@@ -840,6 +840,11 @@
                       <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="tab" href="#aoiDraw">Draw on Map</a>
                       </li>
+                      <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#aoiUpload">
+                          <i class="fas fa-upload me-1"></i>Upload File
+                        </a>
+                      </li>
                     </ul>
 
                     <div class="tab-content">
@@ -908,6 +913,35 @@
                         <button class="btn btn-success" id="useDrawnAOI">
                           <i class="fas fa-check"></i> Use Drawn AOI
                         </button>
+                      </div>
+
+                      <!-- Upload File Tab -->
+                      <div class="tab-pane fade" id="aoiUpload">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold">Upload file batas wilayah (AOI)</label>
+                          <div id="aoiDropZone" class="border border-2 rounded p-4 text-center"
+                            style="cursor:pointer; border-style:dashed !important; border-color:#adb5bd; min-height:110px;"
+                            ondragover="event.preventDefault(); this.style.borderColor='#0d6efd';"
+                            ondragleave="this.style.borderColor='#adb5bd';" ondrop="handleAOIFileDrop(event)">
+                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2 d-block"></i>
+                            <p class="mb-2 text-muted small">Drag &amp; drop file di sini, atau</p>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                              onclick="$('#aoiFileInput').click()">
+                              <i class="fas fa-folder-open me-1"></i>Pilih File
+                            </button>
+                            <input type="file" id="aoiFileInput" style="display:none;"
+                              accept=".geojson,.json,.kml,.gpx,.zip" onchange="handleAOIFileChange(this)">
+                          </div>
+                          <small class="text-muted d-block mt-1">
+                            Format didukung:
+                            <code>.geojson</code>,
+                            <code>.json</code>,
+                            <code>.kml</code>,
+                            <code>.gpx</code>,
+                            <code>.zip</code> (shapefile — ZIP berisi .shp + .dbf + .prj)
+                          </small>
+                        </div>
+                        <div id="aoiUploadStatus"></div>
                       </div>
                     </div>
 
@@ -1292,7 +1326,8 @@
                       <div class="sidebar h-100">
                         <h5 class="mb-3"><i class="fas fa-sliders"></i> Pengaturan</h5>
                         <div id="disasterAoiStatus" class="alert alert-warning py-2" style="font-size:.82rem;">
-                          <i class="fas fa-exclamation-triangle"></i> Belum ada AOI. Pilih AOI di modul Analisis Stok Karbon.
+                          <i class="fas fa-exclamation-triangle"></i> Belum ada AOI. Pilih AOI di modul Analisis Stok
+                          Karbon.
                         </div>
 
                         <div class="mb-3">
@@ -1320,7 +1355,8 @@
                         <button class="btn btn-success w-100 fw-bold" onclick="DisasterMapping.run()">
                           <i class="fas fa-map-location-dot"></i> Deteksi Area Terdampak
                         </button>
-                        <button class="btn btn-outline-primary w-100 mt-2" onclick="DisasterMapping.loadOfficialSources()">
+                        <button class="btn btn-outline-primary w-100 mt-2"
+                          onclick="DisasterMapping.loadOfficialSources()">
                           <i class="fas fa-database"></i> Muat Sumber Resmi
                         </button>
                         <button class="btn btn-outline-info w-100 mt-2" onclick="DisasterMapping.loadBmkgAlerts()">
@@ -2738,6 +2774,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+  <script src="https://unpkg.com/@mapbox/togeojson/dist/togeojson.umd.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <!-- Select2 JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
@@ -2748,8 +2786,8 @@
     // Configuration - will be replaced by Vite during build
     const config = {
       api: {
-        baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
-        //baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
+        //baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
+        baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
       },
       env: 'development',
       appTitle: 'GEOSAVE'
@@ -4654,6 +4692,84 @@
       showAOIInfo();
       showAlert('Custom polygon set as AOI! Area will be clipped to your drawn shape.', 'success');
       console.log('✓ Drawn AOI set with GeoJSON:', geojson);
+    }
+
+    // ==========================================
+    // AOI FILE UPLOAD
+    // ==========================================
+    function handleAOIFileDrop(event) {
+      event.preventDefault();
+      document.getElementById('aoiDropZone').style.borderColor = '#adb5bd';
+      const file = event.dataTransfer.files[0];
+      if (file) processAOIFile(file);
+    }
+
+    function handleAOIFileChange(input) {
+      const file = input.files[0];
+      if (file) processAOIFile(file);
+      input.value = '';
+    }
+
+    async function processAOIFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const statusEl = document.getElementById('aoiUploadStatus');
+      statusEl.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-spinner fa-spin me-1"></i>Memproses file...</div>';
+
+      try {
+        let geojson;
+
+        if (ext === 'geojson' || ext === 'json') {
+          const text = await file.text();
+          geojson = JSON.parse(text);
+        } else if (ext === 'kml') {
+          const text = await file.text();
+          const dom = new DOMParser().parseFromString(text, 'text/xml');
+          if (typeof toGeoJSON === 'undefined') throw new Error('Library toGeoJSON belum dimuat');
+          geojson = toGeoJSON.kml(dom);
+        } else if (ext === 'gpx') {
+          const text = await file.text();
+          const dom = new DOMParser().parseFromString(text, 'text/xml');
+          if (typeof toGeoJSON === 'undefined') throw new Error('Library toGeoJSON belum dimuat');
+          geojson = toGeoJSON.gpx(dom);
+        } else if (ext === 'zip') {
+          if (typeof shp === 'undefined') throw new Error('Library shpjs belum dimuat');
+          const buffer = await file.arrayBuffer();
+          geojson = await shp(buffer);
+        } else {
+          statusEl.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>Format tidak didukung. Gunakan .geojson, .json, .kml, .gpx, atau .zip (shapefile).</div>';
+          return;
+        }
+
+        if (!geojson) throw new Error('File tidak dapat di-parse atau kosong');
+
+        drawnItems.clearLayers();
+        const geoJsonLayer = L.geoJSON(geojson, {
+          style: { color: '#0d6efd', fillColor: '#cfe2ff', fillOpacity: 0.3, weight: 2 }
+        });
+        geoJsonLayer.addTo(drawnItems);
+
+        const bounds = geoJsonLayer.getBounds();
+        if (!bounds.isValid()) throw new Error('File tidak mengandung geometri yang valid');
+        map.fitBounds(bounds);
+
+        const area = calculateAreaFromGeoJSON(geojson) || calculateAreaFromBounds(bounds);
+
+        currentAOI = {
+          type: 'upload',
+          name: file.name,
+          geometry: bounds,
+          area: area,
+          geojson: geojson
+        };
+
+        showAOIInfo();
+        statusEl.innerHTML = `<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>File <strong>${file.name}</strong> berhasil dimuat sebagai AOI.</div>`;
+        showAlert(`AOI dari file "${file.name}" berhasil dimuat!`, 'success');
+
+      } catch (err) {
+        console.error('AOI file upload error:', err);
+        statusEl.innerHTML = `<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>Gagal memproses file: ${err.message}</div>`;
+      }
     }
 
     function calculateAreaFromBounds(bounds) {
