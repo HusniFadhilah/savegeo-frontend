@@ -75,6 +75,33 @@
       background: #ffffff;
       border-color: #ffffff;
     }
+
+    .map-control-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .admin-boundary-toolbar {
+      border: 1px solid #d8e2ee;
+      border-radius: 6px;
+      background: #f8fbff;
+      padding: 10px;
+    }
+
+    .admin-boundary-status {
+      min-height: 18px;
+    }
+
+    .child-admin-boundary {
+      cursor: pointer;
+    }
+
+    .leaflet-control-layers {
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.16);
+    }
   </style>
 </head>
 
@@ -413,11 +440,15 @@
                       <i class="fas fa-database"></i> Reference Dataset
                     </label>
                     <select class="form-select" id="carbonReferenceDataset">
-                      <option value="ESA_CCI" selected>ESA CCI Biomass (2020, 100m) - Recommended
-                      </option>
+                      <option value="ESA_CCI" selected>ESA CCI Biomass (2020, 100m) — Recommended</option>
                       <option value="WCMC">WCMC Carbon Density (2010, 300m)</option>
                       <option value="GEDI">GEDI L4B Biomass (2019-2023, 1km)</option>
-                      <option value="Simard">Simard Forest Height (2011, 1km)</option>
+                      <option value="GEDI_L4A_MONTHLY">GEDI L4A Monthly AGBD Carbon (2019-2023, 25m)</option>
+                      <option value="GEDI_L4B_STACK">GEDI L4B + S2/S1/DEM Stack (2019-2023, 1km)</option>
+                      <option value="SPAWN">Spawn &amp; Gibbs AGB Carbon (2010, 300m)</option>
+                      <option value="ORNL_AGB_BGB">NASA ORNL AGB+BGB Carbon Density (2010, 300m)</option>
+                      <option value="OPENLANDMAP_SOC">OpenLandMap Soil Organic Carbon — SOC (2019, 250m)</option>
+                      <option value="Simard">Simard Forest Height proxy (2011, 1km) — Legacy</option>
                     </select>
                     <small class="text-muted d-block mt-1" id="datasetDescription">
                       <i class="fas fa-info-circle"></i>
@@ -430,13 +461,12 @@
                     <label class="form-label">
                       <i class="fas fa-brain"></i> Pre-trained Model
                     </label>
-                    <!-- ✅ Add compatibility info -->
-                    <div class="alert alert-info alert-sm mb-2">
+                    <div class="alert alert-info alert-sm mb-2" id="modelCompatibilityHint">
                       <small>
                         <i class="fas fa-info-circle"></i>
-                        <strong>GEE Compatibility:</strong> Only Linear, Ridge, and Lasso models
-                        can be deployed directly to Google Earth Engine. Random Forest and other
-                        tree-based models require additional processing.
+                        <strong>Dataset-aware filtering:</strong> Only models trained for the selected
+                        reference dataset and deployable on GEE are shown.
+                        Change dataset to reload compatible models.
                       </small>
                     </div>
 
@@ -879,6 +909,23 @@
                         <button class="btn btn-success" id="loadRegion">
                           <i class="fas fa-check"></i> Load Region
                         </button>
+                        <div class="admin-boundary-toolbar mt-3">
+                          <div class="map-control-row">
+                            <div>
+                              <label class="form-label mb-1">Show Inner Boundary</label>
+                              <select class="form-select form-select-sm" id="adminChildBoundaryLevel" disabled>
+                                <option value="">Load a region first</option>
+                              </select>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" id="toggleAdminChildBoundaries" disabled>
+                              <i class="fas fa-layer-group"></i> Show
+                            </button>
+                          </div>
+                          <small class="text-muted d-block mt-2">
+                            Click an inner boundary to filter AOI to that region and unlock the next lower level.
+                          </small>
+                          <div class="admin-boundary-status small text-muted mt-1" id="adminBoundaryStatus"></div>
+                        </div>
                       </div>
 
                       <!-- Coordinates Tab -->
@@ -2786,8 +2833,8 @@
     // Configuration - will be replaced by Vite during build
     const config = {
       api: {
-        baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
-        //baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
+        //baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
+        baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
       },
       env: 'development',
       appTitle: 'GEOSAVE'
@@ -2828,6 +2875,78 @@
     let processTimers = {};
     let timerInterval = null;
     let landCoverDatasetDocs = {};
+    let adminChildBoundaryLayer = null;
+    let activeAdminSelection = null;
+
+    const BASEMAP_DEFINITIONS = {
+      roads: {
+        label: 'Roads',
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      },
+      satellite: {
+        label: 'Satellite',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19
+      },
+      topo: {
+        label: 'Topographic',
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        attribution: 'Map data &copy; OpenStreetMap contributors, SRTM | OpenTopoMap',
+        maxZoom: 17
+      },
+      terrain: {
+        label: 'Terrain Relief',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 13
+      },
+      dark: {
+        label: 'Dark',
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 19
+      },
+      light: {
+        label: 'Light',
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 19
+      }
+    };
+
+    const ADMIN_LEVELS = {
+      province: { child: 'city', label: 'City/Regency', selectId: 'provinceSelect', childSelectId: 'citySelect', useValue: 'use_province' },
+      city: { child: 'district', label: 'District', selectId: 'citySelect', childSelectId: 'districtSelect', useValue: 'use_city' },
+      district: { child: 'village', label: 'Village/Kelurahan', selectId: 'districtSelect', childSelectId: 'villageSelect', useValue: 'use_district' },
+      village: { child: null, label: null, selectId: 'villageSelect', childSelectId: null, useValue: null }
+    };
+
+    const CARBON_REFERENCE_YEAR_OPTIONS = {
+      ESA_CCI: [
+        { value: 2020, label: '2020 (Latest)' },
+        { value: 2019, label: '2019' },
+        { value: 2018, label: '2018' },
+        { value: 2017, label: '2017' },
+        { value: 2010, label: '2010' }
+      ],
+      GEDI_L4A_MONTHLY: [
+        { value: 2023, label: '2023 (Latest)' },
+        { value: 2022, label: '2022' },
+        { value: 2021, label: '2021' },
+        { value: 2020, label: '2020' },
+        { value: 2019, label: '2019' }
+      ],
+      ESA_CCI_SATIO_AGB: [
+        { value: 2020, label: '2020 (Latest)' },
+        { value: 2019, label: '2019' },
+        { value: 2018, label: '2018' },
+        { value: 2017, label: '2017' },
+        { value: 2010, label: '2010' }
+      ]
+    };
 
     const ESA_WORLDCOVER_LEGEND = {
       "Trees": "#006400",
@@ -3052,6 +3171,14 @@
 
       async getRegionGeometry(endpoint, code) {
         return await this.request(`/regions/geometry?endpoint=${endpoint}&code=${code}`);
+      }
+
+      async getRegionChildrenGeometries(parentCode, childEndpoint) {
+        const params = new URLSearchParams({
+          parent_code: parentCode,
+          child_endpoint: childEndpoint
+        });
+        return await this.request(`/regions/children-geometries?${params.toString()}`);
       }
 
       async getLandCoverDatasets() {
@@ -3949,9 +4076,35 @@
     // ==========================================
     // MAP INITIALIZATION
     // ==========================================
+    function createBasemapLayer(key) {
+      const def = BASEMAP_DEFINITIONS[key] || BASEMAP_DEFINITIONS.roads;
+      return L.tileLayer(def.url, {
+        attribution: def.attribution,
+        maxZoom: def.maxZoom || 19,
+        subdomains: def.subdomains || 'abc'
+      });
+    }
+
+    function addBasemapSwitcher(targetMap, defaultKey = 'roads', addDefault = true) {
+      const layers = {};
+
+      Object.entries(BASEMAP_DEFINITIONS).forEach(([key, def]) => {
+        layers[def.label] = createBasemapLayer(key);
+      });
+
+      const defaultLabel = BASEMAP_DEFINITIONS[defaultKey]?.label || BASEMAP_DEFINITIONS.roads.label;
+      if (addDefault) {
+        (layers[defaultLabel] || layers[BASEMAP_DEFINITIONS.roads.label]).addTo(targetMap);
+      }
+      L.control.layers(layers, null, { collapsed: true, position: 'topright' }).addTo(targetMap);
+
+      return layers;
+    }
+
     function initializeMap() {
       // AOI Selection Map
       map = L.map('map').setView([-6.9667, 110.4167], 10);
+      addBasemapSwitcher(map, 'roads', false);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
@@ -4030,6 +4183,7 @@
       // Analysis type change
       $('#analysisType').on('change', function () {
         updateParameterVisibility();
+        updateRunAnalysisState();
       });
 
       $('#enableLulcTransition').on('change', function () {
@@ -4074,6 +4228,10 @@
       // Load Region button
       $('#loadRegion').on('click', async function () {
         await loadRegionGeometry();
+      });
+
+      $('#toggleAdminChildBoundaries').on('click', async function () {
+        await toggleAdminChildBoundaries();
       });
 
       // Set Coordinate AOI
@@ -4278,6 +4436,121 @@
       return copy;
     }
 
+    function clearAdminChildBoundaries() {
+      if (adminChildBoundaryLayer && map) {
+        map.removeLayer(adminChildBoundaryLayer);
+      }
+      adminChildBoundaryLayer = null;
+      $('#toggleAdminChildBoundaries').html('<i class="fas fa-layer-group"></i> Show');
+      $('#adminBoundaryStatus').text('');
+    }
+
+    function updateAdminBoundaryControls() {
+      const levelInfo = activeAdminSelection ? ADMIN_LEVELS[activeAdminSelection.endpoint] : null;
+      const childLevel = levelInfo?.child;
+      const $select = $('#adminChildBoundaryLevel');
+      const $button = $('#toggleAdminChildBoundaries');
+
+      clearAdminChildBoundaries();
+      $select.empty();
+
+      if (!activeAdminSelection || !childLevel) {
+        $select.append('<option value="">No lower level available</option>').prop('disabled', true);
+        $button.prop('disabled', true);
+        return;
+      }
+
+      $select
+        .append(new Option(levelInfo.label, childLevel, true, true))
+        .prop('disabled', false);
+      $button.prop('disabled', false);
+      $('#adminBoundaryStatus').text(`Ready to show ${levelInfo.label} boundaries inside ${activeAdminSelection.name}.`);
+    }
+
+    async function toggleAdminChildBoundaries() {
+      if (adminChildBoundaryLayer) {
+        clearAdminChildBoundaries();
+        return;
+      }
+      await loadAdminChildBoundaries();
+    }
+
+    async function loadAdminChildBoundaries() {
+      if (!activeAdminSelection) {
+        showAlert('Load an administrative AOI first.', 'warning');
+        return;
+      }
+
+      const childEndpoint = $('#adminChildBoundaryLevel').val();
+      if (!childEndpoint) return;
+
+      $('#toggleAdminChildBoundaries').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Loading');
+      $('#adminBoundaryStatus').text(`Loading ${ADMIN_LEVELS[activeAdminSelection.endpoint]?.label || childEndpoint} boundaries...`);
+
+      const response = await apiClient.getRegionChildrenGeometries(activeAdminSelection.code, childEndpoint);
+      $('#toggleAdminChildBoundaries').prop('disabled', false).html('<i class="fas fa-eye-slash"></i> Hide');
+
+      if (!response.success || !response.data?.features?.length) {
+        $('#toggleAdminChildBoundaries').html('<i class="fas fa-layer-group"></i> Show');
+        $('#adminBoundaryStatus').text('');
+        showAlert(response.error || 'No inner boundary geometry available.', 'warning');
+        return;
+      }
+
+      const geojson = childEndpoint === 'village' ? response.data : swapGeoJSON(response.data);
+
+      adminChildBoundaryLayer = L.geoJSON(geojson, {
+        className: 'child-admin-boundary',
+        style: {
+          color: '#f97316',
+          weight: 1.4,
+          fillColor: '#fbbf24',
+          fillOpacity: 0.08
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          const name = props.name || props.NAMOBJ || props.name_id || props.code || 'Region';
+          const code = props.code;
+
+          layer.bindTooltip(name, { sticky: true, direction: 'top' });
+          layer.on('mouseover', () => layer.setStyle({ weight: 2.4, fillOpacity: 0.18 }));
+          layer.on('mouseout', () => layer.setStyle({ weight: 1.4, fillOpacity: 0.08 }));
+          layer.on('click', async () => {
+            if (!code) return;
+            await selectAdminBoundaryFeature(childEndpoint, code, name);
+          });
+        }
+      }).addTo(map);
+
+      const count = response.data.meta?.count || response.data.features.length;
+      $('#adminBoundaryStatus').text(`${count} inner boundaries visible. Click one to filter AOI.`);
+    }
+
+    async function selectAdminBoundaryFeature(endpoint, code, name) {
+      if (endpoint === 'city') {
+        $('#citySelect').val(code).trigger('change.select2');
+        ['districtSelect', 'villageSelect'].forEach(id => {
+          $(`#${id}`).empty().append('<option value=""></option>');
+          initSelect2(id, `-- Select ${id === 'districtSelect' ? 'District' : 'Village'} First --`);
+          $(`#${id}`).prop('disabled', true);
+        });
+        await loadRegion('district', code, 'districtSelect', 'District');
+        $('#districtSelect').prop('disabled', false);
+      } else if (endpoint === 'district') {
+        $('#districtSelect').val(code).trigger('change.select2');
+        $('#villageSelect').empty().append('<option value=""></option>');
+        initSelect2('villageSelect', '-- Select Village First --');
+        await loadRegion('village', code, 'villageSelect', 'Village/Kelurahan');
+        $('#villageSelect').prop('disabled', false);
+      } else if (endpoint === 'village') {
+        $('#villageSelect').val(code).trigger('change.select2');
+      }
+
+      clearAdminChildBoundaries();
+      showAlert(`Filtering AOI to ${name}...`, 'info', 2000);
+      await loadRegionGeometry();
+    }
+
     async function loadRegionGeometry() {
       const provinceCode = $('#provinceSelect').val();
       const cityCode = $('#citySelect').val();
@@ -4353,6 +4626,8 @@
           area: area,
           geojson: geojson
         };
+        activeAdminSelection = { endpoint, code, name };
+        updateAdminBoundaryControls();
 
         showAOIInfo();
         showAlert(`${name} loaded successfully!`, 'success');
@@ -4365,110 +4640,126 @@
     // ==========================================
     // MODEL MANAGEMENT FUNCTIONS
     // ==========================================
-    async function loadAvailableModels() {
+
+    // Tracks compatible model count for the current dataset selection.
+    // Initialised to 1 (optimistic) so the run button stays enabled until first load.
+    window._carbonCompatibleModelCount = 1;
+
+    function updateRunAnalysisState() {
+      const analysisType = $('#analysisType').val();
+      const needsCarbonModel = analysisType === 'carbon' || analysisType === 'combined';
+      const noModel = window._carbonCompatibleModelCount === 0;
+
+      if (needsCarbonModel && noModel) {
+        $('#runAnalysis')
+          .prop('disabled', true)
+          .removeClass('btn-primary')
+          .addClass('btn-secondary')
+          .attr('title', 'No models compatible with the selected dataset. Upload or train a compatible model.');
+      } else {
+        $('#runAnalysis')
+          .prop('disabled', false)
+          .removeClass('btn-secondary')
+          .addClass('btn-primary')
+          .removeAttr('title');
+      }
+    }
+
+    async function loadCarbonModelsForDataset(dataset) {
+      if (!dataset) dataset = $('#carbonReferenceDataset').val();
+      const $select = $('#carbonModelSelect');
+      const $desc = $('#modelDescription');
+
+      $select.html('<option value="" disabled>Loading models…</option>');
+      $desc.html('<i class="fas fa-spinner fa-spin"></i> Loading compatible models…');
+
       try {
-        const response = await apiClient.listModels();
+        const response = await apiClient.request(
+          `/models?model_type=carbon&target_dataset=${encodeURIComponent(dataset)}&gee_deployable=true`
+        );
 
-        if (response.success && response.data.models) {
-          const models = response.data.models;
-          const $select = $('#carbonModelSelect');
-
-          // Filter only models that can be expressed as raster algebra in GEE.
-          const geeCompatibleAlgos = ['linear', 'ridge', 'lasso', 'elasticnet', 'elastic_net'];
-          const compatibleModels = models.filter(m =>
-            geeCompatibleAlgos.includes(String(m.algorithm || '').toLowerCase())
-          );
-
-          const defaultCompatible = compatibleModels.some(m => m.is_default);
-          $select.html(defaultCompatible
-            ? '<option value="">-- Use Default Model --</option>'
-            : '<option value="" disabled>-- Default model is not GEE-compatible --</option>'
-          );
-
-          if (compatibleModels.length === 0) {
-            $select.append('<option value="" disabled>-- No GEE-compatible models available --</option>');
-            $('#modelDescription').html(
-              `<i class="fas fa-exclamation-triangle text-warning"></i> 
-                    No GEE-compatible models found. Train a Linear, Ridge, Lasso, or ElasticNet model first.`
-            );
-            console.warn('No GEE-compatible models available');
-            return;
-          }
-
-          // Group by algorithm
-          const grouped = {};
-          compatibleModels.forEach(model => {
-            const algo = model.algorithm || 'Other';
-            if (!grouped[algo]) grouped[algo] = [];
-            grouped[algo].push(model);
-          });
-
-          // Create optgroups
-          for (const [algo, modelList] of Object.entries(grouped)) {
-            const $optgroup = $('<optgroup>').attr('label', algo.toUpperCase());
-
-            modelList
-              .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at))
-              .forEach(model => {
-                const date = new Date(model.registered_at).toLocaleDateString();
-                const r2 = (model.r2 !== undefined && model.r2 !== null)
-                  ? ` (R²: ${Number(model.r2).toFixed(3)})`
-                  : '';
-
-                $optgroup.append(
-                  $('<option>')
-                    .val(model.name)
-                    .text(`${model.name} - ${date}${r2}`)
-                    .data('model', model)
-                );
-              });
-
-            $select.append($optgroup);
-          }
-
-          // ✅ Show warning if some models were filtered
-          const filteredCount = models.length - compatibleModels.length;
-          let description = `<i class="fas fa-check-circle text-success"></i> 
-                ${compatibleModels.length} GEE-compatible model(s) available`;
-
-          if (filteredCount > 0) {
-            description += `<br><small class="text-muted">
-                    <i class="fas fa-info-circle"></i>
-                    ${filteredCount} non-linear model(s) hidden (not GEE-compatible)
-                </small>`;
-          }
-
-          if (!defaultCompatible && compatibleModels.length > 0) {
-            const preferredModel = compatibleModels
-              .slice()
-              .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at))[0];
-            $select.val(preferredModel.name);
-            displayModelInfo(preferredModel.name);
-            description += `<br><small class="text-muted">
-                    <i class="fas fa-check-circle"></i>
-                    Auto-selected ${preferredModel.name} because the default model is not GEE-compatible
-                </small>`;
-          }
-
-          $('#modelDescription').html(description);
-
-          console.log(`✓ Loaded ${compatibleModels.length} GEE-compatible models (${filteredCount} filtered)`);
-
-        } else {
-          $('#carbonModelSelect').html('<option value="">-- No models available --</option>');
-          $('#modelDescription').html(
-            `<i class="fas fa-exclamation-triangle text-warning"></i> 
-                No trained models found. Using default model.`
-          );
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to fetch models');
         }
+
+        const models = response.data.models || [];
+        window._carbonCompatibleModelCount = models.length;
+
+        if (models.length === 0) {
+          $select.html('<option value="" disabled>— No compatible models for this dataset —</option>');
+          $desc.html(
+            `<i class="fas fa-exclamation-triangle text-warning"></i> ` +
+            `No GEE-deployable models found for <strong>${dataset}</strong>. ` +
+            `Upload or train a model trained with this dataset, or select a different dataset.`
+          );
+          updateRunAnalysisState();
+          return;
+        }
+
+        // Default placeholder
+        const hasDefault = models.some(m => m.is_default);
+        $select.html(
+          hasDefault
+            ? '<option value="">— Use Default Model —</option>'
+            : '<option value="">— Select Model —</option>'
+        );
+
+        // Group by algorithm for optgroups
+        const grouped = {};
+        models.forEach(m => {
+          const algo = m.algorithm || 'Other';
+          if (!grouped[algo]) grouped[algo] = [];
+          grouped[algo].push(m);
+        });
+
+        for (const [algo, modelList] of Object.entries(grouped)) {
+          const $optgroup = $('<optgroup>').attr('label', algo.toUpperCase());
+          modelList
+            .sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0))
+            .forEach(m => {
+              const date = m.uploaded_at ? new Date(m.uploaded_at).toLocaleDateString() : '';
+              const r2Raw = m.metrics?.r2_mean ?? m.metrics?.r2
+                         ?? m.metadata_json?.cv_metrics?.r2_mean ?? null;
+              const r2Str = r2Raw !== null ? ` (R²: ${Number(r2Raw).toFixed(3)})` : '';
+              $optgroup.append(
+                $('<option>')
+                  .val(m.name)
+                  .text(`${m.display_name || m.name} — ${date}${r2Str}`)
+                  .data('model', m)
+              );
+            });
+          $select.append($optgroup);
+        }
+
+        // Auto-select newest when no default
+        if (!hasDefault && models.length > 0) {
+          const newest = models.slice()
+            .sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0))[0];
+          $select.val(newest.name);
+          displayModelInfo(newest.name);
+        }
+
+        $desc.html(
+          `<i class="fas fa-check-circle text-success"></i> ` +
+          `${models.length} model(s) compatible with <strong>${dataset}</strong>`
+        );
+        console.log(`✓ Loaded ${models.length} model(s) for dataset: ${dataset}`);
+
       } catch (error) {
+        window._carbonCompatibleModelCount = 0;
         console.error('Error loading models:', error);
-        $('#carbonModelSelect').html('<option value="">-- Error loading models --</option>');
-        $('#modelDescription').html(
-          `<i class="fas fa-exclamation-circle text-danger"></i> 
-            Failed to load models: ${error.message}`
+        $select.html('<option value="" disabled>— Error loading models —</option>');
+        $desc.html(
+          `<i class="fas fa-exclamation-circle text-danger"></i> Failed to load models: ${error.message}`
         );
       }
+
+      updateRunAnalysisState();
+    }
+
+    // Kept as alias so any external callers still work
+    async function loadAvailableModels() {
+      return loadCarbonModelsForDataset($('#carbonReferenceDataset').val());
     }
 
     async function displayModelInfo(modelName) {
@@ -4657,6 +4948,8 @@
           geojson: geojson,  // ✅ GeoJSON persegi untuk clipping di backend
         };
 
+        activeAdminSelection = null;
+        updateAdminBoundaryControls();
         showAOIInfo();
         hideLoading();
         showAlert('AOI set successfully!', 'success');
@@ -4689,6 +4982,8 @@
         geojson: geojson,      // ✅ GeoJSON asli untuk dikirim ke backend (akan di-clip)
       };
 
+      activeAdminSelection = null;
+      updateAdminBoundaryControls();
       showAOIInfo();
       showAlert('Custom polygon set as AOI! Area will be clipped to your drawn shape.', 'success');
       console.log('✓ Drawn AOI set with GeoJSON:', geojson);
@@ -4762,6 +5057,8 @@
           geojson: geojson
         };
 
+        activeAdminSelection = null;
+        updateAdminBoundaryControls();
         showAOIInfo();
         statusEl.innerHTML = `<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>File <strong>${file.name}</strong> berhasil dimuat sebagai AOI.</div>`;
         showAlert(`AOI dari file "${file.name}" berhasil dimuat!`, 'success');
@@ -5053,11 +5350,33 @@
         div.innerHTML = `<h6 style="margin-bottom:10px;font-weight:bold;">${currentLanguage === 'id' ? 'Legenda' : 'Legend'}</h6>`;
 
         if (layerName === 'carbon_estimated' || layerName === 'carbon_reference') {
-          // Carbon legend with gradient
-          const colors = ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
-          const labels = ['0', '40', '80', '120', '160', '200+'];
+          const carbonData = analysisResults.carbon || {};
+          const layerData = layerName === 'carbon_reference'
+            ? (carbonData.carbon_reference || {})
+            : (carbonData.carbon_estimated || {});
+          const referenceData = carbonData.carbon_reference || {};
+          const modelInfo = carbonData.model_info || {};
+          const vis = layerData.vis_params || {};
+          const colors = Array.isArray(vis.palette) && vis.palette.length
+            ? vis.palette.map(color => String(color).startsWith('#') ? color : `#${color}`)
+            : ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
+          const minVal = Number.isFinite(Number(vis.min)) ? Number(vis.min) : 0;
+          const maxVal = Number.isFinite(Number(vis.max)) ? Number(vis.max) : 200;
+          const unit = referenceData.unit || layerData.unit || 'Mg/ha';
+          const labels = colors.map((_, idx) => {
+            if (colors.length === 1) return minVal.toFixed(0);
+            const value = minVal + ((maxVal - minVal) * idx / (colors.length - 1));
+            const rounded = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, '');
+            return idx === colors.length - 1 ? `${rounded}+` : rounded;
+          });
+          const layerTitle = layerName === 'carbon_reference'
+            ? `${referenceData.name || modelInfo.reference_dataset || 'Reference Carbon'}`
+            : 'Estimated Carbon';
+          const densityLabel = referenceData.target_pool === 'soil_organic_carbon'
+            ? `Soil Organic Carbon (${unit})`
+            : `Carbon Density (${unit})`;
 
-          div.innerHTML += '<div style="margin-bottom:5px;"><strong>Carbon Density (Mg/ha)</strong></div>';
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${densityLabel}</strong></div>`;
 
           for (let i = 0; i < colors.length; i++) {
             div.innerHTML += `
@@ -5069,18 +5388,19 @@
           }
 
           // Add display mode info
-          const displayMode = analysisResults.carbon?.model_info?.display_mode;
-          const modeIcon = displayMode === 'clipped'
+          const displayMode = modelInfo.calculation_mode || carbonData.area_info?.calculation_mode || modelInfo.display_mode;
+          const isClipped = displayMode === 'clipped' || displayMode === 'clipped_aoi';
+          const modeIcon = isClipped
             ? '<i class="fas fa-cut text-success"></i>'
             : '<i class="fas fa-layer-group text-info"></i>';
 
-          const modeText = displayMode === 'clipped' ? 'Clipped to AOI' : 'Full Tiles';
+          const modeText = isClipped ? 'Clipped to AOI' : 'Full Tiles';
 
           if (layerName === 'carbon_estimated') {
             div.innerHTML += `
                     <div class="mt-2">
                         <small class="text-muted">
-                            <i class="fas fa-satellite"></i> Sentinel-2 Model<br>
+                            <i class="fas fa-satellite"></i> ${modelInfo.model_name || 'Carbon model'}<br>
                             ${modeIcon} ${modeText}
                         </small>
                     </div>
@@ -5089,7 +5409,8 @@
             div.innerHTML += `
                     <div class="mt-2">
                         <small class="text-muted">
-                            <i class="fas fa-database"></i> WCMC Reference<br>
+                            <i class="fas fa-database"></i> ${layerTitle}<br>
+                            ${referenceData.year ? `Year/baseline: ${referenceData.year}<br>` : ''}
                             ${modeIcon} ${modeText}
                         </small>
                     </div>
@@ -5291,6 +5612,7 @@
 
       const center = currentAOI.geometry.getCenter();
       resultMap = L.map('resultMapContainer').setView([center.lat, center.lng], parseInt($('#zoomValue').text()));
+      addBasemapSwitcher(resultMap, 'roads', false);
 
       // Base layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -5462,7 +5784,7 @@
       console.log('=== Carbon Data Debug ===');
       console.log('Full carbon data:', carbonData);
       console.log('Model info:', carbonData?.model_info);
-      console.log('Reference dataset info:', carbonData?.model_info?.reference_dataset_info);
+      console.log('Reference dataset info:', carbonData?.carbon_reference);
       console.log('========================');
 
       // Safety checks
@@ -5473,11 +5795,12 @@
       }
 
       // Extract dataset info with fallback
-      const datasetInfo = carbonData.model_info?.reference_dataset_info || {};
+      const datasetInfo = carbonData.carbon_reference || carbonData.model_info?.reference_dataset_info || {};
       const datasetName = datasetInfo.name || 'Unknown Dataset';
       const datasetResolution = datasetInfo.resolution || 'N/A';
       const datasetYear = datasetInfo.year || 'N/A';
       const datasetFullName = datasetInfo.full_name || datasetName;
+      const datasetUnit = datasetInfo.unit || carbonData.carbon_estimated?.unit || 'Mg/ha';
 
       console.log('Extracted dataset info:', {
         datasetName,
@@ -5583,10 +5906,10 @@
 
       // ✅ Carbon Density Table
       const densityHtml = `
-        <tr><td><strong>Mean:</strong></td><td>${(stats.mean || 0).toFixed(2)} Mg/ha</td></tr>
-        <tr><td><strong>Std Dev:</strong></td><td>${(stats.std_dev || 0).toFixed(2)} Mg/ha</td></tr>
-        <tr><td><strong>Min:</strong></td><td>${(stats.min || 0).toFixed(2)} Mg/ha</td></tr>
-        <tr><td><strong>Max:</strong></td><td>${(stats.max || 0).toFixed(2)} Mg/ha</td></tr>
+        <tr><td><strong>Mean:</strong></td><td>${(stats.mean || 0).toFixed(2)} ${datasetUnit}</td></tr>
+        <tr><td><strong>Std Dev:</strong></td><td>${(stats.std_dev || 0).toFixed(2)} ${datasetUnit}</td></tr>
+        <tr><td><strong>Min:</strong></td><td>${(stats.min || 0).toFixed(2)} ${datasetUnit}</td></tr>
+        <tr><td><strong>Max:</strong></td><td>${(stats.max || 0).toFixed(2)} ${datasetUnit}</td></tr>
         <tr class="table-light">
             <td colspan="2">
                 <small class="text-muted">
@@ -6847,21 +7170,28 @@
         const stats = cd.carbon_estimated?.statistics || {};
         const ai = cd.area_info || {};
         const mi = cd.model_info || {};
+        const ref = cd.carbon_reference || {};
+        const carbonUnit = ref.unit || cd.carbon_estimated?.unit || 'Mg/ha';
+        const refName = ref.full_name || ref.name || mi.reference_dataset || 'N/A';
+        const refYear = ref.year || mi.reference_dataset_year || 'N/A';
 
         report += `## Carbon Stock Analysis\n\n`;
         if (times.carbon) report += `**Processing Time:** ${formatDuration(times.carbon)}\n\n`;
 
         report += `### Carbon Density Statistics\n`;
-        report += `- Mean: ${(stats.mean || 0).toFixed(2)} Mg/ha\n`;
-        report += `- Std Dev: ${(stats.std_dev || 0).toFixed(2)} Mg/ha\n`;
-        report += `- Min: ${(stats.min || 0).toFixed(2)} Mg/ha\n`;
-        report += `- Max: ${(stats.max || 0).toFixed(2)} Mg/ha\n\n`;
+        report += `- Mean: ${(stats.mean || 0).toFixed(2)} ${carbonUnit}\n`;
+        report += `- Std Dev: ${(stats.std_dev || 0).toFixed(2)} ${carbonUnit}\n`;
+        report += `- Min: ${(stats.min || 0).toFixed(2)} ${carbonUnit}\n`;
+        report += `- Max: ${(stats.max || 0).toFixed(2)} ${carbonUnit}\n\n`;
 
         report += `### Total Carbon Stock\n`;
         report += `- Calculation Area: ${(ai.calculation_area_ha || 0).toLocaleString()} ha\n`;
         report += `- Total Carbon: ${(ai.total_carbon_tons || 0).toLocaleString()} tons\n`;
         report += `- CO₂ Equivalent: ${(ai.carbon_dioxide_equivalent_tons || 0).toLocaleString()} tons CO₂e\n`;
-        report += `- Reference Dataset: ${mi.reference_dataset || 'N/A'} (${mi.reference_dataset_year || 'N/A'})\n\n`;
+        report += `- Reference Dataset: ${refName} (${refYear})\n`;
+        if (ref.resolution) report += `- Reference Resolution: ${ref.resolution}m\n`;
+        if (ref.description) report += `- Reference Note: ${ref.description}\n`;
+        report += '\n';
 
         if (cd.carbon_delta?.series?.length) {
           const delta = cd.carbon_delta;
@@ -7047,6 +7377,7 @@
         }
 
         this.map = L.map('disasterMap', { zoomControl: true }).setView([-6.9667, 110.4167], 9);
+        addBasemapSwitcher(this.map, 'roads', false);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 18
@@ -7478,16 +7809,31 @@
     $('#carbonReferenceDataset').on('change', function () {
       updateDatasetDescription();
       updateYearSelectorVisibility();
+      loadCarbonModelsForDataset($(this).val());
     });
 
     // Function to update dataset description
     function updateDatasetDescription() {
       const dataset = $('#carbonReferenceDataset').val();
       const descriptions = {
-        'ESA_CCI': '<i class="fas fa-info-circle"></i> High-resolution (100m) global biomass map from ESA Climate Change Initiative. Most accurate for 2010-2020.',
-        'WCMC': '<i class="fas fa-info-circle"></i> Global carbon density map (300m) from UN World Conservation Monitoring Centre. Based on 2010 data.',
-        'GEDI': '<i class="fas fa-info-circle"></i> NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest areas, 2019-2023.',
-        'Simard': '<i class="fas fa-info-circle"></i> Global forest canopy height (1km) converted to biomass. Based on 2011 data.'
+        'ESA_CCI':
+          '<i class="fas fa-info-circle"></i> High-resolution (100m) global biomass map from ESA Climate Change Initiative. Most accurate for 2010–2020. Biomass × 0.47 = carbon density.',
+        'WCMC':
+          '<i class="fas fa-info-circle"></i> Global carbon density map (300m) from UN World Conservation Monitoring Centre. Fixed 2010 baseline. Units already in Mg C/ha.',
+        'GEDI':
+          '<i class="fas fa-info-circle"></i> NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest-covered areas, 2019–2023. Biomass × 0.47 = carbon density.',
+        'GEDI_L4A_MONTHLY':
+          '<i class="fas fa-info-circle"></i> GEDI monthly aboveground biomass density at 25m converted to carbon with a 0.47 carbon fraction. Best for forest biomass calibration where GEDI coverage is available.',
+        'GEDI_L4B_STACK':
+          '<i class="fas fa-info-circle"></i> GEDI L4B biomass target with Sentinel-2, Sentinel-1, DEM, and Dynamic World forest mask predictors. Resolution follows GEDI target scale; detailed map output depends on predictor stack and model.',
+        'SPAWN':
+          '<i class="fas fa-info-circle"></i> Spawn &amp; Gibbs (2020) global aboveground biomass carbon density at 300m. Band already in Mg C/ha — no conversion needed.',
+        'ORNL_AGB_BGB':
+          '<i class="fas fa-info-circle"></i> NASA ORNL biomass carbon density combining aboveground and belowground carbon pools (AGB + BGB) from Spawn 2020. Both bands in Mg C/ha.',
+        'OPENLANDMAP_SOC':
+          '<i class="fas fa-exclamation-triangle text-warning"></i> <strong>Soil organic carbon</strong> from OpenLandMap (g/kg at 0 cm depth). This represents a <strong>soil carbon pool</strong>, not aboveground biomass carbon. Do not compare totals directly with AGB carbon datasets.',
+        'Simard':
+          '<i class="fas fa-info-circle text-muted"></i> <em>Legacy:</em> Global forest canopy height (1km) converted to a biomass proxy. Based on 2011 data. Use GEDI or ESA CCI for more accurate estimates.',
       };
 
       $('#datasetDescription').html(descriptions[dataset] || '');
@@ -7496,8 +7842,17 @@
     // Function to show/hide year selector based on dataset
     function updateYearSelectorVisibility() {
       const dataset = $('#carbonReferenceDataset').val();
+      // Show year selector for time-series datasets where year selection is meaningful
+      const yearOptions = CARBON_REFERENCE_YEAR_OPTIONS[dataset];
 
-      if (dataset === 'ESA_CCI') {
+      if (yearOptions) {
+        const $yearSelect = $('#carbonDatasetYear');
+        const currentValue = String($yearSelect.val() || '');
+        $yearSelect.empty();
+        yearOptions.forEach((option, index) => {
+          const selected = String(option.value) === currentValue || (index === 0 && !yearOptions.some(item => String(item.value) === currentValue));
+          $yearSelect.append(new Option(option.label, option.value, selected, selected));
+        });
         $('#carbonYearSelector').show();
       } else {
         $('#carbonYearSelector').hide();
@@ -8363,6 +8718,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
+        addBasemapSwitcher(this.changeMap, 'roads', false);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'
@@ -8542,6 +8898,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
+        addBasemapSwitcher(this.originalMap, 'roads', false);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'
