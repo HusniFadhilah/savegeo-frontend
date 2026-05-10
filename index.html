@@ -443,8 +443,8 @@
                       <i class="fas fa-database"></i> Reference Dataset
                     </label>
                     <select class="form-select" id="carbonReferenceDataset">
-                      <option value="ESA_CCI" selected>ESA CCI Biomass (2020, 100m) — Recommended</option>
-                      <option value="WCMC">WCMC Carbon Density (2010, 300m)</option>
+                      <option value="ESA_CCI">ESA CCI Biomass (2020, 100m)</option>
+                      <option value="WCMC" selected>WCMC Carbon Density (2010, 300m)</option>
                       <option value="GEDI">GEDI L4B Biomass (2019-2023, 1km)</option>
                       <option value="GEDI_L4A_MONTHLY">GEDI L4A Monthly AGBD Carbon (2019-2023, 25m)</option>
                       <option value="GEDI_L4B_STACK">GEDI L4B + S2/S1/DEM Stack (2019-2023, 1km)</option>
@@ -809,7 +809,8 @@
                         <option value="12">Des</option>
                       </select>
                     </div>
-                    <small class="text-muted">Hanya berlaku untuk Dynamic World. Dataset tahunan menggunakan data penuh tahun yang dipilih.</small>
+                    <small class="text-muted">Hanya berlaku untuk Dynamic World. Dataset tahunan menggunakan data penuh
+                      tahun yang dipilih.</small>
                   </div>
 
                   <!-- Month mode: single month picker -->
@@ -829,7 +830,8 @@
                       <option value="11">November</option>
                       <option value="12">Desember</option>
                     </select>
-                    <small class="text-muted">Dynamic World difilter per bulan. Dataset tahunan (ESA, ESRI, MODIS) menggunakan tahun dari slider di atas.</small>
+                    <small class="text-muted">Dynamic World difilter per bulan. Dataset tahunan (ESA, ESRI, MODIS)
+                      menggunakan tahun dari slider di atas.</small>
                   </div>
 
                   <!-- Specific date mode: date range pickers -->
@@ -845,7 +847,9 @@
                       </div>
                     </div>
                     <div class="alert alert-info py-2 px-3 mb-0">
-                      <small><i class="fas fa-circle-info me-1"></i> <strong>Dynamic World</strong> mendukung tanggal spesifik (near real-time harian). Dataset tahunan (ESA, ESRI, MODIS, Copernicus) menggunakan tahun dari tanggal mulai.</small>
+                      <small><i class="fas fa-circle-info me-1"></i> <strong>Dynamic World</strong> mendukung tanggal
+                        spesifik (near real-time harian). Dataset tahunan (ESA, ESRI, MODIS, Copernicus) menggunakan
+                        tahun dari tanggal mulai.</small>
                     </div>
                   </div>
 
@@ -5919,13 +5923,13 @@
         let tStartMonth = 1, tEndMonth = 12;
         if (lcMode === 'year') {
           tStartMonth = parseInt($('#lcStartMonth').val());
-          tEndMonth   = parseInt($('#lcEndMonth').val());
+          tEndMonth = parseInt($('#lcEndMonth').val());
         } else if (lcMode === 'month') {
           tStartMonth = tEndMonth = parseInt($('#lcSingleMonth').val());
         } else {
           const sd = $('#lcStartDate').val();
           tStartMonth = sd ? parseInt(sd.slice(5, 7)) : 1;
-          tEndMonth   = 12;
+          tEndMonth = 12;
         }
         const transitionParams = {
           aoi: params.aoi,
@@ -6186,6 +6190,48 @@
 
     function getLandCoverDisplayLabel(datasetKey, bucket, includeRequested = false) {
       const name = bucket?.dataset_name || datasetKey.replace(/_/g, ' ');
+      const MONTHS = currentLanguage === 'id'
+        ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      function parseYMD(str) {
+        const p = str.split('-').map(Number);
+        return { y: p[0], m: p[1] - 1, d: p[2] }; // m is 0-indexed
+      }
+      function lastDay(y, m) { return new Date(y, m + 1, 0).getDate(); } // m 0-indexed
+
+      const dr = bucket?.date_range;
+      if (dr?.start && dr?.end) {
+        const s = parseYMD(dr.start);
+        let e = parseYMD(dr.end);
+
+        const isFullYear =
+          s.m === 0 && s.d === 1 && (
+            (s.y === e.y && e.m === 11 && e.d === 31) ||
+            (e.y === s.y + 1 && e.m === 0 && e.d === 1)
+          );
+
+        if (!isFullYear) {
+          // Adjust exclusive end (e.g. "2026-05-01" → April 30)
+          if (e.d === 1 && !(e.m === 0 && e.y > s.y)) {
+            const prev = new Date(e.y, e.m, 0);
+            e = { y: prev.getFullYear(), m: prev.getMonth(), d: prev.getDate() };
+          }
+
+          const sameYear = s.y === e.y;
+          const isMonthPrecision = s.d === 1 && e.d === lastDay(e.y, e.m);
+
+          if (isMonthPrecision) {
+            if (s.m === e.m && sameYear) return `${name} (${MONTHS[s.m]} ${s.y})`;
+            if (sameYear) return `${name} (${MONTHS[s.m]}-${MONTHS[e.m]} ${s.y})`;
+            return `${name} (${MONTHS[s.m]} ${s.y} - ${MONTHS[e.m]} ${e.y})`;
+          }
+          if (sameYear) return `${name} (${s.d} ${MONTHS[s.m]} - ${e.d} ${MONTHS[e.m]} ${s.y})`;
+          return `${name} (${s.d} ${MONTHS[s.m]} ${s.y} - ${e.d} ${MONTHS[e.m]} ${e.y})`;
+        }
+      }
+
+      // Year-based fallback (annual datasets or full-year DW)
       const rawEffectiveYear = bucket?.year ?? bucket?.effective_year;
       const effectiveYear = clampLandCoverEffectiveYear(datasetKey, rawEffectiveYear);
       const requestedYear = bucket?.requested_year ?? rawEffectiveYear;
