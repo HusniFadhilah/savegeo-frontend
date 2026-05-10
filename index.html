@@ -316,6 +316,9 @@
       <i class="bi bi-list"></i>
     </button>
 
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
     <!-- Main Content Wrapper -->
     <div class="content-wrapper expanded" id="contentWrapper">
 
@@ -753,42 +756,97 @@
                     </label>
                   </div>
 
+                  <!-- Date Mode Toggle -->
                   <div class="mb-3">
-                    <label class="form-label">Month Range (Dynamic World)</label>
+                    <label class="form-label">Mode Tanggal Analisis</label>
+                    <div class="btn-group w-100" role="group">
+                      <input type="radio" class="btn-check" name="lcDateMode" id="lcDateModeYear" value="year" checked>
+                      <label class="btn btn-outline-primary btn-sm" for="lcDateModeYear">
+                        <i class="fas fa-calendar"></i> Tahun
+                      </label>
+                      <input type="radio" class="btn-check" name="lcDateMode" id="lcDateModeMonth" value="month">
+                      <label class="btn btn-outline-primary btn-sm" for="lcDateModeMonth">
+                        <i class="fas fa-calendar-days"></i> Bulan
+                      </label>
+                      <input type="radio" class="btn-check" name="lcDateMode" id="lcDateModeDate" value="date">
+                      <label class="btn btn-outline-primary btn-sm" for="lcDateModeDate">
+                        <i class="fas fa-calendar-day"></i> Tanggal
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Year mode: month range (for Dynamic World) -->
+                  <div class="mb-3" id="lcMonthRangeControl">
+                    <label class="form-label">Rentang Bulan <small class="text-muted">(Dynamic World)</small></label>
                     <div class="d-flex gap-2">
                       <select class="form-select" id="lcStartMonth">
                         <option value="1">Jan</option>
                         <option value="2">Feb</option>
                         <option value="3">Mar</option>
                         <option value="4">Apr</option>
-                        <option value="5">May</option>
+                        <option value="5">Mei</option>
                         <option value="6">Jun</option>
                         <option value="7">Jul</option>
-                        <option value="8">Aug</option>
+                        <option value="8">Agu</option>
                         <option value="9">Sep</option>
-                        <option value="10">Oct</option>
+                        <option value="10">Okt</option>
                         <option value="11">Nov</option>
-                        <option value="12">Dec</option>
+                        <option value="12">Des</option>
                       </select>
-
-                      <span class="align-self-center">to</span>
-
+                      <span class="align-self-center">s/d</span>
                       <select class="form-select" id="lcEndMonth">
                         <option value="1">Jan</option>
                         <option value="2">Feb</option>
                         <option value="3">Mar</option>
                         <option value="4">Apr</option>
-                        <option value="5">May</option>
+                        <option value="5">Mei</option>
                         <option value="6">Jun</option>
                         <option value="7">Jul</option>
-                        <option value="8">Aug</option>
+                        <option value="8">Agu</option>
                         <option value="9">Sep</option>
-                        <option value="10">Oct</option>
+                        <option value="10">Okt</option>
                         <option value="11">Nov</option>
-                        <option value="12">Dec</option>
+                        <option value="12">Des</option>
                       </select>
                     </div>
-                    <small class="text-muted">Hanya berlaku untuk Dynamic World</small>
+                    <small class="text-muted">Hanya berlaku untuk Dynamic World. Dataset tahunan menggunakan data penuh tahun yang dipilih.</small>
+                  </div>
+
+                  <!-- Month mode: single month picker -->
+                  <div class="mb-3 d-none" id="lcSingleMonthControl">
+                    <label class="form-label">Pilih Bulan</label>
+                    <select class="form-select" id="lcSingleMonth">
+                      <option value="1">Januari</option>
+                      <option value="2">Februari</option>
+                      <option value="3">Maret</option>
+                      <option value="4">April</option>
+                      <option value="5">Mei</option>
+                      <option value="6">Juni</option>
+                      <option value="7">Juli</option>
+                      <option value="8">Agustus</option>
+                      <option value="9">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                    <small class="text-muted">Dynamic World difilter per bulan. Dataset tahunan (ESA, ESRI, MODIS) menggunakan tahun dari slider di atas.</small>
+                  </div>
+
+                  <!-- Specific date mode: date range pickers -->
+                  <div class="d-none" id="lcSpecificDateControl">
+                    <div class="row g-2 mb-2">
+                      <div class="col-6">
+                        <label class="form-label">Dari Tanggal</label>
+                        <input type="date" class="form-control" id="lcStartDate">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label">Sampai Tanggal</label>
+                        <input type="date" class="form-control" id="lcEndDate">
+                      </div>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 mb-0">
+                      <small><i class="fas fa-circle-info me-1"></i> <strong>Dynamic World</strong> mendukung tanggal spesifik (near real-time harian). Dataset tahunan (ESA, ESRI, MODIS, Copernicus) menggunakan tahun dari tanggal mulai.</small>
+                    </div>
                   </div>
 
                   <div class="border-top pt-3 mt-3">
@@ -809,7 +867,8 @@
                           <option value="ESRI_LandCover">ESRI Land Cover</option>
                           <option value="MODIS_LandCover">MODIS MCD12Q1</option>
                           <option value="Copernicus_LandCover">Copernicus Global Land Cover</option>
-                          <option value="ESA_GlobCover">ESA GlobCover 2009</option>
+                          <option value="GLC_FCS30D">GLC_FCS30D</option>
+                          <option value="C3S_LandCover">C3S Land Cover</option>
                           <option value="JAXA_FNF">JAXA ALOS Forest/Non-Forest</option>
                           <option value="JAXA_FNF4">JAXA PALSAR FNF 4-class</option>
                           <option value="MapBiomas_Indonesia">MapBiomas Indonesia LANDY</option>
@@ -836,7 +895,7 @@
                           <option value="25">25m (JAXA FNF)</option>
                           <option value="30">30m</option>
                           <option value="100">100m (lebih cepat)</option>
-                          <option value="300">300m (GlobCover)</option>
+                          <option value="300">300m (C3S / coarse global)</option>
                           <option value="500">500m (MODIS / area luas)</option>
                         </select>
                       </div>
@@ -882,47 +941,47 @@
                       <div class="tab-pane fade show active" id="aoiAdmin">
                         <div class="row">
                           <div class="col-md-6 mb-3">
-                            <label class="form-label">Province</label>
+                            <label class="form-label" data-i18n="region.province">Provinsi</label>
                             <select class="form-select" id="provinceSelect">
-                              <option value="">-- Loading... --</option>
+                              <option value="" data-i18n="region.loading">-- Memuat... --</option>
                             </select>
                           </div>
                           <div class="col-md-6 mb-3">
-                            <label class="form-label">City/Regency</label>
+                            <label class="form-label" data-i18n="region.city">Kota/Kabupaten</label>
                             <select class="form-select" id="citySelect" disabled>
-                              <option value="">-- Select Province First --</option>
+                              <option value="" data-i18n="region.selectProvinceFirst">-- Pilih Provinsi --</option>
                             </select>
                           </div>
                           <div class="col-md-6 mb-3">
-                            <label class="form-label">District</label>
+                            <label class="form-label" data-i18n="region.district">Kecamatan</label>
                             <select class="form-select" id="districtSelect" disabled>
-                              <option value="">-- Select City First --</option>
+                              <option value="" data-i18n="region.selectCityFirst">-- Pilih Kota/Kabupaten --</option>
                             </select>
                           </div>
                           <div class="col-md-6 mb-3">
-                            <label class="form-label">Village</label>
+                            <label class="form-label" data-i18n="region.village">Kelurahan/Desa</label>
                             <select class="form-select" id="villageSelect" disabled>
-                              <option value="">-- Select District First --</option>
+                              <option value="" data-i18n="region.selectDistrictFirst">-- Pilih Kecamatan --</option>
                             </select>
                           </div>
                         </div>
                         <button class="btn btn-success" id="loadRegion">
-                          <i class="fas fa-check"></i> Load Region
+                          <i class="fas fa-check"></i> <span data-i18n="region.loadRegion">Muat Wilayah</span>
                         </button>
                         <div class="admin-boundary-toolbar mt-3">
                           <div class="map-control-row">
                             <div>
-                              <label class="form-label mb-1">Show Inner Boundary</label>
+                              <label class="form-label mb-1" data-i18n="admin.showInner">Tampilkan Batas Dalam</label>
                               <select class="form-select form-select-sm" id="adminChildBoundaryLevel" disabled>
-                                <option value="">Load a region first</option>
+                                <option value="" data-i18n="admin.loadFirst">Muat wilayah terlebih dahulu</option>
                               </select>
                             </div>
                             <button class="btn btn-sm btn-outline-primary" id="toggleAdminChildBoundaries" disabled>
-                              <i class="fas fa-layer-group"></i> Show
+                              <i class="fas fa-layer-group"></i> <span data-i18n="admin.show">Tampilkan</span>
                             </button>
                           </div>
-                          <small class="text-muted d-block mt-2">
-                            Click an inner boundary to filter AOI to that region and unlock the next lower level.
+                          <small class="text-muted d-block mt-2" data-i18n="admin.clickHint">
+                            Klik batas dalam untuk filter AOI ke wilayah tersebut.
                           </small>
                           <div class="admin-boundary-status small text-muted mt-1" id="adminBoundaryStatus"></div>
                         </div>
@@ -932,55 +991,58 @@
                       <div class="tab-pane fade" id="aoiCoord">
                         <div class="row">
                           <div class="col-md-4 mb-3">
-                            <label class="form-label">Latitude</label>
+                            <label class="form-label" data-i18n="region.latitude">Lintang</label>
                             <input type="number" class="form-control" id="latitude" value="-6.9667" step="0.0001">
                           </div>
                           <div class="col-md-4 mb-3">
-                            <label class="form-label">Longitude</label>
+                            <label class="form-label" data-i18n="region.longitude">Bujur</label>
                             <input type="number" class="form-control" id="longitude" value="110.4167" step="0.0001">
                           </div>
                           <div class="col-md-4 mb-3">
-                            <label class="form-label">Buffer (km)</label>
+                            <label class="form-label" data-i18n="region.buffer">Buffer (km)</label>
                             <input type="number" class="form-control" id="buffer" value="10" min="1" max="50">
                           </div>
                         </div>
                         <button class="btn btn-success" id="setCoordAOI">
-                          <i class="fas fa-check"></i> Set AOI
+                          <i class="fas fa-check"></i> <span data-i18n="region.setAoi">Atur AOI</span>
                         </button>
                       </div>
 
                       <!-- Draw Tab -->
                       <div class="tab-pane fade" id="aoiDraw">
                         <div class="alert alert-info">
-                          <i class="fas fa-info-circle"></i> Draw a polygon on the map below,
-                          then
-                          click
-                          "Use Drawn AOI"
+                          <i class="fas fa-info-circle"></i>
+                          <span data-i18n="region.drawHint">Gambar poligon pada peta di bawah, lalu klik "Gunakan AOI
+                            yang Digambar".</span>
                         </div>
                         <button class="btn btn-success" id="useDrawnAOI">
-                          <i class="fas fa-check"></i> Use Drawn AOI
+                          <i class="fas fa-check"></i> <span data-i18n="region.useDrawnAoi">Gunakan AOI yang
+                            Digambar</span>
                         </button>
                       </div>
 
                       <!-- Upload File Tab -->
                       <div class="tab-pane fade" id="aoiUpload">
                         <div class="mb-3">
-                          <label class="form-label fw-semibold">Upload file batas wilayah (AOI)</label>
+                          <label class="form-label fw-semibold" data-i18n="region.uploadBoundary">Unggah file batas
+                            wilayah (AOI)</label>
                           <div id="aoiDropZone" class="border border-2 rounded p-4 text-center"
                             style="cursor:pointer; border-style:dashed !important; border-color:#adb5bd; min-height:110px;"
                             ondragover="event.preventDefault(); this.style.borderColor='#0d6efd';"
                             ondragleave="this.style.borderColor='#adb5bd';" ondrop="handleAOIFileDrop(event)">
                             <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2 d-block"></i>
-                            <p class="mb-2 text-muted small">Drag &amp; drop file di sini, atau</p>
+                            <p class="mb-2 text-muted small" data-i18n="region.dragDrop">Tarik &amp; letakkan file di
+                              sini, atau</p>
                             <button type="button" class="btn btn-sm btn-outline-primary"
                               onclick="$('#aoiFileInput').click()">
-                              <i class="fas fa-folder-open me-1"></i>Pilih File
+                              <i class="fas fa-folder-open me-1"></i><span data-i18n="region.chooseFile">Pilih
+                                File</span>
                             </button>
                             <input type="file" id="aoiFileInput" style="display:none;"
                               accept=".geojson,.json,.kml,.gpx,.zip" onchange="handleAOIFileChange(this)">
                           </div>
                           <small class="text-muted d-block mt-1">
-                            Format didukung:
+                            <span data-i18n="region.supportedFormats">Format didukung:</span>
                             <code>.geojson</code>,
                             <code>.json</code>,
                             <code>.kml</code>,
@@ -998,8 +1060,10 @@
                     <!-- AOI Info -->
                     <div id="aoiInfo" class="mt-3" style="display: none;">
                       <div class="alert alert-success">
-                        <h6><i class="fas fa-check-circle"></i> AOI Selected</h6>
-                        <p class="mb-0">Region: <strong id="regionName">-</strong></p>
+                        <h6><i class="fas fa-check-circle"></i> <span data-i18n="region.aoiSelected">AOI Terpilih</span>
+                        </h6>
+                        <p class="mb-0"><span data-i18n="region.region">Wilayah</span>: <strong
+                            id="regionName">-</strong></p>
                         <p class="mb-0">Area: <strong id="regionArea">-</strong> km²</p>
                       </div>
                     </div>
@@ -1017,6 +1081,15 @@
                       <ul class="nav nav-tabs mb-3" id="resultTabs">
                         <!-- Dynamically populated -->
                       </ul>
+                      <div id="layerOpacityControl" class="d-flex align-items-center mb-2 gap-2"
+                        style="display: none !important;">
+                        <label class="form-label mb-0 small text-muted" for="layerOpacitySlider">
+                          <i class="fas fa-adjust"></i> Opacity
+                        </label>
+                        <input type="range" class="form-range" id="layerOpacitySlider" min="0" max="1" step="0.05"
+                          value="1" style="width: 120px;">
+                        <span id="layerOpacityValue" class="small text-muted">100%</span>
+                      </div>
                       <div id="resultMapContainer" class="result-map"></div>
                     </div>
                   </div>
@@ -1824,6 +1897,8 @@
                     <option value="Dynamic_World">Dynamic World (Google, 10m)</option>
                     <option value="ESA_WorldCover">ESA WorldCover (10m)</option>
                     <option value="ESRI_LandCover">ESRI Land Cover (10m)</option>
+                    <option value="GLC_FCS30D">GLC_FCS30D (30m)</option>
+                    <option value="C3S_LandCover">C3S Land Cover (300m)</option>
                     <option value="MapBiomas_Indonesia">MapBiomas Indonesia LANDY (30m)</option>
                     <option value="JAXA_FNF4">JAXA PALSAR FNF 4-class (25m)</option>
                     <option value="JAXA_FNF">JAXA ALOS FNF (25m)</option>
@@ -2857,6 +2932,7 @@
     let selectedIndices = ['NDVI', 'NDWI', 'MNDWI', 'NDBI'];
     let analysisResults = {};
     let geeTileLayers = {};
+    let mapLayerRegistry = {};
     let charts = {
       landcoverPie_Dynamic_World: null,
       landcoverPie_ESA_WorldCover: null,
@@ -2877,8 +2953,10 @@
     let landCoverDatasetDocs = {};
     let adminChildBoundaryLayer = null;
     let activeAdminSelection = null;
+    const regionGeometryCache = new Map();
+    const adminChildBoundaryCache = new Map();
 
-    const BASEMAP_DEFINITIONS = {
+    let BASEMAP_DEFINITIONS = {
       roads: {
         label: 'Roads',
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -2917,11 +2995,64 @@
       }
     };
 
+    async function loadMapLayerRegistry() {
+      try {
+        const bResp = await apiClient.request('/basemaps');
+        if (bResp.success && bResp.data?.layers?.length) {
+          const loaded = {};
+          for (const layer of bResp.data.layers) {
+            if (!layer.enabled) continue;
+            loaded[layer.key] = {
+              label: layer.name,
+              url: layer.tile_url,
+              attribution: layer.attribution,
+              maxZoom: layer.max_zoom || 19,
+            };
+          }
+          if (Object.keys(loaded).length) {
+            BASEMAP_DEFINITIONS = loaded;
+            console.log(`✓ Basemaps loaded from registry: ${Object.keys(loaded).length}`);
+          }
+        }
+      } catch (e) {
+        console.warn('Basemap registry unavailable, using built-in defaults');
+      }
+
+      try {
+        const lResp = await apiClient.request('/map-layers');
+        if (lResp.success && lResp.data?.layers) {
+          for (const layer of lResp.data.layers) {
+            mapLayerRegistry[layer.key] = layer;
+          }
+          console.log(`✓ Layer registry loaded: ${Object.keys(mapLayerRegistry).length} layers`);
+        }
+      } catch (e) {
+        console.warn('Map layer registry unavailable');
+      }
+    }
+
     const ADMIN_LEVELS = {
       province: { child: 'city', label: 'City/Regency', selectId: 'provinceSelect', childSelectId: 'citySelect', useValue: 'use_province' },
       city: { child: 'district', label: 'District', selectId: 'citySelect', childSelectId: 'districtSelect', useValue: 'use_city' },
       district: { child: 'village', label: 'Village/Kelurahan', selectId: 'districtSelect', childSelectId: 'villageSelect', useValue: 'use_district' },
       village: { child: null, label: null, selectId: 'villageSelect', childSelectId: null, useValue: null }
+    };
+
+    // All available child boundary levels per parent level (not just direct child)
+    const ADMIN_CHILD_LEVELS = {
+      province: [
+        { endpoint: 'city', label_id: 'Kota/Kabupaten', label_en: 'City/Regency' },
+        { endpoint: 'district', label_id: 'Kecamatan', label_en: 'District' },
+        { endpoint: 'village', label_id: 'Kelurahan/Desa', label_en: 'Village' },
+      ],
+      city: [
+        { endpoint: 'district', label_id: 'Kecamatan', label_en: 'District' },
+        { endpoint: 'village', label_id: 'Kelurahan/Desa', label_en: 'Village' },
+      ],
+      district: [
+        { endpoint: 'village', label_id: 'Kelurahan/Desa', label_en: 'Village' },
+      ],
+      village: [],
     };
 
     const CARBON_REFERENCE_YEAR_OPTIONS = {
@@ -3004,7 +3135,7 @@
     async function runCarbonAnalysis() {
       const validation = validateCarbonParams();
       if (!validation.valid) {
-        showAlert('Invalid carbon analysis parameters:\n' + validation.errors.join('\n'), 'danger');
+        showAlert(tf('alert.invalidCarbonParams', { errors: validation.errors.join('\n') }), 'danger');
         return null;
       }
 
@@ -3044,7 +3175,7 @@
 
       if (response.success) {
         if (!response.data.carbon_estimated || !response.data.area_info) {
-          showAlert('Error: Invalid response from server.', 'danger');
+          showAlert(t('alert.invalidCarbonResponse'), 'danger');
           return null;
         }
         if ($('#enableCarbonDelta').is(':checked')) {
@@ -3061,19 +3192,19 @@
           };
 
           if (deltaParams.start_year >= deltaParams.end_year) {
-            showAlert('Rentang tahun delta karbon tidak valid', 'warning');
+            showAlert(t('alert.carbonDeltaInvalid'), 'warning');
           } else {
             const deltaResponse = await apiClient.analyzeCarbonDelta(deltaParams);
             if (deltaResponse.success) {
               response.data.carbon_delta = deltaResponse.data;
             } else {
-              showAlert('Delta karbon gagal: ' + deltaResponse.error, 'warning');
+              showAlert(tf('alert.carbonDeltaFailed', { error: deltaResponse.error }), 'warning');
             }
           }
         }
         return response.data;
       } else {
-        showAlert('Carbon analysis failed: ' + response.error, 'danger');
+        showAlert(tf('alert.carbonFailed', { error: response.error }), 'danger');
         return null;
       }
     }
@@ -3173,11 +3304,12 @@
         return await this.request(`/regions/geometry?endpoint=${endpoint}&code=${code}`);
       }
 
-      async getRegionChildrenGeometries(parentCode, childEndpoint) {
+      async getRegionChildrenGeometries(parentCode, childEndpoint, parentEndpoint) {
         const params = new URLSearchParams({
           parent_code: parentCode,
           child_endpoint: childEndpoint
         });
+        if (parentEndpoint) params.set('parent_endpoint', parentEndpoint);
         return await this.request(`/regions/children-geometries?${params.toString()}`);
       }
 
@@ -3266,13 +3398,18 @@
 
       landCoverDatasetDocs = response.data;
       const datasets = Object.values(response.data);
+      const formatYears = ds => {
+        const min = ds.year_min || '-';
+        const max = ds.year_max || '-';
+        return `${min}-${max}`;
+      };
       const analysisOptions = datasets.map(ds => {
         const selected = ds.key === 'Dynamic_World' ? 'selected' : '';
-        return `<option value="${ds.key}" ${selected}>${ds.name} - ${ds.resolution}</option>`;
+        return `<option value="${ds.key}" ${selected}>${ds.name} - ${ds.resolution} (${formatYears(ds)})</option>`;
       }).join('');
       const transitionOptions = datasets.map(ds => {
         const selected = ds.key === 'Dynamic_World' ? 'selected' : '';
-        return `<option value="${ds.key}" ${selected}>${ds.name}</option>`;
+        return `<option value="${ds.key}" ${selected}>${ds.name} (${formatYears(ds)})</option>`;
       }).join('');
 
       $('#landcoverDatasetSelect').html(analysisOptions);
@@ -3288,7 +3425,61 @@
         width: '100%',
         minimumResultsForSearch: 5
       });
+      $('#landcoverDatasetSelect').off('change.yearRange').on('change.yearRange', function () {
+        updateYearSliderForSelectedDatasets(true);
+      });
+      updateYearSliderForSelectedDatasets(false);
       renderLandCoverDocsTable();
+    }
+
+    function parseDatasetYearMax(yearMax) {
+      const currentYear = new Date().getFullYear();
+      if (typeof yearMax === 'number') return Math.min(yearMax, currentYear);
+      const text = String(yearMax || '').trim().toLowerCase();
+      if (!text || text === 'present' || text === 'latest' || text === 'now') return currentYear;
+      const parsed = parseInt(text, 10);
+      return Number.isFinite(parsed) ? Math.min(parsed, currentYear) : currentYear;
+    }
+
+    function getSelectedLandCoverYearRange() {
+      const currentYear = new Date().getFullYear();
+      const fallbackMin = AppConfig.getInt('year.min', 2015);
+      const fallbackMax = Math.min(AppConfig.getInt('year.max', currentYear), currentYear);
+      const selected = ($('#landcoverDatasetSelect').val() || [])
+        .map(key => landCoverDatasetDocs[key])
+        .filter(Boolean);
+
+      if (!selected.length) return { min: fallbackMin, max: fallbackMax };
+
+      const min = Math.min(...selected.map(ds => parseInt(ds.year_min, 10)).filter(Number.isFinite));
+      const max = Math.max(...selected.map(ds => parseDatasetYearMax(ds.year_max)));
+
+      return {
+        min: Number.isFinite(min) ? min : fallbackMin,
+        max: Number.isFinite(max) ? Math.min(max, currentYear) : fallbackMax
+      };
+    }
+
+    function updateYearSliderForSelectedDatasets(preserveValue = true) {
+      const $s = $('#yearSlider');
+      const $v = $('#yearValue');
+      if (!$s.length) return;
+
+      const range = getSelectedLandCoverYearRange();
+      const min = Math.min(range.min, range.max);
+      const max = Math.max(range.min, range.max);
+      const currentValue = parseInt($s.val() || $v.text() || max, 10);
+      const targetValue = preserveValue && Number.isFinite(currentValue)
+        ? Math.min(max, Math.max(min, currentValue))
+        : max;
+
+      $s.attr('min', min).attr('max', max).val(targetValue);
+      $v.text(targetValue);
+
+      if (!$('#transitionStartYear').data('manual')) $('#transitionStartYear').val(Math.max(min, targetValue - 1));
+      if (!$('#transitionEndYear').data('manual')) $('#transitionEndYear').val(targetValue);
+      if (!$('#carbonDeltaStartYear').data('manual')) $('#carbonDeltaStartYear').val(Math.max(min, targetValue - 1));
+      if (!$('#carbonDeltaEndYear').data('manual')) $('#carbonDeltaEndYear').val(targetValue);
     }
 
     function renderLandCoverDocsTable() {
@@ -3326,7 +3517,51 @@
         'auth.account': 'Akun',
         'loading.processing': 'Memproses data...',
         'loading.wait': 'Mohon tunggu',
+        'loading.vegetationMain': 'Menganalisis indeks vegetasi...',
+        'loading.vegetationSub': 'Memproses citra Sentinel-2...',
+        'loading.landcoverMain': 'Menganalisis tutupan lahan...',
+        'loading.landcoverSub': 'Memproses dataset tutupan lahan...',
+        'loading.carbonMain': 'Mengestimasi stok karbon...',
+        'loading.carbonSub': 'Membangun model regresi...',
+        'loading.createAoiMain': 'Membuat AOI...',
+        'loading.createAoiSub': 'Menghitung zona buffer',
+        'loading.exportMain': 'Membuat GeoTIFF...',
+        'loading.exportSub': 'Meminta URL unduhan dari Earth Engine',
+        'loading.lcYearMain': 'Menganalisis tutupan lahan {year}...',
+        'loading.lcYearSub': '{current} dari {total} tahun diproses',
         'status.connecting': 'Menghubungkan...',
+        'status.connected': 'Terhubung',
+        'status.offline': 'Offline',
+        'status.eeReady': 'Earth Engine Siap',
+        'status.backendOffline': 'Backend Offline',
+        'alert.backendConnected': 'Backend berhasil terhubung.',
+        'alert.backendOffline': 'Peringatan: backend tidak terhubung. Periksa server Anda.',
+        'alert.selectedModel': 'Model dipilih: {name}',
+        'alert.aoiRequired': 'Pilih AOI terlebih dahulu.',
+        'alert.invalidCarbonParams': 'Parameter analisis karbon tidak valid:\n{errors}',
+        'alert.invalidCarbonResponse': 'Error: response server tidak valid.',
+        'alert.carbonDeltaInvalid': 'Rentang tahun delta karbon tidak valid.',
+        'alert.carbonDeltaFailed': 'Delta karbon gagal: {error}',
+        'alert.carbonFailed': 'Analisis karbon gagal: {error}',
+        'alert.analysisCompleted': 'Analisis selesai dalam {duration}.',
+        'alert.noAnalysisResults': 'Tidak ada hasil analisis.',
+        'alert.analysisError': 'Error saat analisis: {error}',
+        'alert.vegetationFailed': 'Analisis vegetasi gagal: {error}',
+        'alert.selectLulcDataset': 'Pilih minimal satu dataset tutupan lahan.',
+        'alert.transitionInvalid': 'Rentang tahun transisi tidak valid.',
+        'alert.transitionFailed': 'Analisis transisi gagal: {error}',
+        'alert.landcoverFailed': 'Analisis tutupan lahan gagal: {error}',
+        'alert.invalidCoordinates': 'Masukkan koordinat dan buffer yang valid.',
+        'alert.aoiSet': 'AOI berhasil dibuat.',
+        'alert.drawPolygonFirst': 'Gambar poligon pada peta terlebih dahulu.',
+        'alert.drawnAoiSet': 'Poligon kustom dijadikan AOI. Area akan dipotong sesuai bentuk poligon.',
+        'alert.exportAoiRequired': 'Pilih AOI terlebih dahulu.',
+        'alert.exportRunFirst': 'Jalankan analisis terlebih dahulu sebelum export.',
+        'alert.exportNoLayer': 'Tidak ada hasil analisis yang cocok untuk export.',
+        'alert.exportFailed': 'Export gagal: {error}',
+        'alert.exportError': 'Error export: {error}',
+        'alert.statsDownloaded': 'Statistik berhasil diunduh.',
+        'alert.reportGenerated': 'Laporan berhasil dibuat.',
         'lulc.docsTitle': 'Dokumentasi Dataset LULC',
         'table.dataset': 'Dataset',
         'table.description': 'Deskripsi',
@@ -3348,6 +3583,49 @@
         'sidebar.language': 'Bahasa',
         'home.title': 'Platform Analitik Citra Berbasis AI',
         'home.subtitle': 'Platform estimasi karbon & vegetasi berbasis AI (Sentinel-2 & Google Earth Engine)',
+        'admin.showInner': 'Tampilkan Batas Dalam',
+        'admin.show': 'Tampilkan',
+        'admin.hide': 'Sembunyikan',
+        'admin.clickHint': 'Klik batas dalam untuk filter AOI ke wilayah tersebut.',
+        'admin.loadFirst': 'Muat wilayah terlebih dahulu',
+        'admin.noLower': 'Silahkan muat wilayah dahulu',
+        'admin.selectLevel': 'Pilih level batas...',
+        'region.province': 'Provinsi',
+        'region.city': 'Kota/Kabupaten',
+        'region.district': 'Kecamatan',
+        'region.village': 'Kelurahan/Desa',
+        'region.loading': '-- Memuat... --',
+        'region.selectProvinceFirst': '-- Pilih Provinsi --',
+        'region.selectCityFirst': '-- Pilih Kota/Kabupaten --',
+        'region.selectDistrictFirst': '-- Pilih Kecamatan --',
+        'region.loadRegion': 'Muat Wilayah',
+        'region.loadingAction': 'Memuat',
+        'region.latitude': 'Lintang',
+        'region.longitude': 'Bujur',
+        'region.buffer': 'Buffer (km)',
+        'region.setAoi': 'Atur AOI',
+        'region.drawHint': 'Gambar poligon pada peta di bawah, lalu klik "Gunakan AOI yang Digambar".',
+        'region.useDrawnAoi': 'Gunakan AOI yang Digambar',
+        'region.uploadBoundary': 'Unggah file batas wilayah (AOI)',
+        'region.dragDrop': 'Tarik & letakkan file di sini, atau',
+        'region.chooseFile': 'Pilih File',
+        'region.supportedFormats': 'Format didukung:',
+        'region.aoiSelected': 'AOI Terpilih',
+        'region.region': 'Wilayah',
+        'region.area': 'Luas',
+        'region.useProvinceOnly': '- Gunakan Provinsi Saja -',
+        'region.useCityOnly': '- Gunakan Kota/Kabupaten Saja -',
+        'region.useDistrictOnly': '- Gunakan Kecamatan Saja -',
+        'region.selectProvince': '-- Pilih Provinsi --',
+        'region.selectCity': '-- Pilih Kota/Kabupaten --',
+        'region.selectDistrict': '-- Pilih Kecamatan --',
+        'region.selectVillage': '-- Pilih Kelurahan/Desa --',
+        'region.loadingBoundary': 'Memuat batas {name}...',
+        'region.loadedStatus': '{name} tampil ({source}, {ms} ms).',
+        'region.loadedSuccess': '{name} berhasil dimuat.',
+        'region.loadFailed': 'Gagal memuat batas wilayah: {error}',
+        'region.selectProvinceWarning': 'Pilih provinsi terlebih dahulu.',
+        'region.aoiRequired': 'Pilih AOI terlebih dahulu.',
       },
       en: {
         'nav.collaboration': 'Collaboration between Diponegoro University and PT LEN Industri',
@@ -3357,7 +3635,51 @@
         'auth.account': 'Account',
         'loading.processing': 'Processing data...',
         'loading.wait': 'Please wait',
+        'loading.vegetationMain': 'Analyzing vegetation indices...',
+        'loading.vegetationSub': 'Processing Sentinel-2 imagery...',
+        'loading.landcoverMain': 'Analyzing land cover...',
+        'loading.landcoverSub': 'Processing land cover datasets...',
+        'loading.carbonMain': 'Estimating carbon stock...',
+        'loading.carbonSub': 'Building regression model...',
+        'loading.createAoiMain': 'Creating AOI...',
+        'loading.createAoiSub': 'Calculating buffer zone',
+        'loading.exportMain': 'Generating GeoTIFF...',
+        'loading.exportSub': 'Requesting download URL from Earth Engine',
+        'loading.lcYearMain': 'Analyzing land cover {year}...',
+        'loading.lcYearSub': 'Processing {current} of {total} years',
         'status.connecting': 'Connecting...',
+        'status.connected': 'Connected',
+        'status.offline': 'Offline',
+        'status.eeReady': 'Earth Engine Ready',
+        'status.backendOffline': 'Backend Offline',
+        'alert.backendConnected': 'Backend connected successfully.',
+        'alert.backendOffline': 'Warning: backend is not connected. Please check your server.',
+        'alert.selectedModel': 'Selected model: {name}',
+        'alert.aoiRequired': 'Please select an AOI first.',
+        'alert.invalidCarbonParams': 'Invalid carbon analysis parameters:\n{errors}',
+        'alert.invalidCarbonResponse': 'Error: invalid response from server.',
+        'alert.carbonDeltaInvalid': 'Invalid carbon delta year range.',
+        'alert.carbonDeltaFailed': 'Carbon delta failed: {error}',
+        'alert.carbonFailed': 'Carbon analysis failed: {error}',
+        'alert.analysisCompleted': 'Analysis completed in {duration}.',
+        'alert.noAnalysisResults': 'No analysis results available.',
+        'alert.analysisError': 'Error during analysis: {error}',
+        'alert.vegetationFailed': 'Vegetation analysis failed: {error}',
+        'alert.selectLulcDataset': 'Please select at least one land cover dataset.',
+        'alert.transitionInvalid': 'Invalid transition year range.',
+        'alert.transitionFailed': 'Transition analysis failed: {error}',
+        'alert.landcoverFailed': 'Land cover analysis failed: {error}',
+        'alert.invalidCoordinates': 'Please enter valid coordinates and buffer.',
+        'alert.aoiSet': 'AOI set successfully.',
+        'alert.drawPolygonFirst': 'Please draw a polygon on the map first.',
+        'alert.drawnAoiSet': 'Custom polygon set as AOI. Area will be clipped to your drawn shape.',
+        'alert.exportAoiRequired': 'Please select an AOI first.',
+        'alert.exportRunFirst': 'Run an analysis first before exporting.',
+        'alert.exportNoLayer': 'No matching analysis results found for export.',
+        'alert.exportFailed': 'Export failed: {error}',
+        'alert.exportError': 'Export error: {error}',
+        'alert.statsDownloaded': 'Statistics downloaded successfully.',
+        'alert.reportGenerated': 'Report generated successfully.',
         'lulc.docsTitle': 'LULC Dataset Documentation',
         'table.dataset': 'Dataset',
         'table.description': 'Description',
@@ -3379,6 +3701,49 @@
         'sidebar.language': 'Language',
         'home.title': 'AI Imagery Analytics Platform',
         'home.subtitle': 'AI-based carbon and vegetation estimation platform (Sentinel-2 & Google Earth Engine)',
+        'admin.showInner': 'Show Inner Boundary',
+        'admin.show': 'Show',
+        'admin.hide': 'Hide',
+        'admin.clickHint': 'Click an inner boundary to filter AOI to that region.',
+        'admin.loadFirst': 'Load a region first',
+        'admin.noLower': 'Please load a region first',
+        'admin.selectLevel': 'Select boundary level...',
+        'region.province': 'Province',
+        'region.city': 'City/Regency',
+        'region.district': 'District',
+        'region.village': 'Village',
+        'region.loading': '-- Loading... --',
+        'region.selectProvinceFirst': '-- Select Province First --',
+        'region.selectCityFirst': '-- Select City/Regency First --',
+        'region.selectDistrictFirst': '-- Select District First --',
+        'region.loadRegion': 'Load Region',
+        'region.loadingAction': 'Loading',
+        'region.latitude': 'Latitude',
+        'region.longitude': 'Longitude',
+        'region.buffer': 'Buffer (km)',
+        'region.setAoi': 'Set AOI',
+        'region.drawHint': 'Draw a polygon on the map below, then click "Use Drawn AOI".',
+        'region.useDrawnAoi': 'Use Drawn AOI',
+        'region.uploadBoundary': 'Upload boundary file (AOI)',
+        'region.dragDrop': 'Drag & drop a file here, or',
+        'region.chooseFile': 'Choose File',
+        'region.supportedFormats': 'Supported formats:',
+        'region.aoiSelected': 'AOI Selected',
+        'region.region': 'Region',
+        'region.area': 'Area',
+        'region.useProvinceOnly': 'Use Province Only',
+        'region.useCityOnly': 'Use City/Regency Only',
+        'region.useDistrictOnly': 'Use District Only',
+        'region.selectProvince': '-- Select Province --',
+        'region.selectCity': '-- Select City/Regency --',
+        'region.selectDistrict': '-- Select District --',
+        'region.selectVillage': '-- Select Village --',
+        'region.loadingBoundary': 'Loading {name} boundary...',
+        'region.loadedStatus': '{name} loaded ({source}, {ms} ms).',
+        'region.loadedSuccess': '{name} loaded successfully.',
+        'region.loadFailed': 'Failed to load region geometry: {error}',
+        'region.selectProvinceWarning': 'Please select a province.',
+        'region.aoiRequired': 'Please select an AOI first.',
       }
     };
 
@@ -3406,6 +3771,10 @@
         'Kota/Kabupaten': 'City/Regency',
         'Kecamatan': 'District',
         'Kelurahan/Desa': 'Village',
+        'Lintang': 'Latitude',
+        'Bujur': 'Longitude',
+        'Wilayah:': 'Region:',
+        'Luas:': 'Area:',
         // --- common form labels ---
         'Tahun': 'Year',
         'Bulan Mulai': 'Start Month',
@@ -3574,6 +3943,11 @@
         'City/Regency': 'Kota/Kabupaten',
         'District': 'Kecamatan',
         'Village': 'Kelurahan/Desa',
+        'Latitude': 'Lintang',
+        'Longitude': 'Bujur',
+        'Buffer (km)': 'Buffer (km)',
+        'Region:': 'Wilayah:',
+        'Area:': 'Luas:',
         // --- common form labels ---
         'Year': 'Tahun',
         'Start Month': 'Bulan Mulai',
@@ -3716,6 +4090,20 @@
       return (I18N[currentLanguage] && I18N[currentLanguage][key]) || I18N.id[key] || key;
     }
 
+    function tf(key, values = {}) {
+      return t(key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
+    }
+
+    function regionPlaceholder(selectId) {
+      const map = {
+        provinceSelect: 'region.selectProvince',
+        citySelect: 'region.selectCity',
+        districtSelect: 'region.selectDistrict',
+        villageSelect: 'region.selectVillage'
+      };
+      return t(map[selectId] || 'region.selectProvince');
+    }
+
     // ── Land cover class name translations (EN → ID) ───────────────
     const LULC_CLASS_TRANSLATIONS = {
       // Dynamic World (Google)
@@ -3759,6 +4147,7 @@
       'Open water': 'Air Terbuka',
       'Herbaceous wetland': 'Lahan Basah',
       'Mangroves': 'Mangrove',
+      'Mangrove': 'Mangrove',
       'Moss and lichen': 'Lumut',
       // ESRI Land Cover
       'Scrub/Shrub': 'Semak',
@@ -3820,7 +4209,7 @@
       'Open forest, mixed': 'Hutan Terbuka, Campuran',
       'Open forest, unknown': 'Hutan Terbuka, Tidak Diketahui',
       'Ocean': 'Laut',
-      // ESA GlobCover
+      // GLC_FCS30D / legacy GlobCover-style classes
       'Post-flooding or irrigated croplands': 'Lahan Pertanian Irigasi/Pasca-Banjir',
       'Rainfed croplands': 'Lahan Pertanian Tadah Hujan',
       'Mosaic cropland / vegetation': 'Mosaik Pertanian / Vegetasi',
@@ -3838,6 +4227,61 @@
       'Flooded forest, saline water': 'Hutan Tergenang, Air Asin',
       'Artificial surfaces': 'Permukaan Buatan',
       'Bare areas': 'Area Gundul',
+      // GLC_FCS30D
+      'Rainfed cropland': 'Lahan Pertanian Tadah Hujan',
+      'Herbaceous cover cropland': 'Lahan Pertanian Berpenutup Herba',
+      'Tree or shrub cover cropland': 'Lahan Pertanian Berpenutup Pohon/Semak',
+      'Irrigated cropland': 'Lahan Pertanian Irigasi',
+      'Open evergreen broadleaved forest': 'Hutan Daun Lebar Hijau Terbuka',
+      'Closed evergreen broadleaved forest': 'Hutan Daun Lebar Hijau Tertutup',
+      'Open deciduous broadleaved forest': 'Hutan Daun Lebar Gugur Terbuka',
+      'Closed deciduous broadleaved forest': 'Hutan Daun Lebar Gugur Tertutup',
+      'Open evergreen needle-leaved forest': 'Hutan Konifer Hijau Terbuka',
+      'Closed evergreen needle-leaved forest': 'Hutan Konifer Hijau Tertutup',
+      'Open deciduous needle-leaved forest': 'Hutan Konifer Gugur Terbuka',
+      'Closed deciduous needle-leaved forest': 'Hutan Konifer Gugur Tertutup',
+      'Open mixed leaf forest': 'Hutan Campuran Terbuka',
+      'Closed mixed leaf forest': 'Hutan Campuran Tertutup',
+      'Evergreen shrubland': 'Semak Hijau Sepanjang Tahun',
+      'Deciduous shrubland': 'Semak Gugur',
+      'Lichens and mosses': 'Liken dan Lumut',
+      'Sparse shrubland': 'Semak Jarang',
+      'Sparse herbaceous': 'Herba Jarang',
+      'Swamp': 'Rawa',
+      'Marsh': 'Rawa Herba',
+      'Flooded flat': 'Dataran Tergenang',
+      'Saline': 'Area Salin',
+      'Salt marsh': 'Rawa Asin',
+      'Tidal flat': 'Dataran Pasang Surut',
+      'Impervious surfaces': 'Permukaan Kedap Air',
+      'Consolidated bare areas': 'Area Gundul Terkonsolidasi',
+      'Unconsolidated bare areas': 'Area Gundul Tidak Terkonsolidasi',
+      'Water body': 'Badan Air',
+      'Permanent ice and snow': 'Es dan Salju Permanen',
+      // C3S Land Cover
+      'Cropland, rainfed': 'Lahan Pertanian Tadah Hujan',
+      'Cropland, irrigated or post-flooding': 'Lahan Pertanian Irigasi/Pasca-Banjir',
+      'Mosaic cropland / natural vegetation': 'Mosaik Pertanian / Vegetasi Alami',
+      'Mosaic natural vegetation / cropland': 'Mosaik Vegetasi Alami / Pertanian',
+      'Tree cover, broadleaved, evergreen': 'Tutupan Pohon Daun Lebar Hijau',
+      'Tree cover, broadleaved, deciduous, closed to open': 'Tutupan Pohon Daun Lebar Gugur, Tertutup hingga Terbuka',
+      'Tree cover, broadleaved, deciduous, closed': 'Tutupan Pohon Daun Lebar Gugur, Tertutup',
+      'Tree cover, broadleaved, deciduous, open': 'Tutupan Pohon Daun Lebar Gugur, Terbuka',
+      'Tree cover, needleleaved, evergreen': 'Tutupan Pohon Konifer Hijau',
+      'Tree cover, needleleaved, evergreen, closed': 'Tutupan Pohon Konifer Hijau, Tertutup',
+      'Tree cover, needleleaved, evergreen, open': 'Tutupan Pohon Konifer Hijau, Terbuka',
+      'Tree cover, needleleaved, deciduous': 'Tutupan Pohon Konifer Gugur',
+      'Tree cover, needleleaved, deciduous, closed': 'Tutupan Pohon Konifer Gugur, Tertutup',
+      'Tree cover, needleleaved, deciduous, open': 'Tutupan Pohon Konifer Gugur, Terbuka',
+      'Tree cover, mixed leaf type': 'Tutupan Pohon Campuran',
+      'Mosaic tree and shrub / herbaceous cover': 'Mosaik Pohon dan Semak / Tutupan Herba',
+      'Mosaic herbaceous cover / tree and shrub': 'Mosaik Tutupan Herba / Pohon dan Semak',
+      'Sparse tree': 'Pohon Jarang',
+      'Sparse shrub': 'Semak Jarang',
+      'Tree cover, flooded, fresh or brackish water': 'Tutupan Pohon Tergenang, Air Tawar atau Payau',
+      'Tree cover, flooded, saline water': 'Tutupan Pohon Tergenang, Air Asin',
+      'Shrub or herbaceous cover, flooded': 'Tutupan Semak atau Herba Tergenang',
+      'Urban areas': 'Area Perkotaan',
       'Permanent snow and ice': 'Salju dan Es Permanen',
       'Unclassified': 'Tidak Terklasifikasi',
     };
@@ -3906,7 +4350,7 @@
         Object.keys(analysisResults.landcover).forEach(datasetKey => {
           const bucket = analysisResults.landcover[datasetKey];
           if (bucket && bucket.classes) {
-            const label = bucket.dataset_name || datasetKey.replace(/_/g, ' ');
+            const label = getLandCoverDisplayLabel(datasetKey, bucket);
             renderLandCoverTableAndChart(datasetKey, label);
           }
         });
@@ -3923,6 +4367,7 @@
       if (activeResultLayerName && resultMap && legendControl) {
         updateLegend(activeResultLayerName);
       }
+      refreshRegionLanguageState();
     }
 
     function initializeLanguageSelector() {
@@ -3984,6 +4429,7 @@
       registerConfigBindings();
       AppConfig.applyToUI();
       await loadLandCoverDatasetOptions();
+      await loadMapLayerRegistry();
       initializeMap();
       initializeEventHandlers();
       updateParameterVisibility();
@@ -4009,10 +4455,10 @@
       villageSelect = document.getElementById('villageSelect');
 
       // Inisialisasi awal Select2 untuk semua dropdown
-      initSelect2('provinceSelect', '-- Select Province --');
-      initSelect2('citySelect', '-- Select Province First --');
-      initSelect2('districtSelect', '-- Select City First --');
-      initSelect2('villageSelect', '-- Select District First --');
+      initSelect2('provinceSelect', regionPlaceholder('provinceSelect'));
+      initSelect2('citySelect', t('region.selectProvinceFirst'));
+      initSelect2('districtSelect', t('region.selectCityFirst'));
+      initSelect2('villageSelect', t('region.selectDistrictFirst'));
 
       // Disable downstream saat init
       $('#citySelect, #districtSelect, #villageSelect').prop('disabled', true);
@@ -4024,7 +4470,8 @@
         // Reset downstream
         ['citySelect', 'districtSelect', 'villageSelect'].forEach(id => {
           $(`#${id}`).empty().append('<option value=""></option>');
-          initSelect2(id, `-- Select ${id === 'citySelect' ? 'City' : id === 'districtSelect' ? 'District' : 'Village'} First --`);
+          const placeholderKey = id === 'citySelect' ? 'region.selectProvinceFirst' : id === 'districtSelect' ? 'region.selectCityFirst' : 'region.selectDistrictFirst';
+          initSelect2(id, t(placeholderKey));
           $(`#${id}`).prop('disabled', true);
         });
 
@@ -4033,8 +4480,8 @@
         await loadRegion('city', code, 'citySelect', 'City/Regency');
 
         // Tambahkan opsi "Use Province Only"
-        $('#citySelect').prepend('<option value="use_province" selected>📍 Use Province Only</option>');
-        initSelect2('citySelect', '-- Select City/Regency --');
+        $('#citySelect').prepend(`<option value="use_province" selected>${t('region.useProvinceOnly')}</option>`);
+        initSelect2('citySelect', regionPlaceholder('citySelect'));
         $('#citySelect').prop('disabled', false);
       });
 
@@ -4044,7 +4491,7 @@
 
         ['districtSelect', 'villageSelect'].forEach(id => {
           $(`#${id}`).empty().append('<option value=""></option>');
-          initSelect2(id, `-- Select ${id === 'districtSelect' ? 'District' : 'Village'} First --`);
+          initSelect2(id, t(id === 'districtSelect' ? 'region.selectCityFirst' : 'region.selectDistrictFirst'));
           $(`#${id}`).prop('disabled', true);
         });
 
@@ -4059,7 +4506,7 @@
         const code = $(this).val();
 
         $('#villageSelect').empty().append('<option value=""></option>');
-        initSelect2('villageSelect', '-- Select Village First --');
+        initSelect2('villageSelect', t('region.selectDistrictFirst'));
         $('#villageSelect').prop('disabled', true);
 
         if (!code) return;
@@ -4104,12 +4551,7 @@
     function initializeMap() {
       // AOI Selection Map
       map = L.map('map').setView([-6.9667, 110.4167], 10);
-      addBasemapSwitcher(map, 'roads', false);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-      }).addTo(map);
+      addBasemapSwitcher(map, 'roads', true);
 
       // Add draw controls
       map.addLayer(drawnItems);
@@ -4172,7 +4614,7 @@
         await displayModelInfo(modelName);
 
         if (modelName) {
-          showAlert(`Selected model: ${modelName}`, 'info', 3000);
+          showAlert(tf('alert.selectedModel', { name: modelName }), 'info', 3000);
         }
       });
 
@@ -4190,6 +4632,13 @@
         $('#lulcTransitionParams').toggle(this.checked);
       });
 
+      $('input[name="lcDateMode"]').on('change', function () {
+        const mode = $(this).val();
+        $('#lcMonthRangeControl').toggleClass('d-none', mode !== 'year');
+        $('#lcSingleMonthControl').toggleClass('d-none', mode !== 'month');
+        $('#lcSpecificDateControl').toggleClass('d-none', mode !== 'date');
+      });
+
       $('#transitionStartYear, #transitionEndYear').on('input', function () {
         $(this).data('manual', true);
       });
@@ -4201,7 +4650,8 @@
           ESRI_LandCover: 10,
           MODIS_LandCover: 500,
           Copernicus_LandCover: 100,
-          ESA_GlobCover: 300,
+          GLC_FCS30D: 30,
+          C3S_LandCover: 300,
           JAXA_FNF: 25,
           JAXA_FNF4: 25,
           MapBiomas_Indonesia: 30
@@ -4296,18 +4746,18 @@
     // BACKEND CONNECTION
     // ==========================================
     async function checkBackendConnection() {
-      updateConnectionStatus('Connecting...', false);
+      updateConnectionStatus(t('status.connecting'), false);
 
       const response = await apiClient.healthCheck();
 
       if (response.success && response.data.ee_initialized) {
-        updateConnectionStatus('Connected', true);
-        $('#eeStatus').html('<i class="fas fa-check-circle"></i> Earth Engine Ready');
-        showAlert('Backend connected successfully!', 'success', 3000);
+        updateConnectionStatus(t('status.connected'), true);
+        $('#eeStatus').html(`<i class="fas fa-check-circle"></i> ${t('status.eeReady')}`);
+        showAlert(t('alert.backendConnected'), 'success', 3000);
       } else {
-        updateConnectionStatus('Offline', false);
-        $('#eeStatus').html('<i class="fas fa-times-circle"></i> Backend Offline');
-        showAlert('Warning: Backend not connected. Please check your server.', 'danger', 5000);
+        updateConnectionStatus(t('status.offline'), false);
+        $('#eeStatus').html(`<i class="fas fa-times-circle"></i> ${t('status.backendOffline')}`);
+        showAlert(t('alert.backendOffline'), 'danger', 5000);
       }
     }
 
@@ -4340,6 +4790,28 @@
       });
     }
 
+    function refreshRegionLanguageState() {
+      const selectedOnlyOptions = {
+        citySelect: ['use_province', 'region.useProvinceOnly'],
+        districtSelect: ['use_city', 'region.useCityOnly'],
+        villageSelect: ['use_district', 'region.useDistrictOnly']
+      };
+
+      Object.entries(selectedOnlyOptions).forEach(([selectId, [value, key]]) => {
+        const option = document.querySelector(`#${selectId} option[value="${value}"]`);
+        if (option) option.textContent = t(key);
+      });
+
+      ['provinceSelect', 'citySelect', 'districtSelect', 'villageSelect'].forEach(id => {
+        const $el = $(`#${id}`);
+        if ($el.hasClass('select2-hidden-accessible')) {
+          initSelect2(id, regionPlaceholder(id));
+        }
+      });
+
+      updateAdminBoundaryControls();
+    }
+
     // ==========================================
     // REGION LOADING — dengan Select2
     // ==========================================
@@ -4348,7 +4820,8 @@
 
       // Reset & tampilkan "Loading..."
       $select.empty().append(`<option value="">Loading ${label}…</option>`);
-      initSelect2(selectId, `-- Select ${label} --`);
+      $select.empty().append(`<option value="">${t('common.loading')}</option>`);
+      initSelect2(selectId, regionPlaceholder(selectId));
 
       let response;
       try {
@@ -4361,7 +4834,7 @@
         }
 
         if (response.success && response.data) {
-          $select.empty().append(`<option value="">-- Select ${label} --</option>`);
+          $select.empty().append(`<option value="">${regionPlaceholder(selectId)}</option>`);
 
           Object.entries(response.data)
             .sort((a, b) => a[0].localeCompare(b[0]))
@@ -4379,7 +4852,7 @@
       }
 
       // Refresh Select2 setelah opsi diisi
-      initSelect2(selectId, `-- Select ${label} --`);
+      initSelect2(selectId, regionPlaceholder(selectId));
     }
 
     // --- Helper: balik [lat, lon, ...] -> [lon, lat, ...]
@@ -4436,6 +4909,52 @@
       return copy;
     }
 
+    function cloneGeoJSON(gj) {
+      return gj ? JSON.parse(JSON.stringify(gj)) : gj;
+    }
+
+    function getCachedRegionGeometry(endpoint, code) {
+      return regionGeometryCache.get(`${endpoint}:${code}`) || null;
+    }
+
+    function setCachedRegionGeometry(endpoint, code, geojson) {
+      regionGeometryCache.set(`${endpoint}:${code}`, cloneGeoJSON(geojson));
+    }
+
+    function getAdminChildBoundaryCacheKey(parentEndpoint, parentCode, childEndpoint) {
+      return `${parentEndpoint || ''}:${parentCode}:${childEndpoint}`;
+    }
+
+    function setRegionLoadingState(isLoading, message = '') {
+      const label = isLoading ? t('region.loadingAction') : t('region.loadRegion');
+      $('#loadRegion')
+        .prop('disabled', isLoading)
+        .html(isLoading
+          ? `<i class="fas fa-spinner fa-spin"></i> ${label}`
+          : `<i class="fas fa-check"></i> <span data-i18n="region.loadRegion">${label}</span>`);
+
+      if (message) $('#adminBoundaryStatus').text(message);
+    }
+
+    function schedulePreciseAOIAreaUpdate(geojson, fallbackBounds) {
+      const run = () => {
+        const preciseArea = calculateAreaFromGeoJSON(geojson);
+        if (!preciseArea || !currentAOI) return;
+        currentAOI.area = preciseArea;
+        $('#regionArea').text(preciseArea);
+      };
+
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(run, { timeout: 1200 });
+      } else {
+        setTimeout(run, 0);
+      }
+
+      if (!currentAOI?.area && fallbackBounds) {
+        currentAOI.area = calculateAreaFromBounds(fallbackBounds);
+      }
+    }
+
     function clearAdminChildBoundaries() {
       if (adminChildBoundaryLayer && map) {
         map.removeLayer(adminChildBoundaryLayer);
@@ -4446,25 +4965,35 @@
     }
 
     function updateAdminBoundaryControls() {
-      const levelInfo = activeAdminSelection ? ADMIN_LEVELS[activeAdminSelection.endpoint] : null;
-      const childLevel = levelInfo?.child;
+      const endpoint = activeAdminSelection?.endpoint;
       const $select = $('#adminChildBoundaryLevel');
       const $button = $('#toggleAdminChildBoundaries');
+      const isId = currentLanguage === 'id';
 
       clearAdminChildBoundaries();
       $select.empty();
 
-      if (!activeAdminSelection || !childLevel) {
-        $select.append('<option value="">No lower level available</option>').prop('disabled', true);
+      const childOptions = ADMIN_CHILD_LEVELS[endpoint] || [];
+
+      if (!activeAdminSelection || !childOptions.length) {
+        $select.append(`<option value="">${t('admin.noLower')}</option>`)
+          .prop('disabled', true);
         $button.prop('disabled', true);
         return;
       }
 
-      $select
-        .append(new Option(levelInfo.label, childLevel, true, true))
-        .prop('disabled', false);
+      for (const opt of childOptions) {
+        $select.append(new Option(isId ? opt.label_id : opt.label_en, opt.endpoint));
+      }
+      $select.val(childOptions[0].endpoint).prop('disabled', false);
       $button.prop('disabled', false);
-      $('#adminBoundaryStatus').text(`Ready to show ${levelInfo.label} boundaries inside ${activeAdminSelection.name}.`);
+
+      const firstLabel = isId ? childOptions[0].label_id : childOptions[0].label_en;
+      $('#adminBoundaryStatus').text(
+        isId
+          ? `Siap tampilkan batas ${firstLabel} di dalam ${activeAdminSelection.name}.`
+          : `Ready to show ${firstLabel} boundaries inside ${activeAdminSelection.name}.`
+      );
     }
 
     async function toggleAdminChildBoundaries() {
@@ -4476,28 +5005,61 @@
     }
 
     async function loadAdminChildBoundaries() {
+      const isId = currentLanguage === 'id';
+
       if (!activeAdminSelection) {
-        showAlert('Load an administrative AOI first.', 'warning');
+        showAlert(isId ? 'Muat AOI administratif terlebih dahulu.' : 'Load an administrative AOI first.', 'warning');
         return;
       }
 
       const childEndpoint = $('#adminChildBoundaryLevel').val();
+      const parentEndpoint = activeAdminSelection.endpoint;
       if (!childEndpoint) return;
 
-      $('#toggleAdminChildBoundaries').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Loading');
-      $('#adminBoundaryStatus').text(`Loading ${ADMIN_LEVELS[activeAdminSelection.endpoint]?.label || childEndpoint} boundaries...`);
+      // Human label for selected child level
+      const allOpts = ADMIN_CHILD_LEVELS[parentEndpoint] || [];
+      const selOpt = allOpts.find(o => o.endpoint === childEndpoint);
+      const childLabel = selOpt ? (isId ? selOpt.label_id : selOpt.label_en) : childEndpoint;
 
-      const response = await apiClient.getRegionChildrenGeometries(activeAdminSelection.code, childEndpoint);
-      $('#toggleAdminChildBoundaries').prop('disabled', false).html('<i class="fas fa-eye-slash"></i> Hide');
+      const startedAt = performance.now();
+      const cacheKey = getAdminChildBoundaryCacheKey(parentEndpoint, activeAdminSelection.code, childEndpoint);
+
+      $('#toggleAdminChildBoundaries').prop('disabled', true)
+        .html(`<i class="fas fa-spinner fa-spin"></i> ${isId ? 'Memuat' : 'Loading'}`);
+      $('#adminBoundaryStatus').text(
+        isId
+          ? `Memuat batas ${childLabel}...`
+          : `Loading ${childLabel} boundaries...`
+      );
+
+      let response = adminChildBoundaryCache.get(cacheKey);
+      const fromCache = Boolean(response);
+
+      if (!response) {
+        response = await apiClient.getRegionChildrenGeometries(
+          activeAdminSelection.code, childEndpoint, parentEndpoint
+        );
+        if (response.success && response.data?.features?.length) {
+          adminChildBoundaryCache.set(cacheKey, response);
+        }
+      }
+
+      const hideLabel = isId ? 'Sembunyikan' : 'Hide';
+      const showLabel = isId ? 'Tampilkan' : 'Show';
+      $('#toggleAdminChildBoundaries').prop('disabled', false)
+        .html(`<i class="fas fa-eye-slash"></i> ${hideLabel}`);
 
       if (!response.success || !response.data?.features?.length) {
-        $('#toggleAdminChildBoundaries').html('<i class="fas fa-layer-group"></i> Show');
+        $('#toggleAdminChildBoundaries').html(`<i class="fas fa-layer-group"></i> ${showLabel}`);
         $('#adminBoundaryStatus').text('');
-        showAlert(response.error || 'No inner boundary geometry available.', 'warning');
+        showAlert(
+          response.error || (isId ? 'Tidak ada geometri batas dalam yang tersedia.' : 'No inner boundary geometry available.'),
+          'warning'
+        );
         return;
       }
 
-      const geojson = childEndpoint === 'village' ? response.data : swapGeoJSON(response.data);
+      const geojson = childEndpoint === 'village' ? cloneGeoJSON(response.data) : swapGeoJSON(response.data);
 
       adminChildBoundaryLayer = L.geoJSON(geojson, {
         className: 'child-admin-boundary',
@@ -4523,7 +5085,12 @@
       }).addTo(map);
 
       const count = response.data.meta?.count || response.data.features.length;
-      $('#adminBoundaryStatus').text(`${count} inner boundaries visible. Click one to filter AOI.`);
+      const elapsed = Math.round(performance.now() - startedAt);
+      $('#adminBoundaryStatus').text(
+        currentLanguage === 'id'
+          ? `${count} batas dalam terlihat (${fromCache ? 'cache' : 'api'}, ${elapsed} ms). Klik salah satu untuk filter AOI.`
+          : `${count} inner boundaries visible (${fromCache ? 'cache' : 'api'}, ${elapsed} ms). Click one to filter AOI.`
+      );
     }
 
     async function selectAdminBoundaryFeature(endpoint, code, name) {
@@ -4531,7 +5098,7 @@
         $('#citySelect').val(code).trigger('change.select2');
         ['districtSelect', 'villageSelect'].forEach(id => {
           $(`#${id}`).empty().append('<option value=""></option>');
-          initSelect2(id, `-- Select ${id === 'districtSelect' ? 'District' : 'Village'} First --`);
+          initSelect2(id, t(id === 'districtSelect' ? 'region.selectCityFirst' : 'region.selectDistrictFirst'));
           $(`#${id}`).prop('disabled', true);
         });
         await loadRegion('district', code, 'districtSelect', 'District');
@@ -4539,7 +5106,7 @@
       } else if (endpoint === 'district') {
         $('#districtSelect').val(code).trigger('change.select2');
         $('#villageSelect').empty().append('<option value=""></option>');
-        initSelect2('villageSelect', '-- Select Village First --');
+        initSelect2('villageSelect', t('region.selectDistrictFirst'));
         await loadRegion('village', code, 'villageSelect', 'Village/Kelurahan');
         $('#villageSelect').prop('disabled', false);
       } else if (endpoint === 'village') {
@@ -4547,7 +5114,12 @@
       }
 
       clearAdminChildBoundaries();
-      showAlert(`Filtering AOI to ${name}...`, 'info', 2000);
+      showAlert(
+        currentLanguage === 'id'
+          ? `Memfilter AOI ke ${name}...`
+          : `Filtering AOI to ${name}...`,
+        'info', 2000
+      );
       await loadRegionGeometry();
     }
 
@@ -4559,11 +5131,13 @@
       let geojson
 
       if (!provinceCode) {
-        showAlert('Please select a province', 'warning');
+        showAlert(t('region.selectProvinceWarning'), 'warning');
         return;
       }
 
-      let endpoint, code, name;
+      let endpoint = 'province';
+      let code = provinceCode;
+      let name = $('#provinceSelect option:selected').text();
       if (cityCode && cityCode !== 'use_province') {
         endpoint = 'city';
         code = cityCode;
@@ -4585,15 +5159,27 @@
         name = $('#provinceSelect option:selected').text();
       }
 
-      showLoading(`Loading ${name} geometry...`, 'Fetching boundary data from API');
+      const isId = currentLanguage === 'id';
+      const startedAt = performance.now();
+      setRegionLoadingState(true, tf('region.loadingBoundary', { name }));
 
-      const response = await apiClient.getRegionGeometry(endpoint, code);
+      try {
+        let geojsonOriginal = getCachedRegionGeometry(endpoint, code);
+        const fromCache = Boolean(geojsonOriginal);
 
-      hideLoading();
+        if (geojsonOriginal) {
+          geojsonOriginal = cloneGeoJSON(geojsonOriginal);
+        } else {
+          const response = await apiClient.getRegionGeometry(endpoint, code);
+          if (!response.success || !response.data) {
+            showAlert(tf('region.loadFailed', { error: response.error || 'Unknown error' }), 'danger');
+            return;
+          }
+          geojsonOriginal = response.data;
+          setCachedRegionGeometry(endpoint, code, geojsonOriginal);
+        }
 
-      if (response.success && response.data) {
         // 1) Ambil GeoJSON asli
-        const geojsonOriginal = response.data;
 
         // 2) Balik lat-lon pada geometry
         if (endpoint != 'village')
@@ -4612,12 +5198,12 @@
           }
         });
 
-        geoJsonLayer.addTo(drawnItems);
-        map.fitBounds(geoJsonLayer.getBounds());
-
-        // 4) Hitung area dsb.
         const bounds = geoJsonLayer.getBounds();
-        const area = calculateAreaFromGeoJSON(geojson) || calculateAreaFromBounds(bounds);
+        geoJsonLayer.addTo(drawnItems);
+        map.fitBounds(bounds);
+
+        // 4) Pakai area bounds dulu agar UI cepat; area presisi dihitung idle.
+        const area = calculateAreaFromBounds(bounds);
 
         currentAOI = {
           type: 'admin',
@@ -4630,10 +5216,22 @@
         updateAdminBoundaryControls();
 
         showAOIInfo();
-        showAlert(`${name} loaded successfully!`, 'success');
+        schedulePreciseAOIAreaUpdate(geojson, bounds);
+
+        const elapsed = Math.round(performance.now() - startedAt);
+        const cacheNote = fromCache ? 'cache' : 'api';
+        $('#adminBoundaryStatus').text(
+          isId
+            ? tf('region.loadedStatus', { name, source: cacheNote, ms: elapsed })
+            : tf('region.loadedStatus', { name, source: cacheNote, ms: elapsed })
+        );
+        showAlert(tf('region.loadedSuccess', { name }), 'success', 2500);
         console.log('✓ Region geometry loaded:', name);
-      } else {
-        showAlert('Failed to load region geometry: ' + (response.error || 'Unknown error'), 'danger');
+      } catch (err) {
+        console.error('Region geometry loading error:', err);
+        showAlert(tf('region.loadFailed', { error: err.message || 'Unknown error' }), 'danger');
+      } finally {
+        setRegionLoadingState(false);
       }
     }
 
@@ -4719,7 +5317,7 @@
             .forEach(m => {
               const date = m.uploaded_at ? new Date(m.uploaded_at).toLocaleDateString() : '';
               const r2Raw = m.metrics?.r2_mean ?? m.metrics?.r2
-                         ?? m.metadata_json?.cv_metrics?.r2_mean ?? null;
+                ?? m.metadata_json?.cv_metrics?.r2_mean ?? null;
               const r2Str = r2Raw !== null ? ` (R²: ${Number(r2Raw).toFixed(3)})` : '';
               $optgroup.append(
                 $('<option>')
@@ -4896,11 +5494,11 @@
       const buffer = parseFloat($('#buffer').val());
 
       if (isNaN(lat) || isNaN(lon) || isNaN(buffer)) {
-        showAlert('Please enter valid coordinates and buffer', 'warning');
+        showAlert(t('alert.invalidCoordinates'), 'warning');
         return;
       }
 
-      showLoading('Creating AOI...', 'Calculating buffer zone');
+      showLoading(t('loading.createAoiMain'), t('loading.createAoiSub'));
 
       setTimeout(() => {
         const bufferDeg = buffer / 111;
@@ -4952,7 +5550,7 @@
         updateAdminBoundaryControls();
         showAOIInfo();
         hideLoading();
-        showAlert('AOI set successfully!', 'success');
+        showAlert(t('alert.aoiSet'), 'success');
         console.log('✓ Coordinate AOI set with GeoJSON:', geojson);
       }, 500);
     }
@@ -4961,7 +5559,7 @@
       const layers = drawnItems.getLayers();
 
       if (layers.length === 0) {
-        showAlert('Please draw a polygon on the map first', 'warning');
+        showAlert(t('alert.drawPolygonFirst'), 'warning');
         return;
       }
 
@@ -4985,7 +5583,7 @@
       activeAdminSelection = null;
       updateAdminBoundaryControls();
       showAOIInfo();
-      showAlert('Custom polygon set as AOI! Area will be clipped to your drawn shape.', 'success');
+      showAlert(t('alert.drawnAoiSet'), 'success');
       console.log('✓ Drawn AOI set with GeoJSON:', geojson);
     }
 
@@ -5146,7 +5744,7 @@
     // ==========================================
     async function runCompleteAnalysis() {
       if (!currentAOI) {
-        showAlert('Please select an AOI first', 'warning');
+        showAlert(t('alert.aoiRequired'), 'warning');
         return;
       }
 
@@ -5162,7 +5760,7 @@
 
         // ── Vegetation ──────────────────────────────────────────
         if (analysisType === 'vegetation' || analysisType === 'combined') {
-          showLoading('Analyzing vegetation indices...', 'Processing Sentinel-2 imagery…', 20);
+          showLoading(t('loading.vegetationMain'), t('loading.vegetationSub'), 20);
           const t0 = Date.now();
           const vegData = await runVegetationAnalysis();
           const dur = ((Date.now() - t0) / 1000).toFixed(2);
@@ -5176,7 +5774,7 @@
 
         // ── Land Cover ───────────────────────────────────────────
         if (analysisType === 'landcover' || analysisType === 'combined') {
-          showLoading('Analyzing land cover...', 'Processing land cover datasets…', 60);
+          showLoading(t('loading.landcoverMain'), t('loading.landcoverSub'), 60);
           const t0 = Date.now();
           const lcData = await runLandCoverAnalysis();
           const dur = ((Date.now() - t0) / 1000).toFixed(2);
@@ -5195,7 +5793,7 @@
 
         // ── Carbon ──────────────────────────────────────────────
         if (analysisType === 'carbon' || analysisType === 'combined') {
-          showLoading('Estimating carbon stock...', 'Building regression model…', 40);
+          showLoading(t('loading.carbonMain'), t('loading.carbonSub'), 40);
           const t0 = Date.now();
           const carbonData = await runCarbonAnalysis();
           const dur = ((Date.now() - t0) / 1000).toFixed(2);
@@ -5217,16 +5815,16 @@
 
         if (Object.keys(analysisResults).filter(k => !k.startsWith('_')).length > 0) {
           displayResults();
-          showAlert(`Analysis completed in ${formatDuration(totalDuration)}!`, 'success', 5000);
+          showAlert(tf('alert.analysisCompleted', { duration: formatDuration(totalDuration) }), 'success', 5000);
           $('html, body').animate({ scrollTop: $('#resultsSection').offset().top - 100 }, 500);
         } else {
-          showAlert('No analysis results available', 'warning');
+          showAlert(t('alert.noAnalysisResults'), 'warning');
         }
 
       } catch (error) {
         hideLoading();
         console.error('Analysis error:', error);
-        showAlert('Error during analysis: ' + error.message, 'danger');
+        showAlert(tf('alert.analysisError', { error: error.message }), 'danger');
       }
     }
 
@@ -5253,7 +5851,7 @@
         console.log('✓ Vegetation analysis complete:', response.data);
         return response.data;
       } else {
-        showAlert('Vegetation analysis failed: ' + response.error, 'danger');
+        showAlert(tf('alert.vegetationFailed', { error: response.error }), 'danger');
         return null;
       }
     }
@@ -5268,8 +5866,37 @@
       }
 
       if (datasets.length === 0) {
-        showAlert('Please select at least one land cover dataset', 'warning');
+        showAlert(t('alert.selectLulcDataset'), 'warning');
         return null;
+      }
+
+      const lcMode = $('input[name="lcDateMode"]:checked').val() || 'year';
+      let lcDateParams = {};
+      if (lcMode === 'year') {
+        lcDateParams = {
+          year: parseInt($('#yearValue').text()),
+          start_month: parseInt($('#lcStartMonth').val()),
+          end_month: parseInt($('#lcEndMonth').val()),
+        };
+      } else if (lcMode === 'month') {
+        const m = parseInt($('#lcSingleMonth').val());
+        lcDateParams = {
+          year: parseInt($('#yearValue').text()),
+          start_month: m,
+          end_month: m,
+        };
+      } else {
+        const sd = $('#lcStartDate').val();
+        const ed = $('#lcEndDate').val();
+        if (!sd || !ed) {
+          showAlert(t('alert.selectDateRange') || 'Pilih tanggal mulai dan tanggal akhir.', 'warning');
+          return null;
+        }
+        if (sd > ed) {
+          showAlert(t('alert.dateRangeInvalid') || 'Tanggal mulai harus sebelum tanggal akhir.', 'warning');
+          return null;
+        }
+        lcDateParams = { start_date: sd, end_date: ed };
       }
 
       const params = {
@@ -5279,38 +5906,46 @@
           east: currentAOI.geometry.getEast(),
           north: currentAOI.geometry.getNorth()
         },
-        year: parseInt($('#yearValue').text()),
         datasets,
         dw_mode: $('#dwMode').val(),
         include_improbable_classes: $('#includeImprobableClasses').is(':checked'),
-
-        start_month: parseInt($('#lcStartMonth').val()),
-        end_month: parseInt($('#lcEndMonth').val()),
+        ...lcDateParams,
       };
 
       console.log('Land cover analysis params:', params);
 
       const response = await apiClient.analyzeLandCover(params);
       if (response.success && $('#enableLulcTransition').is(':checked')) {
+        let tStartMonth = 1, tEndMonth = 12;
+        if (lcMode === 'year') {
+          tStartMonth = parseInt($('#lcStartMonth').val());
+          tEndMonth   = parseInt($('#lcEndMonth').val());
+        } else if (lcMode === 'month') {
+          tStartMonth = tEndMonth = parseInt($('#lcSingleMonth').val());
+        } else {
+          const sd = $('#lcStartDate').val();
+          tStartMonth = sd ? parseInt(sd.slice(5, 7)) : 1;
+          tEndMonth   = 12;
+        }
         const transitionParams = {
           aoi: params.aoi,
           dataset: $('#transitionDataset').val(),
           start_year: parseInt($('#transitionStartYear').val()),
           end_year: parseInt($('#transitionEndYear').val()),
-          start_month: parseInt($('#lcStartMonth').val()),
-          end_month: parseInt($('#lcEndMonth').val()),
+          start_month: tStartMonth,
+          end_month: tEndMonth,
           scale: parseInt($('#transitionScale').val()),
           include_improbable_classes: $('#includeImprobableClasses').is(':checked')
         };
 
         if (transitionParams.start_year >= transitionParams.end_year) {
-          showAlert('Rentang tahun transisi tidak valid', 'warning');
+          showAlert(t('alert.transitionInvalid'), 'warning');
         } else {
           const transitionResponse = await apiClient.analyzeLandCoverTransition(transitionParams);
           if (transitionResponse.success) {
             response.data._transition = transitionResponse.data;
           } else {
-            showAlert('Analisis transisi gagal: ' + transitionResponse.error, 'warning');
+            showAlert(tf('alert.transitionFailed', { error: transitionResponse.error }), 'warning');
           }
         }
       }
@@ -5319,7 +5954,7 @@
         console.log('✓ Land cover analysis complete:', response.data);
         return response.data;
       } else {
-        showAlert('Land cover analysis failed: ' + response.error, 'danger');
+        showAlert(tf('alert.landcoverFailed', { error: response.error }), 'danger');
         return null;
       }
     }
@@ -5356,13 +5991,16 @@
             : (carbonData.carbon_estimated || {});
           const referenceData = carbonData.carbon_reference || {};
           const modelInfo = carbonData.model_info || {};
-          const vis = layerData.vis_params || {};
-          const colors = Array.isArray(vis.palette) && vis.palette.length
-            ? vis.palette.map(color => String(color).startsWith('#') ? color : `#${color}`)
+          const registryVis = (mapLayerRegistry[layerName] || {}).vis_params || {};
+          const apiVis = layerData.vis_params || {};
+          const effectiveVis = { ...registryVis, ...apiVis };
+          const colors = Array.isArray(effectiveVis.palette) && effectiveVis.palette.length
+            ? effectiveVis.palette.map(color => String(color).startsWith('#') ? color : `#${color}`)
             : ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
-          const minVal = Number.isFinite(Number(vis.min)) ? Number(vis.min) : 0;
-          const maxVal = Number.isFinite(Number(vis.max)) ? Number(vis.max) : 200;
-          const unit = referenceData.unit || layerData.unit || 'Mg/ha';
+          const minVal = Number.isFinite(Number(effectiveVis.min)) ? Number(effectiveVis.min) : 0;
+          const maxVal = Number.isFinite(Number(effectiveVis.max)) ? Number(effectiveVis.max) : 200;
+          const unit = referenceData.unit || layerData.unit
+            || (mapLayerRegistry[layerName] || {}).unit || 'Mg/ha';
           const labels = colors.map((_, idx) => {
             if (colors.length === 1) return minVal.toFixed(0);
             const value = minVal + ((maxVal - minVal) * idx / (colors.length - 1));
@@ -5417,7 +6055,8 @@
                 `;
           }
         } else if (layerName === 'Dynamic_World' && analysisResults.landcover?.Dynamic_World?.classes) {
-          div.innerHTML += '<div style="margin-bottom:5px;"><strong>Dynamic World</strong></div>';
+          const dataset = analysisResults.landcover.Dynamic_World;
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${getLandCoverDisplayLabel('Dynamic_World', dataset, true)}</strong></div>`;
           for (const [nm, d] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
             div.innerHTML += `
           <div class="legend-item">
@@ -5426,8 +6065,8 @@
           </div>`;
           }
         } else if (layerName === 'ESA_WorldCover') {
-          div.innerHTML += '<div style="margin-bottom:5px;"><strong>ESA WorldCover</strong></div>';
-
+          const dataset = analysisResults.landcover?.ESA_WorldCover;
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${getLandCoverDisplayLabel('ESA_WorldCover', dataset, true)}</strong></div>`;
           const classes = analysisResults.landcover?.ESA_WorldCover?.classes;
           if (classes) {
             console.log('ESA Legend - classes:', classes);
@@ -5456,8 +6095,8 @@
             }
           }
         } else if (layerName === 'ESRI_LandCover') {
-          div.innerHTML += '<div style="margin-bottom:5px;"><strong>ESRI Land Cover</strong></div>';
-
+          const dataset = analysisResults.landcover?.ESRI_LandCover;
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${getLandCoverDisplayLabel('ESRI_LandCover', dataset, true)}</strong></div>`;
           const classes = analysisResults.landcover?.ESRI_LandCover?.classes;
           if (classes) {
             console.log('ESRI Legend - classes:', classes);
@@ -5476,7 +6115,7 @@
           }
         } else if (analysisResults.landcover?.[layerName]?.classes) {
           const dataset = analysisResults.landcover[layerName];
-          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${dataset.dataset_name || layerName.replace(/_/g, ' ')}</strong></div>`;
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${getLandCoverDisplayLabel(layerName, dataset, true)}</strong></div>`;
           const sorted = Object.entries(dataset.classes).sort((a, b) => {
             return (a[1].class_value || 0) - (b[1].class_value || 0);
           });
@@ -5518,7 +6157,7 @@
         $('#landcoverStats [data-lc-dynamic="true"]').remove();
         for (const [key, data] of Object.entries(analysisResults.landcover || {})) {
           if (isDatasetEntry(key, data) && data?.classes) {
-            if (renderLandCoverTableAndChart(key, data.dataset_name || key.replace(/_/g, ' '))) hasLC = true;
+            if (renderLandCoverTableAndChart(key, getLandCoverDisplayLabel(key, data))) hasLC = true;
           }
         }
 
@@ -5545,18 +6184,62 @@
       return ('tile_url' in value) || ('classes' in value) || ('indices' in value);
     }
 
+    function getLandCoverDisplayLabel(datasetKey, bucket, includeRequested = false) {
+      const name = bucket?.dataset_name || datasetKey.replace(/_/g, ' ');
+      const rawEffectiveYear = bucket?.year ?? bucket?.effective_year;
+      const effectiveYear = clampLandCoverEffectiveYear(datasetKey, rawEffectiveYear);
+      const requestedYear = bucket?.requested_year ?? rawEffectiveYear;
+      if (!effectiveYear) return name;
+
+      const effectiveText = String(effectiveYear);
+      const requestedText = requestedYear != null ? String(requestedYear) : null;
+      const shouldShowRequested = includeRequested && requestedText && requestedText !== effectiveText;
+      if (!shouldShowRequested) return `${name} (${effectiveText})`;
+
+      const requestedLabel = currentLanguage === 'id' ? 'diminta' : 'requested';
+      return `${name} (${effectiveText}; ${requestedLabel} ${requestedText})`;
+    }
+
+    function clampLandCoverEffectiveYear(datasetKey, year) {
+      const parsedYear = parseInt(year, 10);
+      if (!Number.isFinite(parsedYear)) return year;
+
+      const doc = landCoverDatasetDocs[datasetKey] || {};
+      const currentYear = new Date().getFullYear();
+      const min = parseInt(doc.year_min, 10);
+      const max = parseDatasetYearMax(doc.year_max);
+
+      if (Number.isFinite(min) && parsedYear < min) return min;
+      if (Number.isFinite(max) && parsedYear > max) return max;
+
+      return Math.min(parsedYear, currentYear);
+    }
+
+    function getPreferredInitialResultLayer() {
+      const landcover = analysisResults.landcover || null;
+      if (!landcover?.ESA_WorldCover) return null;
+
+      const landcoverKeys = Object.entries(landcover)
+        .filter(([key, value]) => isDatasetEntry(key, value))
+        .map(([key]) => key);
+      const hasAdditionalDataset = landcoverKeys.some(key => !['Dynamic_World', 'ESA_WorldCover'].includes(key));
+
+      return hasAdditionalDataset ? 'ESA_WorldCover' : null;
+    }
+
     function createResultTabs() {
       const tabsHtml = [];
+      const preferredInitialLayer = getPreferredInitialResultLayer();
       let isFirst = true;
 
       // ── Vegetation ─────────────────────────────────────────────
       if (analysisResults.vegetation) {
         if (analysisResults.vegetation.rgb_tile_url) {
-          tabsHtml.push(makeTab('rgb', '<i class="fas fa-image"></i> RGB', isFirst));
+          tabsHtml.push(makeTab('rgb', '<i class="fas fa-image"></i> RGB', !preferredInitialLayer && isFirst));
           isFirst = false;
         }
         for (const index in (analysisResults.vegetation.indices || {})) {
-          tabsHtml.push(makeTab(index, `<i class="fas fa-leaf"></i> ${index}`, isFirst));
+          tabsHtml.push(makeTab(index, `<i class="fas fa-leaf"></i> ${index}`, !preferredInitialLayer && isFirst));
           isFirst = false;
         }
       }
@@ -5572,8 +6255,8 @@
             continue;
           }
 
-          const label = dataset.replace(/_/g, ' ');
-          tabsHtml.push(makeTab(dataset, `<i class="fas fa-map"></i> ${label}`, isFirst));
+          const label = getLandCoverDisplayLabel(dataset, val);
+          tabsHtml.push(makeTab(dataset, `<i class="fas fa-map"></i> ${label}`, dataset === preferredInitialLayer || (!preferredInitialLayer && isFirst)));
           isFirst = false;
         }
       }
@@ -5584,7 +6267,11 @@
         isFirst = false;
 
         if ($('#showReference').is(':checked') && analysisResults.carbon.carbon_reference) {
-          tabsHtml.push(makeTab('carbon_reference', '<i class="fas fa-database"></i> Reference Carbon', false));
+          const refMeta = analysisResults.carbon.carbon_reference;
+          const refLabel = refMeta.name
+            || (mapLayerRegistry['carbon_reference'] || {}).name
+            || 'Reference Carbon';
+          tabsHtml.push(makeTab('carbon_reference', `<i class="fas fa-database"></i> ${refLabel}`, false));
         }
       }
 
@@ -5612,12 +6299,7 @@
 
       const center = currentAOI.geometry.getCenter();
       resultMap = L.map('resultMapContainer').setView([center.lat, center.lng], parseInt($('#zoomValue').text()));
-      addBasemapSwitcher(resultMap, 'roads', false);
-
-      // Base layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(resultMap);
+      addBasemapSwitcher(resultMap, 'roads', true);
 
       // AOI boundary
       L.rectangle(currentAOI.geometry, {
@@ -5627,9 +6309,11 @@
       }).addTo(resultMap);
 
       // Add first layer
-      const firstTab = $('#resultTabs button:first');
-      if (firstTab.length) {
-        switchResultLayer(firstTab.data('layer')); // ini juga akan memanggil updateLegend
+      const initialTab = $('#resultTabs button.active').first().length
+        ? $('#resultTabs button.active').first()
+        : $('#resultTabs button:first');
+      if (initialTab.length) {
+        switchResultLayer(initialTab.data('layer')); // ini juga akan memanggil updateLegend
       }
     }
 
@@ -5661,10 +6345,17 @@
       if (tileUrl) {
         console.log(`Loading tile: ${tileUrl.substring(0, 100)}...`);
 
+        const registryMeta = mapLayerRegistry[layerName] || {};
+        const defaultOpacity = registryMeta.default_opacity != null ? registryMeta.default_opacity : 1;
+        $('#layerOpacitySlider').val(defaultOpacity);
+        $('#layerOpacityValue').text(Math.round(defaultOpacity * 100) + '%');
+        $('#layerOpacityControl').css('display', 'flex');
+
         geeTileLayers[layerName] = L.tileLayer(tileUrl, {
           attribution: '© Google Earth Engine',
           className: 'gee-tile-layer',
           maxZoom: 18,
+          opacity: defaultOpacity,
           errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // transparent 1x1
         }).addTo(resultMap);
 
@@ -5681,10 +6372,19 @@
       } else {
         console.warn(`No tile URL for layer: ${layerName}`);
         showAlert(`No visualization available for ${layerName}`, 'warning', 3000);
+        $('#layerOpacityControl').hide();
       }
 
       updateLegend(layerName);
     }
+
+    $('#layerOpacitySlider').on('input', function () {
+      const val = parseFloat($(this).val());
+      $('#layerOpacityValue').text(Math.round(val * 100) + '%');
+      if (activeResultLayerName && geeTileLayers[activeResultLayerName]) {
+        geeTileLayers[activeResultLayerName].setOpacity(val);
+      }
+    });
 
     function addLegendToMap() {
       const legend = L.control({ position: 'bottomright' });
@@ -6263,7 +6963,7 @@
         let dominantClass = '';
         let dominantPercentage = 0;
 
-        const preferredDataset = ['Dynamic_World', 'ESA_WorldCover', 'ESRI_LandCover', 'MapBiomas_Indonesia', 'JAXA_FNF4', 'JAXA_FNF', 'Copernicus_LandCover', 'ESA_GlobCover', 'MODIS_LandCover']
+        const preferredDataset = ['Dynamic_World', 'ESA_WorldCover', 'ESRI_LandCover', 'MapBiomas_Indonesia', 'GLC_FCS30D', 'C3S_LandCover', 'JAXA_FNF4', 'JAXA_FNF', 'Copernicus_LandCover', 'MODIS_LandCover']
           .find(key => analysisResults.landcover?.[key]?.classes);
 
         if (preferredDataset) {
@@ -6541,7 +7241,7 @@
             },
             title: {
               display: true,
-              text: `${datasetLabel} - ${bucket.year || 'N/A'}`,
+              text: getLandCoverDisplayLabel(datasetKey, bucket, true),
               font: { size: 14, weight: 'bold' }
             },
             tooltip: {
@@ -6831,13 +7531,13 @@
     // ==========================================
     async function exportToGoogleDrive() {
       if (!currentAOI) {
-        showAlert('Please select an AOI first', 'warning');
+        showAlert(t('alert.exportAoiRequired'), 'warning');
         return;
       }
 
       const hasResults = analysisResults.vegetation || analysisResults.landcover || analysisResults.carbon;
       if (!hasResults) {
-        showAlert('Run an analysis first before exporting', 'warning');
+        showAlert(t('alert.exportRunFirst'), 'warning');
         return;
       }
 
@@ -6864,7 +7564,7 @@
         else if (analysisResults.vegetation) { layer_type = 'vegetation'; index_name = 'NDVI'; scale = 20; }
         else { layer_type = 'landcover'; dataset = 'Dynamic_World'; scale = 10; }
       } else {
-        showAlert('No matching analysis results found for export', 'warning');
+        showAlert(t('alert.exportNoLayer'), 'warning');
         return;
       }
 
@@ -6877,7 +7577,7 @@
       dataset = confirmed.dataset;
       scale = confirmed.scale;
 
-      showLoading('Generating GeoTIFF...', 'Requesting download URL from Earth Engine');
+      showLoading(t('loading.exportMain'), t('loading.exportSub'));
 
       const aoi = currentAOI.geojson
         ? { geojson: currentAOI.geojson }
@@ -6933,12 +7633,12 @@
         } else {
           const errMsg = response.data?.error || response.error || 'Unknown error';
           const suggestion = response.data?.suggestion || '';
-          showAlert(`Export failed: ${errMsg}${suggestion ? '<br><small>' + suggestion + '</small>' : ''}`, 'danger', 8000);
+          showAlert(`${tf('alert.exportFailed', { error: errMsg })}${suggestion ? '<br><small>' + suggestion + '</small>' : ''}`, 'danger', 8000);
         }
 
       } catch (error) {
         hideLoading();
-        showAlert('Export error: ' + error.message, 'danger');
+        showAlert(tf('alert.exportError', { error: error.message }), 'danger');
       }
     }
 
@@ -7104,7 +7804,7 @@
       link.click();
       URL.revokeObjectURL(url);
 
-      showAlert('Statistics downloaded successfully!', 'success');
+      showAlert(t('alert.statsDownloaded'), 'success');
     }
 
     function generateReport() {
@@ -7216,7 +7916,7 @@
       a.click();
       URL.revokeObjectURL(url);
 
-      showAlert('Report generated successfully!', 'success');
+      showAlert(t('alert.reportGenerated'), 'success');
     }
 
     // ==========================================
@@ -7297,10 +7997,21 @@
     }
 
     $(function () {
-      let m = new Date().getMonth() + 1; // 1-12
+      const now = new Date();
+      const m = now.getMonth() + 1; // 1-12
+      const y = now.getFullYear();
 
       $("#lcStartMonth").val(1);
       $("#lcEndMonth").val(m === 1 ? 1 : m - 1);
+      $("#lcSingleMonth").val(m === 1 ? 1 : m - 1);
+
+      const padTwo = n => String(n).padStart(2, '0');
+      const endDay = new Date(y, m - 1, 0).getDate(); // last day of prev month
+      $("#lcStartDate").val(`${y}-01-01`);
+      const prevM = m === 1 ? 12 : m - 1;
+      const prevY = m === 1 ? y - 1 : y;
+      const prevDay = new Date(prevY, prevM, 0).getDate();
+      $("#lcEndDate").val(`${prevY}-${padTwo(prevM)}-${padTwo(prevDay)}`);
     });
 
     function hideLoading() {
@@ -7377,11 +8088,7 @@
         }
 
         this.map = L.map('disasterMap', { zoomControl: true }).setView([-6.9667, 110.4167], 9);
-        addBasemapSwitcher(this.map, 'roads', false);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 18
-        }).addTo(this.map);
+        addBasemapSwitcher(this.map, 'roads', true);
         this.layerGroup = L.layerGroup().addTo(this.map);
         this.officialLayerGroup = L.layerGroup().addTo(this.map);
       },
@@ -7860,8 +8567,9 @@
     }
 
     function setYearSlider() {
+      const currentYear = new Date().getFullYear();
       const min = AppConfig.getInt('year.min', 2015);
-      const max = AppConfig.getInt('year.max', new Date().getFullYear());
+      const max = Math.min(AppConfig.getInt('year.max', currentYear), currentYear);
       const $s = $('#yearSlider');
       const $v = $('#yearValue');
 
@@ -7870,16 +8578,14 @@
 
       $s.off('input').on('input', function () {
         const year = parseInt($(this).val());
+        const sliderMin = parseInt($(this).attr('min') || min, 10);
         $v.text(year);
-        if (!$('#transitionStartYear').data('manual')) $('#transitionStartYear').val(Math.max(min, year - 1));
+        if (!$('#transitionStartYear').data('manual')) $('#transitionStartYear').val(Math.max(sliderMin, year - 1));
         if (!$('#transitionEndYear').data('manual')) $('#transitionEndYear').val(year);
-        if (!$('#carbonDeltaStartYear').data('manual')) $('#carbonDeltaStartYear').val(Math.max(min, year - 1));
+        if (!$('#carbonDeltaStartYear').data('manual')) $('#carbonDeltaStartYear').val(Math.max(sliderMin, year - 1));
         if (!$('#carbonDeltaEndYear').data('manual')) $('#carbonDeltaEndYear').val(year);
       });
-      if (!$('#transitionStartYear').data('manual')) $('#transitionStartYear').val(Math.max(min, max - 1));
-      if (!$('#transitionEndYear').data('manual')) $('#transitionEndYear').val(max);
-      if (!$('#carbonDeltaStartYear').data('manual')) $('#carbonDeltaStartYear').val(Math.max(min, max - 1));
-      if (!$('#carbonDeltaEndYear').data('manual')) $('#carbonDeltaEndYear').val(max);
+      updateYearSliderForSelectedDatasets(false);
     }
     function initCloudSliders() {
       const defaultCloud = AppConfig.getInt('analysis.cloud_threshold', 10);
@@ -8066,7 +8772,9 @@
       DATASET_NOTES: {
         Dynamic_World: 'Near real-time · Tersedia tiap tahun (2015+)',
         ESA_WorldCover: 'Tersedia: 2020, 2021 · Tahun lain → data terdekat',
-        ESRI_LandCover: 'Tersedia: 2017–2023 · Luar range → batas terdekat',
+        ESRI_LandCover: 'Tersedia: 2017-2024. Luar range -> batas terdekat',
+        C3S_LandCover: 'Historis global 300m: tahunan 1992-2022',
+        GLC_FCS30D: 'Historis global 30m: 1985/1990/1995, lalu tahunan 2000-2022',
         MapBiomas_Indonesia: 'Indonesia tahunan 2000–2023 · kelas hutan, gambut, sawit, tambang, urban',
         JAXA_FNF4: 'Forest/Non-Forest 4 kelas 2017–2020 · relevan untuk monitoring hutan/karbon',
         JAXA_FNF: 'Forest/Non-Forest 2007–2018 · sederhana untuk baseline hutan',
@@ -8106,9 +8814,7 @@
       // ── Initialization ─────────────────────────────────────────
       init() {
         // Build year inputs using AppConfig if available
-        const maxY = (typeof AppConfig !== 'undefined')
-          ? AppConfig.getInt('year.max', new Date().getFullYear())
-          : new Date().getFullYear();
+        const { max: maxY } = this._datasetYearRange();
         this.addYear(maxY - 1);
         this.addYear(maxY);
         this.updateAoiStatus();
@@ -8132,24 +8838,53 @@
 
       onDatasetChange() {
         const ds = document.getElementById('lcChangeDataset').value;
+        this.activeDataset = ds;
         document.getElementById('lcDatasetNote').textContent = this.DATASET_NOTES[ds] || '';
+        this._rebuildYearOptionsForDataset();
       },
 
       // ── Year management ────────────────────────────────────────
+      _datasetYearRange() {
+        const dataset = document.getElementById('lcChangeDataset')?.value || this.activeDataset || 'Dynamic_World';
+        const doc = landCoverDatasetDocs[dataset] || {};
+        const currentYear = new Date().getFullYear();
+        const configMin = (typeof AppConfig !== 'undefined') ? AppConfig.getInt('year.min', 2015) : 2015;
+        const configMax = (typeof AppConfig !== 'undefined') ? AppConfig.getInt('year.max', currentYear) : currentYear;
+        const min = parseInt(doc.year_min, 10);
+        const max = parseDatasetYearMax(doc.year_max || configMax);
+
+        return {
+          min: Number.isFinite(min) ? min : configMin,
+          max: Math.min(Number.isFinite(max) ? max : configMax, currentYear)
+        };
+      },
+
+      _yearOptionsHtml(target) {
+        const { min, max } = this._datasetYearRange();
+        const parsedTarget = parseInt(target || max, 10);
+        const clampedTarget = Math.min(max, Math.max(min, Number.isFinite(parsedTarget) ? parsedTarget : max));
+        const opts = [];
+        for (let y = max; y >= min; y--) {
+          opts.push(`<option value="${y}"${y === clampedTarget ? ' selected' : ''}>${y}</option>`);
+        }
+        return opts.join('');
+      },
+
+      _rebuildYearOptionsForDataset() {
+        const { min, max } = this._datasetYearRange();
+        document.querySelectorAll('.lc-year-select').forEach(select => {
+          const current = parseInt(select.value || max, 10);
+          const clamped = Math.min(max, Math.max(min, Number.isFinite(current) ? current : max));
+          select.innerHTML = this._yearOptionsHtml(clamped);
+        });
+      },
+
       addYear(presetYear = null) {
-        const maxY = (typeof AppConfig !== 'undefined')
-          ? AppConfig.getInt('year.max', new Date().getFullYear())
-          : new Date().getFullYear();
-        const minY = (typeof AppConfig !== 'undefined')
-          ? AppConfig.getInt('year.min', 2015)
-          : 2015;
+        const { max: maxY } = this._datasetYearRange();
         const target = presetYear || maxY;
 
         const rowId = 'lcy-' + Date.now() + Math.random().toString(36).slice(2, 6);
-        const opts = [];
-        for (let y = maxY; y >= minY; y--) {
-          opts.push(`<option value="${y}"${y === target ? ' selected' : ''}>${y}</option>`);
-        }
+        const opts = this._yearOptionsHtml(target);
 
         const rows = document.querySelectorAll('.lc-year-row').length;
         const canRemove = rows >= 2;
@@ -8157,7 +8892,7 @@
         const html = `
       <div class="lc-year-row d-flex align-items-center gap-2 mb-1" id="${rowId}">
         <span class="lc-year-num text-muted small fw-bold" style="min-width:18px;">${rows + 1}</span>
-        <select class="form-select form-select-sm lc-year-select" style="max-width:100px;">${opts.join('')}</select>
+        <select class="form-select form-select-sm lc-year-select" style="max-width:100px;">${opts}</select>
         ${canRemove ? `<button class="btn btn-sm btn-outline-danger py-0 px-1" style="line-height:1.4;" onclick="LCChange.removeYear('${rowId}')"><i class="bi bi-x" style="font-size:12px;"></i></button>` : '<span style="width:28px;"></span>'}
       </div>`;
 
@@ -8718,11 +9453,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
-        addBasemapSwitcher(this.changeMap, 'roads', false);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(this.changeMap);
+        addBasemapSwitcher(this.changeMap, 'roads', true);
 
         if (typeof currentAOI !== 'undefined' && currentAOI) {
           if (currentAOI.geojson) {
@@ -8898,11 +9629,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
-        addBasemapSwitcher(this.originalMap, 'roads', false);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(this.originalMap);
+        addBasemapSwitcher(this.originalMap, 'roads', true);
 
         if (typeof currentAOI !== 'undefined' && currentAOI) {
           if (currentAOI.geojson) {

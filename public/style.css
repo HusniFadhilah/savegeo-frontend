@@ -117,7 +117,7 @@ body {
   padding: 12px 0;
 }
 
-.main-sidebar.collapsed .sidebar-header > span {
+.main-sidebar.collapsed .sidebar-header>span {
   display: none;
 }
 
@@ -263,6 +263,9 @@ body {
   transition: all 0.3s;
   cursor: pointer;
   position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .sidebar-menu-item:hover {
@@ -736,15 +739,26 @@ body {
     position: fixed;
     left: 0;
     top: 56px;
-    width: 260px;
+    width: 80vw;
+    max-width: 280px;
     height: calc(100vh - 56px);
     z-index: 1040;
     transform: translateX(-100%);
-    transition: transform 0.3s;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Never let collapsed desktop class override mobile width */
+    min-width: unset !important;
+  }
+
+  /* Override collapsed-class width so desktop shrink doesn't apply on mobile */
+  .main-sidebar.collapsed {
+    width: 80vw !important;
+    max-width: 280px !important;
+    min-width: unset !important;
   }
 
   .main-sidebar.mobile-open {
     transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
   }
 
   .content-wrapper {
@@ -754,6 +768,91 @@ body {
   .mobile-menu-toggle {
     display: flex !important;
   }
+
+  /* ── When mobile sidebar is open, always show full labels ──────────
+     The .collapsed class from desktop state may still be present;
+     .mobile-open overrides everything so sidebar looks fully expanded. */
+
+  .main-sidebar.mobile-open .sidebar-menu-text,
+  .main-sidebar.mobile-open.collapsed .sidebar-menu-text {
+    opacity: 1 !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  .main-sidebar.mobile-open .sidebar-menu-item,
+  .main-sidebar.mobile-open.collapsed .sidebar-menu-item {
+    justify-content: flex-start !important;
+    padding: 18px 20px !important;
+  }
+
+  .main-sidebar.mobile-open .sidebar-menu-item:hover,
+  .main-sidebar.mobile-open.collapsed .sidebar-menu-item:hover {
+    padding-left: 25px !important;
+  }
+
+  .main-sidebar.mobile-open .sidebar-menu-item i,
+  .main-sidebar.mobile-open.collapsed .sidebar-menu-item i {
+    margin-right: 15px !important;
+  }
+
+  /* Hide desktop tooltip on mobile — not needed */
+  .main-sidebar.mobile-open.collapsed .sidebar-menu-item:hover::after {
+    display: none !important;
+  }
+
+  /* Header: show "Modul" text and restore layout */
+  .main-sidebar.mobile-open .sidebar-header .header-text,
+  .main-sidebar.mobile-open.collapsed .sidebar-header .header-text {
+    opacity: 1 !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  .main-sidebar.mobile-open.collapsed .sidebar-header>span {
+    display: flex !important;
+  }
+
+  .main-sidebar.mobile-open.collapsed .sidebar-header {
+    justify-content: space-between !important;
+    padding: 20px !important;
+  }
+
+  /* Footer: restore language label */
+  .main-sidebar.mobile-open.collapsed .sidebar-language-label {
+    justify-content: center !important;
+  }
+
+  .main-sidebar.mobile-open.collapsed .language-toggle {
+    width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    margin: 0 !important;
+  }
+
+  .main-sidebar.mobile-open.collapsed .language-toggle::after {
+    display: inline-block !important;
+  }
+
+  .main-sidebar.mobile-open.collapsed .language-dropdown {
+    justify-content: flex-start !important;
+  }
+}
+
+/* ✅ MOBILE SIDEBAR OVERLAY */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1039;
+  /* below sidebar (1040) but above content */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-overlay.active {
+  display: block;
 }
 
 /* ✅ MOBILE TOGGLE GREEN */
@@ -775,9 +874,12 @@ body {
   justify-content: center;
   font-size: 1.5rem;
   transition: all 0.3s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-menu-toggle:hover {
+.mobile-menu-toggle:hover,
+.mobile-menu-toggle:active {
   background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-light) 100%);
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(46, 125, 50, 0.5);
