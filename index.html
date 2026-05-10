@@ -2912,11 +2912,10 @@
     // Configuration - will be replaced by Vite during build
     const config = {
       api: {
-        //baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
-        baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
+        baseUrl: '__VITE_API_BASE_URL__'
       },
       env: 'development',
-      appTitle: 'GEOSAVE'
+      appTitle: '%VITE_APP_TITLE%'
     };
 
     const API_BASE_URL = config.api.baseUrl;
