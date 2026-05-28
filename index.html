@@ -938,6 +938,11 @@
                           <i class="fas fa-upload me-1"></i>Upload File
                         </a>
                       </li>
+                      <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#aoiCompany" onclick="loadCompanyAOI()">
+                          <i class="fas fa-industry me-1"></i>Perusahaan
+                        </a>
+                      </li>
                     </ul>
 
                     <div class="tab-content">
@@ -1055,6 +1060,39 @@
                           </small>
                         </div>
                         <div id="aoiUploadStatus"></div>
+                      </div>
+
+                      <!-- Perusahaan Tab -->
+                      <div class="tab-pane fade" id="aoiCompany">
+                        <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+                          <input type="text" class="form-control form-control-sm" id="coSearch"
+                            placeholder="Cari nama perusahaan..." style="max-width:200px"
+                            oninput="filterCompanyList()">
+                          <select class="form-select form-select-sm" id="coFilterType" multiple
+                            style="min-width:180px">
+                            <option value="mining">Pertambangan</option>
+                            <option value="forestry">Kehutanan</option>
+                            <option value="plantation">Perkebunan</option>
+                            <option value="energy">Energi</option>
+                          </select>
+                          <select class="form-select form-select-sm" id="coFilterProvince"
+                            style="min-width:160px">
+                            <option value="">Semua provinsi</option>
+                          </select>
+                          <button class="btn btn-sm btn-outline-secondary" onclick="loadCompanyAOI()">
+                            <i class="fas fa-sync-alt"></i>
+                          </button>
+                        </div>
+                        <div id="coLoadingMsg" class="text-muted small mb-2" style="display:none">
+                          <i class="fas fa-spinner fa-spin"></i> Memuat data...
+                        </div>
+                        <div id="coEmptyMsg" class="text-muted small mb-2" style="display:none">
+                          Belum ada data perusahaan. Tambahkan melalui Admin Panel.
+                        </div>
+                        <div id="coList" style="max-height:280px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px"></div>
+                        <button class="btn btn-success mt-2" id="coUseBtn" style="display:none" onclick="useCompanyAOI()">
+                          <i class="fas fa-check"></i> Gunakan sebagai AOI
+                        </button>
                       </div>
                     </div>
 
@@ -2932,6 +2970,9 @@
     let map, resultMap;
     let drawnItems = new L.FeatureGroup();
     let currentAOI = null;
+    let _allCompanyData = [];
+    let _selectedCompany = null;
+    let _coPreviewLayer = null;
     let selectedIndices = ['NDVI', 'NDWI', 'MNDWI', 'NDBI'];
     let analysisResults = {};
     let geeTileLayers = {};
@@ -5740,6 +5781,138 @@
       $('#regionName').text(currentAOI.name);
       $('#regionArea').text(currentAOI.area);
       $('#aoiInfo').slideDown();
+    }
+
+    // ==========================================
+    // COMPANY AOI
+    // ==========================================
+    const CO_TYPE_LABEL = { mining:'Pertambangan', forestry:'Kehutanan', plantation:'Perkebunan', energy:'Energi' };
+
+    async function loadCompanyAOI() {
+      $('#coLoadingMsg').show();
+      $('#coEmptyMsg').hide();
+      $('#coList').empty();
+      $('#coUseBtn').hide();
+      _selectedCompany = null;
+
+      try {
+        const resp = await fetch(`${API_BASE_URL}/companies`);
+        const json = await resp.json();
+        _allCompanyData = json.companies || [];
+
+        // Populate province filter
+        const provinces = [...new Set(_allCompanyData.map(c => c.province).filter(Boolean))].sort();
+        const $prov = $('#coFilterProvince');
+        $prov.html('<option value="">Semua provinsi</option>' +
+          provinces.map(p => `<option value="${p}">${encodeURIComponent(p).replace(/%20/g,' ')}</option>`).join(''));
+
+        // Init Select2 (destroy first if already initialized)
+        ['coFilterType', 'coFilterProvince'].forEach(id => {
+          const $el = $(`#${id}`);
+          if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+        });
+
+        $('#coFilterType').select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Semua tipe industri',
+          allowClear: true,
+          dropdownParent: $('#aoiCompany'),
+        }).on('change', filterCompanyList);
+
+        $('#coFilterProvince').select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Semua provinsi',
+          allowClear: true,
+          dropdownParent: $('#aoiCompany'),
+        }).on('change', filterCompanyList);
+
+        filterCompanyList();
+      } catch (e) {
+        $('#coLoadingMsg').hide();
+        $('#coEmptyMsg').text('Gagal memuat data. ' + e.message).show();
+      }
+      $('#coLoadingMsg').hide();
+    }
+
+    function filterCompanyList() {
+      const search   = ($('#coSearch').val() || '').toLowerCase();
+      const itypes   = $('#coFilterType').val() || [];   // array (multiple select)
+      const province = $('#coFilterProvince').val() || '';
+
+      const filtered = _allCompanyData.filter(c =>
+        (!itypes.length || itypes.includes(c.industry_type)) &&
+        (!province      || c.province === province) &&
+        (!search        || c.name.toLowerCase().includes(search) || (c.company_name||'').toLowerCase().includes(search))
+      );
+
+      const list = $('#coList');
+      list.empty();
+      if (!filtered.length) {
+        $('#coEmptyMsg').show();
+        return;
+      }
+      $('#coEmptyMsg').hide();
+
+      filtered.forEach(c => {
+        const areaStr = c.area_ha ? `${c.area_ha.toLocaleString('id-ID', {maximumFractionDigits:0})} ha` : '';
+        const item = $(`<div class="p-2" style="cursor:pointer;border-bottom:1px solid #dee2e6;font-size:13px"
+          data-id="${c.id}">
+          <div class="fw-semibold">${c.name}</div>
+          <div class="text-muted small">
+            ${CO_TYPE_LABEL[c.industry_type]||c.industry_type}
+            ${c.sub_type ? ' · ' + c.sub_type : ''}
+            ${c.province ? ' · ' + c.province : ''}
+            ${areaStr ? ' · ' + areaStr : ''}
+          </div>
+        </div>`);
+
+        item.on('click', function() {
+          list.find('div[data-id]').css('background','');
+          $(this).css('background','#e8f4fe');
+          _selectedCompany = c;
+          $('#coUseBtn').show();
+        });
+
+        list.append(item);
+      });
+    }
+
+    async function useCompanyAOI() {
+      if (!_selectedCompany) return;
+      try {
+        const resp = await fetch(`${API_BASE_URL}/companies/${_selectedCompany.id}/geojson`);
+        if (!resp.ok) throw new Error('Gagal fetch GeoJSON');
+        const json = await resp.json();
+        const geojson = json.geojson;
+        if (!geojson) throw new Error('GeoJSON kosong');
+
+        drawnItems.clearLayers();
+        if (_coPreviewLayer) { map.removeLayer(_coPreviewLayer); _coPreviewLayer = null; }
+
+        const layer = L.geoJSON(geojson, {
+          style: { color: '#fd7e14', fillColor: '#fff3cd', fillOpacity: 0.3, weight: 2 }
+        });
+        layer.addTo(drawnItems);
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds);
+
+        const areaKm2 = _selectedCompany.area_ha ? (_selectedCompany.area_ha / 100).toFixed(2) : calculateAreaFromGeoJSON(geojson);
+
+        currentAOI = {
+          type:     'company',
+          name:     _selectedCompany.name,
+          area:     areaKm2,
+          geometry: bounds,
+          geojson:  geojson,
+        };
+
+        activeAdminSelection = null;
+        updateAdminBoundaryControls && updateAdminBoundaryControls();
+        showAOIInfo();
+        showAlert(`AOI dari perusahaan "${_selectedCompany.name}" berhasil dimuat!`, 'success');
+      } catch (e) {
+        showAlert('Gagal memuat AOI perusahaan: ' + e.message, 'danger');
+      }
     }
 
     // ==========================================

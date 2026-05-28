@@ -76,6 +76,10 @@
         <a class="sb-item" id="si-us" onclick="nav('us')">
           <i class="fas fa-user-shield"></i><span>Admin Users</span>
         </a>
+        <div class="sb-section">Data Spasial</div>
+        <a class="sb-item" id="si-co" onclick="nav('co')">
+          <i class="fas fa-industry"></i><span>Batas Perusahaan</span>
+        </a>
       </div>
       <div class="sb-foot">
         <div class="sb-avatar" id="sb-av">AD</div>
@@ -369,6 +373,165 @@
           </div>
         </div>
 
+        <!-- ===== BATAS PERUSAHAAN ===== -->
+        <div class="page-section" id="sec-co">
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-header-custom">
+              <span>Batas Perusahaan</span>
+              <div style="display:flex;gap:6px">
+                <button class="btn-sm primary" onclick="toggleForm('co-form')"><i class="fas fa-plus"></i> Tambah Manual</button>
+                <button class="btn-sm" onclick="toggleForm('co-import-form')"><i class="fas fa-cloud-download-alt"></i> Import Open Data</button>
+              </div>
+            </div>
+            <div class="card-body-custom">
+
+              <!-- Form tambah manual -->
+              <div class="collapse-form" id="co-form">
+                <div class="two-col" style="margin-bottom:0.75rem">
+                  <div class="form-field">
+                    <label class="form-label">Nama Konsesi / IUP *</label>
+                    <input class="form-input" id="co-name" placeholder="cth: PT Tambang Jaya - IUP Batubara">
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Nama Perusahaan</label>
+                    <input class="form-input" id="co-company" placeholder="cth: PT Tambang Jaya">
+                  </div>
+                </div>
+                <div class="two-col" style="margin-bottom:0.75rem">
+                  <div class="form-field">
+                    <label class="form-label">Tipe Industri *</label>
+                    <select class="form-input" id="co-industry">
+                      <option value="mining">Pertambangan</option>
+                      <option value="forestry">Kehutanan (HPH/HTI)</option>
+                      <option value="plantation">Perkebunan (HGU)</option>
+                      <option value="energy">Energi (PLTU/PLTS/Migas)</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Sub-tipe / Jenis Izin</label>
+                    <input class="form-input" id="co-subtype" placeholder="cth: IUP, HPH, HGU, PLTU ...">
+                  </div>
+                </div>
+                <div class="two-col" style="margin-bottom:0.75rem">
+                  <div class="form-field">
+                    <label class="form-label">Provinsi</label>
+                    <input class="form-input" id="co-province" placeholder="cth: Kalimantan Timur">
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Kabupaten/Kota</label>
+                    <input class="form-input" id="co-district" placeholder="cth: Kutai Kartanegara">
+                  </div>
+                </div>
+                <div class="form-field" style="margin-bottom:0.75rem">
+                  <label class="form-label">Deskripsi</label>
+                  <input class="form-input" id="co-desc" placeholder="Keterangan tambahan (opsional)">
+                </div>
+                <div class="form-field" style="margin-bottom:0.75rem">
+                  <label class="form-label">GeoJSON Batas Wilayah *</label>
+                  <div class="upload-zone" id="co-zone" onclick="document.getElementById('co-file').click()"
+                    ondragover="event.preventDefault();this.classList.add('dragover')"
+                    ondragleave="this.classList.remove('dragover')" ondrop="coFileDrop(event)">
+                    <i class="fas fa-map" style="font-size:20px;color:#94a3b8;margin-bottom:6px"></i>
+                    <div style="font-size:12px;color:#64748b">Klik atau drag & drop file <strong>.geojson / .json</strong></div>
+                    <div id="co-filename" style="font-size:11px;color:#3b82f6;margin-top:4px"></div>
+                  </div>
+                  <input type="file" id="co-file" accept=".geojson,.json" style="display:none" onchange="coFileSelect(this)">
+                  <div style="margin-top:6px">
+                    <label class="form-label" style="font-size:10px;color:var(--text-muted)">atau paste GeoJSON langsung:</label>
+                    <textarea class="form-input" id="co-geojson-text" rows="4" placeholder='{"type":"Feature","geometry":{...},"properties":{}}'
+                      style="font-family:monospace;font-size:11px;resize:vertical"></textarea>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-sm primary" onclick="saveCompany()"><i class="fas fa-save"></i> Simpan</button>
+                  <button class="btn-sm" onclick="toggleForm('co-form')">Batal</button>
+                </div>
+              </div>
+
+              <!-- Form import open data -->
+              <div class="collapse-form" id="co-import-form">
+                <div style="margin-bottom:0.75rem;font-size:12px;color:var(--text-muted)">
+                  Fetch otomatis data konsesi dari sumber terbuka. Proses bisa memakan waktu 30–180 detik.
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:0.75rem">
+                  <div style="font-weight:600;font-size:12px;margin-bottom:2px">OpenStreetMap (Overpass API)</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+                      <input type="checkbox" id="osm-mining" checked> Pertambangan
+                    </label>
+                    <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+                      <input type="checkbox" id="osm-forestry"> Kehutanan
+                    </label>
+                    <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+                      <input type="checkbox" id="osm-plantation"> Perkebunan
+                    </label>
+                    <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+                      <input type="checkbox" id="osm-energy"> Energi
+                    </label>
+                  </div>
+                  <button class="btn-sm primary" onclick="importFromOSM()"><i class="fas fa-map-marker"></i> Import dari OSM</button>
+                  <div style="height:1px;background:var(--border);margin:4px 0"></div>
+                  <div style="font-weight:600;font-size:12px;margin-bottom:2px">Global Forest Watch (GFW)</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="btn-sm" onclick="importFromGFW('mining')"><i class="fas fa-hard-hat"></i> Mining Concessions</button>
+                    <button class="btn-sm" onclick="importFromGFW('palm_oil')"><i class="fas fa-leaf"></i> Palm Oil</button>
+                    <button class="btn-sm" onclick="importFromGFW('timber')"><i class="fas fa-tree"></i> Timber</button>
+                  </div>
+                </div>
+                <div id="co-import-log" style="font-size:11px;color:var(--text-muted);min-height:20px"></div>
+                <div style="margin-top:6px">
+                  <button class="btn-sm" onclick="toggleForm('co-import-form')">Tutup</button>
+                </div>
+              </div>
+
+              <!-- Filter bar -->
+              <div style="display:flex;gap:8px;margin-bottom:0.75rem;flex-wrap:wrap;align-items:center">
+                <input class="form-input" id="co-search" placeholder="Cari nama..."
+                  style="max-width:200px" oninput="filterCompanies()">
+                <select class="form-input" id="co-filter-industry" style="max-width:160px" onchange="filterCompanies()">
+                  <option value="">Semua tipe</option>
+                  <option value="mining">Pertambangan</option>
+                  <option value="forestry">Kehutanan</option>
+                  <option value="plantation">Perkebunan</option>
+                  <option value="energy">Energi</option>
+                </select>
+                <span id="co-count" style="font-size:11px;color:var(--text-muted)"></span>
+              </div>
+
+              <!-- Table -->
+              <div style="overflow-x:auto">
+                <table class="tbl">
+                  <colgroup>
+                    <col style="width:22%">
+                    <col style="width:18%">
+                    <col style="width:11%">
+                    <col style="width:10%">
+                    <col style="width:13%">
+                    <col style="width:10%">
+                    <col style="width:8%">
+                    <col style="width:8%">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Nama Konsesi</th>
+                      <th>Perusahaan</th>
+                      <th>Tipe</th>
+                      <th>Sub-tipe</th>
+                      <th>Provinsi</th>
+                      <th>Luas (ha)</th>
+                      <th>Sumber</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="co-tbody">
+                    <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1.5rem">Memuat...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- end page-content -->
     </div><!-- end main -->
   </div><!-- end layout -->
@@ -380,7 +543,7 @@
     // ─────────────────────────────────────────────
     // Config
     // ─────────────────────────────────────────────
-    const BASE = (window.API_BASE_URL || 'https://backend.geomoka.husnifd.my.id/api').replace(/\/api$/, '');
+    const BASE = ('__VITE_API_BASE_URL__').replace(/\/api$/, '');
     let JWT = '';
     let currentUser = null;
     let geeFileData = null;
@@ -457,6 +620,7 @@
       ml: ['ML Models', 'Kelola model machine learning yang diupload', loadModels],
       cf: ['System Config', 'Konfigurasi aplikasi tersimpan di database', loadConfig],
       us: ['Admin Users', 'Kelola akun administrator', loadUsers],
+      co: ['Batas Perusahaan', 'Kelola batas wilayah konsesi dan perusahaan industri', loadCompanies],
     };
 
     function nav(tab) {
@@ -904,6 +1068,155 @@
         document.getElementById('pw-confirm').value = '';
       } else {
         toast(r.data.error || 'Gagal ganti password', 'e');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Company Boundaries
+    // ─────────────────────────────────────────────
+    const INDUSTRY_LABEL = { mining:'Pertambangan', forestry:'Kehutanan', plantation:'Perkebunan', energy:'Energi' };
+    const SOURCE_LABEL   = { manual:'Manual', osm:'OpenStreetMap', gfw:'GlobalForestWatch' };
+    let _allCompanies    = [];
+    let _coFileData      = null;
+
+    async function loadCompanies() {
+      const r = await api('GET', '/api/admin/companies');
+      if (!r.ok) { toast('Gagal memuat data perusahaan', 'e'); return; }
+      _allCompanies = r.data.companies || [];
+      renderCompanyTable(_allCompanies);
+    }
+
+    function renderCompanyTable(list) {
+      document.getElementById('co-count').textContent = `${list.length} entri`;
+      const tbody = document.getElementById('co-tbody');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1.5rem">Belum ada data. Tambah manual atau import dari open data.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(c => `
+        <tr>
+          <td title="${c.name}">${c.name.length > 30 ? c.name.slice(0,28)+'…' : c.name}</td>
+          <td>${c.company_name || '—'}</td>
+          <td><span class="badge-label">${INDUSTRY_LABEL[c.industry_type] || c.industry_type}</span></td>
+          <td>${c.sub_type || '—'}</td>
+          <td>${c.province || '—'}</td>
+          <td>${c.area_ha ? c.area_ha.toLocaleString('id-ID', {maximumFractionDigits:1}) : '—'}</td>
+          <td style="font-size:10px">${SOURCE_LABEL[c.source] || c.source}</td>
+          <td>
+            <button class="btn-sm" style="padding:2px 6px;font-size:10px" onclick="toggleCoActive(${c.id},${c.is_active})" title="${c.is_active?'Nonaktifkan':'Aktifkan'}">
+              <i class="fas fa-${c.is_active?'eye':'eye-slash'}"></i>
+            </button>
+            <button class="btn-sm danger" style="padding:2px 6px;font-size:10px" onclick="deleteCompany(${c.id},'${c.name.replace(/'/g,'')}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function filterCompanies() {
+      const search  = (document.getElementById('co-search').value || '').toLowerCase();
+      const itype   = document.getElementById('co-filter-industry').value;
+      const filtered = _allCompanies.filter(c =>
+        (!itype || c.industry_type === itype) &&
+        (!search || c.name.toLowerCase().includes(search) || (c.company_name||'').toLowerCase().includes(search))
+      );
+      renderCompanyTable(filtered);
+    }
+
+    function coFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+      _coFileData = file;
+      document.getElementById('co-filename').textContent = file.name;
+      document.getElementById('co-geojson-text').value = '';
+    }
+
+    function coFileDrop(e) {
+      e.preventDefault();
+      document.getElementById('co-zone').classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      _coFileData = file;
+      document.getElementById('co-filename').textContent = file.name;
+      document.getElementById('co-geojson-text').value = '';
+    }
+
+    async function saveCompany() {
+      const name    = document.getElementById('co-name').value.trim();
+      const itype   = document.getElementById('co-industry').value;
+      if (!name) { toast('Nama konsesi diperlukan', 'e'); return; }
+
+      const geojsonText = document.getElementById('co-geojson-text').value.trim();
+      if (!_coFileData && !geojsonText) { toast('GeoJSON diperlukan (file atau teks)', 'e'); return; }
+
+      const fd = new FormData();
+      fd.append('name',          name);
+      fd.append('company_name',  document.getElementById('co-company').value.trim());
+      fd.append('industry_type', itype);
+      fd.append('sub_type',      document.getElementById('co-subtype').value.trim());
+      fd.append('province',      document.getElementById('co-province').value.trim());
+      fd.append('district',      document.getElementById('co-district').value.trim());
+      fd.append('description',   document.getElementById('co-desc').value.trim());
+
+      if (_coFileData) {
+        fd.append('geojson_file', _coFileData);
+      } else {
+        fd.append('geojson_text', geojsonText);
+      }
+
+      const r = await api('POST', '/api/admin/companies', fd, true);
+      if (r.ok) {
+        toast('Company boundary berhasil disimpan');
+        toggleForm('co-form');
+        _coFileData = null;
+        document.getElementById('co-filename').textContent = '';
+        document.getElementById('co-geojson-text').value = '';
+        document.getElementById('co-name').value = '';
+        loadCompanies();
+      } else {
+        toast(r.data.error || 'Gagal menyimpan', 'e');
+      }
+    }
+
+    async function toggleCoActive(id, isActive) {
+      const r = await api('PUT', `/api/admin/companies/${id}`, { is_active: !isActive });
+      if (r.ok) { loadCompanies(); } else { toast('Gagal mengubah status', 'e'); }
+    }
+
+    async function deleteCompany(id, name) {
+      if (!confirm(`Hapus "${name}"?`)) return;
+      const r = await api('DELETE', `/api/admin/companies/${id}`);
+      if (r.ok) { toast('Dihapus'); loadCompanies(); } else { toast('Gagal menghapus', 'e'); }
+    }
+
+    async function importFromOSM() {
+      const types = [];
+      if (document.getElementById('osm-mining').checked)     types.push('mining');
+      if (document.getElementById('osm-forestry').checked)   types.push('forestry');
+      if (document.getElementById('osm-plantation').checked) types.push('plantation');
+      if (document.getElementById('osm-energy').checked)     types.push('energy');
+      if (!types.length) { toast('Pilih minimal satu tipe industri', 'e'); return; }
+
+      const log = document.getElementById('co-import-log');
+      log.textContent = 'Memuat dari OpenStreetMap... (bisa 30–180 detik)';
+      const r = await api('POST', '/api/admin/companies/import/osm', { industry_types: types });
+      if (r.ok) {
+        log.textContent = `Selesai: ${r.data.imported} diimpor, ${r.data.skipped} dilewati.`;
+        loadCompanies();
+      } else {
+        log.textContent = 'Error: ' + (r.data.error || 'Gagal import OSM');
+      }
+    }
+
+    async function importFromGFW(dataset) {
+      const log = document.getElementById('co-import-log');
+      log.textContent = `Memuat dataset GFW: ${dataset}...`;
+      const r = await api('POST', '/api/admin/companies/import/gfw', { dataset });
+      if (r.ok) {
+        log.textContent = `Selesai: ${r.data.imported} diimpor, ${r.data.skipped} dilewati.`;
+        loadCompanies();
+      } else {
+        log.textContent = 'Error: ' + (r.data.error || 'Gagal import GFW');
       }
     }
 
