@@ -67,6 +67,9 @@
         <a class="sb-item" id="si-ge" onclick="nav('ge')">
           <i class="fas fa-satellite-dish"></i><span>GEE Credentials</span>
         </a>
+        <a class="sb-item" id="si-ag" onclick="nav('ag')">
+          <i class="fas fa-map-marked-alt"></i><span>ArcGIS</span>
+        </a>
         <a class="sb-item" id="si-ml" onclick="nav('ml')">
           <i class="fas fa-brain"></i><span>ML Models</span>
         </a>
@@ -213,6 +216,29 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== ARCGIS STATUS ===== -->
+        <div class="page-section" id="sec-ag">
+          <div class="card">
+            <div class="card-header-custom">
+              <span>ArcGIS Integration Status</span>
+              <button class="btn-sm" onclick="loadArcGIS()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="card-body-custom">
+              <div id="ag-status-body" style="color:var(--text-muted);padding:12px 0;">Memuat status...</div>
+              <div style="margin-top:16px;padding:12px;background:var(--bg-main);border-radius:6px;font-size:12px;color:var(--text-muted)">
+                <strong>Cara mengaktifkan ArcGIS:</strong><br>
+                Tambahkan env var berikut ke file <code>.env</code> backend:<br><br>
+                <code>ARCGIS_ENABLED=true</code><br>
+                <code>ARCGIS_PORTAL_URL=https://www.arcgis.com</code><br>
+                <code>ARCGIS_AUTH_MODE=api_key</code><br>
+                <code>ARCGIS_API_KEY=&lt;api-key-anda&gt;</code><br>
+                <code>ARCGIS_REQUEST_TIMEOUT=30</code><br><br>
+                Token/API key <strong>tidak pernah</strong> dikembalikan ke halaman ini.
               </div>
             </div>
           </div>
@@ -617,6 +643,7 @@
     const NAV_MAP = {
       ov: ['Overview', 'Dashboard sistem SAVEGEO', loadOverview],
       ge: ['GEE Credentials', 'Kelola service account Google Earth Engine', loadGEE],
+      ag: ['ArcGIS', 'Status integrasi ArcGIS Living Atlas', loadArcGIS],
       ml: ['ML Models', 'Kelola model machine learning yang diupload', loadModels],
       cf: ['System Config', 'Konfigurasi aplikasi tersimpan di database', loadConfig],
       us: ['Admin Users', 'Kelola akun administrator', loadUsers],
@@ -723,6 +750,40 @@
     </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem">Belum ada credential. Upload service account JSON.</td></tr>';
 
       document.getElementById('gee-tbody').innerHTML = rows;
+    }
+
+    async function loadArcGIS() {
+      const body = document.getElementById('ag-status-body');
+      body.textContent = 'Memuat status ArcGIS...';
+      const r = await api('GET', '/api/admin/arcgis/status');
+      if (!r.ok) {
+        body.innerHTML = `<span style="color:var(--danger)">Gagal memuat status ArcGIS: ${r.data?.error || r.status}</span>`;
+        return;
+      }
+      const d = r.data;
+      const enabledBadge = d.enabled
+        ? '<span class="stat-badge badge-green">Enabled</span>'
+        : '<span class="stat-badge badge-gray">Disabled</span>';
+      const configBadge = d.configured
+        ? '<span class="stat-badge badge-green">Configured</span>'
+        : '<span class="stat-badge badge-yellow">Not configured</span>';
+      const reachBadge = d.can_reach_portal === true
+        ? '<span class="stat-badge badge-green">Reachable</span>'
+        : d.can_reach_portal === false
+          ? '<span class="stat-badge badge-red">Unreachable</span>'
+          : '';
+
+      body.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <tr><td style="padding:6px 0;color:var(--text-muted);width:160px">Status</td><td>${enabledBadge}</td></tr>
+          <tr><td style="padding:6px 0;color:var(--text-muted)">Credential</td><td>${configBadge}</td></tr>
+          <tr><td style="padding:6px 0;color:var(--text-muted)">Auth mode</td><td><code>${d.auth_mode || '—'}</code></td></tr>
+          <tr><td style="padding:6px 0;color:var(--text-muted)">Portal URL</td><td><code>${d.portal_url || '—'}</code></td></tr>
+          ${d.can_reach_portal !== undefined ? `<tr><td style="padding:6px 0;color:var(--text-muted)">Koneksi portal</td><td>${reachBadge} ${d.portal_error ? `<span style="color:var(--danger);font-size:11px">${d.portal_error}</span>` : ''}</td></tr>` : ''}
+          ${d.portal_name ? `<tr><td style="padding:6px 0;color:var(--text-muted)">Nama portal</td><td>${d.portal_name}</td></tr>` : ''}
+          ${d.message ? `<tr><td colspan="2" style="padding:8px 0;color:var(--text-muted);font-size:12px">${d.message}</td></tr>` : ''}
+          <tr><td style="padding:6px 0;color:var(--text-muted)">Dicek pada</td><td style="font-size:11px">${d.checked_at || '—'}</td></tr>
+        </table>`;
     }
 
     function geeFileSelect(input) {

@@ -443,15 +443,22 @@
                       <i class="fas fa-database"></i> Reference Dataset
                     </label>
                     <select class="form-select" id="carbonReferenceDataset">
-                      <option value="ESA_CCI">ESA CCI Biomass (2020, 100m)</option>
-                      <option value="WCMC" selected>WCMC Carbon Density (2010, 300m)</option>
-                      <option value="GEDI">GEDI L4B Biomass (2019-2023, 1km)</option>
-                      <option value="GEDI_L4A_MONTHLY">GEDI L4A Monthly AGBD Carbon (2019-2023, 25m)</option>
-                      <option value="GEDI_L4B_STACK">GEDI L4B + S2/S1/DEM Stack (2019-2023, 1km)</option>
-                      <option value="SPAWN">Spawn &amp; Gibbs AGB Carbon (2010, 300m)</option>
-                      <option value="ORNL_AGB_BGB">NASA ORNL AGB+BGB Carbon Density (2010, 300m)</option>
-                      <option value="OPENLANDMAP_SOC">OpenLandMap Soil Organic Carbon — SOC (2019, 250m)</option>
-                      <option value="Simard">Simard Forest Height proxy (2011, 1km) — Legacy</option>
+                      <optgroup label="Google Earth Engine (GEE)">
+                        <option value="ESA_CCI">ESA CCI Biomass (2020, 100m)</option>
+                        <option value="WCMC" selected>WCMC Carbon Density (2010, 300m)</option>
+                        <option value="GEDI">GEDI L4B Biomass (2019-2023, 1km)</option>
+                        <option value="GEDI_L4A_MONTHLY">GEDI L4A Monthly AGBD Carbon (2019-2023, 25m)</option>
+                        <option value="GEDI_L4B_STACK">GEDI L4B + S2/S1/DEM Stack (2019-2023, 1km)</option>
+                        <option value="SPAWN">Spawn &amp; Gibbs AGB Carbon (2010, 300m)</option>
+                        <option value="ORNL_AGB_BGB">NASA ORNL AGB+BGB Carbon Density (2010, 300m)</option>
+                        <option value="OPENLANDMAP_SOC">OpenLandMap Soil Organic Carbon — SOC (2019, 250m)</option>
+                        <option value="Simard">Simard Forest Height proxy (2011, 1km) — Legacy</option>
+                      </optgroup>
+                      <optgroup label="ArcGIS Living Atlas">
+                        <option value="WCMC_Carbon_ArcGIS">WCMC Biomass Carbon Density — ArcGIS (2010, 300m)</option>
+                        <option value="UNEP_WCMC_Biomass">UNEP-WCMC World Biomass Carbon — AGB+BGB (300m)</option>
+                        <option value="UNEP_WCMC_Biomass_SOC">UNEP-WCMC Biomass + Soil Carbon — AGB+BGB+SOC (300m)</option>
+                      </optgroup>
                     </select>
                     <small class="text-muted d-block mt-1" id="datasetDescription">
                       <i class="fas fa-info-circle"></i>
@@ -468,7 +475,7 @@
                       <small>
                         <i class="fas fa-info-circle"></i>
                         <strong>Dataset-aware filtering:</strong> Only models trained for the selected
-                        reference dataset and deployable on GEE are shown.
+                        reference dataset are shown.
                         Change dataset to reload compatible models.
                       </small>
                     </div>
@@ -698,12 +705,26 @@
 
                   <div class="mb-3">
                     <label class="form-label">Dataset LULC</label>
-                    <select class="form-select" id="landcoverDatasetSelect" multiple size="5">
-                      <option value="Dynamic_World" selected>Dynamic World - Google 10m</option>
-                      <option value="ESA_WorldCover">ESA WorldCover - 10m</option>
-                      <option value="ESRI_LandCover">ESRI Land Cover - 10m</option>
-                      <option value="MODIS_LandCover">MODIS MCD12Q1 - 500m</option>
-                      <option value="Copernicus_LandCover">Copernicus Global Land Cover - 100m</option>
+                    <select class="form-select" id="landcoverDatasetSelect" multiple size="8">
+                      <optgroup label="GEE — Official">
+                        <option value="Dynamic_World" selected>Dynamic World - Google 10m</option>
+                        <option value="ESA_WorldCover">ESA WorldCover - 10m</option>
+                        <option value="ESRI_LandCover">ESRI Land Cover (GEE) - 10m</option>
+                        <option value="MODIS_LandCover">MODIS MCD12Q1 - 500m</option>
+                        <option value="Copernicus_LandCover">Copernicus Global Land Cover - 100m</option>
+                        <option value="JAXA_FNF">JAXA ALOS Forest/Non-Forest - 25m</option>
+                        <option value="JAXA_FNF4">JAXA PALSAR FNF 4-class - 25m</option>
+                      </optgroup>
+                      <optgroup label="GEE — Community Catalog">
+                        <option value="GLC_FCS30D">GLC_FCS30D - 30m</option>
+                        <option value="C3S_LandCover">C3S Land Cover - 300m</option>
+                        <option value="MapBiomas_Indonesia">MapBiomas Indonesia LANDY - 30m</option>
+                      </optgroup>
+                      <optgroup label="ArcGIS Living Atlas">
+                        <option value="ESRI_LULC_LivingAtlas">ESRI LULC Living Atlas - 10m (2017-2025)</option>
+                        <option value="ESA_CCI_LandCover_2018">ESA CCI Land Cover 2018 - 300m</option>
+                        <option value="DEA_Mangroves">DEA Mangroves (Australia/SEA coast) - 25m</option>
+                      </optgroup>
                     </select>
                     <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
                       <small class="text-muted">Pilih satu atau beberapa dataset LULC</small>
@@ -1370,6 +1391,20 @@
                                     <!-- Will be populated by JS -->
                                   </tbody>
                                 </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Carbon Density Stats Chart (prediction + reference) -->
+                        <div class="row mt-3" id="carbonDensityChartRow" style="display:none;">
+                          <div class="col-md-12">
+                            <div class="card">
+                              <div class="card-header">
+                                <i class="fas fa-chart-bar"></i> Carbon Density Statistics Chart
+                              </div>
+                              <div class="card-body">
+                                <canvas id="carbonDensityStatsChart" style="max-height:300px;"></canvas>
                               </div>
                             </div>
                           </div>
@@ -2985,7 +3020,8 @@
       lulcTransitionNet: null,
       carbonDeltaTotal: null,
       carbonDeltaDensity: null,
-      carbonDeltaYoY: null
+      carbonDeltaYoY: null,
+      carbonDensityStats: null
     };
     let legendControl = null;
     let activeResultLayerName = null;
@@ -3447,13 +3483,18 @@
         const max = ds.year_max || '-';
         return `${min}-${max}`;
       };
+      const providerTag = ds => {
+        const pt = ds.provider_type || '';
+        if (pt.startsWith('arcgis')) return ' [ArcGIS]';
+        return '';
+      };
       const analysisOptions = datasets.map(ds => {
         const selected = ds.key === 'Dynamic_World' ? 'selected' : '';
-        return `<option value="${ds.key}" ${selected}>${ds.name} - ${ds.resolution} (${formatYears(ds)})</option>`;
+        return `<option value="${ds.key}" ${selected}>${ds.name} - ${ds.resolution} (${formatYears(ds)})${providerTag(ds)}</option>`;
       }).join('');
-      const transitionOptions = datasets.map(ds => {
+      const transitionOptions = datasets.filter(ds => ds.supports_transition !== false).map(ds => {
         const selected = ds.key === 'Dynamic_World' ? 'selected' : '';
-        return `<option value="${ds.key}" ${selected}>${ds.name} (${formatYears(ds)})</option>`;
+        return `<option value="${ds.key}" ${selected}>${ds.name} (${formatYears(ds)})${providerTag(ds)}</option>`;
       }).join('');
 
       $('#landcoverDatasetSelect').html(analysisOptions);
@@ -5317,7 +5358,7 @@
 
       try {
         const response = await apiClient.request(
-          `/models?model_type=carbon&target_dataset=${encodeURIComponent(dataset)}&gee_deployable=true`
+          `/models?model_type=carbon&target_dataset=${encodeURIComponent(dataset)}`
         );
 
         if (!response.success) {
@@ -5331,7 +5372,7 @@
           $select.html('<option value="" disabled>— No compatible models for this dataset —</option>');
           $desc.html(
             `<i class="fas fa-exclamation-triangle text-warning"></i> ` +
-            `No GEE-deployable models found for <strong>${dataset}</strong>. ` +
+            `No compatible models found for <strong>${dataset}</strong>. ` +
             `Upload or train a model trained with this dataset, or select a different dataset.`
           );
           updateRunAnalysisState();
@@ -5383,7 +5424,7 @@
 
         $desc.html(
           `<i class="fas fa-check-circle text-success"></i> ` +
-          `${models.length} model(s) compatible with <strong>${dataset}</strong>`
+          `${models.length} compatible model(s) for <strong>${dataset}</strong>`
         );
         console.log(`✓ Loaded ${models.length} model(s) for dataset: ${dataset}`);
 
@@ -6519,6 +6560,12 @@
       resultMap = L.map('resultMapContainer').setView([center.lat, center.lng], parseInt($('#zoomValue').text()));
       addBasemapSwitcher(resultMap, 'roads', true);
 
+      // Custom pane for result overlay tiles — z-index 250 keeps them above basemap tiles (tilePane=200)
+      // regardless of DOM insertion order when the user switches basemaps.
+      resultMap.createPane('resultTilePane');
+      resultMap.getPane('resultTilePane').style.zIndex = 250;
+      resultMap.getPane('resultTilePane').style.pointerEvents = 'none';
+
       // AOI boundary
       L.rectangle(currentAOI.geometry, {
         color: 'red',
@@ -6560,6 +6607,12 @@
         tileUrl = analysisResults.carbon.carbon_reference.tile_url;
       }
 
+      // Convert relative ArcGIS proxy URLs to absolute (proxy tiles live on backend, not Vite dev server)
+      if (tileUrl && tileUrl.startsWith('/')) {
+        const apiRoot = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:8086/api').replace(/\/api\/?$/, '');
+        tileUrl = apiRoot + tileUrl;
+      }
+
       if (tileUrl) {
         console.log(`Loading tile: ${tileUrl.substring(0, 100)}...`);
 
@@ -6569,8 +6622,14 @@
         $('#layerOpacityValue').text(Math.round(defaultOpacity * 100) + '%');
         $('#layerOpacityControl').css('display', 'flex');
 
+        const lcMeta = (analysisResults.landcover || {})[layerName] || {};
+        const isArcGIS = (lcMeta.provider_type || '').startsWith('arcgis');
+        const attribution = isArcGIS
+          ? '© Esri, Impact Observatory, Microsoft | ArcGIS Living Atlas'
+          : '© Google Earth Engine';
         geeTileLayers[layerName] = L.tileLayer(tileUrl, {
-          attribution: '© Google Earth Engine',
+          attribution,
+          pane: 'resultTilePane',
           className: 'gee-tile-layer',
           maxZoom: 18,
           opacity: defaultOpacity,
@@ -6822,21 +6881,40 @@
         $('#carbonModeInfo').html(modeBanner);
       }
 
-      // ✅ Carbon Density Table
-      const densityHtml = `
-        <tr><td><strong>Mean:</strong></td><td>${(stats.mean || 0).toFixed(2)} ${datasetUnit}</td></tr>
-        <tr><td><strong>Std Dev:</strong></td><td>${(stats.std_dev || 0).toFixed(2)} ${datasetUnit}</td></tr>
-        <tr><td><strong>Min:</strong></td><td>${(stats.min || 0).toFixed(2)} ${datasetUnit}</td></tr>
-        <tr><td><strong>Max:</strong></td><td>${(stats.max || 0).toFixed(2)} ${datasetUnit}</td></tr>
-        <tr class="table-light">
-            <td colspan="2">
-                <small class="text-muted">
-                    <i class="fas fa-database"></i>
-                    <strong>Reference:</strong> ${datasetFullName}
-                </small>
-            </td>
-        </tr>`;
+      // ✅ Carbon Density Table (prediction + optional reference comparison)
+      const _refContainer = carbonData.carbon_reference || carbonData.data?.carbon_reference;
+      const refStats = _refContainer?.statistics ?? null;
+      const refHasData = refStats && Object.values(refStats).some(v => v !== null && v !== undefined);
+      const showRef = refHasData && $('#showReference').is(':checked');
+
+      let densityHtml;
+      if (showRef) {
+        densityHtml = `
+          <tr class="table-secondary">
+            <th>Metric</th>
+            <th>Prediction</th>
+            <th>${datasetName}</th>
+          </tr>
+          <tr><td><strong>Mean</strong></td><td>${(stats.mean||0).toFixed(2)} ${datasetUnit}</td><td>${(refStats.mean||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Std Dev</strong></td><td>${(stats.std_dev||0).toFixed(2)} ${datasetUnit}</td><td>${(refStats.std_dev||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Min</strong></td><td>${(stats.min||0).toFixed(2)} ${datasetUnit}</td><td>${(refStats.min||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Max</strong></td><td>${(stats.max||0).toFixed(2)} ${datasetUnit}</td><td>${(refStats.max||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr class="table-light">
+            <td colspan="3"><small class="text-muted"><i class="fas fa-database"></i> <strong>Reference:</strong> ${datasetFullName}</small></td>
+          </tr>`;
+      } else {
+        densityHtml = `
+          <tr><td><strong>Mean:</strong></td><td>${(stats.mean||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Std Dev:</strong></td><td>${(stats.std_dev||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Min:</strong></td><td>${(stats.min||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr><td><strong>Max:</strong></td><td>${(stats.max||0).toFixed(2)} ${datasetUnit}</td></tr>
+          <tr class="table-light">
+            <td colspan="2"><small class="text-muted"><i class="fas fa-database"></i> <strong>Reference:</strong> ${datasetFullName}</small></td>
+          </tr>`;
+      }
       $('#carbonDensityTable').html(densityHtml);
+
+      // stats passed to delta chart as reference lines
 
       // ✅ Total Carbon Table
       const totalCarbonTons = areaInfo.total_carbon_tons || 0;
@@ -6933,10 +7011,22 @@
 
       $('#carbonModelInfo').html(modelHtml);
       $('#carbonStats').show();
-      renderCarbonDeltaStats(carbonData.carbon_delta);
+
+      // Augment refStats with pre-computed total carbon tons (mean/min/max × area)
+      let chartRefStats = null;
+      if (showRef && refStats) {
+        chartRefStats = {
+          ...refStats,
+          total_carbon_tons:     (refStats.mean || 0) * calculationAreaHa,
+          total_carbon_min_tons: (refStats.min  || 0) * calculationAreaHa,
+          total_carbon_max_tons: (refStats.max  || 0) * calculationAreaHa,
+        };
+      }
+      renderCarbonDeltaStats(carbonData.carbon_delta, stats, chartRefStats, datasetName, datasetUnit);
+      console.log('[Carbon Chart] refStats:', refStats, '| showRef:', showRef, '| checkbox:', $('#showReference').is(':checked'));
     }
 
-    function renderCarbonDeltaStats(deltaData) {
+    function renderCarbonDeltaStats(deltaData, predStats, refStats, refName, unit) {
       if (!deltaData?.series?.length) {
         $('#carbonDeltaStats').hide();
         return;
@@ -6960,40 +7050,206 @@
       const totalCtx = document.getElementById('carbonDeltaTotalChart');
       if (totalCtx) {
         if (charts.carbonDeltaTotal) charts.carbonDeltaTotal.destroy();
+
+        const totalChartLabels = refStats
+          ? [...labels, `${refName || 'Ref.'}\n(Referensi)`]
+          : [...labels];
+        const nT = labels.length;
+
+        const totalDatasets = [{
+          label: 'Total Carbon (tons)',
+          data: [...totals, ...(refStats ? [null] : [])],
+          borderColor: 'rgb(34, 139, 34)',
+          backgroundColor: 'rgba(34, 139, 34, 0.12)',
+          tension: 0.25,
+          fill: true,
+          pointRadius: 3,
+          spanGaps: false,
+          order: 0
+        }];
+
+        if (refStats) {
+          const rn = refName || 'Reference';
+          const refTotal    = refStats.total_carbon_tons     ?? 0;
+          const refTotalMin = refStats.total_carbon_min_tons ?? 0;
+          const refTotalMax = refStats.total_carbon_max_tons ?? 0;
+
+          // Horizontal avg line across time range (null at Ref. position)
+          totalDatasets.push({
+            label: `${rn} Avg (${Math.round(refTotal).toLocaleString()} t)`,
+            data: [...Array(nT).fill(refTotal), null],
+            borderColor: 'rgba(234, 88, 12, 0.75)',
+            borderDash: [8, 4], borderWidth: 1.5,
+            fill: false, pointRadius: 0, tension: 0, spanGaps: false, order: 1
+          });
+
+          // Ref. point at the extra x-category
+          totalDatasets.push({
+            label: `${rn} Total (${Math.round(refTotal).toLocaleString()} t)`,
+            data: [...Array(nT).fill(null), refTotal],
+            borderColor: 'rgba(234, 88, 12, 0.9)',
+            backgroundColor: 'rgba(234, 88, 12, 0.15)',
+            borderDash: [8, 4], borderWidth: 2,
+            pointRadius: 7, pointStyle: 'rectRounded',
+            fill: false, tension: 0, spanGaps: false, order: 1
+          });
+
+          // Min / Max ref points
+          if (refTotalMin !== refTotal) {
+            totalDatasets.push({
+              label: `${rn} Min (${Math.round(refTotalMin).toLocaleString()} t)`,
+              data: [...Array(nT).fill(null), refTotalMin],
+              borderColor: 'rgba(234, 88, 12, 0.55)',
+              borderDash: [4, 4], borderWidth: 1.5,
+              pointRadius: 5, pointStyle: 'triangle',
+              fill: false, tension: 0, spanGaps: false, order: 1
+            });
+            totalDatasets.push({
+              label: `${rn} Max (${Math.round(refTotalMax).toLocaleString()} t)`,
+              data: [...Array(nT).fill(null), refTotalMax],
+              borderColor: 'rgba(234, 88, 12, 0.55)',
+              borderDash: [4, 4], borderWidth: 1.5,
+              pointRadius: 5, pointStyle: 'triangle',
+              fill: false, tension: 0, spanGaps: false, order: 1
+            });
+          }
+        }
+
         charts.carbonDeltaTotal = new Chart(totalCtx, {
           type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Total Carbon (tons)',
-              data: totals,
-              borderColor: 'rgb(34, 139, 34)',
-              backgroundColor: 'rgba(34, 139, 34, 0.12)',
-              tension: 0.25,
-              fill: true
-            }]
-          },
-          options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'tons C' } } } }
+          data: { labels: totalChartLabels, datasets: totalDatasets },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? Math.round(ctx.parsed.y).toLocaleString() + ' t' : '-'}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  callback: function(val, idx) {
+                    return (totalChartLabels[idx] || '').split('\n');
+                  }
+                }
+              },
+              y: { title: { display: true, text: 'tons C' } }
+            }
+          }
         });
       }
 
       const densityCtx = document.getElementById('carbonDeltaDensityChart');
       if (densityCtx) {
         if (charts.carbonDeltaDensity) charts.carbonDeltaDensity.destroy();
+
+        const yUnit = unit || 'Mg/ha';
+        const n = labels.length;
+
+        // Extend x-axis: add "Ref." category when reference data shown
+        const chartLabels = refStats ? [...labels, `${refName || 'Ref.'}\n(Referensi)`] : [...labels];
+
+        // Prediction time-series (null at Ref. position)
+        const predLine = [...densities, ...(refStats ? [null] : [])];
+
+        const densityDatasets = [{
+          label: 'Mean Density (Mg/ha)',
+          data: predLine,
+          borderColor: 'rgb(37, 99, 235)',
+          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+          tension: 0.25,
+          fill: true,
+          pointRadius: 3,
+          spanGaps: false,
+          order: 0
+        }];
+
+        if (predStats) {
+          // Pred avg/min/max as horizontal lines across time range only (null at Ref. position)
+          densityDatasets.push({
+            label: `Pred. Avg (${(predStats.mean||0).toFixed(1)})`,
+            data: [...Array(n).fill(predStats.mean||0), ...(refStats ? [null] : [])],
+            borderColor: 'rgba(37, 99, 235, 0.75)',
+            borderDash: [8, 4], borderWidth: 1.5,
+            fill: false, pointRadius: 0, tension: 0, spanGaps: false, order: 1
+          });
+          densityDatasets.push({
+            label: `Pred. Min (${(predStats.min||0).toFixed(1)})`,
+            data: [...Array(n).fill(predStats.min||0), ...(refStats ? [null] : [])],
+            borderColor: 'rgba(37, 99, 235, 0.4)',
+            borderDash: [4, 4], borderWidth: 1,
+            fill: false, pointRadius: 0, tension: 0, spanGaps: false, order: 1
+          });
+          densityDatasets.push({
+            label: `Pred. Max (${(predStats.max||0).toFixed(1)})`,
+            data: [...Array(n).fill(predStats.max||0), ...(refStats ? [null] : [])],
+            borderColor: 'rgba(37, 99, 235, 0.4)',
+            borderDash: [4, 4], borderWidth: 1,
+            fill: false, pointRadius: 0, tension: 0, spanGaps: false, order: 1
+          });
+        }
+
+        if (refStats) {
+          const rn = refName || 'Reference';
+          const refMean = refStats.mean ?? 0;
+          const refMin  = refStats.min  ?? 0;
+          const refMax  = refStats.max  ?? 0;
+          // Reference plotted ONLY at the Ref. x-position (null for time points)
+          densityDatasets.push({
+            label: `${rn} Avg (${Number(refMean).toFixed(1)})`,
+            data: [...Array(n).fill(null), refMean],
+            borderColor: 'rgba(234, 88, 12, 0.9)',
+            backgroundColor: 'rgba(234, 88, 12, 0.15)',
+            borderDash: [8, 4], borderWidth: 2,
+            pointRadius: 6, pointStyle: 'rectRounded',
+            fill: false, tension: 0, spanGaps: false, order: 1
+          });
+          densityDatasets.push({
+            label: `${rn} Min (${Number(refMin).toFixed(1)})`,
+            data: [...Array(n).fill(null), refMin],
+            borderColor: 'rgba(234, 88, 12, 0.55)',
+            borderDash: [4, 4], borderWidth: 1.5,
+            pointRadius: 5, pointStyle: 'triangle',
+            fill: false, tension: 0, spanGaps: false, order: 1
+          });
+          densityDatasets.push({
+            label: `${rn} Max (${Number(refMax).toFixed(1)})`,
+            data: [...Array(n).fill(null), refMax],
+            borderColor: 'rgba(234, 88, 12, 0.55)',
+            borderDash: [4, 4], borderWidth: 1.5,
+            pointRadius: 5, pointStyle: 'triangle',
+            fill: false, tension: 0, spanGaps: false, order: 1
+          });
+        }
+
         charts.carbonDeltaDensity = new Chart(densityCtx, {
           type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Mean Density (Mg/ha)',
-              data: densities,
-              borderColor: 'rgb(37, 99, 235)',
-              backgroundColor: 'rgba(37, 99, 235, 0.12)',
-              tension: 0.25,
-              fill: true
-            }]
-          },
-          options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'Mg/ha' } } } }
+          data: { labels: chartLabels, datasets: densityDatasets },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? Number(ctx.parsed.y).toFixed(2) + ' ' + yUnit : '-'}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  callback: function(val, idx) {
+                    const lbl = chartLabels[idx] || '';
+                    return lbl.split('\n');
+                  }
+                }
+              },
+              y: { title: { display: true, text: yUnit }, beginAtZero: false }
+            }
+          }
         });
       }
 
@@ -7027,6 +7283,55 @@
       `).join('') || '<tr><td colspan="5" class="text-muted text-center">Tidak ada delta.</td></tr>');
 
       $('#carbonDeltaStats').show();
+    }
+
+    function renderCarbonDensityStatsChart(predStats, refStats, unit, refName) {
+      $('#carbonDensityChartRow').show();
+      const ctx = document.getElementById('carbonDensityStatsChart');
+      if (!ctx) return;
+
+      if (charts.carbonDensityStats) charts.carbonDensityStats.destroy();
+
+      const labels = ['Min', 'Mean', 'Max', 'Std Dev'];
+      const datasets = [{
+        label: 'Prediction',
+        data: [predStats.min||0, predStats.mean||0, predStats.max||0, predStats.std_dev||0],
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }];
+
+      if (refStats) {
+        datasets.push({
+          label: refName || 'Reference',
+          data: [refStats.min||0, refStats.mean||0, refStats.max||0, refStats.std_dev||0],
+          backgroundColor: 'rgba(255, 159, 64, 0.7)',
+          borderColor: 'rgba(255, 159, 64, 1)',
+          borderWidth: 1
+        });
+      }
+
+      charts.carbonDensityStats = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} ${unit}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: `Carbon Density (${unit})` }
+            }
+          }
+        }
+      });
     }
 
 
@@ -8759,6 +9064,12 @@
           '<i class="fas fa-exclamation-triangle text-warning"></i> <strong>Soil organic carbon</strong> from OpenLandMap (g/kg at 0 cm depth). This represents a <strong>soil carbon pool</strong>, not aboveground biomass carbon. Do not compare totals directly with AGB carbon datasets.',
         'Simard':
           '<i class="fas fa-info-circle text-muted"></i> <em>Legacy:</em> Global forest canopy height (1km) converted to a biomass proxy. Based on 2011 data. Use GEDI or ESA CCI for more accurate estimates.',
+        'WCMC_Carbon_ArcGIS':
+          '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> Global AGB+BGB biomass carbon density at 300m from UN WCMC, hosted on ArcGIS Living Atlas. Fixed 2010 baseline. Units in Mg C/ha. Reference tiles served via ArcGIS proxy.',
+        'UNEP_WCMC_Biomass':
+          '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> UNEP-WCMC World Biomass Carbon — above and belowground biomass carbon (AGB+BGB) at 300m. Served via UNEP-WCMC ArcGIS portal.',
+        'UNEP_WCMC_Biomass_SOC':
+          '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> UNEP-WCMC combined biomass and soil organic carbon (AGB+BGB+SOC to 1m depth) at 300m. Total ecosystem carbon pool. Served via UNEP-WCMC ArcGIS portal.',
       };
 
       $('#datasetDescription').html(descriptions[dataset] || '');
