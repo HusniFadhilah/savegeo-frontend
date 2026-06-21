@@ -1136,7 +1136,7 @@
                         </h6>
                         <p class="mb-0"><span data-i18n="region.region">Wilayah</span>: <strong
                             id="regionName">-</strong></p>
-                        <p class="mb-0">Area: <strong id="regionArea">-</strong> km²</p>
+                        <p class="mb-0"><span data-i18n="region.area">Area</span>: <strong id="regionArea">-</strong> <span id="regionAreaUnit">km²</span></p>
                       </div>
                     </div>
                   </div>
@@ -5068,7 +5068,7 @@
         const preciseArea = calculateAreaFromGeoJSON(geojson);
         if (!preciseArea || !currentAOI) return;
         currentAOI.area = preciseArea;
-        $('#regionArea').text(preciseArea);
+        setAOIAreaDisplay(preciseArea);
       };
 
       if ('requestIdleCallback' in window) {
@@ -5823,7 +5823,30 @@
     function calculateAreaFromBounds(bounds) {
       const latDiff = Math.abs(bounds.getSouth() - bounds.getNorth());
       const lonDiff = Math.abs(bounds.getWest() - bounds.getEast());
-      return (latDiff * 111 * lonDiff * 111 * Math.cos(bounds.getCenter().lat * Math.PI / 180)).toFixed(2);
+      return latDiff * 111 * lonDiff * 111 * Math.cos(bounds.getCenter().lat * Math.PI / 180);
+    }
+
+    function formatAreaDisplay(km2) {
+      const v = Number(km2);
+      if (!Number.isFinite(v) || v <= 0) return { text: '-', unit: '' };
+      const m2 = v * 1_000_000;
+      if (m2 < 10_000) {
+        return { text: m2.toLocaleString(undefined, { maximumFractionDigits: 0 }), unit: 'm²' };
+      }
+      const ha = v * 100;
+      if (ha < 100) {
+        return { text: ha.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), unit: 'ha' };
+      }
+      if (v < 1) {
+        return { text: ha.toLocaleString(undefined, { maximumFractionDigits: 1 }), unit: 'ha' };
+      }
+      return { text: v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), unit: 'km²' };
+    }
+
+    function setAOIAreaDisplay(km2) {
+      const { text, unit } = formatAreaDisplay(km2);
+      $('#regionArea').text(text);
+      $('#regionAreaUnit').text(unit);
     }
 
     function calculateAreaFromGeoJSON(geojson) {
@@ -5883,12 +5906,12 @@
         areaM2 = geometryArea(geojson);
       }
 
-      return areaM2 > 0 ? (areaM2 / 1000000).toFixed(2) : null;
+      return areaM2 > 0 ? areaM2 / 1000000 : null;
     }
 
     function showAOIInfo() {
       $('#regionName').text(currentAOI.name);
-      $('#regionArea').text(currentAOI.area);
+      setAOIAreaDisplay(currentAOI.area);
       $('#aoiInfo').slideDown();
     }
 
@@ -6005,7 +6028,7 @@
         const bounds = layer.getBounds();
         if (bounds.isValid()) map.fitBounds(bounds);
 
-        const areaKm2 = _selectedCompany.area_ha ? (_selectedCompany.area_ha / 100).toFixed(2) : calculateAreaFromGeoJSON(geojson);
+        const areaKm2 = _selectedCompany.area_ha ? _selectedCompany.area_ha / 100 : calculateAreaFromGeoJSON(geojson);
 
         currentAOI = {
           type:     'company',
@@ -6444,6 +6467,10 @@
     function displayResults() {
       try {
         $('#resultsSection').slideDown();
+
+        if (!analysisResults.carbon) {
+          $('#carbonStats').hide();
+        }
 
         createResultTabs();     // sudah difix di atas
         initializeResultMap();
