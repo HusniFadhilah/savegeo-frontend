@@ -90,6 +90,30 @@ Jangan menjanjikan bahwa dataset baru lebih akurat secara umum. Untuk GEDI, copy
 
 Untuk SOC/OpenLandMap, copy harus menyebut soil carbon agar user tidak mengira hasilnya sama dengan stok karbon biomassa di atas tanah.
 
+## Contoh Dataset External Raster Provider
+
+Untuk dataset dengan `provider_type = "external_raster"` (e.g. `SOILGRIDS_SOC_30CM`):
+
+```html
+<optgroup label="External / Open Carbon Providers">
+  <option value="SOILGRIDS_SOC_30CM">ISRIC SoilGrids SOC 0–30cm — REST API (2017, 250m, soil carbon)</option>
+</optgroup>
+```
+
+Deskripsi:
+```js
+'SOILGRIDS_SOC_30CM':
+  '<i class="fas fa-globe text-secondary"></i> <strong>External / Open Data:</strong> ' +
+  '<strong>Soil organic carbon</strong> dari ISRIC SoilGrids v2.0 via REST API. ' +
+  'SOC pool — jangan bandingkan total dengan aboveground biomass carbon.'
+```
+
+Hal yang perlu diperhatikan untuk external raster:
+- `carbon_reference.tile_url` akan `null` — jangan coba render tile.
+- `carbon_reference.statistics` berisi sampled point stats jika API tersedia.
+- `carbon_reference.statistics.note` berisi pesan jika API tidak mendukung operasi yang diminta.
+- Year selector tidak diperlukan (`time_aware: false` di registry).
+
 ## Compatibility Note
 
 Frontend hanya memilih reference dataset dan model. Jika dataset baru membutuhkan model khusus, backend tetap harus memvalidasi kompatibilitas dan mengembalikan error yang jelas. Frontend boleh menampilkan hint, tetapi jangan menyembunyikan model secara hardcoded kecuali backend menyediakan metadata kompatibilitas.

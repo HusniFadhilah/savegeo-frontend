@@ -62,14 +62,25 @@ Catatan: ada kode lama yang mencoba membaca `model_info.reference_dataset_info`.
 
 ## Dataset Values Saat Ini
 
-Dropdown saat ini mengenal:
+Dropdown `#carbonReferenceDataset` mengenal tiga optgroup:
 
-- `ESA_CCI`
-- `WCMC`
-- `GEDI`
-- `Simard`
+**Google Earth Engine (GEE)**
+- `ESA_CCI`, `WCMC`, `GEDI`, `GEDI_L4A_MONTHLY`, `GEDI_L4B_STACK`
+- `SPAWN`, `ORNL_AGB_BGB`, `OPENLANDMAP_SOC`, `ESA_CCI_SATIO_AGB`, `Simard`
 
-Jika backend menambah key baru seperti `GEDI_L4B_STACK`, `OPENLANDMAP_SOC`, `ORNL_AGB_BGB`, atau `GEDI_L4A_MONTHLY`, frontend harus menambah option dengan value yang sama persis.
+**ArcGIS Living Atlas**
+- `WCMC_Carbon_ArcGIS`, `UNEP_WCMC_Biomass`, `UNEP_WCMC_Biomass_SOC`
+
+**External / Open Carbon Providers**
+- `SOILGRIDS_SOC_30CM` — sampled statistics only, no tile
+- `GLOBAL_MANGROVE_WATCH_AGB` — placeholder; butuh rasterio
+
+Untuk dataset `external_raster`:
+- `carbon_reference.tile_url` adalah `null` — tidak ada layer tile yang perlu ditambahkan ke peta.
+- `carbon_reference.statistics` berisi sampled point stats (mean, std_dev, min, max, n_samples).
+- Jika `statistics.note` ada, tampilkan sebagai informasi/warning, bukan error.
+
+Jika backend menambah key baru, frontend harus menambah `<option>` di optgroup yang sesuai dan entry di `updateDatasetDescription()`.
 
 ## Dataset-Aware Model Selection
 

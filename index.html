@@ -452,12 +452,20 @@
                         <option value="SPAWN">Spawn &amp; Gibbs AGB Carbon (2010, 300m)</option>
                         <option value="ORNL_AGB_BGB">NASA ORNL AGB+BGB Carbon Density (2010, 300m)</option>
                         <option value="OPENLANDMAP_SOC">OpenLandMap Soil Organic Carbon — SOC (2019, 250m)</option>
-                        <option value="Simard">Simard Forest Height proxy (2011, 1km) — Legacy</option>
+                        <option value="Simard" disabled title="Dataset deprecated — gunakan WCMC/SPAWN/GEDI">Simard Forest Height proxy (2011, 1km) — ⚠ Deprecated</option>
                       </optgroup>
                       <optgroup label="ArcGIS Living Atlas">
                         <option value="WCMC_Carbon_ArcGIS">WCMC Biomass Carbon Density — ArcGIS (2010, 300m)</option>
                         <option value="UNEP_WCMC_Biomass">UNEP-WCMC World Biomass Carbon — AGB+BGB (300m)</option>
                         <option value="UNEP_WCMC_Biomass_SOC">UNEP-WCMC Biomass + Soil Carbon — AGB+BGB+SOC (300m)</option>
+                      </optgroup>
+                      <optgroup label="External / Open Carbon Providers">
+                        <option value="SOILGRIDS_SOC_30CM">ISRIC SoilGrids SOC 0–30cm — REST API (2017, 250m, soil carbon)</option>
+                        <option value="GLOBAL_MANGROVE_WATCH_AGB">JAXA Global Mangrove Watch AGB Carbon (2020, 25m, mangrove)</option>
+                        <option value="HANSEN_TREECOVER_AGB_PROXY">Hansen GFC Treecover AGB Proxy — COG (2023, 30m, aboveground carbon)</option>
+                      </optgroup>
+                      <optgroup label="Experimental / 2026 Carbon">
+                        <option value="ESA_BIOMASS_2026">ESA Biomass Mission 2026 — Cloud GeoTIFF (experimental, forest woody biomass carbon)</option>
                       </optgroup>
                     </select>
                     <small class="text-muted d-block mt-1" id="datasetDescription">
@@ -628,6 +636,7 @@
                   <label class="form-label">Year</label>
                   <input type="range" class="form-range" id="yearSlider" min="2017">
                   <div class="text-center"><strong id="yearValue"></strong></div>
+                  <div id="lcYearContextHint" class="d-none mt-1"></div>
                 </div>
 
                 <!-- Zoom -->
@@ -1372,7 +1381,7 @@
                           <div class="col-md-6">
                             <div class="card">
                               <div class="card-body">
-                                <h6 class="card-title">Carbon Density Statistics</h6>
+                                <h6 class="card-title" id="carbonDensityStatsTitle">Carbon Density Statistics</h6>
                                 <table class="table table-sm">
                                   <tbody id="carbonDensityTable">
                                     <!-- Will be populated by JS -->
@@ -1385,7 +1394,7 @@
                           <div class="col-md-6">
                             <div class="card">
                               <div class="card-body">
-                                <h6 class="card-title">Total Carbon Stock</h6>
+                                <h6 class="card-title" id="carbonTotalStatsTitle">Total Carbon Stock</h6>
                                 <table class="table table-sm">
                                   <tbody id="carbonTotalTable">
                                     <!-- Will be populated by JS -->
@@ -1400,7 +1409,7 @@
                         <div class="row mt-3" id="carbonDensityChartRow" style="display:none;">
                           <div class="col-md-12">
                             <div class="card">
-                              <div class="card-header">
+                              <div class="card-header" id="carbonDensityChartHeader">
                                 <i class="fas fa-chart-bar"></i> Carbon Density Statistics Chart
                               </div>
                               <div class="card-body">
@@ -1448,7 +1457,7 @@
                                         <tr>
                                           <th>Periode</th>
                                           <th class="text-end">Delta Carbon (tons)</th>
-                                          <th class="text-end">Delta Density (Mg/ha)</th>
+                                          <th class="text-end" id="carbonDeltaDensityHeader">Delta Density</th>
                                           <th class="text-end">Delta CO2e (tons)</th>
                                           <th class="text-end">%</th>
                                         </tr>
@@ -3486,6 +3495,7 @@
       const providerTag = ds => {
         const pt = ds.provider_type || '';
         if (pt.startsWith('arcgis')) return ' [ArcGIS]';
+        if (pt === 'cloud_geotiff' || pt === 'external_raster' || pt === 'open_lulc_api') return ' [Cloud GeoTIFF]';
         return '';
       };
       const analysisOptions = datasets.map(ds => {
@@ -3565,6 +3575,37 @@
       if (!$('#transitionEndYear').data('manual')) $('#transitionEndYear').val(targetValue);
       if (!$('#carbonDeltaStartYear').data('manual')) $('#carbonDeltaStartYear').val(Math.max(min, targetValue - 1));
       if (!$('#carbonDeltaEndYear').data('manual')) $('#carbonDeltaEndYear').val(targetValue);
+
+      updateLcYearContextHint(targetValue);
+    }
+
+    function updateLcYearContextHint(year) {
+      const $hint = $('#lcYearContextHint');
+      if (!$hint.length) return;
+      const currentYear = new Date().getFullYear();
+      const selected = ($('#landcoverDatasetSelect').val() || []);
+      const hasEsri = selected.includes('ESRI_LandCover');
+      const hasDW   = selected.includes('Dynamic_World');
+      const parts   = [];
+
+      if (year >= currentYear && hasEsri) {
+        parts.push(
+          '<span class="text-warning"><i class="fas fa-circle-info me-1"></i>' +
+          'Latest annual Esri LULC is 2025; 2026 requests use latest available annual map.</span>'
+        );
+      }
+      if (year >= currentYear && hasDW) {
+        parts.push(
+          '<span class="text-success"><i class="fas fa-satellite-dish me-1"></i>' +
+          'Dynamic World supports near-real-time ' + year + ' data.</span>'
+        );
+      }
+
+      if (parts.length) {
+        $hint.html('<small>' + parts.join('<br>') + '</small>').removeClass('d-none');
+      } else {
+        $hint.addClass('d-none').empty();
+      }
     }
 
     function renderLandCoverDocsTable() {
@@ -4675,6 +4716,7 @@
         const year = parseInt($(this).val());
         if (!$('#transitionStartYear').data('manual')) $('#transitionStartYear').val(Math.max(2017, year - 1));
         if (!$('#transitionEndYear').data('manual')) $('#transitionEndYear').val(year);
+        updateLcYearContextHint(year);
       });
 
       $('#zoomSlider').on('input', function () {
@@ -5369,11 +5411,37 @@
         window._carbonCompatibleModelCount = models.length;
 
         if (models.length === 0) {
-          $select.html('<option value="" disabled>— No compatible models for this dataset —</option>');
+          const _noModelGuidance = {
+            'GEDI_L4A_MONTHLY':
+              'Dataset ini <em>training-capable</em>. Jalankan <code>train_gedi_carbon.py --dataset GEDI_L4A_MONTHLY</code> untuk melatih model. ' +
+              'Alternatif dengan model tersedia: <strong>GEDI_L4B_STACK</strong>, <strong>GEDI</strong>.',
+            'Simard':
+              '<strong>Dataset legacy (deprecated).</strong> Simard Forest Height tidak direkomendasikan untuk analisis baru. ' +
+              'Gunakan <strong>WCMC</strong>, <strong>SPAWN</strong>, atau <strong>GEDI</strong> sebagai pengganti modern.',
+            'UNEP_WCMC_Biomass':
+              'Dataset ArcGIS Living Atlas. Latih model dengan <code>train_arcgis_carbon.py --dataset UNEP_WCMC_Biomass</code>, ' +
+              'atau gunakan <strong>WCMC_Carbon_ArcGIS</strong> / <strong>WCMC</strong> yang sudah memiliki model.',
+            'UNEP_WCMC_Biomass_SOC':
+              'Dataset ArcGIS multi-pool (AGB+BGB+SOC). Gunakan <strong>WCMC_Carbon_ArcGIS</strong> atau <strong>WCMC</strong> untuk model yang tersedia.',
+            'ESA_BIOMASS_2026':
+              '<strong>⚗ Eksperimental — ESA Biomass mission 2026.</strong><br>' +
+              'Dataset karbon referensi dari misi ESA BIOMASS (data terbuka sejak 2026-01-26). ' +
+              'Ini adalah <em>reference dataset 2026</em> (label karbon dari produk ESA), bukan sekadar prediksi model dari citra 2026.<br>' +
+              '<strong>Catatan:</strong> "Tahun analisis" di slider atas adalah tahun citra Sentinel-2 untuk <em>inferensi model</em>. ' +
+              'Setel ke 2026 agar model memproyeksikan stok karbon dari fitur S2 tahun berjalan.<br>' +
+              'Langkah setup: (1) set env var <code>ESA_BIOMASS_2026_URL</code> ke URI COG publik ESA, ' +
+              '(2) jalankan <code>train_esa_biomass_carbon.py --force</code>. ' +
+              'Belum ada model sampai URL dan training selesai.',
+            'GLOBAL_MANGROVE_WATCH_AGB':
+              'Dataset mangrove eksternal. Latih model dengan <code>train_external_carbon.py --dataset GLOBAL_MANGROVE_WATCH_AGB</code>.',
+          };
+          const _guidance = _noModelGuidance[dataset] ||
+            `Upload atau latih model dengan dataset <strong>${dataset}</strong> via halaman Admin → Model Management.`;
+          $select.html('<option value="" disabled>— Tidak ada model untuk dataset ini —</option>');
           $desc.html(
-            `<i class="fas fa-exclamation-triangle text-warning"></i> ` +
-            `No compatible models found for <strong>${dataset}</strong>. ` +
-            `Upload or train a model trained with this dataset, or select a different dataset.`
+            `<div class="alert alert-warning py-2 mb-0">` +
+            `<i class="fas fa-exclamation-triangle"></i> <strong>Tidak ada model compatible untuk <em>${dataset}</em>.</strong><br>` +
+            `<small>${_guidance}</small></div>`
           );
           updateRunAnalysisState();
           return;
@@ -6208,6 +6276,35 @@
             : (carbonData.carbon_estimated || {});
           const referenceData = carbonData.carbon_reference || {};
           const modelInfo = carbonData.model_info || {};
+          const unit = referenceData.unit || layerData.unit
+            || (mapLayerRegistry[layerName] || {}).unit || 'Mg/ha';
+          const layerTitle = layerName === 'carbon_reference'
+            ? `${referenceData.name || modelInfo.reference_dataset || 'Reference Carbon'}`
+            : 'Estimated Carbon';
+
+          // Detect soil carbon for label
+          const _refPool = referenceData.target_pool || '';
+          const _isSoilLegend = _refPool.includes('soil') || ['g/kg','dg/kg','kg/m²'].includes(unit);
+          const densityLabel = _isSoilLegend
+            ? `Soil Organic Carbon (${unit})`
+            : `Carbon Density (${unit})`;
+
+          // For carbon_reference with no tile (external provider): show stats-only legend
+          const _noTileProviders = ['external_raster', 'esa_biomass_external', 'open_data_rest'];
+          if (layerName === 'carbon_reference' && !referenceData.tile_url
+              && _noTileProviders.includes(referenceData.provider_type)) {
+            div.innerHTML += `
+              <div style="margin-bottom:5px;"><strong>${layerTitle}</strong></div>
+              <div class="mt-1 p-2" style="background:#f8f9fa;border-radius:4px;font-size:0.78rem;">
+                <i class="fas fa-chart-bar text-info"></i> <strong>Statistik saja</strong><br>
+                <span class="text-muted">Visualisasi peta tidak tersedia<br>untuk provider eksternal ini.</span><br><br>
+                <i class="fas fa-database text-muted"></i> Unit: <strong>${unit}</strong><br>
+                ${referenceData.resolution ? `<i class="fas fa-search text-muted"></i> Resolusi: <strong>${referenceData.resolution}m</strong><br>` : ''}
+                ${referenceData.year ? `<i class="fas fa-calendar text-muted"></i> Tahun: <strong>${referenceData.year}</strong>` : ''}
+              </div>`;
+            return div;
+          }
+
           const registryVis = (mapLayerRegistry[layerName] || {}).vis_params || {};
           const apiVis = layerData.vis_params || {};
           const effectiveVis = { ...registryVis, ...apiVis };
@@ -6216,20 +6313,12 @@
             : ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
           const minVal = Number.isFinite(Number(effectiveVis.min)) ? Number(effectiveVis.min) : 0;
           const maxVal = Number.isFinite(Number(effectiveVis.max)) ? Number(effectiveVis.max) : 200;
-          const unit = referenceData.unit || layerData.unit
-            || (mapLayerRegistry[layerName] || {}).unit || 'Mg/ha';
           const labels = colors.map((_, idx) => {
             if (colors.length === 1) return minVal.toFixed(0);
             const value = minVal + ((maxVal - minVal) * idx / (colors.length - 1));
             const rounded = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, '');
             return idx === colors.length - 1 ? `${rounded}+` : rounded;
           });
-          const layerTitle = layerName === 'carbon_reference'
-            ? `${referenceData.name || modelInfo.reference_dataset || 'Reference Carbon'}`
-            : 'Estimated Carbon';
-          const densityLabel = referenceData.target_pool === 'soil_organic_carbon'
-            ? `Soil Organic Carbon (${unit})`
-            : `Carbon Density (${unit})`;
 
           div.innerHTML += `<div style="margin-bottom:5px;"><strong>${densityLabel}</strong></div>`;
 
@@ -6648,8 +6737,21 @@
         console.log(`✓ Layer added to map: ${layerName}`);
       } else {
         console.warn(`No tile URL for layer: ${layerName}`);
-        showAlert(`No visualization available for ${layerName}`, 'warning', 3000);
         $('#layerOpacityControl').hide();
+        if (layerName === 'carbon_reference') {
+          const _refMeta = analysisResults.carbon?.carbon_reference || {};
+          const _noTileTypes = ['external_raster', 'esa_biomass_external', 'open_data_rest'];
+          if (_noTileTypes.includes(_refMeta.provider_type)) {
+            showAlert(
+              `<i class="fas fa-info-circle"></i> <strong>${_refMeta.name || 'Reference dataset'}</strong>: statistik tersedia, visualisasi peta tidak didukung untuk tipe provider ini (<code>${_refMeta.provider_type || 'external'}</code>).`,
+              'info', 7000
+            );
+          } else {
+            showAlert(`Tidak ada tile untuk referensi karbon. Coba dataset lain.`, 'warning', 4000);
+          }
+        } else {
+          showAlert(`No visualization available for ${layerName}`, 'warning', 3000);
+        }
       }
 
       updateLegend(layerName);
@@ -6778,6 +6880,32 @@
       const datasetYear = datasetInfo.year || 'N/A';
       const datasetFullName = datasetInfo.full_name || datasetName;
       const datasetUnit = datasetInfo.unit || carbonData.carbon_estimated?.unit || 'Mg/ha';
+      const datasetTargetPool = datasetInfo.target_pool || '';
+      const datasetIsSoilCarbon = datasetTargetPool.includes('soil')
+        || ['g/kg', 'dg/kg', 'kg/m²', 't/ha_soc'].includes(datasetUnit);
+      const datasetIsExternal = ['external_raster', 'esa_biomass_external', 'open_data_rest']
+        .includes(datasetInfo.provider_type);
+
+      // Update static card titles to match dataset type
+      $('#carbonDensityStatsTitle').text(datasetIsSoilCarbon ? 'SOC Density Statistics' : 'Carbon Density Statistics');
+      $('#carbonTotalStatsTitle').text(datasetIsSoilCarbon ? 'Total SOC Estimate' : 'Total Carbon Stock');
+      if (datasetIsSoilCarbon) {
+        $('#carbonDensityChartHeader').html('<i class="fas fa-chart-bar"></i> SOC Density Statistics Chart');
+      } else {
+        $('#carbonDensityChartHeader').html('<i class="fas fa-chart-bar"></i> Carbon Density Statistics Chart');
+      }
+
+      // Show / hide external reference notice
+      const _extNoticeId = 'carbonRefExternalNotice';
+      if (datasetIsExternal) {
+        const _noticeHtml = `<div id="${_extNoticeId}" class="alert alert-secondary py-2 mb-2">
+          <small><i class="fas fa-link"></i> <strong>${datasetName}</strong>: dataset eksternal — hanya statistik tersedia.
+          Visualisasi peta tidak didukung untuk tipe provider ini.</small></div>`;
+        if (!$(`#${_extNoticeId}`).length) $('#carbonStats').prepend(_noticeHtml);
+        else $(`#${_extNoticeId}`).html($(_noticeHtml).html());
+      } else {
+        $(`#${_extNoticeId}`).remove();
+      }
 
       console.log('Extracted dataset info:', {
         datasetName,
@@ -6832,8 +6960,8 @@
                 <div class="col-md-12">
                     <small class="text-success">
                         <i class="fas fa-check-circle"></i>
-                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation 
-                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} Mg/ha)
+                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation
+                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} ${datasetUnit})
                     </small>
                 </div>
             </div>
@@ -6865,8 +6993,8 @@
                 <div class="col-md-12">
                     <small class="text-success">
                         <i class="fas fa-check-circle"></i>
-                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation 
-                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} Mg/ha)
+                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation
+                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} ${datasetUnit})
                     </small>
                 </div>
             </div>
@@ -6989,7 +7117,7 @@
         <div class="row">
             <div class="col-md-3"><strong>Training Samples:</strong><br><span class="badge bg-primary">${trainingSamples.toLocaleString()}</span></div>
             ${cvFolds > 0 ? `<div class="col-md-2"><strong>Validation:</strong><br><span class="badge bg-success">${cvFolds}-Fold CV</span></div>` : ''}
-            <div class="col-md-3"><strong>RMSE:</strong><br><span class="badge ${rmseBadgeClass}">${rmse.toFixed(2)}${rmseStd ? ' ± ' + rmseStd.toFixed(2) : ''} Mg/ha</span></div>
+            <div class="col-md-3"><strong>RMSE:</strong><br><span class="badge ${rmseBadgeClass}">${rmse.toFixed(2)}${rmseStd ? ' ± ' + rmseStd.toFixed(2) : ''} ${datasetUnit}</span></div>
             ${r2Score !== undefined ? `<div class="col-md-2"><strong>R² Score:</strong><br><span class="badge ${r2BadgeClass}">${r2Score.toFixed(3)}</span></div>` : ''}
             <div class="col-md-2"><strong>Tree Mask:</strong><br>${treeMask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}</div>
         </div>`;
@@ -7031,6 +7159,10 @@
         $('#carbonDeltaStats').hide();
         return;
       }
+
+      // Update delta table density header to match dataset unit
+      const _dUnit = unit || 'Mg/ha';
+      $('#carbonDeltaDensityHeader').text(`Delta Density (${_dUnit})`);
 
       const summary = deltaData.summary || {};
       const net = Number(summary.net_delta_total_carbon_tons || 0);
@@ -7156,7 +7288,7 @@
         const predLine = [...densities, ...(refStats ? [null] : [])];
 
         const densityDatasets = [{
-          label: 'Mean Density (Mg/ha)',
+          label: `Mean Density (${yUnit})`,
           data: predLine,
           borderColor: 'rgb(37, 99, 235)',
           backgroundColor: 'rgba(37, 99, 235, 0.12)',
@@ -7404,6 +7536,17 @@
         const modelPerf = carbonData.model_performance || {};
         const modelInfo = carbonData.model_info || {};
 
+        // Unit & pool-type derived from reference dataset metadata
+        const estimatedUnit = carbonData.carbon_reference?.unit
+          || carbonData.carbon_estimated?.unit
+          || 'Mg/ha';
+        const targetPool = carbonData.carbon_reference?.target_pool || '';
+        const isSoilCarbon = targetPool.includes('soil')
+          || ['g/kg', 'dg/kg', 'kg/m²', 't/ha_soc'].includes(estimatedUnit);
+
+        const densityLabel = isSoilCarbon ? 'Avg SOC Density' : 'Avg Carbon Density';
+        const totalLabel   = isSoilCarbon ? 'Total SOC Estimate' : 'Total Carbon Stock';
+
         const meanCarbon = stats.mean || 0;
         const totalCarbon = areaInfo.total_carbon_tons || 0;
         const co2Equivalent = areaInfo.carbon_dioxide_equivalent_tons || 0;
@@ -7417,8 +7560,8 @@
             <div class="metric-card">
                 <div class="metric-icon"><i class="fa-solid fa-tree"></i></div>
                 <div class="metric-value">${meanCarbon.toFixed(2)}
-                    <small>Mg/ha</small></div>
-                <div class="metric-label">Avg Carbon Density</div>
+                    <small>${estimatedUnit}</small></div>
+                <div class="metric-label">${densityLabel}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -7426,7 +7569,7 @@
                 <div class="metric-icon"><i class="fa-solid fa-weight-hanging"></i></div>
                 <div class="metric-value">${totalCarbon.toLocaleString()}
                     <small>tons</small></div>
-                <div class="metric-label">Total Carbon Stock</div>
+                <div class="metric-label">${totalLabel}</div>
                 <small class="text-muted d-block mt-1">
                     ${calculationMode === 'clipped_aoi' ? '<i class="fas fa-cut"></i> Clipped AOI' : '<i class="fas fa-layer-group"></i> Bounding Box'}
                 </small>
@@ -7437,14 +7580,14 @@
                 <div class="metric-icon"><i class="fa-solid fa-cloud"></i></div>
                 <div class="metric-value">${co2Equivalent.toLocaleString()}
                     <small>tons</small></div>
-                <div class="metric-label">CO₂ Equivalent</div>
+                <div class="metric-label">CO₂ Equivalent${isSoilCarbon ? ' *' : ''}</div>
+                ${isSoilCarbon ? '<small class="text-warning d-block mt-1"><i class="fas fa-exclamation-triangle"></i> Estimasi SOC, bukan AGB</small>' : ''}
             </div>
         </div>
         `;
 
         // ✅ Show RMSE or R² based on availability
         if (hasCV && r2Score !== undefined) {
-          // Show R² if we have cross-validation
           const r2BadgeClass = r2Score >= 0.7 ? 'success' : r2Score >= 0.5 ? 'warning' : 'danger';
           html += `
             <div class="col-md-3">
@@ -7457,13 +7600,12 @@
                     </div>
                     <div class="metric-label">R² Score (CV)</div>
                     <small class="text-muted d-block mt-1">
-                        RMSE: ${rmse.toFixed(2)} Mg/ha
+                        RMSE: ${rmse.toFixed(2)} ${estimatedUnit}
                     </small>
                 </div>
             </div>
             `;
         } else {
-          // Show RMSE if no cross-validation
           html += `
             <div class="col-md-3">
                 <div class="metric-card">
@@ -8365,11 +8507,27 @@
       for (const [dsKey, ds] of Object.entries(analysisResults.landcover || {})) {
         if (!ds?.classes) continue;
 
-        report += `## Land Cover – ${dsKey.replace(/_/g, ' ')}\n\n`;
+        const dsName = ds.dataset_name || dsKey.replace(/_/g, ' ');
+        report += `## Land Cover – ${dsName}\n\n`;
         if (times.landcover) report += `**Processing Time:** ${formatDuration(times.landcover)}\n\n`;
 
-        for (const [cls, d] of Object.entries(ds.classes)) {
-          report += `- **${cls}:** ${d.area} ha (${d.percentage}%)\n`;
+        if (ds.requested_year) report += `**Requested Year:** ${ds.requested_year}\n`;
+        if (ds.year && ds.year !== ds.requested_year) report += `**Effective Year:** ${ds.year}\n`;
+        if (ds.resolution) report += `**Resolution:** ${ds.resolution}\n`;
+        if (ds.total_area_ha) report += `**Total Area:** ${ds.total_area_ha.toLocaleString()} ha\n`;
+        report += '\n';
+
+        // Dominant class
+        const classEntries = Object.entries(ds.classes);
+        if (classEntries.length) {
+          const dominant = classEntries.reduce((a, b) => (b[1].area_ha || 0) > (a[1].area_ha || 0) ? b : a);
+          report += `**Dominant Class:** ${dominant[0]}\n\n`;
+        }
+
+        report += `**Land Cover Classes:**\n`;
+        for (const [cls, d] of classEntries) {
+          const areaVal = (d.area_ha || d.area || 0);
+          report += `- **${cls}:** ${typeof areaVal === 'number' ? areaVal.toLocaleString() : areaVal} ha (${d.percentage}%)\n`;
         }
         report += '\n';
       }
@@ -8398,19 +8556,27 @@
         const refName = ref.full_name || ref.name || mi.reference_dataset || 'N/A';
         const refYear = ref.year || mi.reference_dataset_year || 'N/A';
 
+        const _rptPool = ref.target_pool || '';
+        const _rptIsSoil = _rptPool.includes('soil') || ['g/kg','dg/kg','kg/m²'].includes(carbonUnit);
+        const _rptDensityLabel = _rptIsSoil ? 'SOC Density Statistics' : 'Carbon Density Statistics';
+        const _rptTotalLabel   = _rptIsSoil ? 'Total SOC Estimate' : 'Total Carbon Stock';
+
         report += `## Carbon Stock Analysis\n\n`;
         if (times.carbon) report += `**Processing Time:** ${formatDuration(times.carbon)}\n\n`;
+        if (ref.provider_type && ['external_raster','esa_biomass_external'].includes(ref.provider_type)) {
+          report += `> **Note:** Reference dataset is external (${ref.provider_type}). Statistics only — no map tile available.\n\n`;
+        }
 
-        report += `### Carbon Density Statistics\n`;
+        report += `### ${_rptDensityLabel}\n`;
         report += `- Mean: ${(stats.mean || 0).toFixed(2)} ${carbonUnit}\n`;
         report += `- Std Dev: ${(stats.std_dev || 0).toFixed(2)} ${carbonUnit}\n`;
         report += `- Min: ${(stats.min || 0).toFixed(2)} ${carbonUnit}\n`;
         report += `- Max: ${(stats.max || 0).toFixed(2)} ${carbonUnit}\n\n`;
 
-        report += `### Total Carbon Stock\n`;
+        report += `### ${_rptTotalLabel}\n`;
         report += `- Calculation Area: ${(ai.calculation_area_ha || 0).toLocaleString()} ha\n`;
         report += `- Total Carbon: ${(ai.total_carbon_tons || 0).toLocaleString()} tons\n`;
-        report += `- CO₂ Equivalent: ${(ai.carbon_dioxide_equivalent_tons || 0).toLocaleString()} tons CO₂e\n`;
+        report += `- CO₂ Equivalent: ${(ai.carbon_dioxide_equivalent_tons || 0).toLocaleString()} tons CO₂e${_rptIsSoil ? ' *(approximate for SOC)*' : ''}\n`;
         report += `- Reference Dataset: ${refName} (${refYear})\n`;
         if (ref.resolution) report += `- Reference Resolution: ${ref.resolution}m\n`;
         if (ref.description) report += `- Reference Note: ${ref.description}\n`;
@@ -9063,13 +9229,26 @@
         'OPENLANDMAP_SOC':
           '<i class="fas fa-exclamation-triangle text-warning"></i> <strong>Soil organic carbon</strong> from OpenLandMap (g/kg at 0 cm depth). This represents a <strong>soil carbon pool</strong>, not aboveground biomass carbon. Do not compare totals directly with AGB carbon datasets.',
         'Simard':
-          '<i class="fas fa-info-circle text-muted"></i> <em>Legacy:</em> Global forest canopy height (1km) converted to a biomass proxy. Based on 2011 data. Use GEDI or ESA CCI for more accurate estimates.',
+          '<i class="fas fa-exclamation-triangle text-danger"></i> <strong>⚠ Deprecated.</strong> Simard Forest Height proxy (2011, 1km) — dataset ini <strong>tidak direkomendasikan</strong> untuk analisis baru. ' +
+          'Tidak ada model yang dilatih untuk dataset ini. Gunakan <strong>WCMC</strong>, <strong>SPAWN</strong>, atau <strong>GEDI</strong> sebagai pengganti modern.',
         'WCMC_Carbon_ArcGIS':
           '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> Global AGB+BGB biomass carbon density at 300m from UN WCMC, hosted on ArcGIS Living Atlas. Fixed 2010 baseline. Units in Mg C/ha. Reference tiles served via ArcGIS proxy.',
         'UNEP_WCMC_Biomass':
           '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> UNEP-WCMC World Biomass Carbon — above and belowground biomass carbon (AGB+BGB) at 300m. Served via UNEP-WCMC ArcGIS portal.',
         'UNEP_WCMC_Biomass_SOC':
           '<i class="fas fa-layer-group text-primary"></i> <strong>ArcGIS Living Atlas:</strong> UNEP-WCMC combined biomass and soil organic carbon (AGB+BGB+SOC to 1m depth) at 300m. Total ecosystem carbon pool. Served via UNEP-WCMC ArcGIS portal.',
+        'SOILGRIDS_SOC_30CM':
+          '<i class="fas fa-globe text-secondary"></i> <strong>External / Open Data:</strong> <strong>Soil organic carbon</strong> from ISRIC SoilGrids v2.0 (250m global), depth-weighted mean at 0–30 cm via REST API. <strong>SOC pool</strong> — do not compare totals with aboveground biomass carbon datasets. No tile rendering; sampled statistics only.',
+        'GLOBAL_MANGROVE_WATCH_AGB':
+          '<i class="fas fa-water text-success"></i> <strong>External / Open Data:</strong> JAXA Global Mangrove Watch 2020 aboveground biomass carbon at 25m. <strong>Mangrove ecosystems only</strong> — results are not valid for terrestrial forest areas. Carbon density = AGB × 0.47. Point sampling via rasterio (optional dependency).',
+        'HANSEN_TREECOVER_AGB_PROXY':
+          '<i class="fas fa-tree text-success"></i> <strong>External / Open Data:</strong> <strong>Hansen GFC 2023 treecover AGB proxy</strong> at 30m via public COG (rasterio). Tree cover (%) × 0.94 ≈ Mg C/ha aboveground carbon proxy. <strong>Proxy, bukan ukuran biomassa tervalidasi</strong> — cocok untuk hutan; nilai rendah di lahan terbuka/non-hutan. Diakses langsung via Google Cloud Storage, tanpa GEE. Expected R² 0.4–0.6.',
+        'ESA_BIOMASS_2026':
+          '<i class="fas fa-satellite text-warning"></i> <strong>Experimental / 2026:</strong> <strong>ESA Biomass mission</strong> forest woody biomass carbon dataset, open data since 2026-01-26. ' +
+          'Loaded via Cloud GeoTIFF (GEE ee.Image.loadGeoTIFF). ' +
+          '<strong>Availability depends on configured ESA product raster URL</strong> — admin must set env var <code>ESA_BIOMASS_2026_URL</code> to a public COG URI. ' +
+          'Forest-focused; not valid for non-forest areas. Biomass × 0.47 = carbon. ' +
+          '<em>This is an inference-year 2026 reference dataset, not a model prediction for 2026.</em>',
       };
 
       $('#datasetDescription').html(descriptions[dataset] || '');
