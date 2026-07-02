@@ -123,6 +123,12 @@
     var hasVegetation = !!(ar.vegetation);
     var hasTransition = !!(ar.landcover_transition);
 
+    /* Extract key numeric values for AI narration */
+    var carbonData = ar.carbon || {};
+    var carbonStats = carbonData.statistics || carbonData.stats || {};
+    var vegData = ar.vegetation || {};
+    var vegStats = vegData.statistics || vegData.stats || {};
+
     return {
       current_module:              currentModule,
       has_aoi:                     !!SaveGeoContext.getActiveAOI(),
@@ -138,6 +144,20 @@
         landcover:  hasLandcover,
         vegetation: hasVegetation,
         transition: hasTransition,
+        carbon_data: hasCarbon ? {
+          carbon_estimated:  carbonData.carbon_estimated   || null,
+          total_carbon:      carbonData.total_carbon       || null,
+          carbon_unit:       carbonData.carbon_unit        || carbonData.unit || null,
+          area_ha:           carbonData.area_ha            || null,
+          model_r2:          carbonData.model_r2           || null,
+          target_pool:       carbonData.target_pool        || null,
+          dataset_name:      carbonData.dataset_name       || carbonData.reference_dataset || null,
+          statistics:        Object.keys(carbonStats).length ? carbonStats : null,
+        } : null,
+        vegetation_data: hasVegetation ? {
+          indices:    vegData.indices || Object.keys(vegData).filter(function(k){ return k !== 'tile_url' && k !== 'statistics'; }),
+          statistics: Object.keys(vegStats).length ? vegStats : null,
+        } : null,
       },
     };
   }
@@ -242,7 +262,8 @@
         case 'highlight_ui':       this._highlightUI(action, cb);                      break;
         case 'request_file_aoi':   this._requestFileAOI(action, cb);                  break;
         case 'open_draw_tool':     this._openDrawTool(action, cb);                     break;
-        case 'offer_choices':      this._offerChoices(action, cb);                     break;
+        case 'offer_choices':              this._offerChoices(action, cb);                    break;
+        case 'download_boundary_geojson':  this._downloadBoundaryGeoJSON(action, cb);        break;
         default:                   cb();
       }
     },
@@ -337,6 +358,21 @@
         if (el) { el.value = v; if (window.$) $(el).trigger('change'); }
       }
 
+      /* Register one-shot hook so cb() fires only after analysis truly finishes.
+         Fallback: 3-minute timeout in case the hook never fires (error path). */
+      var fired = false;
+      var fallback = setTimeout(function () {
+        if (!fired) { fired = true; window._onSaveGeoAnalysisDone = null; cb(); }
+      }, 180000);
+      window._onSaveGeoAnalysisDone = function () {
+        if (!fired) {
+          fired = true;
+          clearTimeout(fallback);
+          window._onSaveGeoAnalysisDone = null;
+          setTimeout(cb, 300);
+        }
+      };
+
       switch (analysis) {
         case 'carbon':
           setType('carbon');
@@ -374,7 +410,7 @@
         default:
           clickRunBtn();
       }
-      cb();
+      /* NOTE: cb() is NOT called here — it fires via _onSaveGeoAnalysisDone hook */
     },
 
     _showLayer: function (layer, cb) {
@@ -576,6 +612,67 @@
       }
       cb();
     },
+
+    /* Fetch admin boundary GeoJSON for a location, set as AOI, offer download */
+    _downloadBoundaryGeoJSON: function (action, cb) {
+      var query    = action.query || '';
+      var chatbot  = ActionExecutor.chatbot;
+      var geocodeUrl = ChatbotAPI.baseUrl() + '/utils/geocode?q=' + encodeURIComponent(query);
+
+      fetch(geocodeUrl)
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.lat) { if (chatbot) chatbot._addMessage('assistant', 'Lokasi "' + query + '" tidak ditemukan.'); cb(); return; }
+          var ai   = d.address_info || {};
+          var isID = ai.country_code === 'id';
+
+          if (isID && ai.province && typeof window.setAOIByAdminName === 'function') {
+            // Use admin dropdown to set AOI, then wait for geometry to load
+            window.setAOIByAdminName(ai.province, ai.city || '', ai.district || '', '').then(function () {
+              /* AOI is now set via admin boundary — offer download of current AOI */
+              if (chatbot) _offerCurrentAOIDownload(chatbot, query);
+              cb();
+            });
+          } else if (d.bbox) {
+            /* Non-Indonesia: use bbox GeoJSON fallback */
+            var b = d.bbox;
+            var feature = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[
+              [b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[b[0],b[1]]
+            ]]}, properties: { name: d.display_name || query } };
+            if (typeof window.setAOIFromGeoJSON === 'function') window.setAOIFromGeoJSON(feature, d.display_name || query);
+            if (chatbot) _offerCurrentAOIDownload(chatbot, query, feature);
+            cb();
+          } else {
+            if (chatbot) chatbot._addMessage('assistant', 'Tidak dapat mengambil batas wilayah untuk "' + query + '".');
+            cb();
+          }
+        })
+        .catch(function () { cb(); });
+
+      function _offerCurrentAOIDownload(chatbot, name, forceFeature) {
+        setTimeout(function () {
+          var feature = forceFeature;
+          if (!feature && typeof window.setAOIFromGeoJSON !== 'undefined') {
+            var aoi = typeof currentAOI !== 'undefined' ? currentAOI : null;
+            if (aoi && aoi.geojson) feature = aoi.geojson.features ? aoi.geojson.features[0] : aoi.geojson;
+          }
+          if (!feature) { chatbot._addMessage('assistant', 'Batas wilayah ' + escapeHtml(name) + ' sudah diset di peta.'); return; }
+          var geoText  = JSON.stringify({ type: 'FeatureCollection', features: [feature] }, null, 2);
+          var blob     = new Blob([geoText], { type: 'application/json' });
+          var url      = URL.createObjectURL(blob);
+          var safeName = name.replace(/[^a-zA-Z0-9_\- ]/g, '_').slice(0, 60);
+          var dlMsg    = document.createElement('div');
+          dlMsg.className = 'sgc-message sgc-assistant';
+          dlMsg.innerHTML =
+            '<div class="sgc-bubble">Batas wilayah <strong>' + escapeHtml(name) + '</strong> sudah diset sebagai AOI.' +
+            ' <a href="' + url + '" download="' + escapeHtml(safeName) + '.geojson" style="color:#1e6b3c;font-weight:600;">' +
+            '<i class="fas fa-download me-1"></i>Unduh GeoJSON</a></div>';
+          var msgs = document.getElementById('sgc-messages');
+          if (msgs) msgs.appendChild(dlMsg);
+          chatbot._scrollBottom();
+        }, 500);
+      }
+    },
   };
 
   /* ─── Utilities ──────────────────────────────────────────────── */
@@ -606,7 +703,8 @@
       open_draw_tool:    function(a){ return '✏️ Buka alat gambar AOI'; },
       ask_user:          function(a){ return '<em>'+escapeHtml(a.question||'')+'</em>'; },
       explain:           function(a){ return 'Jelaskan: '+escapeHtml(a.topic||''); },
-      offer_choices:     function(a){ return '🔘 '+escapeHtml(a.question||'Pilih opsi'); },
+      offer_choices:              function(a){ return '🔘 '+escapeHtml(a.question||'Pilih opsi'); },
+      download_boundary_geojson:  function(a){ return '⬇️ Ambil batas wilayah GeoJSON: <strong>'+escapeHtml(a.query||'')+'</strong>'; },
     };
     var fn = labels[action.type];
     return fn ? fn(action) : escapeHtml(action.type);
@@ -892,7 +990,7 @@
       '<div id="sgc-input-area">' +
         '<button id="sgc-camera" title="Screenshot peta"><i class="fas fa-camera"></i></button>' +
         '<button id="sgc-attach" title="Lampirkan file (gambar, PDF, CSV, TXT)"><i class="fas fa-paperclip"></i></button>' +
-        '<input type="file" id="sgc-file-input" accept="image/*,.pdf,.txt,.csv,.json,.md,.docx" style="display:none">' +
+        '<input type="file" id="sgc-file-input" accept="image/*,.pdf,.txt,.csv,.json,.geojson,.kml,.md,.docx,.zip,.shp" style="display:none">' +
         '<textarea id="sgc-input" placeholder="Tanyakan sesuatu atau minta analisis..." rows="1"></textarea>' +
         '<button id="sgc-send" title="Kirim"><i class="fas fa-paper-plane"></i></button>' +
       '</div>';
@@ -983,6 +1081,10 @@
     'text/plain':       'fas fa-file-alt',
     'text/markdown':    'fas fa-file-alt',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fas fa-file-word',
+    'application/zip':             'fas fa-file-archive',
+    'application/x-zip-compressed':'fas fa-file-archive',
+    'application/vnd.google-earth.kml+xml': 'fas fa-globe',
+    'application/vnd.google-earth.kmz':     'fas fa-globe',
   };
   var TEXT_TYPES = ['text/plain', 'text/csv', 'application/json', 'text/markdown', 'text/md'];
 
@@ -1003,12 +1105,12 @@
     var mime     = file.type || 'application/octet-stream';
     var isImage  = mime.startsWith('image/');
     var isText   = TEXT_TYPES.indexOf(mime) !== -1;
+    var fname    = file.name.toLowerCase();
     var sizeLabel = file.size < 1024 ? file.size + ' B'
                   : file.size < 1048576 ? (file.size / 1024).toFixed(1) + ' KB'
                   : (file.size / 1048576).toFixed(1) + ' MB';
 
     if (isImage) {
-      // Route image files through existing vision path
       var reader = new FileReader();
       reader.onload = function (ev) {
         var b64 = (ev.target.result || '').replace(/^data:[^;]+;base64,/, '');
@@ -1023,15 +1125,67 @@
 
     var icon = FILE_ICONS[mime] || 'fas fa-file';
 
-    var isGeoJSON = file.name.endsWith('.geojson') ||
-                    (file.name.endsWith('.json') && (mime === 'application/json' || mime === 'application/geo+json'));
+    // SHP zip bundle → send to backend for conversion
+    var isZipSHP = fname.endsWith('.zip') || fname.endsWith('.shp');
+    if (isZipSHP) {
+      self._setStatus('Mengkonversi shapefile...');
+      self._addMessage('assistant', 'Memproses shapefile, harap tunggu...');
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var b64 = (ev.target.result || '').replace(/^data:[^;]+;base64,/, '');
+        var url = ChatbotAPI.baseUrl() + '/utils/convert_shp';
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zip_b64: b64, name: file.name }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) {
+            self._addMessage('assistant', 'Gagal konversi SHP: ' + d.error);
+            self._setStatus('Siap membantu analisis');
+            return;
+          }
+          var rawText = JSON.stringify(d.geojson);
+          self._addMessage('assistant', 'Shapefile berhasil dikonversi (' + d.feature_count + ' feature).');
+          self._offerGeoJSONAsAOI(d.geojson, d.name || file.name, rawText, sizeLabel);
+          self._setStatus('Siap membantu analisis');
+        })
+        .catch(function (err) {
+          self._addMessage('assistant', 'Gagal mengirim shapefile: ' + err.message);
+          self._setStatus('Siap membantu analisis');
+        });
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // KML → parse client-side → GeoJSON
+    var isKML = fname.endsWith('.kml');
+    if (isKML) {
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var text = ev.target.result || '';
+        var geo = _parseKMLToGeoJSON(text, file.name);
+        if (geo) {
+          var rawText = JSON.stringify(geo);
+          self._offerGeoJSONAsAOI(geo, file.name.replace(/\.kml$/i, ''), rawText, sizeLabel);
+        } else {
+          self._addMessage('assistant', 'KML tidak dapat diparsing sebagai polygon AOI. Coba konversi ke GeoJSON terlebih dahulu.');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+      return;
+    }
+
+    var isGeoJSON = fname.endsWith('.geojson') ||
+                    (fname.endsWith('.json') && (mime === 'application/json' || mime === 'application/geo+json'));
 
     if (isText || isGeoJSON) {
       var reader = new FileReader();
       reader.onload = function (ev) {
         var text = ev.target.result || '';
 
-        // Try to detect GeoJSON polygon for AOI offer
         if (isGeoJSON) {
           try {
             var geo = JSON.parse(text);
@@ -1044,7 +1198,7 @@
               self._offerGeoJSONAsAOI(geo, file.name, text, sizeLabel);
               return;
             }
-          } catch (err) { /* not valid GeoJSON, fall through to normal text handling */ }
+          } catch (err) { /* not valid GeoJSON, fall through */ }
         }
 
         self._pendingFile = {
@@ -1073,6 +1227,68 @@
     };
     reader.readAsDataURL(file);
   };
+
+  /* Minimal KML Polygon/Placemark → GeoJSON FeatureCollection */
+  function _parseKMLToGeoJSON(kmlText, fileName) {
+    try {
+      var parser = new DOMParser();
+      var doc    = parser.parseFromString(kmlText, 'text/xml');
+      var features = [];
+
+      function coordsToRing(text) {
+        return text.trim().split(/\s+/).map(function (t) {
+          var p = t.split(',');
+          return [parseFloat(p[0]), parseFloat(p[1])];
+        }).filter(function (p) { return !isNaN(p[0]) && !isNaN(p[1]); });
+      }
+
+      var placemarks = doc.getElementsByTagNameNS('*', 'Placemark');
+      Array.from(placemarks).forEach(function (pm) {
+        var nameEl = pm.getElementsByTagNameNS('*', 'name')[0];
+        var name   = nameEl ? nameEl.textContent.trim() : '';
+
+        // Polygon
+        var polys = pm.getElementsByTagNameNS('*', 'Polygon');
+        Array.from(polys).forEach(function (poly) {
+          var outer = poly.getElementsByTagNameNS('*', 'outerBoundaryIs')[0];
+          if (!outer) return;
+          var coords = outer.getElementsByTagNameNS('*', 'coordinates')[0];
+          if (!coords) return;
+          var ring = coordsToRing(coords.textContent);
+          if (ring.length < 3) return;
+          if (ring[0][0] !== ring[ring.length-1][0] || ring[0][1] !== ring[ring.length-1][1]) ring.push(ring[0]);
+          features.push({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: { name: name } });
+        });
+
+        // MultiGeometry → just collect polygons
+        var mgs = pm.getElementsByTagNameNS('*', 'MultiGeometry');
+        Array.from(mgs).forEach(function (mg) {
+          var polys2 = mg.getElementsByTagNameNS('*', 'Polygon');
+          var rings  = [];
+          Array.from(polys2).forEach(function (poly) {
+            var outer = poly.getElementsByTagNameNS('*', 'outerBoundaryIs')[0];
+            if (!outer) return;
+            var coords = outer.getElementsByTagNameNS('*', 'coordinates')[0];
+            if (!coords) return;
+            var ring = coordsToRing(coords.textContent);
+            if (ring.length < 3) return;
+            if (ring[0][0] !== ring[ring.length-1][0] || ring[0][1] !== ring[ring.length-1][1]) ring.push(ring[0]);
+            rings.push(ring);
+          });
+          if (rings.length === 1) {
+            features.push({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [rings[0]] }, properties: { name: name } });
+          } else if (rings.length > 1) {
+            features.push({ type: 'Feature', geometry: { type: 'MultiPolygon', coordinates: rings.map(function(r){return [r];}) }, properties: { name: name } });
+          }
+        });
+      });
+
+      if (!features.length) return null;
+      return { type: 'FeatureCollection', features: features };
+    } catch (e) {
+      return null;
+    }
+  }
 
   SaveGeoChatbot.prototype._offerGeoJSONAsAOI = function (geo, fileName, rawText, sizeLabel) {
     var self = this;
@@ -1385,6 +1601,8 @@
   SaveGeoChatbot.prototype._runActions = function (actions, card) {
     var self = this;
     ActionExecutor.chatbot = self;   // expose chatbot ref to executor actions
+    var hadAnalysis = (actions || []).some(function (a) { return a.type === 'run_analysis'; });
+    var analysisTypes = (actions || []).filter(function (a) { return a.type === 'run_analysis'; }).map(function (a) { return a.analysis; });
     ActionExecutor.run(
       actions,
       function onStep(action, i, total) {
@@ -1399,13 +1617,38 @@
         if (card) {
           var footer = card.querySelector('.sgc-plan-footer, #sgc-confirm-footer, .sgc-status-running');
           if (footer) footer.innerHTML = '<span style="color:#1e6b3c;font-size:13px;"><i class="fas fa-check-circle me-1"></i> Selesai</span>';
-        } else {
-          self._addMessage('assistant', 'Tindakan berhasil dijalankan.');
         }
         self._renderQuickActions();
         self._scrollBottom();
+        if (hadAnalysis) {
+          self._narrateResults(analysisTypes);
+        } else if (!card) {
+          self._addMessage('assistant', 'Tindakan berhasil dijalankan.');
+        }
       }
     );
+  };
+
+  /* After analysis completes, call AI to narrate and explain the results */
+  SaveGeoChatbot.prototype._narrateResults = function (analysisTypes) {
+    var self = this;
+    var typeLabel = (analysisTypes || []).join(', ') || 'analisis';
+    var sysMsg = 'Analisis ' + typeLabel + ' telah selesai dijalankan. Tolong ringkas dan jelaskan hasil analisis yang sudah tersedia: angka estimasi utama, satuan, interpretasi kondisi area, keterbatasan dataset yang dipakai, dan rekomendasi tindak lanjut.';
+    var loadEl = self._addLoadingDots();
+    ChatbotAPI.send(sysMsg, null, null, self._sessionId, null)
+      .then(function (resp) {
+        if (loadEl && loadEl.parentNode) loadEl.remove();
+        if (resp && resp.message) self._addMessage('assistant', resp.message);
+        if (resp && resp.warnings && resp.warnings.length) self._addWarningBlock(resp.warnings);
+        if (resp && resp.session_id && !self._sessionId) {
+          self._sessionId = resp.session_id;
+        }
+        self._scrollBottom();
+      })
+      .catch(function (e) {
+        if (loadEl && loadEl.parentNode) loadEl.remove();
+        console.warn('SaveGeoChatbot: narrateResults failed', e);
+      });
   };
 
   /* Legacy response handler for old /agent/analyze schema */

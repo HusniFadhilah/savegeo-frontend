@@ -6278,14 +6278,23 @@
           displayResults();
           showAlert(tf('alert.analysisCompleted', { duration: formatDuration(totalDuration) }), 'success', 5000);
           $('html, body').animate({ scrollTop: $('#resultsSection').offset().top - 100 }, 500);
+          if (typeof window._onSaveGeoAnalysisDone === 'function') {
+            window._onSaveGeoAnalysisDone({ results: analysisResults });
+          }
         } else {
           showAlert(t('alert.noAnalysisResults'), 'warning');
+          if (typeof window._onSaveGeoAnalysisDone === 'function') {
+            window._onSaveGeoAnalysisDone({ results: {} });
+          }
         }
 
       } catch (error) {
         hideLoading();
         console.error('Analysis error:', error);
         showAlert(tf('alert.analysisError', { error: error.message }), 'danger');
+        if (typeof window._onSaveGeoAnalysisDone === 'function') {
+          window._onSaveGeoAnalysisDone({ results: {}, error: error.message });
+        }
       }
     }
 
