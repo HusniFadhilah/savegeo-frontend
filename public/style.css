@@ -361,6 +361,75 @@ body {
   animation: fadeIn 0.3s ease-in;
 }
 
+.module-heading-bar {
+  position: relative;
+  min-height: 56px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 132px;
+}
+
+.module-heading-bar > div {
+  width: 100%;
+}
+
+.module-help-btn {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.help-modal-section {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e8f0eb;
+}
+
+.help-modal-section.mb-0 {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.help-modal-section h6 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.quick-start-steps {
+  display: grid;
+  gap: 12px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.quick-start-steps li {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2eee6;
+  border-radius: 6px;
+  background: #fbfdfb;
+}
+
+.quick-start-steps strong {
+  color: var(--primary-dark);
+}
+
+.quick-start-steps span {
+  color: #4b5563;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -759,6 +828,30 @@ body {
   .main-sidebar.mobile-open {
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .module-heading-bar {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 0;
+    padding-right: 52px;
+    text-align: left !important;
+  }
+
+  .module-help-btn {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .module-help-btn span {
+    display: none;
+  }
+
+  .quick-start-steps li {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .content-wrapper {

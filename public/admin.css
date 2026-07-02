@@ -359,6 +359,11 @@ body {
     color: #b91c1c;
 }
 
+.badge-purple {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
 /* ─── Table ─── */
 .tbl {
     width: 100%;
@@ -557,6 +562,167 @@ body {
     flex-shrink: 0;
 }
 
+/* ─── Provider selector cards ─── */
+.cfg-row-provider {
+    align-items: flex-start;
+    padding: 0.5rem 0;
+}
+.cfg-provider-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+}
+.cfg-provider-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+    background: var(--card-bg);
+}
+.cfg-provider-card:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+.cfg-provider-card.active {
+    border-color: #3b82f6;
+    background: #dbeafe;
+}
+.cfg-provider-icon { font-size: 16px; flex-shrink: 0; }
+.cfg-provider-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.cfg-provider-hint { font-size: 11px; color: var(--text-muted); flex: 1; }
+
+/* ─── Secret / API-key fields ─── */
+.cfg-secret-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.cfg-secret-wrap input {
+    flex: 1;
+    padding: 0.22rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--card-bg);
+    color: var(--text);
+    min-width: 0;
+}
+.cfg-secret-wrap input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+.cfg-secret-ok {
+    font-size: 11px;
+    font-weight: 600;
+    color: #16a34a;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.cfg-secret-empty {
+    font-size: 11px;
+    font-weight: 600;
+    color: #dc2626;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ─── Tom Select — OpenRouter model picker ─── */
+#or-model-select + .ts-wrapper {
+    width: 100%;
+}
+.ts-wrapper.single .ts-control {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    padding: 5px 10px;
+    min-height: 34px;
+    cursor: pointer;
+    box-shadow: none;
+}
+.ts-wrapper.single.focus .ts-control {
+    border-color: #1a6d3c;
+    box-shadow: 0 0 0 3px rgba(26,109,60,0.12);
+}
+.ts-dropdown {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    font-size: 13px;
+    overflow: hidden;
+}
+.ts-dropdown .ts-dropdown-content {
+    max-height: 300px;
+}
+.ts-dropdown-header {
+    padding: 8px 10px;
+    background: #f9fafb;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+}
+.ts-custom-opt { padding: 2px 0; }
+.ts-opt-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+.ts-opt-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.or-item-id {
+    font-size: 10px;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+.or-ctx { font-size: 10px; color: #9ca3af; }
+.or-badge-free {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: #16a34a;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.or-badge-paid {
+    font-size: 10px;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.ts-dropdown .option { padding: 7px 12px; border-bottom: 1px solid #f9fafb; }
+.ts-dropdown .option:hover,
+.ts-dropdown .option.active { background: #f0fdf4; }
+.ts-dropdown .optgroup-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #374151;
+    background: #f9fafb;
+    padding: 6px 12px;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid #e5e7eb;
+}
+.ts-dropdown .no-results,
+.ts-dropdown .create { padding: 10px 12px; color: #9ca3af; font-size: 12px; }
+.ts-control .item { font-size: 12px; }
+
 /* ─── Activity ─── */
 .act-row {
     display: flex;
@@ -740,4 +906,69 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
+}
+
+/* ── Key pool section ──────────────────────────────────────────── */
+.kp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.kp-row:last-child { border-bottom: none; }
+.kp-label {
+  width: 110px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+  padding-top: 3px;
+}
+.kp-status {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.kp-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.kp-none    { background: #fef3c7; color: #92400e; }
+.kp-partial { background: #dbeafe; color: #1e40af; }
+.kp-ok      { background: #d1fae5; color: #065f46; }
+.kp-key-chip {
+  font-size: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 7px;
+  color: #475569;
+  font-family: monospace;
+}
+.kp-key-chip em { font-style: normal; color: #64748b; margin-left: 4px; }
+.kp-edit {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+.kp-edit textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  font-family: monospace;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 6px 8px;
+  resize: vertical;
+  color: #1e293b;
+  background: #fff;
 }

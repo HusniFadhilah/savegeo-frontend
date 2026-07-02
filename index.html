@@ -132,8 +132,11 @@
 
       <!-- RIGHT: STATUS -->
       <div class="ms-3 d-flex align-items-center gap-2">
-        <span class="badge bg-light text-dark" id="eeStatus" style="min-width: 170px;">
-          <i class="bi bi-arrow-repeat spin"></i> Checking...
+        <span class="badge bg-light text-dark" id="eeStatus"
+              style="min-width: 110px; cursor: pointer;"
+              data-bs-toggle="modal" data-bs-target="#systemStatusModal"
+              title="Lihat status sistem">
+          <i class="bi bi-arrow-repeat spin"></i> Memeriksa...
         </span>
 
         <!-- Skeleton -->
@@ -187,10 +190,29 @@
     </div>
   </div>
 
-  <!-- Connection Status -->
-  <div class="connection-status" id="connectionStatus">
-    <span class="status-dot offline"></span>
-    <span class="text-muted" data-i18n="status.connecting">Menghubungkan...</span>
+  <!-- System Status Modal -->
+  <div class="modal fade" id="systemStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title d-flex align-items-center gap-2 mb-0">
+            <i class="fas fa-server text-success"></i> Status Sistem
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body px-3 py-3" id="systemStatusBody">
+          <div class="text-center text-muted py-3">
+            <i class="fas fa-spinner fa-spin me-2"></i> Memuat status...
+          </div>
+        </div>
+        <div class="modal-footer py-2 justify-content-between">
+          <small class="text-muted" id="systemStatusTimestamp"></small>
+          <button class="btn btn-sm btn-outline-secondary" id="systemStatusRefresh">
+            <i class="fas fa-sync-alt me-1"></i> Refresh
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="modal fade" id="lulcDatasetDocsModal" tabindex="-1" aria-hidden="true">
@@ -326,86 +348,71 @@
       <div class="module-container active" id="module-carbon">
 
         <div class="container-fluid mt-4">
-          <div class="text-center mb-4">
-            <h3 class="fw-bold mb-1">
-              <i class="bi bi-tree-fill text-success"></i>
-              <span data-i18n="home.title">Platform Analitik Citra Berbasis AI</span>
-            </h3>
-            <p class="text-muted mb-0" data-i18n="home.subtitle">
-              Platform estimasi karbon & vegetasi berbasis AI (Sentinel-2 & Google Earth Engine)
-            </p>
+          <div class="module-heading-bar text-center mb-4">
+            <div>
+              <h3 class="fw-bold mb-1">
+                <i class="bi bi-tree-fill text-success"></i>
+                <span data-i18n="home.title">Platform Analitik Citra Berbasis AI</span>
+              </h3>
+              <p class="text-muted mb-0" data-i18n="home.subtitle">
+                Platform estimasi karbon & vegetasi berbasis AI (Sentinel-2 & Google Earth Engine)
+              </p>
+            </div>
+            <button class="btn btn-outline-success btn-sm module-help-btn position-absolute top-0 end-0" type="button"
+              data-bs-toggle="modal" data-bs-target="#quickStartHelpModal" aria-label="Buka bantuan analisis">
+              <i class="bi bi-question-circle-fill"></i>
+              <span>Bantuan</span>
+            </button>
           </div>
-          <!-- ============================================ -->
-          <!-- ACCORDION: Panduan Memulai -->
-          <!-- ============================================ -->
-          <div class="accordion mb-4" id="accordionGettingStarted">
 
-            <!-- Accordion Item 1: Quick Start -->
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="headingOne">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
-                  aria-expanded="true" aria-controls="collapseOne">
-                  <i class="bi bi-rocket-takeoff-fill me-2"></i> Quick Start Analisis Stok Karbon &
-                  Vegetasi
-                </button>
-              </h2>
-              <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
-                data-bs-parent="#accordionGettingStarted">
-                <div class="accordion-body">
-                  <ol class="mb-0 ps-3">
-                    <li><strong>Pilih AOI</strong> – Scroll ke bagian Area of Interest</li>
-                    <li><strong>Atur Parameter</strong> – Gunakan panel kiri</li>
-                    <li><strong>Run Analysis</strong> – Tunggu hasil & visualisasi</li>
-                  </ol>
+          <div class="modal fade" id="quickStartHelpModal" tabindex="-1" aria-labelledby="quickStartHelpModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="quickStartHelpModalLabel">
+                    <i class="bi bi-rocket-takeoff-fill text-success me-2"></i>
+                    Quick Start Analisis Stok Karbon & Vegetasi
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
-              </div>
-            </div>
-
-            <!-- Accordion Item 2: Langkah Detail -->
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="headingTwo">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                  data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                  <i class="bi bi-list-ol me-2"></i> Langkah Analisis
-                </button>
-              </h2>
-              <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
-                data-bs-parent="#accordionGettingStarted">
-                <div class="accordion-body">
-                  <ul class="mb-2">
-                    <li><strong>Pilih Area:</strong> Admin Indonesia, Koordinat + Buffer, atau
-                      Gambar Manual</li>
-                    <li><strong>Parameter:</strong> Tahun, Periode, Cloud Threshold, Jenis Analisis
-                    </li>
-                    <li><strong>Proses:</strong> Klik Run Analysis (±10 detik–1 menit)</li>
-                  </ul>
+                <div class="modal-body">
+                  <div class="help-modal-section">
+                    <h6><i class="bi bi-rocket-takeoff-fill text-success me-2"></i>Quick Start</h6>
+                    <ol class="quick-start-steps mb-0">
+                      <li><strong>Pilih AOI</strong><span>Scroll ke bagian Area of Interest.</span></li>
+                      <li><strong>Atur Parameter</strong><span>Gunakan panel kiri untuk memilih jenis analisis, tahun,
+                          periode, dan cloud threshold.</span></li>
+                      <li><strong>Run Analysis</strong><span>Tunggu proses selesai, lalu cek visualisasi dan statistik
+                          hasil.</span></li>
+                    </ol>
+                  </div>
+                  <div class="help-modal-section">
+                    <h6><i class="bi bi-list-ol text-success me-2"></i>Langkah Analisis</h6>
+                    <ul class="mb-0">
+                      <li><strong>Pilih Area:</strong> Admin Indonesia, Koordinat + Buffer, atau Gambar Manual.</li>
+                      <li><strong>Parameter:</strong> Tahun, periode, cloud threshold, dan jenis analisis.</li>
+                      <li><strong>Proses:</strong> Klik Run Analysis, lalu tunggu sekitar 10 detik sampai 1 menit.</li>
+                    </ul>
+                  </div>
+                  <div class="help-modal-section mb-0">
+                    <h6><i class="bi bi-lightbulb-fill text-success me-2"></i>Tips & Bantuan</h6>
+                    <ul class="mb-0">
+                      <li>Cloud threshold ideal: <strong>20-40%</strong>.</li>
+                      <li>Periode analisis yang stabil: <strong>3-6 bulan</strong>.</li>
+                      <li>Mulai dari area kecil untuk testing agar proses lebih cepat.</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- Accordion Item 3: Tips & Bantuan -->
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="headingThree">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                  data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                  <i class="bi bi-lightbulb-fill me-2"></i> Tips & Bantuan
-                </button>
-              </h2>
-              <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
-                data-bs-parent="#accordionGettingStarted">
-                <div class="accordion-body">
-                  <ul class="mb-2">
-                    <li>Cloud threshold ideal: <strong>20–40%</strong></li>
-                    <li>Periode analisis: <strong>3–6 bulan</strong></li>
-                    <li>Mulai dari area kecil untuk testing</li>
-                  </ul>
-                  <button class="btn btn-sm btn-info" onclick="switchModule('guide')">
-                    <i class="bi bi-book-fill"></i> Buka Panduan Lengkap
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                  <button type="button" class="btn btn-success btn-sm" data-bs-dismiss="modal"
+                    onclick="switchModule('guide')">
+                    <i class="bi bi-book-fill me-1"></i> Panduan Lengkap
                   </button>
                 </div>
               </div>
             </div>
-
           </div>
 
           <div class="row">
@@ -1494,6 +1501,13 @@
                         <div class="col-md-4 mb-2">
                           <button class="btn btn-primary w-100" id="generateReport">
                             <i class="fas fa-file-alt"></i> Generate Report
+                          </button>
+                        </div>
+                      </div>
+                      <div class="row mt-2">
+                        <div class="col-12">
+                          <button class="btn btn-success w-100" id="exportExecSummary">
+                            <i class="fas fa-file-word"></i> Export Executive Summary (.docx)
                           </button>
                         </div>
                       </div>
@@ -3348,10 +3362,12 @@
           return { success: true, data: response };
         } catch (error) {
           console.error('API Request Error:', error);
+          const rawError = error.responseJSON?.error || error.responseJSON?.message || error.statusText || null;
           return {
             success: false,
             status: error.status,
-            error: error.responseJSON?.error || error.statusText || 'Network error'
+            data: error.responseJSON,
+            error: translateBackendMessage(rawError, error.responseJSON) || t('backend.networkError')
           };
         }
       }
@@ -3591,13 +3607,13 @@
       if (year >= currentYear && hasEsri) {
         parts.push(
           '<span class="text-warning"><i class="fas fa-circle-info me-1"></i>' +
-          'Latest annual Esri LULC is 2025; 2026 requests use latest available annual map.</span>'
+          t('landcover.esriLatestHint') + '</span>'
         );
       }
       if (year >= currentYear && hasDW) {
         parts.push(
           '<span class="text-success"><i class="fas fa-satellite-dish me-1"></i>' +
-          'Dynamic World supports near-real-time ' + year + ' data.</span>'
+          tf('landcover.dynamicWorldNrtHint', { year }) + '</span>'
         );
       }
 
@@ -3628,7 +3644,7 @@
             <td>${official}${publication ? '<br>' + publication : ''}</td>
           </tr>`;
       }).join('');
-      $('#lulcDatasetDocsBody').html(rows || '<tr><td colspan="8" class="text-muted text-center">Tidak ada metadata dataset.</td></tr>');
+      $('#lulcDatasetDocsBody').html(rows || `<tr><td colspan="8" class="text-muted text-center">${t('dataset.noMetadata')}</td></tr>`);
     }
 
     // ==========================================
@@ -3674,6 +3690,8 @@
         'alert.analysisError': 'Error saat analisis: {error}',
         'alert.vegetationFailed': 'Analisis vegetasi gagal: {error}',
         'alert.selectLulcDataset': 'Pilih minimal satu dataset tutupan lahan.',
+        'alert.selectDateRange': 'Pilih tanggal mulai dan tanggal akhir.',
+        'alert.dateRangeInvalid': 'Tanggal mulai harus sebelum tanggal akhir.',
         'alert.transitionInvalid': 'Rentang tahun transisi tidak valid.',
         'alert.transitionFailed': 'Analisis transisi gagal: {error}',
         'alert.landcoverFailed': 'Analisis tutupan lahan gagal: {error}',
@@ -3688,6 +3706,21 @@
         'alert.exportError': 'Error export: {error}',
         'alert.statsDownloaded': 'Statistik berhasil diunduh.',
         'alert.reportGenerated': 'Laporan berhasil dibuat.',
+        'alert.geotiffReady': 'GeoTIFF siap! Unduhan akan dimulai otomatis. {link} jika tidak otomatis.',
+        'alert.clickHere': 'Klik di sini',
+        'alert.executiveSummaryConfirm': 'Belum ada AOI atau hasil analisis. Tetap buat template Executive Summary?',
+        'alert.executiveSummaryGenerating': 'Membuat executive summary...',
+        'alert.executiveSummaryFailed': 'Gagal membuat executive summary.',
+        'alert.executiveSummaryFailedWithError': 'Gagal membuat executive summary: {error}',
+        'alert.executiveSummaryDownloaded': 'Executive summary berhasil dibuat dan diunduh.',
+        'landcover.esriLatestHint': 'LULC tahunan Esri terbaru adalah 2025; permintaan 2026 memakai peta tahunan terbaru yang tersedia.',
+        'landcover.dynamicWorldNrtHint': 'Dynamic World mendukung data near-real-time tahun {year}.',
+        'dataset.noMetadata': 'Tidak ada metadata dataset.',
+        'backend.networkError': 'Koneksi ke server gagal.',
+        'backend.unknownError': 'Terjadi kesalahan yang tidak diketahui.',
+        'backend.aoiRequired': 'AOI wajib diisi.',
+        'backend.eeInactive': 'Earth Engine tidak aktif.',
+        'backend.unknownDataset': 'Dataset tidak dikenal: {dataset}',
         'lulc.docsTitle': 'Dokumentasi Dataset LULC',
         'table.dataset': 'Dataset',
         'table.description': 'Deskripsi',
@@ -3792,6 +3825,8 @@
         'alert.analysisError': 'Error during analysis: {error}',
         'alert.vegetationFailed': 'Vegetation analysis failed: {error}',
         'alert.selectLulcDataset': 'Please select at least one land cover dataset.',
+        'alert.selectDateRange': 'Select a start and end date.',
+        'alert.dateRangeInvalid': 'The start date must be before the end date.',
         'alert.transitionInvalid': 'Invalid transition year range.',
         'alert.transitionFailed': 'Transition analysis failed: {error}',
         'alert.landcoverFailed': 'Land cover analysis failed: {error}',
@@ -3806,6 +3841,21 @@
         'alert.exportError': 'Export error: {error}',
         'alert.statsDownloaded': 'Statistics downloaded successfully.',
         'alert.reportGenerated': 'Report generated successfully.',
+        'alert.geotiffReady': 'GeoTIFF is ready. The download will start automatically. {link} if it does not.',
+        'alert.clickHere': 'Click here',
+        'alert.executiveSummaryConfirm': 'There is no AOI or analysis result yet. Create an Executive Summary template anyway?',
+        'alert.executiveSummaryGenerating': 'Creating executive summary...',
+        'alert.executiveSummaryFailed': 'Failed to create executive summary.',
+        'alert.executiveSummaryFailedWithError': 'Failed to create executive summary: {error}',
+        'alert.executiveSummaryDownloaded': 'Executive summary generated and downloaded.',
+        'landcover.esriLatestHint': 'Latest annual Esri LULC is 2025; 2026 requests use the latest available annual map.',
+        'landcover.dynamicWorldNrtHint': 'Dynamic World supports near-real-time {year} data.',
+        'dataset.noMetadata': 'No dataset metadata available.',
+        'backend.networkError': 'Could not connect to the server.',
+        'backend.unknownError': 'An unknown error occurred.',
+        'backend.aoiRequired': 'AOI is required.',
+        'backend.eeInactive': 'Earth Engine is not active.',
+        'backend.unknownDataset': 'Unknown dataset: {dataset}',
         'lulc.docsTitle': 'LULC Dataset Documentation',
         'table.dataset': 'Dataset',
         'table.description': 'Description',
@@ -4218,6 +4268,33 @@
 
     function tf(key, values = {}) {
       return t(key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
+    }
+
+    function translateBackendMessage(message, payload = {}) {
+      if (!message && payload?.message_key) {
+        message = { message_key: payload.message_key, params: payload.message_params || payload.params || {} };
+      }
+      if (!message) return '';
+      if (typeof message === 'object') {
+        if (message.message_key) return tf(message.message_key, message.params || {});
+        if (message[currentLanguage]) return message[currentLanguage];
+        if (message.id || message.en) return message[currentLanguage === 'en' ? 'en' : 'id'] || message.id || message.en;
+        if (message.code) return tf(message.code, message.params || {});
+      }
+
+      const raw = String(message);
+      const map = {
+        'aoi is required': 'backend.aoiRequired',
+        'Missing required field: aoi': 'backend.aoiRequired',
+        'Earth Engine tidak aktif': 'backend.eeInactive',
+        'Earth Engine not active': 'backend.eeInactive',
+      };
+      if (map[raw]) return t(map[raw]);
+
+      const unknownDataset = raw.match(/^Unknown dataset:\s*(.+)$/i);
+      if (unknownDataset) return tf('backend.unknownDataset', { dataset: unknownDataset[1] });
+
+      return raw;
     }
 
     function regionPlaceholder(selectId) {
@@ -4839,6 +4916,10 @@
         generateReport();
       });
 
+      $('#exportExecSummary').on('click', async function () {
+        await downloadExecutiveSummary();
+      });
+
       $('input[name="carbonClipMode"]').on('change', function () {
         updateClipModeHelp();
       });
@@ -4872,34 +4953,106 @@
     // ==========================================
     // BACKEND CONNECTION
     // ==========================================
+    let _lastHealthData = null;
+
     async function checkBackendConnection() {
-      updateConnectionStatus(t('status.connecting'), false);
-
+      updateConnectionStatus(t('status.connecting'), null);
       const response = await apiClient.healthCheck();
-
       if (response.success && response.data.ee_initialized) {
+        _lastHealthData = response.data;
         updateConnectionStatus(t('status.connected'), true);
-        $('#eeStatus').html(`<i class="fas fa-check-circle"></i> ${t('status.eeReady')}`);
         showAlert(t('alert.backendConnected'), 'success', 3000);
       } else {
+        _lastHealthData = response.data || null;
         updateConnectionStatus(t('status.offline'), false);
-        $('#eeStatus').html(`<i class="fas fa-times-circle"></i> ${t('status.backendOffline')}`);
         showAlert(t('alert.backendOffline'), 'danger', 5000);
       }
     }
 
     function updateConnectionStatus(text, isOnline) {
-      const statusDot = $('#connectionStatus .status-dot');
-      const statusText = $('#connectionStatus span:last-child');
-
-      if (isOnline) {
-        statusDot.removeClass('offline').addClass('online');
+      const el = document.getElementById('eeStatus');
+      if (!el) return;
+      if (isOnline === true) {
+        el.innerHTML = '<span class="status-dot online" style="width:8px;height:8px;vertical-align:middle;margin-right:5px;"></span>' + text;
+      } else if (isOnline === false) {
+        el.innerHTML = '<span class="status-dot offline" style="width:8px;height:8px;vertical-align:middle;margin-right:5px;"></span>' + text;
       } else {
-        statusDot.removeClass('online').addClass('offline');
+        el.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>' + text;
       }
-
-      statusText.text(text);
     }
+
+    // ── System status modal ────────────────────────────────────────
+    function _renderSystemStatusModal(data) {
+      if (!data) {
+        document.getElementById('systemStatusBody').innerHTML =
+          '<div class="text-danger text-center py-2"><i class="fas fa-times-circle me-1"></i> Gagal mengambil status.</div>';
+        return;
+      }
+      const rows = [
+        {
+          icon: 'fas fa-server',
+          label: 'Backend',
+          value: data.status === 'ok' ? 'Online' : 'Error',
+          ok: data.status === 'ok',
+        },
+        {
+          icon: 'fas fa-satellite',
+          label: 'Google Earth Engine',
+          value: data.ee_initialized ? 'Terinisialisasi' : 'Tidak aktif',
+          ok: !!data.ee_initialized,
+        },
+        {
+          icon: 'fas fa-key',
+          label: 'Kredensial GEE',
+          value: data.active_credential || '—',
+          ok: !!data.active_credential,
+        },
+        {
+          icon: 'fas fa-brain',
+          label: 'Model Aktif',
+          value: data.active_models != null ? String(data.active_models) + ' model' : '—',
+          ok: data.active_models > 0,
+        },
+      ];
+      const rowsHtml = rows.map(r => `
+        <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+          <span class="text-muted" style="font-size:13px;">
+            <i class="${r.icon} me-2" style="width:16px;text-align:center;"></i>${r.label}
+          </span>
+          <span class="badge ${r.ok ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}"
+                style="font-size:12px; font-weight:500;">
+            ${r.value}
+          </span>
+        </div>`).join('');
+      document.getElementById('systemStatusBody').innerHTML = rowsHtml;
+      const ts = data.timestamp
+        ? new Date(data.timestamp).toLocaleString('id-ID')
+        : '';
+      document.getElementById('systemStatusTimestamp').textContent = ts ? 'Diperbarui: ' + ts : '';
+    }
+
+    async function _fetchAndRenderSystemStatus() {
+      document.getElementById('systemStatusBody').innerHTML =
+        '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i> Memuat...</div>';
+      const response = await apiClient.healthCheck();
+      if (response.success) {
+        _lastHealthData = response.data;
+        _renderSystemStatusModal(response.data);
+      } else {
+        _renderSystemStatusModal(null);
+      }
+    }
+
+    document.getElementById('systemStatusModal').addEventListener('show.bs.modal', function () {
+      if (_lastHealthData) {
+        _renderSystemStatusModal(_lastHealthData);
+      }
+      _fetchAndRenderSystemStatus();
+    });
+
+    document.getElementById('systemStatusRefresh').addEventListener('click', function () {
+      _fetchAndRenderSystemStatus();
+    });
 
     // ==========================================
     // HELPER: Init atau refresh Select2 pada satu elemen
@@ -6197,11 +6350,11 @@
         const sd = $('#lcStartDate').val();
         const ed = $('#lcEndDate').val();
         if (!sd || !ed) {
-          showAlert(t('alert.selectDateRange') || 'Pilih tanggal mulai dan tanggal akhir.', 'warning');
+          showAlert(t('alert.selectDateRange'), 'warning');
           return null;
         }
         if (sd > ed) {
-          showAlert(t('alert.dateRangeInvalid') || 'Tanggal mulai harus sebelum tanggal akhir.', 'warning');
+          showAlert(t('alert.dateRangeInvalid'), 'warning');
           return null;
         }
         lcDateParams = { start_date: sd, end_date: ed };
@@ -8307,11 +8460,8 @@
           const url = response.data.download_url;
           const filename = response.data.filename || 'savegeo_export.tif';
 
-          showAlert(
-            `✅ GeoTIFF siap! Download akan dimulai otomatis. ` +
-            `<a href="${url}" download="${filename}" target="_blank">Klik di sini</a> jika tidak otomatis.`,
-            'success', 10000
-          );
+          const link = `<a href="${url}" download="${filename}" target="_blank">${t('alert.clickHere')}</a>`;
+          showAlert(tf('alert.geotiffReady', { link }), 'success', 10000);
 
           // Buat link tersembunyi lalu klik
           const a = document.createElement('a');
@@ -8633,6 +8783,177 @@
       URL.revokeObjectURL(url);
 
       showAlert(t('alert.reportGenerated'), 'success');
+    }
+
+    // ==========================================
+    // EXECUTIVE SUMMARY (DOCX)
+    // ==========================================
+
+    function buildExecutiveSummaryPayload() {
+      const year       = parseInt($('#yearValue').text()) || new Date().getFullYear();
+      const startMonth = parseInt($('#startMonth').val()) || 1;
+      const endMonth   = parseInt($('#endMonth').val())   || 12;
+
+      const analysis = {};
+
+      // Land cover — normalize to class_areas list
+      if (analysisResults.landcover) {
+        const firstKey = Object.keys(analysisResults.landcover)[0];
+        const ds       = analysisResults.landcover[firstKey];
+        if (ds && ds.classes) {
+          const classAreas = Object.entries(ds.classes)
+            .map(([cls, d]) => ({
+              class:   cls,
+              area_ha: d.area_ha || d.area || 0,
+              percent: d.percentage || d.percent || 0,
+            }))
+            .sort((a, b) => b.area_ha - a.area_ha);
+          analysis.landcover = {
+            dataset:       firstKey,
+            class_areas:   classAreas,
+            total_area_ha: ds.total_area_ha || null,
+            year:          ds.year || year,
+          };
+        }
+      }
+
+      // Vegetation — normalize to statistics dict
+      if (analysisResults.vegetation && analysisResults.vegetation.indices) {
+        const stats = {};
+        for (const [idx, s] of Object.entries(analysisResults.vegetation.indices)) {
+          stats[idx] = { mean: s.mean, min: s.min, max: s.max };
+        }
+        analysis.vegetation = { statistics: stats };
+      }
+
+      // Carbon
+      if (analysisResults.carbon) {
+        const cd  = analysisResults.carbon;
+        const cs  = (cd.carbon_estimated || {}).statistics || {};
+        const ai  = cd.area_info || {};
+        const ref = cd.carbon_reference || {};
+        const mi  = cd.model_info || {};
+        analysis.carbon = {
+          statistics: {
+            mean:  cs.mean,
+            total: ai.total_carbon_tons,
+            unit:  ref.unit || (cd.carbon_estimated || {}).unit || 'Mg C/ha',
+            co2e:  ai.carbon_dioxide_equivalent_tons,
+          },
+          dataset:     ref.full_name || ref.name || mi.reference_dataset || null,
+          model_name:  mi.model_name || null,
+          target_pool: ref.target_pool || null,
+        };
+      }
+
+      // Land cover transition
+      if (analysisResults.landcover_transition && (analysisResults.landcover_transition.pairs || []).length) {
+        const tr   = analysisResults.landcover_transition;
+        const pair = tr.pairs[0];
+        const topChanges = (pair.flows || [])
+          .filter(f => f.changed)
+          .sort((a, b) => (b.area || 0) - (a.area || 0))
+          .slice(0, 5)
+          .map(f => ({ from: f.from, to: f.to, area_ha: f.area || f.area_ha || 0 }));
+        analysis.landcover_transition = {
+          start_year:        pair.from_year,
+          end_year:          pair.to_year,
+          changed_area_ha:   pair.changed_area_ha,
+          changed_percent:   pair.changed_percentage,
+          top_changes:       topChanges,
+        };
+      }
+
+      // Agent report (from agentic AI if available)
+      const agentReport = (typeof lastAgentReport !== 'undefined' && lastAgentReport) ? lastAgentReport : null;
+
+      const datasets = Object.keys(analysisResults.landcover || {});
+      if (analysisResults.carbon) {
+        const ref = (analysisResults.carbon.carbon_reference || {});
+        const ds  = ref.full_name || ref.name;
+        if (ds && !datasets.includes(ds)) datasets.push(ds);
+      }
+
+      return {
+        title:        'SaveGeo Executive Summary',
+        aoi_name:     currentAOI ? currentAOI.name : 'Area Studi',
+        generated_by: 'SaveGeo',
+        lang:         currentLanguage,
+        period: {
+          year:       year,
+          start_year: year,
+          end_year:   year,
+          start_month: startMonth,
+          end_month:   endMonth,
+        },
+        aoi:      currentAOI ? (currentAOI.geojson || null) : null,
+        analysis: analysis,
+        agent_report: agentReport || {},
+        warnings: [],
+        metadata: {
+          datasets:   datasets,
+          models:     analysisResults.carbon && analysisResults.carbon.model_info
+                        ? [analysisResults.carbon.model_info.model_name].filter(Boolean) : [],
+          parameters: {
+            cloud_threshold: parseInt($('#cloudValue').text()) || 10,
+            year:            year,
+          },
+        },
+      };
+    }
+
+    async function downloadExecutiveSummary() {
+      const btn         = document.getElementById('exportExecSummary');
+      const originalHTML = btn.innerHTML;
+
+      const hasResults = analysisResults.vegetation || analysisResults.landcover || analysisResults.carbon;
+      if (!currentAOI && !hasResults) {
+        const ok = confirm(t('alert.executiveSummaryConfirm'));
+        if (!ok) return;
+      }
+
+      btn.disabled  = true;
+      btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('alert.executiveSummaryGenerating')}`;
+
+      try {
+        const payload  = buildExecutiveSummaryPayload();
+        const response = await fetch(`${API_BASE_URL}/reports/executive-summary`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          let errMsg = t('alert.executiveSummaryFailed');
+          try { const e = await response.json(); errMsg = translateBackendMessage(e.error, e) || errMsg; } catch (_) {}
+          showAlert(errMsg, 'danger');
+          return;
+        }
+
+        const blob = await response.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+
+        // Extract filename from Content-Disposition if present
+        const cd = response.headers.get('Content-Disposition');
+        const fnMatch = cd && cd.match(/filename="([^"]+)"/);
+        a.download = fnMatch
+          ? fnMatch[1]
+          : `savegeo_executive_summary_${Date.now()}.docx`;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showAlert(t('alert.executiveSummaryDownloaded'), 'success', 6000);
+      } catch (error) {
+        showAlert(tf('alert.executiveSummaryFailedWithError', { error: error.message }), 'danger');
+      } finally {
+        btn.disabled  = false;
+        btn.innerHTML = originalHTML;
+      }
     }
 
     // ==========================================
@@ -9213,6 +9534,211 @@
     };
 
     window.DisasterMapping = DisasterMapping;
+
+    // ── Chatbot integration — expose AOI setter and map control ──
+
+    /**
+     * Poll until a <select> has at least one real option beyond the given skip values.
+     * Returns true when ready, false on timeout.
+     */
+    async function _pollSelectReady(selectId, skipValues, timeoutMs) {
+      skipValues = skipValues || [];
+      timeoutMs  = timeoutMs  || 8000;
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const sel = document.getElementById(selectId);
+        if (sel) {
+          const hasReal = Array.from(sel.options).some(o =>
+            o.value && !skipValues.includes(o.value) && !/^(-{2}|loading)/i.test(o.text.trim())
+          );
+          if (hasReal) return true;
+        }
+        await new Promise(r => setTimeout(r, 250));
+      }
+      return false;
+    }
+
+    function _matchOption(sel, rawText, skipValues, stripRe) {
+      const norm = rawText.toLowerCase().replace(stripRe, '').trim();
+      return Array.from(sel.options).find(o => {
+        if (!o.value || (skipValues || []).includes(o.value)) return false;
+        const t = o.text.toLowerCase().replace(stripRe, '').trim();
+        return t.includes(norm) || norm.includes(t);
+      }) || null;
+    }
+
+    /**
+     * Set AOI by selecting from Indonesia Admin dropdowns.
+     * Supports province → city → district → village (kelurahan).
+     * Uses polling instead of fixed timeouts so slow API won't cause wrong level.
+     * @param {string} provinceText  e.g. "Jawa Tengah"
+     * @param {string} cityText      e.g. "Kota Semarang"   (optional)
+     * @param {string} districtText  e.g. "Semarang Tengah" (optional)
+     * @param {string} villageText   e.g. "Miroto"          (optional)
+     * @returns {Promise<boolean>}
+     */
+    window.setAOIByAdminName = async function (provinceText, cityText, districtText, villageText) {
+      const adminTabLink = document.querySelector('a[href="#aoiAdmin"]');
+      if (adminTabLink && window.$) $(adminTabLink).tab('show');
+      await new Promise(r => setTimeout(r, 200));
+
+      // Wait for provinces to finish loading
+      const pReady = await _pollSelectReady('provinceSelect', [], 6000);
+      if (!pReady) return false;
+
+      const pSel = document.getElementById('provinceSelect');
+      if (!pSel) return false;
+
+      const PROV_RE = /^(provinsi|prov\.?)\s+/i;
+      const pMatch  = _matchOption(pSel, provinceText || '', [], PROV_RE);
+      if (!pMatch) return false;
+
+      if (window.$) $(pSel).val(pMatch.value).trigger('change');
+      else { pSel.value = pMatch.value; pSel.dispatchEvent(new Event('change')); }
+
+      if (!cityText) {
+        await new Promise(r => setTimeout(r, 300));
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      // Wait for city options to populate
+      const cReady = await _pollSelectReady('citySelect', ['use_province'], 10000);
+      if (!cReady) {
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      const cSel   = document.getElementById('citySelect');
+      const CITY_RE = /^(kota|kabupaten|kab\.?)\s+/i;
+      const cMatch  = _matchOption(cSel, cityText || '', ['use_province'], CITY_RE);
+
+      if (!cMatch) {
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      if (window.$) $(cSel).val(cMatch.value).trigger('change');
+      else { cSel.value = cMatch.value; cSel.dispatchEvent(new Event('change')); }
+
+      if (!districtText) {
+        await new Promise(r => setTimeout(r, 300));
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      // Wait for district options
+      const dReady = await _pollSelectReady('districtSelect', ['use_city'], 10000);
+      if (!dReady) {
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      const dSel   = document.getElementById('districtSelect');
+      const DIST_RE = /^(kecamatan|kec\.?)\s+/i;
+      const dMatch  = _matchOption(dSel, districtText || '', ['use_city'], DIST_RE);
+
+      if (!dMatch) {
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      if (window.$) $(dSel).val(dMatch.value).trigger('change');
+      else { dSel.value = dMatch.value; dSel.dispatchEvent(new Event('change')); }
+
+      if (!villageText) {
+        await new Promise(r => setTimeout(r, 300));
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      // Wait for village options
+      const vReady = await _pollSelectReady('villageSelect', ['use_district'], 10000);
+      if (!vReady) {
+        document.getElementById('loadRegion')?.click();
+        return true;
+      }
+
+      const vSel    = document.getElementById('villageSelect');
+      const VILL_RE = /^(desa|kelurahan|kel\.?)\s+/i;
+      const vMatch  = _matchOption(vSel, villageText || '', ['use_district'], VILL_RE);
+
+      if (vMatch) {
+        if (window.$) $(vSel).val(vMatch.value).trigger('change');
+        else { vSel.value = vMatch.value; vSel.dispatchEvent(new Event('change')); }
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      document.getElementById('loadRegion')?.click();
+      return true;
+    };
+
+    /**
+     * Set AOI from a GeoJSON Feature (fallback for non-Indonesia or when admin dropdown fails).
+     * @param {object} feature  GeoJSON Feature with Polygon/MultiPolygon geometry
+     * @param {string} name     Display name for the AOI
+     */
+    window.setAOIFromGeoJSON = function (feature, name) {
+      if (!feature || !feature.geometry) {
+        console.warn('[setAOIFromGeoJSON] invalid feature', feature);
+        return;
+      }
+
+      // Clear previous drawn items
+      drawnItems.clearLayers();
+
+      const geoJsonLayer = L.geoJSON(feature, {
+        style: {
+          color: '#2563eb',
+          fillColor: '#93c5fd',
+          fillOpacity: 0.25,
+          weight: 2,
+          dashArray: '5,5',
+        },
+      });
+
+      const bounds = geoJsonLayer.getBounds();
+      if (!bounds.isValid()) {
+        console.warn('[setAOIFromGeoJSON] invalid bounds');
+        return;
+      }
+
+      geoJsonLayer.addTo(drawnItems);
+      map.fitBounds(bounds, { padding: [30, 30] });
+
+      const area = calculateAreaFromGeoJSON(feature) || calculateAreaFromBounds(bounds);
+
+      currentAOI = {
+        type:     'geocode',
+        name:     name || 'AOI',
+        geometry: bounds,
+        area:     area,
+        geojson:  feature,
+      };
+
+      activeAdminSelection = null;
+      updateAdminBoundaryControls();
+      showAOIInfo();
+      if (typeof schedulePreciseAOIAreaUpdate === 'function') {
+        schedulePreciseAOIAreaUpdate(feature, bounds);
+      }
+    };
+
+    /**
+     * Fly map to lat/lng or fitBounds from bbox.
+     * @param {number} lat
+     * @param {number} lng
+     * @param {number} zoom
+     * @param {Array}  bbox  [minLng, minLat, maxLng, maxLat]
+     */
+    window.flyToLocation = function (lat, lng, zoom, bbox) {
+      if (bbox && bbox.length === 4) {
+        map.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], { padding: [30, 30] });
+      } else if (lat && lng) {
+        map.flyTo([lat, lng], zoom || 12, { duration: 1.5 });
+      }
+    };
+
     window.onModuleShown = function (moduleName) {
       if (moduleName === 'disaster') {
         DisasterMapping.initializeDateInputs();
@@ -10475,6 +11001,10 @@
       setTimeout(() => LCChange.init(), 1200);
     });
   </script>
+
+  <!-- SaveGeo Chatbot Widget -->
+  <link rel="stylesheet" href="/savegeo-chatbot.css">
+  <script src="/savegeo-chatbot.js"></script>
 </body>
 
 </html>

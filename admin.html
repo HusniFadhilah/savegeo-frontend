@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 
 </head>
 
@@ -348,6 +349,7 @@
               perubahan</button>
           </div>
           <div id="cfg-sections"></div>
+          <div id="key-pool-section"></div>
         </div>
 
         <!-- ===== ADMIN USERS ===== -->
@@ -565,6 +567,7 @@
   <div id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
   <script>
     // ─────────────────────────────────────────────
     // Config
@@ -574,6 +577,15 @@
     let currentUser = null;
     let geeFileData = null;
     let mlFileData = null;
+
+    function msg(value, fallback = '') {
+      if (!value) return fallback;
+      if (typeof value === 'string') return value;
+      if (value.id || value.en) return value.id || value.en;
+      if (value.message) return msg(value.message, fallback);
+      if (value.error) return msg(value.error, fallback);
+      return fallback || JSON.stringify(value);
+    }
 
     // ─────────────────────────────────────────────
     // API helper
@@ -624,7 +636,7 @@
         showApp();
         initApp();
       } else {
-        document.getElementById('li-err').textContent = r.data.error || 'Login gagal';
+        document.getElementById('li-err').textContent = msg(r.data.error, 'Login gagal');
         document.getElementById('li-err').style.display = 'block';
         showLogin();
       }
@@ -757,7 +769,7 @@
       body.textContent = 'Memuat status ArcGIS...';
       const r = await api('GET', '/api/admin/arcgis/status');
       if (!r.ok) {
-        body.innerHTML = `<span style="color:var(--danger)">Gagal memuat status ArcGIS: ${r.data?.error || r.status}</span>`;
+        body.innerHTML = `<span style="color:var(--danger)">Gagal memuat status ArcGIS: ${msg(r.data?.error, r.status)}</span>`;
         return;
       }
       const d = r.data;
@@ -818,21 +830,21 @@
         loadGEE();
         checkEE();
       } else {
-        toast(r.data.error || 'Gagal upload', 'e');
+        toast(msg(r.data.error, 'Gagal upload'), 'e');
       }
     }
 
     async function activateCred(id) {
       const r = await api('POST', `/api/admin/gee/credentials/${id}/activate`);
       if (r.ok) { toast('Credential diaktifkan, EE diinisialisasi ulang'); loadGEE(); checkEE(); }
-      else toast(r.data.error || 'Gagal aktivasi', 'e');
+      else toast(msg(r.data.error, 'Gagal aktivasi'), 'e');
     }
 
     async function deleteCred(id) {
       if (!confirm('Hapus credential ini?')) return;
       const r = await api('DELETE', `/api/admin/gee/credentials/${id}`);
       if (r.ok) { toast('Credential dihapus'); loadGEE(); }
-      else toast(r.data.error || 'Gagal hapus', 'e');
+      else toast(msg(r.data.error, 'Gagal hapus'), 'e');
     }
 
     // ─────────────────────────────────────────────
@@ -1017,48 +1029,119 @@
         document.getElementById('ml-name').value = '';
         loadModels();
       } else {
-        toast(r.data.error || 'Gagal upload', 'e');
+        toast(msg(r.data.error, 'Gagal upload'), 'e');
       }
     }
 
     async function setDefault(id) {
       const r = await api('POST', `/api/admin/models/${id}/set-default`);
       if (r.ok) { toast('Default model diperbarui'); loadModels(); }
-      else toast(r.data.error || 'Gagal', 'e');
+      else toast(msg(r.data.error, 'Gagal'), 'e');
     }
 
     async function toggleActive(id, currentActive) {
       const r = await api('PUT', `/api/admin/models/${id}`, { is_active: !currentActive });
       if (r.ok) { toast('Status model diperbarui'); loadModels(); }
-      else toast(r.data.error || 'Gagal', 'e');
+      else toast(msg(r.data.error, 'Gagal'), 'e');
     }
 
     async function deleteModel(id) {
       if (!confirm('Hapus model ini? File juga akan dihapus.')) return;
       const r = await api('DELETE', `/api/admin/models/${id}`);
       if (r.ok) { toast('Model dihapus'); loadModels(); }
-      else toast(r.data.error || 'Gagal', 'e');
+      else toast(msg(r.data.error, 'Gagal'), 'e');
     }
 
     // ─────────────────────────────────────────────
     // System Config
     // ─────────────────────────────────────────────
-    const CAT_LABELS = { analysis: 'Analisis', year: 'Rentang Tahun', carbon: 'Carbon & Visualisasi', app: 'Aplikasi' };
-    const CAT_COLORS = { analysis: 'badge-blue', year: 'badge-amber', carbon: 'badge-green', app: 'badge-gray' };
+    const CAT_LABELS = { analysis: 'Analisis', year: 'Rentang Tahun', carbon: 'Carbon & Visualisasi', app: 'Aplikasi', ai: 'AI Controller' };
+    const CAT_COLORS = { analysis: 'badge-blue', year: 'badge-amber', carbon: 'badge-green', app: 'badge-gray', ai: 'badge-purple' };
+
+    // Provider definitions — used to build ai.provider selector
+    const AI_PROVIDERS = [
+      { id: 'anthropic',  label: 'Anthropic',         icon: '🤖', keyField: 'ai.anthropic_api_key',  needsKey: true,  hint: 'Claude 3.x / 4.x' },
+      { id: 'openai',     label: 'OpenAI / Codex',    icon: '🔵', keyField: 'ai.openai_api_key',     needsKey: true,  hint: 'GPT-4o, o1, Codex' },
+      { id: 'openrouter', label: 'OpenRouter',         icon: '🔀', keyField: 'ai.openrouter_api_key', needsKey: true,  hint: 'Multi-model gateway' },
+      { id: 'deepseek',   label: 'DeepSeek',           icon: '🌊', keyField: 'ai.deepseek_api_key',   needsKey: true,  hint: 'deepseek-chat / coder' },
+      { id: 'gemini',     label: 'Google Gemini',      icon: '✨', keyField: 'ai.gemini_api_key',     needsKey: true,  hint: 'Gemini 1.5 / 2.0' },
+      { id: 'ollama',     label: 'Ollama (lokal)',     icon: '🦙', keyField: null,                    needsKey: false, hint: 'Llama, Mistral, dsb.' },
+      { id: 'opencode',   label: 'OpenCode',           icon: '💻', keyField: 'ai.opencode_api_key',   needsKey: false, hint: 'OpenAI-compat, atur Base URL' },
+    ];
+
+    let _providerStatus = {}; // { anthropic: true/false, ollama: true, ... }
+
+    function _cfgRow(item) {
+      const keyLabel = item.key.split('.').pop();
+      const desc     = (item.description || '').replace(/"/g, '&quot;');
+      let inputHtml;
+
+      if (item.key === 'ai.provider') {
+        // Render as provider selector card
+        const current = item.raw_value || 'anthropic';
+        const cards = AI_PROVIDERS.map(p => {
+          const ok       = !p.needsKey || _providerStatus[p.id];
+          const active   = p.id === current;
+          const badgeCls = ok ? 'cfg-secret-ok' : 'cfg-secret-empty';
+          const badgeTxt = ok ? 'Siap' : 'Perlu key';
+          return `
+            <label class="cfg-provider-card ${active ? 'active' : ''}">
+              <input type="radio" name="ai_provider_radio" data-k="${item.key}" value="${p.id}"
+                     ${active ? 'checked' : ''} style="display:none">
+              <span class="cfg-provider-icon">${p.icon}</span>
+              <span class="cfg-provider-name">${p.label}</span>
+              <span class="cfg-provider-hint">${p.hint}</span>
+              <span class="${badgeCls}" style="font-size:10px;margin-left:auto">${badgeTxt}</span>
+            </label>`;
+        }).join('');
+        inputHtml = `<div class="cfg-provider-list">${cards}</div>`;
+
+      } else if (item.is_secret) {
+        const badge = item.is_configured
+          ? `<span class="cfg-secret-ok"><i class="fas fa-check-circle"></i> Dikonfigurasi</span>`
+          : `<span class="cfg-secret-empty"><i class="fas fa-exclamation-circle"></i> Belum diisi</span>`;
+        const ph = item.is_configured ? 'Isi untuk mengganti' : 'Belum dikonfigurasi';
+        inputHtml = `
+          <div class="cfg-secret-wrap">
+            <input type="password" data-k="${item.key}" data-secret="1"
+                   placeholder="${ph}" autocomplete="new-password" title="${desc}">
+            ${badge}
+          </div>`;
+
+      } else if (item.key === 'ai.model') {
+        const val = (item.raw_value ?? '');
+        const opt = val ? `<option value="${_esc(val)}" selected>${_esc(val)}</option>` : '';
+        inputHtml = `<select id="or-model-select" data-k="${item.key}">${opt}</select>`;
+
+      } else {
+        const val = (item.raw_value ?? '').replace(/"/g, '&quot;');
+        inputHtml = `<input data-k="${item.key}" value="${val}" title="${desc}">`;
+      }
+
+      return `
+      <div class="cfg-row ${item.key === 'ai.provider' ? 'cfg-row-provider' : ''}">
+        <span class="cfg-key" title="${item.key}">${keyLabel}</span>
+        <div class="cfg-val">${inputHtml}</div>
+        <span class="cfg-type">${(item.key === 'ai.provider' || item.key === 'ai.model') ? '' : item.value_type}</span>
+      </div>`;
+    }
 
     async function loadConfig() {
       const r = await api('GET', '/api/admin/config');
       if (!r.ok) { toast('Gagal memuat config', 'e'); return; }
 
+      // Build provider status from ai category (which providers have keys configured)
+      const aiItems = r.data.config['ai'] || [];
+      _providerStatus = { ollama: true }; // ollama needs no key
+      aiItems.forEach(item => {
+        AI_PROVIDERS.forEach(p => {
+          if (p.keyField && item.key === p.keyField) _providerStatus[p.id] = !!item.is_configured;
+        });
+      });
+
       let html = '';
       for (const [cat, items] of Object.entries(r.data.config)) {
-        const rows = items.map(item => `
-      <div class="cfg-row">
-        <span class="cfg-key" title="${item.key}">${item.key.split('.').pop()}</span>
-        <div class="cfg-val"><input data-k="${item.key}" value="${item.raw_value ?? ''}" title="${item.description || ''}"></div>
-        <span class="cfg-type">${item.value_type}</span>
-      </div>`).join('');
-
+        const rows = items.map(_cfgRow).join('');
         html += `<div class="card" style="margin-bottom:0.875rem">
       <div class="card-header-custom">
         <span><span class="stat-badge ${CAT_COLORS[cat] || 'badge-gray'}" style="margin-right:6px">${cat}</span>${CAT_LABELS[cat] || cat}</span>
@@ -1068,21 +1151,234 @@
     </div>`;
       }
       document.getElementById('cfg-sections').innerHTML = html;
+
+      // ── Backup key pool section ────────────────────────────────
+      await _renderKeyPoolSection();
+
+      // Provider card click — highlight active, reinit OR picker
+      document.querySelectorAll('.cfg-provider-card').forEach(card => {
+        card.addEventListener('click', () => {
+          card.closest('.cfg-provider-list')
+              .querySelectorAll('.cfg-provider-card')
+              .forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          card.querySelector('input[type=radio]').checked = true;
+          _initORPicker();
+        });
+      });
+
+      _initORPicker();
+    }
+
+    // ── OpenRouter model picker — Tom Select ─────────────────────
+    let _orTS    = null;   // TomSelect instance
+    let _orCache = null;   // cached model list
+
+    function _fmtCtx(n) {
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + 'M ctx';
+      if (n >= 1_000)     return (n / 1_000).toFixed(0)    + 'K ctx';
+      return n + ' ctx';
+    }
+    function _esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function _initORPicker() {
+      const el = document.getElementById('or-model-select');
+      if (!el) return;
+
+      // Destroy previous instance
+      if (_orTS) { _orTS.destroy(); _orTS = null; }
+
+      const activeRadio = document.querySelector('input[name="ai_provider_radio"]:checked');
+      const isOR        = activeRadio?.value === 'openrouter';
+      const currentVal  = el.value;
+
+      _orTS = new TomSelect(el, {
+        create:      true,   // allow typing any model name
+        persist:     false,
+        allowEmptyOption: true,
+        maxOptions:  500,
+        placeholder: isOR ? 'Cari atau ketik nama model...' : 'Kosong = default provider',
+        plugins:     ['remove_button'],
+        render: {
+          option: function(data, escape) {
+            if (!data.is_free && data.is_free !== false) {
+              // plain option (typed or default)
+              return `<div class="ts-custom-opt"><span>${escape(data.text)}</span></div>`;
+            }
+            const badge = data.is_free
+              ? `<span class="or-badge-free">GRATIS</span>`
+              : `<span class="or-badge-paid">$${data.input_per_m}/$${data.output_per_m}/1M</span>`;
+            const ctx = data.context_length ? `<span class="or-ctx">${_fmtCtx(data.context_length)}</span>` : '';
+            return `<div class="ts-custom-opt">
+              <div class="ts-opt-name">${escape(data.text)}</div>
+              <div class="ts-opt-meta">
+                <code class="or-item-id">${escape(data.value)}</code>
+                ${ctx} ${badge}
+              </div>
+            </div>`;
+          },
+          item: function(data, escape) {
+            return `<div title="${escape(data.value)}">${escape(data.text || data.value)}</div>`;
+          },
+          no_results: function() {
+            return `<div class="no-results">Model tidak ditemukan — tekan Enter untuk pakai nama ini.</div>`;
+          },
+          option_create: function(data, escape) {
+            return `<div class="create">Gunakan model: <strong>${escape(data.input)}</strong></div>`;
+          },
+        },
+      });
+
+      if (!isOR) return;  // no catalogue for non-OR providers
+
+      // Load models (use cache if fresh)
+      if (!_orCache) {
+        _orTS.disable();
+        _orTS.settings.placeholder = 'Memuat daftar model...';
+        _orTS.inputState();
+        try {
+          const r = await api('GET', '/api/admin/openrouter/models');
+          if (!r.ok) throw new Error(msg(r.data.error, 'Gagal'));
+          _orCache = r.data.models || [];
+        } catch(e) {
+          _orTS.enable();
+          return;
+        }
+      }
+
+      // Populate optgroups: Gratis / Berbayar
+      _orTS.addOptionGroup('free', { label: '✅  Model Gratis (25)' });
+      _orTS.addOptionGroup('paid', { label: '💰  Model Berbayar' });
+
+      _orCache.forEach(m => {
+        _orTS.addOption({
+          value:          m.id,
+          text:           m.name,
+          is_free:        m.is_free,
+          input_per_m:    m.input_per_m,
+          output_per_m:   m.output_per_m,
+          context_length: m.context_length,
+          optgroup:       m.is_free ? 'free' : 'paid',
+        });
+      });
+
+      if (currentVal) {
+        _orTS.setValue(currentVal, true);
+      }
+      _orTS.settings.placeholder = 'Cari atau ketik nama model...';
+      _orTS.enable();
+      _orTS.inputState();
     }
 
     async function saveConfig() {
       const inputs = document.querySelectorAll('[data-k]');
-      const updates = Array.from(inputs).map(i => ({ key: i.dataset.k, value: i.value }));
+      const updates = Array.from(inputs)
+        .filter(i => {
+          // Skip radio buttons that aren't checked (only 1 per group is sent)
+          if (i.type === 'radio') return i.checked;
+          // Skip empty secret fields (write-only: empty = "no change")
+          if (i.dataset.secret && !i.value.trim()) return false;
+          return true;
+        })
+        .map(i => ({ key: i.dataset.k, value: i.value }));
       const r = await api('PUT', '/api/admin/config', { updates });
-      if (r.ok) toast(`${r.data.updated.length} konfigurasi disimpan ke DB`);
-      else toast(r.data.error || 'Gagal menyimpan', 'e');
+      if (r.ok) {
+        toast(`${r.data.updated.length} konfigurasi disimpan ke DB`);
+        loadConfig();
+      } else {
+        toast(msg(r.data.error, 'Gagal menyimpan'), 'e');
+      }
     }
 
     async function resetAllConfig() {
       if (!confirm('Reset semua konfigurasi ke nilai default?')) return;
       const r = await api('POST', '/api/admin/config/reset', {});
       if (r.ok) { toast('Config direset ke default'); loadConfig(); }
-      else toast(r.data.error || 'Gagal reset', 'e');
+      else toast(msg(r.data.error, 'Gagal reset'), 'e');
+    }
+
+    // ── Backup Key Pool UI ────────────────────────────────────────
+    const _KEY_POOL_PROVIDERS = [
+      { id: 'gemini',     label: 'Gemini',     icon: '✨' },
+      { id: 'openrouter', label: 'OpenRouter',  icon: '🔀' },
+      { id: 'anthropic',  label: 'Anthropic',   icon: '🧠' },
+      { id: 'openai',     label: 'OpenAI',      icon: '🤖' },
+      { id: 'deepseek',   label: 'DeepSeek',    icon: '🌊' },
+    ];
+
+    async function _renderKeyPoolSection() {
+      const container = document.getElementById('key-pool-section');
+      if (!container) return;
+
+      // Load current status
+      const sr = await api('GET', '/api/admin/key-pool/status');
+      const status = sr.ok ? (sr.data || {}) : {};
+
+      let rows = '';
+      for (const p of _KEY_POOL_PROVIDERS) {
+        const keys = status[p.id] || [];
+        const avail   = keys.filter(k => k.available).length;
+        const total   = keys.length;
+        let statusHtml = '';
+        if (total === 0) {
+          statusHtml = `<span class="kp-badge kp-none">Tidak ada kunci cadangan</span>`;
+        } else {
+          const cls = avail === 0 ? 'kp-none' : avail < total ? 'kp-partial' : 'kp-ok';
+          statusHtml = `<span class="kp-badge ${cls}">${avail}/${total} tersedia</span>`;
+          keys.forEach(k => {
+            const avTxt = k.available ? '✅ aktif' : `⏳ ${k.available_in}d lagi`;
+            statusHtml += `<span class="kp-key-chip">${k.prefix} <em>${avTxt}</em></span>`;
+          });
+        }
+
+        rows += `
+        <div class="kp-row">
+          <div class="kp-label">${p.icon} ${p.label}</div>
+          <div class="kp-status">${statusHtml}</div>
+          <button class="btn-sm" onclick="_toggleKPEdit('${p.id}')">Edit</button>
+          <div class="kp-edit" id="kp-edit-${p.id}" style="display:none">
+            <textarea id="kp-ta-${p.id}" rows="4"
+              placeholder="Tempel kunci API cadangan, satu per baris&#10;Kunci utama sudah otomatis terdaftar"
+            ></textarea>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button class="btn-sm btn-primary" onclick="_saveKPKeys('${p.id}')">Simpan</button>
+              <button class="btn-sm" onclick="_toggleKPEdit('${p.id}')">Batal</button>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      container.innerHTML = `
+      <div class="card" style="margin-bottom:0.875rem">
+        <div class="card-header-custom">
+          <span><span class="stat-badge badge-blue" style="margin-right:6px">pool</span>Kunci Cadangan (Key Pool)</span>
+          <span style="font-size:10px;color:var(--text-muted)">Otomatis ganti kunci saat rate-limit habis</span>
+        </div>
+        <div class="card-body-custom" style="padding:0.5rem 1rem 1rem">${rows}</div>
+      </div>`;
+    }
+
+    function _toggleKPEdit(pid) {
+      const el = document.getElementById(`kp-edit-${pid}`);
+      if (!el) return;
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function _saveKPKeys(pid) {
+      const ta = document.getElementById(`kp-ta-${pid}`);
+      if (!ta) return;
+      const val = ta.value.trim();
+      const key = `ai.backup_keys.${pid}`;
+      const r = await api('PUT', '/api/admin/config', { [key]: val });
+      if (r.ok) {
+        toast(`Kunci cadangan ${pid} disimpan`);
+        _toggleKPEdit(pid);
+        await _renderKeyPoolSection();
+      } else {
+        toast(msg(r.data?.error, 'Gagal simpan'), 'e');
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -1128,7 +1424,7 @@
         document.getElementById('pw-new').value = '';
         document.getElementById('pw-confirm').value = '';
       } else {
-        toast(r.data.error || 'Gagal ganti password', 'e');
+        toast(msg(r.data.error, 'Gagal ganti password'), 'e');
       }
     }
 
@@ -1235,7 +1531,7 @@
         document.getElementById('co-name').value = '';
         loadCompanies();
       } else {
-        toast(r.data.error || 'Gagal menyimpan', 'e');
+        toast(msg(r.data.error, 'Gagal menyimpan'), 'e');
       }
     }
 
@@ -1265,7 +1561,7 @@
         log.textContent = `Selesai: ${r.data.imported} diimpor, ${r.data.skipped} dilewati.`;
         loadCompanies();
       } else {
-        log.textContent = 'Error: ' + (r.data.error || 'Gagal import OSM');
+        log.textContent = 'Error: ' + (msg(r.data.error, 'Gagal import OSM'));
       }
     }
 
@@ -1277,7 +1573,7 @@
         log.textContent = `Selesai: ${r.data.imported} diimpor, ${r.data.skipped} dilewati.`;
         loadCompanies();
       } else {
-        log.textContent = 'Error: ' + (r.data.error || 'Gagal import GFW');
+        log.textContent = 'Error: ' + (msg(r.data.error, 'Gagal import GFW'));
       }
     }
 
