@@ -7271,7 +7271,18 @@
       $('#carbonTotalTable').html(totalHtml);
 
       // ✅ Model Info Section
-      const imagesUsed = modelInfo.images_used || 0;
+      const formatAlgorithmName = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return 'Unknown Algorithm';
+        return raw
+          .split(/[_\s-]+/)
+          .filter(Boolean)
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+      };
+      const methodLabel = modelInfo.method || formatAlgorithmName(modelInfo.algorithm);
+      const imagesUsed = Number.isFinite(Number(modelInfo.images_used)) ? Number(modelInfo.images_used) : null;
+      const imagesUsedLabel = imagesUsed == null ? 'N/A' : imagesUsed.toLocaleString();
       const rmse = modelPerf.rmse || 0;
       const rmseStd = modelPerf.rmse_std || 0;
       const r2Score = modelPerf.r2_score;
@@ -7297,9 +7308,9 @@
       let modelHtml = `
         <div class="row mb-2"><div class="col-md-12"><h6><i class="fas fa-cogs"></i> Model Configuration</h6></div></div>
         <div class="row">
-            <div class="col-md-3"><strong>Method:</strong><br><small>${modelInfo.method || 'Linear Regression'}</small></div>
+            <div class="col-md-3"><strong>Method:</strong><br><small>${methodLabel}</small></div>
             <div class="col-md-3"><strong>Reference Dataset:</strong><br><small>${datasetName} (${datasetYear})</small></div>
-            <div class="col-md-3"><strong>Sentinel-2 Images:</strong><br><span class="badge bg-secondary">${imagesUsed}</span></div>
+            <div class="col-md-3"><strong>Sentinel-2 Images:</strong><br><span class="badge bg-secondary">${imagesUsedLabel}</span></div>
             <div class="col-md-3"><strong>Processing Scale:</strong><br>${modelInfo.scale || 250}m</div>
         </div>`;
 
