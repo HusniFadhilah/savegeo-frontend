@@ -19,7 +19,6 @@ function toggleSidebar() {
     sidebar.toggleClass('collapsed');
     const isCollapsed = sidebar.hasClass('collapsed');
     localStorage.setItem('sidebarCollapsed', isCollapsed);
-    console.log('✅ Sidebar:', isCollapsed ? 'collapsed' : 'expanded');
     setTimeout(updateTooltips, 300);
 }
 
@@ -51,7 +50,6 @@ function switchModule(moduleName) {
     if (typeof window.onModuleShown === 'function') {
         window.onModuleShown(moduleName);
     }
-    console.log(`✅ Module: ${moduleName}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -85,8 +83,6 @@ $(document).ready(function () {
         e.preventDefault();
         closeMobileSidebar();
     });
-
-    console.log('✅ Sidebar ready!');
 });
 
 // Close mobile sidebar when tapping outside (click + touchstart).
@@ -99,7 +95,7 @@ $(document).on('click touchstart', function (e) {
     if (!sidebar.hasClass('mobile-open')) return;
 
     const insideSidebar = sidebar.is(e.target) || sidebar.has(e.target).length > 0;
-    const insideToggle  = toggleBtn.is(e.target) || toggleBtn.has(e.target).length > 0;
+    const insideToggle = toggleBtn.is(e.target) || toggleBtn.has(e.target).length > 0;
 
     if (!insideSidebar && !insideToggle) {
         closeMobileSidebar();
@@ -107,8 +103,6 @@ $(document).on('click touchstart', function (e) {
 });
 
 // Global functions
-window.toggleSidebar       = toggleSidebar;
+window.toggleSidebar = toggleSidebar;
 window.toggleMobileSidebar = toggleMobileSidebar;
-window.switchModule        = switchModule;
-
-console.log('✅ custom-scripts.js loaded');
+window.switchModule = switchModule;

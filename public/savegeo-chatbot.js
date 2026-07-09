@@ -821,7 +821,22 @@
         self._sessionId = id;
         (data.messages || []).forEach(function (m) {
           var role = m.role === 'user' ? 'user' : 'assistant';
-          self._addMessage(role, m.content);
+          if (role === 'assistant') {
+            // Try parse full JSON response (new format: {message, actions, warnings})
+            var parsed = null;
+            try { parsed = JSON.parse(m.content); } catch (e) {}
+            if (parsed && typeof parsed.message !== 'undefined') {
+              if (parsed.message) self._addMessage('assistant', parsed.message);
+              if (parsed.warnings && parsed.warnings.length) self._addWarningBlock(parsed.warnings);
+              if (parsed.actions && parsed.actions.length) {
+                self._addActionHistoryCard(parsed.actions, m.created_at);
+              }
+            } else {
+              self._addMessage('assistant', m.content);  // backward compat: plain text
+            }
+          } else {
+            self._addMessage('user', m.content);
+          }
         });
         self._renderSessionPanel();
         self._toggleSessionPanel();  /* close panel after selecting */
@@ -1744,6 +1759,31 @@
       el.appendChild(p);
     });
     this.messagesEl.appendChild(el);
+  };
+
+  SaveGeoChatbot.prototype._addActionHistoryCard = function (actions, timestamp) {
+    if (!actions || !actions.length) return;
+    var el = document.createElement('div');
+    el.className = 'sgc-action-history-card';
+    var ts = '';
+    if (timestamp) {
+      try {
+        ts = new Date(timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {}
+    }
+    var listHtml = '<ol class="sgc-action-history-list">' +
+      actions.map(function (a) {
+        return '<li><span class="sgc-action-history-item">' + actionLabel(a) + '</span></li>';
+      }).join('') +
+      '</ol>';
+    el.innerHTML =
+      '<div class="sgc-action-history-header">' +
+        '<span class="sgc-action-history-badge"><i class="fas fa-list-check"></i> Langkah Dijalankan</span>' +
+        (ts ? '<span class="sgc-action-history-time">' + escapeHtml(ts) + '</span>' : '') +
+      '</div>' +
+      listHtml;
+    this.messagesEl.appendChild(el);
+    this._scrollBottom();
   };
 
   SaveGeoChatbot.prototype._renderQuickActions = function () {

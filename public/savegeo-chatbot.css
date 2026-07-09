@@ -280,6 +280,42 @@
   color: #333;
 }
 .sgc-plan-steps li { margin-bottom: 4px; }
+
+/* ── Action history card (riwayat langkah dari session lama) ──── */
+.sgc-action-history-card {
+  background: #f0f4ff;
+  border: 1px solid #c5d3f0;
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  margin: 4px 0;
+  opacity: 0.88;
+}
+.sgc-action-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.sgc-action-history-badge {
+  background: #4a72c4;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.sgc-action-history-time {
+  font-size: 11px;
+  color: #6b7280;
+}
+.sgc-action-history-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #374151;
+}
+.sgc-action-history-list li { margin-bottom: 3px; }
+.sgc-action-history-item { color: #1e3a8a; }
 .sgc-plan-footer { margin-top: 8px; display: flex; gap: 8px; }
 .sgc-exec-btn {
   flex: 1;
