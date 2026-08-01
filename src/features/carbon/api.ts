@@ -1,0 +1,145 @@
+import { apiClient } from "@/services/apiClient";
+import type { AoiPayload } from "./lib/geo";
+import type {
+  CarbonModelInfo,
+  CarbonModelListItem,
+  CarbonParams,
+  CarbonResult,
+  CompanyBoundary,
+} from "./types";
+
+/**
+ * GET /models (and /models/by-name/{name}) return their payload directly -
+ * `{models: [...], count}` / the model dict itself - no {success,data}
+ * envelope (verified against app/api/routes/models.py + live curl).
+ */
+export async function listCarbonModels(referenceDataset?: string | null): Promise<CarbonModelListItem[]> {
+  const params = new URLSearchParams();
+  params.set("model_type", "carbon");
+  if (referenceDataset) params.set("target_dataset", referenceDataset);
+  const res = await apiClient.get<{ models: CarbonModelListItem[]; count: number }>(
+    `/models?${params.toString()}`,
+  );
+  return res.models ?? [];
+}
+
+export function getCarbonModelInfo(modelName: string): Promise<CarbonModelInfo> {
+  return apiClient.get<CarbonModelInfo>(`/models/by-name/${encodeURIComponent(modelName)}`);
+}
+
+function isNonGeeModel(meta: CarbonModelListItem["metadata_json"]): boolean {
+  const provider = meta?.provider;
+  return provider === "non_gee_stac" || provider === "local_raster";
+}
+
+export interface AnalyzeCarbonArgs {
+  aoi: AoiPayload;
+  params: CarbonParams;
+  selectedModel: CarbonModelListItem | null;
+  visMin: number;
+  visMax: number;
+  visPalette: string[];
+}
+
+/**
+ * Ported from `runCarbonAnalysis()` in main.js: routes non-GEE models
+ * (trained on Planetary Computer STAC features, not ee.Image) to
+ * /analyze/carbon-local instead of /analyze/carbon so a STAC-trained
+ * model's coefficients never get combined with GEE-built features.
+ */
+/**
+ * POST /analyze/carbon(-local) returns the CarbonResult dict directly on
+ * success (200) - no {success,data} envelope. Errors come back as a non-2xx
+ * with `{error: "..."}`, which apiClient already throws as ApiError for -
+ * callers should try/catch, not check a `.success` field.
+ */
+export async function analyzeCarbon({
+  aoi,
+  params,
+  selectedModel,
+  visMin,
+  visMax,
+  visPalette,
+}: AnalyzeCarbonArgs): Promise<CarbonResult> {
+  const meta = selectedModel?.metadata_json;
+
+  if (selectedModel && isNonGeeModel(meta)) {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return apiClient.post<CarbonResult>("/analyze/carbon-local", {
+      aoi,
+      model_name: selectedModel.name,
+      start_date: `${params.year}-${pad(params.startMonth)}-01`,
+      end_date: `${params.year}-${pad(params.endMonth)}-28`,
+      scale: 250,
+      n_samples: 2000,
+      vis_min: visMin,
+      vis_max: visMax,
+      vis_palette: visPalette,
+    });
+  }
+
+  return apiClient.post<CarbonResult>("/analyze/carbon", {
+    aoi,
+    year: params.year,
+    start_month: params.startMonth,
+    end_month: params.endMonth,
+    cloud_threshold: params.cloudThreshold,
+    clip_to_aoi: params.clipMode === "clipped",
+    reference_dataset: params.referenceDataset,
+    dataset_year: params.datasetYear,
+    model_name: params.modelName || null,
+    vis_min: visMin,
+    vis_max: visMax,
+    vis_palette: visPalette.length ? visPalette : undefined,
+  });
+}
+
+export function listCompanies() {
+  return apiClient.get<{ companies: CompanyBoundary[] }>("/companies");
+}
+
+export function getCompanyGeojson(companyId: string) {
+  return apiClient.get<{ geojson: GeoJSON.Feature | GeoJSON.Geometry }>(
+    `/companies/${encodeURIComponent(companyId)}/geojson`,
+  );
+}
+
+export interface ExportGeoTiffArgs {
+  aoi: AoiPayload;
+  layerType: "carbon" | "vegetation" | "landcover" | "rgb";
+  indexName?: string | null;
+  dataset?: string | null;
+  scale: number;
+  year: number;
+  startMonth: number;
+  endMonth: number;
+  cloudThreshold: number;
+  modelName?: string | null;
+  filename: string;
+}
+
+/** POST /download/geotiff returns {status:"success", download_url, filename, ...} directly - no {success,data} envelope. */
+export interface ExportGeoTiffResult {
+  status: string;
+  download_url: string;
+  filename: string;
+  layer_type: string;
+  scale: number;
+  year: number;
+}
+
+export function exportGeoTiff(args: ExportGeoTiffArgs) {
+  return apiClient.post<ExportGeoTiffResult>("/download/geotiff", {
+    aoi: args.aoi,
+    layer_type: args.layerType,
+    index_name: args.indexName ?? null,
+    dataset: args.dataset ?? null,
+    scale: args.scale,
+    year: args.year,
+    start_month: args.startMonth,
+    end_month: args.endMonth,
+    cloud_threshold: args.cloudThreshold,
+    model_name: args.modelName ?? null,
+    filename: args.filename,
+  });
+}
