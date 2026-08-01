@@ -107,8 +107,8 @@ Urutan prioritas layer name (legend title):
 
 ## Layer Control (Basemap Switcher)
 
-Semua peta memakai `addBasemapSwitcher(map, 'roads', true)`:
-- Parameter ketiga `true` berarti basemap default (`roads`) langsung ditambahkan ke peta.
+Semua peta memakai `addBasemapSwitcher(map, 'satellite', true)`:
+- Parameter ketiga `true` berarti basemap default (`satellite`) langsung ditambahkan ke peta.
 - Layer control (radio button) menampilkan semua basemap dari `BASEMAP_DEFINITIONS`.
 - Tidak ada lagi `L.tileLayer(OSM_URL).addTo(map)` hardcoded.
 

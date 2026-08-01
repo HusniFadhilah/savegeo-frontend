@@ -39,8 +39,8 @@ const CONFIG = {
         defaultZoom: parseInt(import.meta.env.VITE_DEFAULT_ZOOM) || 10,
         maxZoom: 18,
         minZoom: 5,
-        tileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '© OpenStreetMap contributors',
+        tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles © Esri, Maxar, Earthstar Geographics',
     },
 
     // Features Toggle

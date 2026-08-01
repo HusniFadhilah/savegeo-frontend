@@ -33,7 +33,7 @@ Repo juga memiliki `node_modules`, jadi build/dev biasanya bisa dijalankan tanpa
 ## Map Layers
 
 - Basemap dikonfigurasi di `BASEMAP_DEFINITIONS` dalam `frontend/index.html`.
-- Map utama, result map, disaster map, dan LULC change map memakai Leaflet layer control untuk pilihan Roads, Satellite, Topographic, Terrain Relief, Dark, dan Light.
+- Map utama, result map, disaster map, dan LULC change map memakai Leaflet layer control untuk pilihan Roads, Satellite, Topographic, Terrain Relief, Dark, dan Light, dengan Satellite sebagai layer default.
 - Leaflet tetap 2D. Opsi `Terrain Relief` memberi tampilan relief/topografi, bukan scene 3D penuh.
 - Batas administratif tingkat bawah memakai endpoint `GET /api/regions/children-geometries`.
 - Default setelah load provinsi/kota/kecamatan hanya batas wilayah terpilih yang tampil. User dapat menekan `Show Inner Boundary` untuk menampilkan kota/kecamatan/kelurahan di dalamnya.

@@ -704,8 +704,11 @@
                     <div class="text-center"><strong id="cloudValue">40</strong>%</div>
                   </div>
 
-                  <div class="mb-3">
+                  <div class="mb-2">
                     <label class="form-label">Vegetation Indices</label>
+                    <input type="text" class="form-control form-control-sm mb-2" id="indexSearchInput"
+                           placeholder="Cari indeks (mis. NDVI, klorofil, kekeringan)...">
+                    <div id="indexCategoryFilter" class="mb-2 d-flex flex-wrap gap-1"></div>
                     <div id="indicesContainer">
                       <span class="index-badge active" data-index="NDVI">NDVI</span>
                       <span class="index-badge active" data-index="NDWI">NDWI</span>
@@ -715,6 +718,54 @@
                       <span class="index-badge" data-index="SAVI">SAVI</span>
                       <span class="index-badge" data-index="BSI">BSI</span>
                       <span class="index-badge" data-index="NDMI">NDMI</span>
+                      <span class="index-badge" data-index="MSAVI">MSAVI</span>
+                      <span class="index-badge" data-index="NBR">NBR</span>
+                      <span class="index-badge" data-index="NDRE">NDRE</span>
+                      <span class="index-badge" data-index="GCI">GCI</span>
+                      <span class="index-badge" data-index="ARVI">ARVI</span>
+                      <span class="index-badge" data-index="VARI">VARI</span>
+                      <span class="index-badge" data-index="SIPI">SIPI</span>
+                      <span class="index-badge" data-index="LAI_PROXY">LAI proxy</span>
+                    </div>
+                    <div id="indexInfoCard" class="small text-muted mt-2" style="display:none;"></div>
+                  </div>
+
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="vegClassifyToggle" checked>
+                    <label class="form-check-label small" for="vegClassifyToggle">Klasifikasi kelas + luas area</label>
+                  </div>
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="vegHistogramToggle" checked>
+                    <label class="form-check-label small" for="vegHistogramToggle">Histogram distribusi nilai</label>
+                  </div>
+
+                  <div class="mb-2">
+                    <button class="btn btn-sm btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#vegCompareCollapse">
+                      <i class="fas fa-code-compare"></i> Perbandingan Antar Indeks
+                    </button>
+                    <div class="collapse mt-2" id="vegCompareCollapse">
+                      <div class="d-flex gap-2 mb-2">
+                        <select class="form-select form-select-sm" id="compareIndexA"></select>
+                        <select class="form-select form-select-sm" id="compareIndexB"></select>
+                      </div>
+                      <button class="btn btn-sm btn-primary w-100" id="runCompareBtn" type="button">
+                        <i class="fas fa-play"></i> Bandingkan
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="mb-2">
+                    <button class="btn btn-sm btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#vegTimeSeriesCollapse">
+                      <i class="fas fa-chart-line"></i> Time Series (Multi-tanggal)
+                    </button>
+                    <div class="collapse mt-2" id="vegTimeSeriesCollapse">
+                      <div id="timeSeriesPeriods"></div>
+                      <button class="btn btn-sm btn-outline-primary w-100 mt-1" id="addPeriodBtn" type="button">
+                        <i class="fas fa-plus"></i> Tambah Periode
+                      </button>
+                      <button class="btn btn-sm btn-primary w-100 mt-2" id="runTimeSeriesBtn" type="button">
+                        <i class="fas fa-play"></i> Jalankan Time Series
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1384,6 +1435,8 @@
                           </div>
                         </div>
                       </div>
+                      <!-- Per-index histogram / classification / narrative (populated by JS) -->
+                      <div id="vegDetailPanels" class="mt-3"></div>
                       <!-- Carbon Stats (add after landcoverStats) -->
                       <div id="carbonStats" class="mt-4" style="display:none;">
                         <h5 class="mb-3"><i class="fas fa-tree"></i> Carbon Stock Analysis</h5>
@@ -1679,8 +1732,9 @@
                           <div class="text-center">
                             <i class="bi bi-tree-fill text-success" style="font-size: 3rem;"></i>
                             <h6 class="mt-2">Analisis Vegetasi</h6>
-                            <p class="text-muted small">8 indeks vegetasi (NDVI, NDWI,
-                              MNDWI, NDBI, EVI, SAVI, BSI, NDMI)</p>
+                            <p class="text-muted small">16 indeks vegetasi (NDVI, EVI, SAVI, MSAVI, NDMI, NDWI,
+                              MNDWI, NDBI, NBR, BSI, NDRE, GCI, ARVI, VARI, SIPI, LAI proxy) dengan klasifikasi,
+                              histogram, perbandingan antar indeks, dan time series.</p>
                           </div>
                         </div>
                         <div class="col-md-4 mb-3">
@@ -2431,8 +2485,10 @@
                                     Indices
                                   </h6>
                                   <p class="card-text">
-                                    Analisis 8 indeks vegetasi: NDVI, NDWI, MNDWI,
-                                    NDBI, EVI, SAVI, BSI, NDMI
+                                    Analisis 16 indeks vegetasi: NDVI, EVI, SAVI, MSAVI, NDMI, NDWI, MNDWI,
+                                    NDBI, NBR, BSI, NDRE, GCI, ARVI, VARI, SIPI, LAI proxy — lengkap dengan
+                                    klasifikasi kelas, histogram, narasi otomatis, perbandingan antar indeks,
+                                    dan time series multi-tanggal.
                                   </p>
                                   <strong>Cocok untuk:</strong>
                                   <ul class="small">
@@ -3036,6 +3092,8 @@
     let _selectedCompany = null;
     let _coPreviewLayer = null;
     let selectedIndices = ['NDVI', 'NDWI', 'MNDWI', 'NDBI'];
+    let vegetationCatalog = null;
+    let timeSeriesPeriodCount = 0;
     let analysisResults = {};
     let geeTileLayers = {};
     let mapLayerRegistry = {};
@@ -3430,6 +3488,17 @@
           method: 'POST',
           data: params
         });
+      }
+
+      async analyzeVegetationCompare(params) {
+        return await this.request('/analyze/vegetation/compare', {
+          method: 'POST',
+          data: params
+        });
+      }
+
+      async getVegetationCatalog() {
+        return await this.request('/vegetation/catalog');
       }
 
       async analyzeLandCover(params) {
@@ -4635,6 +4704,7 @@
       registerConfigBindings();
       AppConfig.applyToUI();
       await loadLandCoverDatasetOptions();
+      await loadVegetationCatalog();
       await loadMapLayerRegistry();
       initializeMap();
       initializeEventHandlers();
@@ -4730,7 +4800,7 @@
     // MAP INITIALIZATION
     // ==========================================
     function createBasemapLayer(key) {
-      const def = BASEMAP_DEFINITIONS[key] || BASEMAP_DEFINITIONS.roads;
+      const def = BASEMAP_DEFINITIONS[key] || BASEMAP_DEFINITIONS.satellite;
       return L.tileLayer(def.url, {
         attribution: def.attribution,
         maxZoom: def.maxZoom || 19,
@@ -4738,16 +4808,16 @@
       });
     }
 
-    function addBasemapSwitcher(targetMap, defaultKey = 'roads', addDefault = true) {
+    function addBasemapSwitcher(targetMap, defaultKey = 'satellite', addDefault = true) {
       const layers = {};
 
       Object.entries(BASEMAP_DEFINITIONS).forEach(([key, def]) => {
         layers[def.label] = createBasemapLayer(key);
       });
 
-      const defaultLabel = BASEMAP_DEFINITIONS[defaultKey]?.label || BASEMAP_DEFINITIONS.roads.label;
+      const defaultLabel = BASEMAP_DEFINITIONS[defaultKey]?.label || BASEMAP_DEFINITIONS.satellite.label;
       if (addDefault) {
-        (layers[defaultLabel] || layers[BASEMAP_DEFINITIONS.roads.label]).addTo(targetMap);
+        (layers[defaultLabel] || layers[BASEMAP_DEFINITIONS.satellite.label]).addTo(targetMap);
       }
       L.control.layers(layers, null, { collapsed: true, position: 'topright' }).addTo(targetMap);
 
@@ -4757,7 +4827,7 @@
     function initializeMap() {
       // AOI Selection Map
       map = L.map('map').setView([-6.9667, 110.4167], 10);
-      addBasemapSwitcher(map, 'roads', true);
+      addBasemapSwitcher(map, 'satellite', true);
 
       // Add draw controls
       map.addLayer(drawnItems);
@@ -4880,7 +4950,18 @@
       $('.index-badge').on('click', function () {
         $(this).toggleClass('active');
         updateSelectedIndices();
+        showIndexInfo($(this).data('index'));
       });
+
+      $('#indexSearchInput').on('input', function () {
+        applyIndexSearchFilter();
+      });
+
+      $('#runCompareBtn').on('click', function () { runVegetationCompare(); });
+      $('#runTimeSeriesBtn').on('click', function () { runVegetationTimeSeries(); });
+      $('#addPeriodBtn').on('click', function () { addTimeSeriesPeriodRow(); });
+      addTimeSeriesPeriodRow({ label: 'Awal', start_month: 1, end_month: 3 });
+      addTimeSeriesPeriodRow({ label: 'Akhir', start_month: 10, end_month: 12 });
 
       // Load Region button
       $('#loadRegion').on('click', async function () {
@@ -6620,6 +6701,38 @@
               ${translateLulcClass(nm)} (${d.percentage}%)
             </div>`;
           }
+        } else if (layerName.endsWith('__class') && analysisResults.vegetation?.indices?.[layerName.replace('__class', '')]?.classification) {
+          const idxName = layerName.replace('__class', '');
+          const classification = analysisResults.vegetation.indices[idxName].classification;
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${idxName} — Klasifikasi</strong></div>`;
+          const sorted = Object.entries(classification.classes).sort((a, b) => (a[1].class_value || 0) - (b[1].class_value || 0));
+          for (const [label, d] of sorted) {
+            div.innerHTML += `
+              <div class="legend-item">
+                <span class="legend-color" style="background:${d.color}"></span>
+                ${label} (${d.percentage}%)
+              </div>`;
+          }
+          div.innerHTML += `<div class="mt-1"><small class="text-muted">Total: ${classification.total_area_ha} ha</small></div>`;
+        } else if (analysisResults.vegetation?.indices?.[layerName]) {
+          // Gradient legend for continuous vegetation index tiles (fills the gap
+          // where vegetation/RGB layers previously fell through to "no legend").
+          const idxData = analysisResults.vegetation.indices[layerName];
+          const catalogMeta = vegetationCatalog?.indices?.[layerName] || {};
+          const palette = (catalogMeta.palette || ['#8B4513', '#FFFF00', '#90EE90', '#006400']).map(c => String(c).startsWith('#') ? c : `#${c}`);
+          const [minVal, maxVal] = catalogMeta.range || [-1, 1];
+          div.innerHTML += `<div style="margin-bottom:5px;"><strong>${layerName}${catalogMeta.name ? ' — ' + catalogMeta.name : ''}</strong></div>`;
+          for (let i = 0; i < palette.length; i++) {
+            const value = palette.length === 1 ? minVal : minVal + (maxVal - minVal) * i / (palette.length - 1);
+            div.innerHTML += `
+              <div class="legend-item">
+                <span class="legend-color" style="background:${palette[i]}"></span>
+                ${value.toFixed(2)}
+              </div>`;
+          }
+          if (idxData.narrative) {
+            div.innerHTML += `<div class="mt-2" style="font-size:0.75rem;max-width:220px;">${idxData.narrative}</div>`;
+          }
         } else {
           div.innerHTML += `<div class="text-muted">${currentLanguage === 'id' ? 'Tidak ada legenda untuk layer ini' : 'No legend for this layer'}</div>`;
         }
@@ -6781,6 +6894,9 @@
         for (const index in (analysisResults.vegetation.indices || {})) {
           tabsHtml.push(makeTab(index, `<i class="fas fa-leaf"></i> ${index}`, !preferredInitialLayer && isFirst));
           isFirst = false;
+          if (analysisResults.vegetation.indices[index].classification?.tile_url) {
+            tabsHtml.push(makeTab(`${index}__class`, `<i class="fas fa-layer-group"></i> ${index} (Kelas)`, false));
+          }
         }
       }
 
@@ -6839,7 +6955,7 @@
 
       const center = currentAOI.geometry.getCenter();
       resultMap = L.map('resultMapContainer').setView([center.lat, center.lng], parseInt($('#zoomValue').text()));
-      addBasemapSwitcher(resultMap, 'roads', true);
+      addBasemapSwitcher(resultMap, 'satellite', true);
 
       // Custom pane for result overlay tiles — z-index 250 keeps them above basemap tiles (tilePane=200)
       // regardless of DOM insertion order when the user switches basemaps.
@@ -6877,6 +6993,8 @@
       // Get tile URL
       if (layerName === 'rgb' && analysisResults.vegetation) {
         tileUrl = analysisResults.vegetation.rgb_tile_url;
+      } else if (layerName.endsWith('__class') && analysisResults.vegetation?.indices?.[layerName.replace('__class', '')]) {
+        tileUrl = analysisResults.vegetation.indices[layerName.replace('__class', '')].classification?.tile_url;
       } else if (analysisResults.vegetation && analysisResults.vegetation.indices[layerName]) {
         tileUrl = analysisResults.vegetation.indices[layerName].tile_url;
       } else if (analysisResults.landcover && analysisResults.landcover[layerName]) {
@@ -7935,6 +8053,62 @@
       if (analysisResults.vegetation) {
         createMeanChart();
         createRangeChart();
+        renderVegetationDetailPanels();
+      }
+    }
+
+    function renderVegetationDetailPanels() {
+      const $panel = $('#vegDetailPanels').empty();
+      const indices = analysisResults.vegetation?.indices || {};
+      for (const [idx, data] of Object.entries(indices)) {
+        const catalogMeta = vegetationCatalog?.indices?.[idx] || {};
+        const histId = `hist_${idx}`;
+        let classTableHtml = '';
+        if (data.classification?.classes) {
+          const rows = Object.entries(data.classification.classes)
+            .sort((a, b) => (a[1].class_value || 0) - (b[1].class_value || 0))
+            .map(([label, c]) => `
+              <tr>
+                <td><span class="legend-color d-inline-block" style="width:12px;height:12px;background:${c.color};border-radius:2px;"></span> ${label}</td>
+                <td class="text-end">${c.area.toFixed(1)} ha</td>
+                <td class="text-end">${c.percentage}%</td>
+              </tr>`).join('');
+          classTableHtml = `
+            <table class="table table-sm mb-2">
+              <thead><tr><th>Kelas</th><th class="text-end">Luas</th><th class="text-end">%</th></tr></thead>
+              <tbody>${rows}</tbody>
+              <tfoot><tr><th>Total</th><th class="text-end">${data.classification.total_area_ha} ha</th><th></th></tr></tfoot>
+            </table>`;
+        }
+        $panel.append(`
+          <div class="card mb-3">
+            <div class="card-body">
+              <h6 class="card-title">${idx}${catalogMeta.name ? ' — ' + catalogMeta.name : ''}</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  ${data.histogram && data.histogram.length ? `<canvas id="${histId}" height="160"></canvas>` : '<p class="text-muted small">Histogram tidak tersedia.</p>'}
+                </div>
+                <div class="col-md-6">${classTableHtml || '<p class="text-muted small">Klasifikasi tidak diaktifkan untuk indeks ini.</p>'}</div>
+              </div>
+              ${data.narrative ? `<p class="small mt-2 mb-0">${data.narrative}</p>` : ''}
+            </div>
+          </div>
+        `);
+        if (data.histogram && data.histogram.length) {
+          const ctx = document.getElementById(histId).getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: data.histogram.map(b => b.bin_start.toFixed(2)),
+              datasets: [{
+                label: `Distribusi nilai ${idx}`,
+                data: data.histogram.map(b => b.count),
+                backgroundColor: catalogMeta.palette ? `#${String(catalogMeta.palette[Math.floor(catalogMeta.palette.length / 2)]).replace('#', '')}` : '#2E7D32',
+              }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
+          });
+        }
       }
     }
 
@@ -8696,12 +8870,28 @@
         report += '\n';
 
         for (const [index, stats] of Object.entries(analysisResults.vegetation.indices || {})) {
-          report += `### ${index}\n`;
+          const catalogMeta = vegetationCatalog?.indices?.[index] || {};
+          report += `### ${index}${catalogMeta.name ? ' — ' + catalogMeta.name : ''}\n`;
+          if (catalogMeta.formula) report += `- Formula: ${catalogMeta.formula}\n`;
           report += `- Min: ${parseFloat(stats.min).toFixed(4)}\n`;
           report += `- Mean: ${parseFloat(stats.mean).toFixed(4)}\n`;
           report += `- Max: ${parseFloat(stats.max).toFixed(4)}\n`;
           report += `- Std Dev: ${parseFloat(stats.std_dev).toFixed(4)}\n\n`;
+          if (stats.classification?.classes) {
+            report += `| Kelas | Luas (ha) | % |\n|---|---|---|\n`;
+            for (const [label, c] of Object.entries(stats.classification.classes)) {
+              report += `| ${label} | ${c.area} | ${c.percentage} |\n`;
+            }
+            report += '\n';
+          }
+          if (stats.narrative) report += `${stats.narrative}\n\n`;
         }
+      }
+
+      if (analysisResults.vegetationCompare) {
+        const cmp = analysisResults.vegetationCompare;
+        report += `## Perbandingan Indeks: ${cmp.index_a} vs ${cmp.index_b}\n\n`;
+        report += `${cmp.insight}\n\n`;
       }
 
       for (const [dsKey, ds] of Object.entries(analysisResults.landcover || {})) {
@@ -9010,6 +9200,252 @@
       console.log('Selected indices:', selectedIndices);
     }
 
+    // ── Vegetation index catalog: search/filter/tooltip/compare/time-series ──
+    async function loadVegetationCatalog() {
+      try {
+        const response = await apiClient.getVegetationCatalog();
+        if (!response.success || !response.data) {
+          throw new Error(response.error || 'invalid catalog response');
+        }
+        vegetationCatalog = response.data;
+      } catch (e) {
+        console.warn('Vegetation catalog fetch failed, using static badge list only:', e);
+        vegetationCatalog = null;
+        return;
+      }
+      renderIndexCategoryFilter();
+      applyIndexBadgeCategories();
+      populateCompareSelects();
+    }
+
+    function applyIndexBadgeCategories() {
+      if (!vegetationCatalog) return;
+      $('#indicesContainer .index-badge').each(function () {
+        const idx = $(this).data('index');
+        const meta = vegetationCatalog.indices[idx];
+        if (!meta) return;
+        $(this).attr('data-categories', (meta.categories || []).join(','));
+        $(this).attr('title', `${meta.name}\n${meta.formula}`);
+      });
+    }
+
+    function renderIndexCategoryFilter() {
+      if (!vegetationCatalog) return;
+      const $container = $('#indexCategoryFilter').empty();
+      $container.append(`<span class="badge bg-secondary category-filter-chip active" data-category="all" style="cursor:pointer;">Semua</span>`);
+      for (const [key, cat] of Object.entries(vegetationCatalog.categories)) {
+        $container.append(
+          `<span class="badge category-filter-chip" data-category="${key}" style="cursor:pointer;background-color:${cat.color};">${cat.label}</span>`
+        );
+      }
+      $('.category-filter-chip').on('click', function () {
+        $('.category-filter-chip').removeClass('active');
+        $(this).addClass('active');
+        filterIndexBadgesByCategory($(this).data('category'));
+      });
+    }
+
+    function filterIndexBadgesByCategory(category) {
+      $('#indicesContainer .index-badge').each(function () {
+        if (category === 'all') { $(this).show(); return; }
+        const cats = ($(this).attr('data-categories') || '').split(',');
+        $(this).toggle(cats.includes(String(category)));
+      });
+      applyIndexSearchFilter();
+    }
+
+    function applyIndexSearchFilter() {
+      const term = ($('#indexSearchInput').val() || '').toLowerCase().trim();
+      $('#indicesContainer .index-badge').each(function () {
+        if (!term) { if ($(this).css('display') === 'none' && !$(this).data('hiddenByCategory')) $(this).show(); return; }
+        const idx = $(this).data('index');
+        const meta = vegetationCatalog?.indices?.[idx];
+        const haystack = [idx, meta?.name, meta?.description, ...(meta?.use_cases || [])].join(' ').toLowerCase();
+        const visibleByCategory = $(this).css('display') !== 'none' || !$('.category-filter-chip.active').length || $('.category-filter-chip.active').data('category') === 'all';
+        $(this).toggle(visibleByCategory && haystack.includes(term));
+      });
+    }
+
+    function showIndexInfo(idx) {
+      const meta = vegetationCatalog?.indices?.[idx];
+      const $card = $('#indexInfoCard');
+      if (!meta) { $card.hide(); return; }
+      $card.html(`
+        <div class="border rounded p-2 bg-light">
+          <strong>${meta.name}</strong> (${idx})<br>
+          <em>Formula:</em> ${meta.formula}<br>
+          <em>Band:</em> ${meta.bands.join(', ')} &nbsp; <em>Rentang:</em> ${meta.range[0]} s/d ${meta.range[1]}<br>
+          <em>Rendah:</em> ${meta.interpretation.low}<br>
+          <em>Sedang:</em> ${meta.interpretation.medium}<br>
+          <em>Tinggi:</em> ${meta.interpretation.high}<br>
+          <em>Kegunaan:</em> ${(meta.use_cases || []).join('; ')}<br>
+          <em>Keterbatasan:</em> ${(meta.limitations || []).join('; ')}<br>
+          <em>Sensor:</em> ${(meta.suitable_sensors || []).join(', ')}
+        </div>
+      `).show();
+    }
+
+    function populateCompareSelects() {
+      if (!vegetationCatalog) return;
+      const $a = $('#compareIndexA').empty();
+      const $b = $('#compareIndexB').empty();
+      for (const idx of Object.keys(vegetationCatalog.indices)) {
+        $a.append(`<option value="${idx}">${idx}</option>`);
+        $b.append(`<option value="${idx}">${idx}</option>`);
+      }
+      $a.val('NDVI');
+      $b.val('NDMI');
+    }
+
+    function addTimeSeriesPeriodRow(defaults = {}) {
+      timeSeriesPeriodCount += 1;
+      const id = timeSeriesPeriodCount;
+      const year = defaults.year || new Date().getFullYear();
+      const startMonth = defaults.start_month || 1;
+      const endMonth = defaults.end_month || 12;
+      const label = defaults.label || `Periode ${id}`;
+      $('#timeSeriesPeriods').append(`
+        <div class="d-flex gap-1 mb-1 align-items-center" data-period-row="${id}">
+          <input type="text" class="form-control form-control-sm" style="width:90px" value="${label}" data-field="label">
+          <input type="number" class="form-control form-control-sm" style="width:70px" value="${year}" data-field="year">
+          <input type="number" class="form-control form-control-sm" style="width:55px" min="1" max="12" value="${startMonth}" data-field="start_month" title="Bulan mulai">
+          <input type="number" class="form-control form-control-sm" style="width:55px" min="1" max="12" value="${endMonth}" data-field="end_month" title="Bulan akhir">
+          <button class="btn btn-sm btn-outline-danger" type="button" onclick="$(this).closest('[data-period-row]').remove()">&times;</button>
+        </div>
+      `);
+    }
+
+    function collectTimeSeriesPeriods() {
+      const periods = [];
+      $('#timeSeriesPeriods [data-period-row]').each(function () {
+        const row = $(this);
+        periods.push({
+          label: row.find('[data-field="label"]').val(),
+          year: parseInt(row.find('[data-field="year"]').val(), 10),
+          start_month: parseInt(row.find('[data-field="start_month"]').val(), 10),
+          end_month: parseInt(row.find('[data-field="end_month"]').val(), 10),
+        });
+      });
+      return periods;
+    }
+
+    function buildVegetationAoiPayload() {
+      if (!currentAOI) return null;
+      return currentAOI.geojson ? { geojson: currentAOI.geojson } : {
+        west: currentAOI.geometry.getWest(),
+        south: currentAOI.geometry.getSouth(),
+        east: currentAOI.geometry.getEast(),
+        north: currentAOI.geometry.getNorth()
+      };
+    }
+
+    async function runVegetationCompare() {
+      const aoi = buildVegetationAoiPayload();
+      if (!aoi) { showAlert(t('alert.noAOI') || 'Gambar atau pilih AOI terlebih dahulu.', 'warning'); return; }
+      const indexA = $('#compareIndexA').val();
+      const indexB = $('#compareIndexB').val();
+      const params = {
+        aoi,
+        year: parseInt($('#yearValue').text() || new Date().getFullYear(), 10),
+        start_month: parseInt($('#startMonth').val(), 10),
+        end_month: parseInt($('#endMonth').val(), 10),
+        cloud_threshold: parseInt($('#cloudValue').text(), 10),
+        index_a: indexA,
+        index_b: indexB,
+      };
+      showLoading('Membandingkan indeks vegetasi...', `${indexA} vs ${indexB}`, 40);
+      const response = await apiClient.analyzeVegetationCompare(params);
+      hideLoading();
+      if (!response.success) {
+        showAlert('Gagal membandingkan indeks: ' + response.error, 'danger');
+        return;
+      }
+      analysisResults.vegetationCompare = response.data;
+      renderVegetationCompareResult(response.data);
+    }
+
+    function renderVegetationCompareResult(result) {
+      let $out = $('#vegCompareResult');
+      if (!$out.length) {
+        $out = $('<div id="vegCompareResult" class="mt-2"></div>');
+        $('#vegCompareCollapse').append($out);
+      }
+      const q = result.quadrants;
+      $out.html(`
+        <div class="border rounded p-2 small">
+          <strong>${result.index_a} vs ${result.index_b}</strong> (${result.date_range.start} → ${result.date_range.end})
+          <table class="table table-sm mb-2 mt-1">
+            <tr><td>Keduanya kondisi baik</td><td>${q.high_high.percentage}%</td><td>${q.high_high.area_ha} ha</td></tr>
+            <tr><td>${result.index_a} baik, ${result.index_b} kurang baik</td><td>${q.high_low.percentage}%</td><td>${q.high_low.area_ha} ha</td></tr>
+            <tr><td>${result.index_a} kurang baik, ${result.index_b} baik</td><td>${q.low_high.percentage}%</td><td>${q.low_high.area_ha} ha</td></tr>
+            <tr><td>Keduanya kondisi kurang baik</td><td>${q.low_low.percentage}%</td><td>${q.low_low.area_ha} ha</td></tr>
+          </table>
+          <p class="mb-0">${result.insight}</p>
+        </div>
+      `);
+    }
+
+    async function runVegetationTimeSeries() {
+      const aoi = buildVegetationAoiPayload();
+      if (!aoi) { showAlert(t('alert.noAOI') || 'Gambar atau pilih AOI terlebih dahulu.', 'warning'); return; }
+      const periods = collectTimeSeriesPeriods();
+      if (periods.length < 2) { showAlert('Tambahkan minimal 2 periode untuk time series.', 'warning'); return; }
+      const params = {
+        aoi,
+        cloud_threshold: parseInt($('#cloudValue').text(), 10),
+        indices: selectedIndices.length ? selectedIndices : ['NDVI'],
+        periods: periods,
+      };
+      showLoading('Menjalankan analisis time series...', `${periods.length} periode`, 40);
+      const response = await apiClient.analyzeVegetation(params);
+      hideLoading();
+      if (!response.success) {
+        showAlert('Gagal menjalankan time series: ' + response.error, 'danger');
+        return;
+      }
+      analysisResults.vegetationTimeSeries = response.data;
+      renderVegetationTimeSeriesResult(response.data);
+    }
+
+    function renderVegetationTimeSeriesResult(result) {
+      let $out = $('#vegTimeSeriesResult');
+      if (!$out.length) {
+        $out = $('<div id="vegTimeSeriesResult" class="mt-2"></div>');
+        $('#vegTimeSeriesCollapse').append($out);
+      }
+      $out.empty();
+      for (const idx of Object.keys(result.time_series || {})) {
+        const canvasId = `tsChart_${idx}`;
+        const summary = result.time_series_summary?.[idx] || {};
+        const anomalyNote = (summary.anomaly_periods || []).length
+          ? `<span class="text-danger">Anomali: ${summary.anomaly_periods.join(', ')}</span>` : '';
+        $out.append(`
+          <div class="border rounded p-2 mb-2 small">
+            <strong>${idx}</strong> — Tren: <span class="badge bg-${summary.trend === 'naik' ? 'success' : summary.trend === 'turun' ? 'danger' : 'secondary'}">${summary.trend || 'n/a'}</span>
+            ${anomalyNote}
+            <canvas id="${canvasId}" height="120"></canvas>
+          </div>
+        `);
+        const series = result.time_series[idx];
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: series.map(p => p.label),
+            datasets: [{
+              label: `${idx} mean`,
+              data: series.map(p => p.mean),
+              borderColor: '#2E7D32',
+              backgroundColor: 'rgba(46,125,50,0.15)',
+              fill: true,
+              tension: 0.25,
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+      }
+    }
+
     function showLoading(mainText, subText, progress = 0) {
       // Start timer
       processStartTime = Date.now();
@@ -9148,7 +9584,7 @@
         }
 
         this.map = L.map('disasterMap', { zoomControl: true }).setView([-6.9667, 110.4167], 9);
-        addBasemapSwitcher(this.map, 'roads', true);
+        addBasemapSwitcher(this.map, 'satellite', true);
         this.layerGroup = L.layerGroup().addTo(this.map);
         this.officialLayerGroup = L.layerGroup().addTo(this.map);
       },
@@ -10745,7 +11181,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
-        addBasemapSwitcher(this.changeMap, 'roads', true);
+        addBasemapSwitcher(this.changeMap, 'satellite', true);
 
         if (typeof currentAOI !== 'undefined' && currentAOI) {
           if (currentAOI.geojson) {
@@ -10921,7 +11357,7 @@
           zoomControl: true,
           attributionControl: true,
         }).setView([center.lat, center.lng], 10);
-        addBasemapSwitcher(this.originalMap, 'roads', true);
+        addBasemapSwitcher(this.originalMap, 'satellite', true);
 
         if (typeof currentAOI !== 'undefined' && currentAOI) {
           if (currentAOI.geojson) {
