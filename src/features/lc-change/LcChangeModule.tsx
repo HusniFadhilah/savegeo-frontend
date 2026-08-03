@@ -5,6 +5,7 @@ import { useUiStore } from "@/hooks/useUiStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear } from "./api";
+import { fetchLandCoverDatasets } from "@/features/landcover/api";
 import { computeTransitions, DATASET_NOTES, DATASET_OPTIONS } from "./utils";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcYearResult } from "./types";
 import YearSelector from "./components/YearSelector";
@@ -65,6 +66,39 @@ export default function LcChangeModule() {
   const [changeMapLoading, setChangeMapLoading] = useState(false);
   const [changeMapError, setChangeMapError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("matrix");
+
+  // Dataset options fetched from GET /landcover/datasets (same catalog the
+  // Landcover feature calls) instead of the 6-item static DATASET_OPTIONS -
+  // falls back to that static list if the request fails/is empty.
+  const [datasetOptions, setDatasetOptions] = useState(DATASET_OPTIONS);
+  const [datasetDocs, setDatasetDocs] = useState<Record<string, { year_min?: number; year_max?: number; description?: string }>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetchLandCoverDatasets()
+      .then((catalog) => {
+        if (cancelled || !catalog) return;
+        const entries = Object.values(catalog);
+        if (!entries.length) return;
+        setDatasetOptions(entries.map((ds) => ({ value: ds.key, label: `${ds.name} (${ds.resolution})` })));
+        setDatasetDocs(catalog as unknown as Record<string, { year_min?: number; year_max?: number; description?: string }>);
+      })
+      .catch(() => {
+        /* keep static fallback options */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const datasetNote = (() => {
+    const doc = datasetDocs[dataset];
+    if (doc) {
+      const years = doc.year_min || doc.year_max ? `Tersedia: ${doc.year_min ?? "-"}-${doc.year_max ?? "-"}` : "";
+      const combined = [years, doc.description].filter(Boolean).join(" · ");
+      if (combined) return combined;
+    }
+    return DATASET_NOTES[dataset] || "";
+  })();
 
   const yearA = activeYears.length >= 2 ? activeYears[pairIndex] : null;
   const yearB = activeYears.length >= 2 ? activeYears[pairIndex + 1] : null;
@@ -230,9 +264,9 @@ export default function LcChangeModule() {
               id="lcChangeDataset"
               value={dataset}
               onChange={(v) => onDatasetChange(v as LcDataset)}
-              options={DATASET_OPTIONS.map((d) => ({ value: d.value, label: d.label }))}
+              options={datasetOptions.map((d) => ({ value: d.value, label: d.label }))}
             />
-            <small className="text-muted d-block mt-1">{DATASET_NOTES[dataset]}</small>
+            <small className="text-muted d-block mt-1">{datasetNote}</small>
           </div>
 
           <div className="mb-3">

@@ -4,7 +4,7 @@
  * time, so anything defined here is publicly visible.
  */
 export const env = {
-  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL || "http://localhost:8086/api").replace(
+  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL || "/api").replace(
     /\/+$/,
     "",
   ),

@@ -117,7 +117,7 @@ body {
   padding: 12px 0;
 }
 
-.main-sidebar.collapsed .sidebar-header > span {
+.main-sidebar.collapsed .sidebar-header>span {
   display: none;
 }
 
@@ -367,7 +367,7 @@ body {
   padding: 0 132px;
 }
 
-.module-heading-bar > div {
+.module-heading-bar>div {
   width: 100%;
 }
 
@@ -714,6 +714,16 @@ body {
 
 .loading-progress-track {
   width: 100%;
+}
+
+.loading-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2563eb;
 }
 
 .progress-bar {

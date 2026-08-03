@@ -18,6 +18,7 @@ export default function AnalysisTypeSelector({ value, onChange }: Props) {
     <div className="mb-3">
       <label className="form-label">Jenis Analisis</label>
       <select
+        id="analysisType"
         className="form-select"
         value={value}
         onChange={(e) => onChange(e.target.value as AnalysisType)}

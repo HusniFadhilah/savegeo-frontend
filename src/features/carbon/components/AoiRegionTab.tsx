@@ -11,7 +11,7 @@ import {
 } from "@/services/analysisService";
 import { ApiError } from "@/services/apiClient";
 import type { RegionOption } from "@/types/api";
-import type { AoiFeature } from "@/types/map";
+import type { AoiFeature, AoiGeometry } from "@/types/map";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface Props {
@@ -20,8 +20,51 @@ interface Props {
 
 type Scope = "admin" | "island" | "indonesia";
 
-function toFeature(geometry: GeoJSON.Geometry): AoiFeature {
-  return { type: "Feature", geometry: geometry as AoiFeature["geometry"], properties: {} };
+/**
+ * The backend's /regions/geometry endpoint (and /regions/islands/*, /regions/indonesia)
+ * pass through whatever the upstream admin-boundary API returns unmodified (matches
+ * the legacy Flask contract byte-for-byte) - in practice that is usually a
+ * FeatureCollection with a single Feature, not a bare Geometry as this file previously
+ * assumed. Wrapping a FeatureCollection directly as a Feature's `geometry` produces
+ * invalid GeoJSON that Earth Engine rejects server-side ("Invalid GeoJSON geometry"),
+ * which is why /analyze/carbon was returning 500 for region-picked AOIs. This
+ * normalizer accepts Geometry | Feature | FeatureCollection and always returns a
+ * single valid Feature<Polygon | MultiPolygon>.
+ */
+function toFeature(input: GeoJSON.GeoJSON): AoiFeature {
+  const asGeometry = (geom: GeoJSON.Geometry | null | undefined): AoiGeometry => {
+    if (!geom) throw new Error("Geometri wilayah kosong");
+    if (geom.type === "Polygon" || geom.type === "MultiPolygon") return geom;
+    if (geom.type === "GeometryCollection") {
+      const polys = geom.geometries.filter(
+        (g): g is GeoJSON.Polygon | GeoJSON.MultiPolygon => g.type === "Polygon" || g.type === "MultiPolygon",
+      );
+      if (!polys.length) throw new Error("Tidak ada geometri Polygon pada GeometryCollection");
+      return mergeToMultiPolygon(polys);
+    }
+    throw new Error(`Tipe geometri tidak didukung: ${geom.type}`);
+  };
+
+  if (input.type === "FeatureCollection") {
+    const geometries = input.features.map((f) => f.geometry).filter((g): g is GeoJSON.Geometry => !!g);
+    if (!geometries.length) throw new Error("FeatureCollection wilayah kosong");
+    const geometry = geometries.length === 1 ? asGeometry(geometries[0]) : mergeToMultiPolygon(geometries.map(asGeometry));
+    return { type: "Feature", geometry, properties: {} };
+  }
+  if (input.type === "Feature") {
+    return { type: "Feature", geometry: asGeometry(input.geometry), properties: input.properties || {} };
+  }
+  return { type: "Feature", geometry: asGeometry(input as GeoJSON.Geometry), properties: {} };
+}
+
+/** Flatten multiple Polygon/MultiPolygon geometries into one MultiPolygon. */
+function mergeToMultiPolygon(geoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[]): GeoJSON.MultiPolygon {
+  const coordinates: GeoJSON.Position[][][] = [];
+  for (const g of geoms) {
+    if (g.type === "Polygon") coordinates.push(g.coordinates);
+    else coordinates.push(...g.coordinates);
+  }
+  return { type: "MultiPolygon", coordinates };
 }
 
 /**
@@ -112,7 +155,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       if (scope === "indonesia") {
         const geometry = await fetchIndonesiaGeometry();
         if (!geometry) throw new Error("Geometri tidak ditemukan");
-        onApply(toFeature(geometry as GeoJSON.Geometry), "Seluruh Indonesia");
+        onApply(toFeature(geometry), "Seluruh Indonesia");
         return;
       }
       if (scope === "island") {
@@ -123,7 +166,7 @@ export default function AoiRegionTab({ onApply }: Props) {
         const label = islands.find((i) => i.code === islandCode)?.name || islandCode;
         const geometry = await fetchIslandGeometry(islandCode);
         if (!geometry) throw new Error("Geometri tidak ditemukan");
-        onApply(toFeature(geometry as GeoJSON.Geometry), label);
+        onApply(toFeature(geometry), label);
         return;
       }
 

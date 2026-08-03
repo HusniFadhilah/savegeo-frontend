@@ -1,12 +1,26 @@
 import { apiClient } from "@/services/apiClient";
 import type { AoiPayload } from "./lib/geo";
 import type {
+  CarbonReferenceDatasetOption,
   CarbonModelInfo,
   CarbonModelListItem,
   CarbonParams,
   CarbonResult,
   CompanyBoundary,
 } from "./types";
+
+interface CarbonDatasetApiItem {
+  key: string;
+  name?: string | null;
+  full_name?: string | null;
+  provider_type?: string | null;
+  target_pool?: string | null;
+  resolution?: number | string | null;
+  year?: number | string | null;
+  year_range?: number[] | string | null;
+  description?: string | null;
+  compatible_model_count?: number;
+}
 
 /**
  * GET /models (and /models/by-name/{name}) return their payload directly -
@@ -25,6 +39,26 @@ export async function listCarbonModels(referenceDataset?: string | null): Promis
 
 export function getCarbonModelInfo(modelName: string): Promise<CarbonModelInfo> {
   return apiClient.get<CarbonModelInfo>(`/models/by-name/${encodeURIComponent(modelName)}`);
+}
+
+export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption[]> {
+  const res = await apiClient.get<{ datasets: CarbonDatasetApiItem[]; count: number }>("/carbon/datasets");
+  return (res.datasets ?? []).map((ds) => {
+    const resolution = ds.resolution ? `, ${ds.resolution}m` : "";
+    const year = ds.year ?? (Array.isArray(ds.year_range) ? ds.year_range.join("-") : ds.year_range);
+    const yearSuffix = year ? ` (${year}${resolution})` : resolution ? ` (${String(resolution).replace(/^, /, "")})` : "";
+    return {
+      value: ds.key,
+      label: ds.name || ds.full_name || ds.key,
+      group: ds.target_pool || ds.provider_type || "Carbon Dataset",
+      description: ds.description || ds.full_name || ds.provider_type || "",
+      year: ds.year,
+      yearRange: ds.year_range,
+      compatibleModelCount: ds.compatible_model_count,
+      source: "api",
+      ...(ds.name || ds.full_name ? { label: `${ds.name || ds.full_name}${yearSuffix}` } : {}),
+    };
+  });
 }
 
 function isNonGeeModel(meta: CarbonModelListItem["metadata_json"]): boolean {

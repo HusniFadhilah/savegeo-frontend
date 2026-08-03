@@ -4,6 +4,7 @@ import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
+import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
 
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
@@ -46,6 +47,22 @@ function ReadyNotifier({ onMapReady }: { onMapReady?: (map: LeafletMap) => void 
 }
 
 /**
+ * Creates the dedicated result-tile pane once per map, before any child can
+ * try to render into it - see config/mapPanes.ts for why this exists.
+ */
+function ResultPaneSetup() {
+  const map = useMap();
+  useEffect(() => {
+    if (!map.getPane(RESULT_PANE)) {
+      const pane = map.createPane(RESULT_PANE);
+      pane.style.zIndex = String(RESULT_PANE_Z_INDEX);
+      pane.style.pointerEvents = "none";
+    }
+  }, [map]);
+  return null;
+}
+
+/**
  * Shared Leaflet shell used by every module (AOI picker, result map,
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
@@ -67,6 +84,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, classN
       )}
       <InvalidateOnResize />
       <ReadyNotifier onMapReady={onMapReady} />
+      <ResultPaneSetup />
       <FullscreenControl />
       {children}
     </MapContainer>

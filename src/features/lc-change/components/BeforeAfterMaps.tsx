@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
@@ -8,6 +8,7 @@ import MapLegend from "@/components/map/MapLegend";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcYearResult } from "../types";
 import { translateLulcClass } from "../utils";
+import { RESULT_PANE } from "@/config/mapPanes";
 
 const AOI_STYLE = { color: "#ef4444", weight: 2, fillOpacity: 0.06 };
 
@@ -72,6 +73,11 @@ export default function BeforeAfterMaps({
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? null : afterRawTile;
 
+  const drawGroupRef = useRef<L.FeatureGroup | null>(null);
+  useEffect(() => {
+    if (!aoi) drawGroupRef.current?.clearLayers();
+  }, [aoi]);
+
   const beforeLegend = classLegend(yearA != null ? yearData[yearA]?.classes : undefined);
   const afterLegend = classLegend(yearB != null ? yearData[yearB]?.classes : undefined);
 
@@ -129,9 +135,8 @@ export default function BeforeAfterMaps({
         <div className="col-md-6">
           <MapView id="lcChangeBeforeMap">
             <BasemapSwitcher />
-            {!aoi && <AoiDrawingTools onChange={onAoiChange} />}
-            {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
-            {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" />}
+            <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
+            {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" pane={RESULT_PANE} />}
             <FitToAoi aoi={aoi} />
           </MapView>
           <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
@@ -146,6 +151,7 @@ export default function BeforeAfterMaps({
                 url={afterTile}
                 opacity={mode === "destination" ? 0.9 : 0.88}
                 attribution="Google Earth Engine"
+                pane={RESULT_PANE}
               />
             )}
             {mode === "changed" && changeMapData?.changed_tile_url && (
@@ -154,6 +160,7 @@ export default function BeforeAfterMaps({
                 url={changeMapData.changed_tile_url}
                 opacity={0.78}
                 attribution="Google Earth Engine"
+                pane={RESULT_PANE}
               />
             )}
             <FitToAoi aoi={aoi} />

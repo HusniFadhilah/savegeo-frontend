@@ -6,6 +6,7 @@ import ResultTileLayer from "@/components/map/ResultTileLayer";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
 import type { AoiState } from "@/features/carbon/types";
+import type { CarbonLayerResult } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 import type { MapLegendEntry } from "@/types/map";
@@ -24,6 +25,7 @@ interface Props {
   visMin: number;
   visMax: number;
   visPalette: string[];
+  legendBins: number;
   showReference: boolean;
   mapKey: string | number;
 }
@@ -73,19 +75,33 @@ function buildLegend(
   visMin: number,
   visMax: number,
   visPalette: string[],
+  legendBins: number,
 ): { title: string; entries: MapLegendEntry[] } {
   if (!activeKey) return { title: "", entries: [] };
 
   if (activeKey === "carbon_estimated" || activeKey === "carbon_reference") {
-    const colors = visPalette.length
-      ? visPalette.map((c) => (c.startsWith("#") ? c : `#${c}`))
-      : ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"];
+    const layer = results.carbon?.[activeKey] as CarbonLayerResult | undefined;
+    const palette = layer?.vis_params?.palette?.length ? layer.vis_params.palette : visPalette;
+    const colors = buildLegendColors(palette.length ? palette : ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"], legendBins);
+    const statsMin = Number(layer?.statistics?.min);
+    const statsMax = Number(layer?.statistics?.max);
+    const visParamMin = Number(layer?.vis_params?.min);
+    const visParamMax = Number(layer?.vis_params?.max);
+    const legendMin = Number.isFinite(statsMin) ? statsMin : Number.isFinite(visParamMin) ? visParamMin : visMin;
+    const legendMax = Number.isFinite(statsMax) ? statsMax : Number.isFinite(visParamMax) ? visParamMax : visMax;
+    const safeMax = legendMax > legendMin ? legendMax : legendMin + 1;
     const n = colors.length;
-    const entries = colors.map((color, i) => ({
-      color,
-      label: `${Math.round(visMin + (i * (visMax - visMin)) / Math.max(n - 1, 1))}${i === n - 1 ? "+" : ""}`,
-    }));
-    return { title: "Densitas Karbon (Mg/ha)", entries };
+    const fmt = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toString() : Number(v.toFixed(2)).toString());
+    const entries = colors.map((color, i) => {
+      const from = legendMin + (i * (safeMax - legendMin)) / n;
+      const to = legendMin + ((i + 1) * (safeMax - legendMin)) / n;
+      return {
+        color,
+        label: i === n - 1 ? `${fmt(from)} - ${fmt(legendMax)}` : `${fmt(from)} - ${fmt(to)}`,
+      };
+    });
+    const unit = layer?.unit || "Mg/ha";
+    return { title: `Densitas Karbon (${unit})`, entries };
   }
 
   const lcVal = results.landcover?.[activeKey];
@@ -103,6 +119,42 @@ function buildLegend(
   return { title: "", entries: [] };
 }
 
+function normalizeHex(color: string) {
+  const trimmed = color.trim().replace(/^#/, "");
+  return /^[0-9a-f]{6}$/i.test(trimmed) ? `#${trimmed}` : "#2e7d32";
+}
+
+function hexToRgb(color: string): [number, number, number] {
+  const hex = normalizeHex(color).slice(1);
+  return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+}
+
+function rgbToHex([r, g, b]: [number, number, number]) {
+  return `#${[r, g, b].map((n) => Math.round(n).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function buildLegendColors(palette: string[], requestedBins: number) {
+  const base = palette.map(normalizeHex);
+  const bins = Math.min(Math.max(Number.isFinite(requestedBins) ? Math.round(requestedBins) : base.length, 2), 20);
+  if (base.length === bins) return base;
+  if (base.length === 1) return Array.from({ length: bins }, () => base[0]);
+
+  return Array.from({ length: bins }, (_, i) => {
+    const t = bins === 1 ? 0 : i / (bins - 1);
+    const scaled = t * (base.length - 1);
+    const left = Math.floor(scaled);
+    const right = Math.min(left + 1, base.length - 1);
+    const local = scaled - left;
+    const a = hexToRgb(base[left]);
+    const b = hexToRgb(base[right]);
+    return rgbToHex([
+      a[0] + (b[0] - a[0]) * local,
+      a[1] + (b[1] - a[1]) * local,
+      a[2] + (b[2] - a[2]) * local,
+    ]);
+  });
+}
+
 /**
  * Ported from main.js createResultTabs()/initializeResultMap()/
  * switchResultLayer()/updateLegend(): result layer tabs, tile map, opacity
@@ -115,6 +167,7 @@ export default function ResultsMapPanel({
   visMin,
   visMax,
   visPalette,
+  legendBins,
   showReference,
   mapKey,
 }: Props) {
@@ -132,8 +185,26 @@ export default function ResultsMapPanel({
     setOpacity(1);
   }, [activeKey]);
 
+  useEffect(() => {
+    window.activeResultLayerName = activeKey ?? undefined;
+    window.switchResultLayer = (layer) => {
+      const normalized = layer.toLowerCase();
+      const match = tabs.find(
+        (tab) =>
+          tab.key.toLowerCase() === normalized ||
+          tab.label.toLowerCase() === normalized ||
+          tab.key.toLowerCase().includes(normalized),
+      );
+      if (match) setActiveKey(match.key);
+    };
+    return () => {
+      delete window.activeResultLayerName;
+      delete window.switchResultLayer;
+    };
+  }, [activeKey, tabs]);
+
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
-  const legend = buildLegend(activeKey, results, visMin, visMax, visPalette);
+  const legend = buildLegend(activeKey, results, visMin, visMax, visPalette, legendBins);
   const center: [number, number] = aoi.bounds
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
@@ -161,12 +232,6 @@ export default function ResultsMapPanel({
           </ul>
         )}
 
-        {activeTab?.tileUrl && (
-          <div className="d-flex align-items-center mb-2 gap-2">
-            <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
-          </div>
-        )}
-
         <div style={{ position: "relative" }}>
           <MapView
             key={mapKey}
@@ -178,7 +243,10 @@ export default function ResultsMapPanel({
             <BasemapSwitcher />
             <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
             {activeTab?.tileUrl && (
-              <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
+              <>
+                <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
+                <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+              </>
             )}
           </MapView>
           {legend.entries.length > 0 && (

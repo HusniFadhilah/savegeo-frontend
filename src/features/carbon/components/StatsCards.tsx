@@ -140,27 +140,27 @@ export default function StatsCards({ results, processingTimes }: Props) {
   }
 
   const timeSections = [
-    { key: "vegetation" as const, icon: "bi-flower1", label: "Vegetasi" },
-    { key: "landcover" as const, icon: "bi-map", label: "Tutupan Lahan" },
-    { key: "carbon" as const, icon: "bi-tree", label: "Karbon" },
-    { key: "total" as const, icon: "bi-stopwatch", label: "Total Waktu" },
+    { key: "vegetation" as const, icon: "bi-flower1", label: "Vegetasi", color: "#43a047" },
+    { key: "landcover" as const, icon: "bi-map", label: "Tutupan Lahan", color: "#1e88e5" },
+    { key: "carbon" as const, icon: "bi-tree", label: "Karbon", color: "#fb8c00" },
+    { key: "total" as const, icon: "bi-stopwatch", label: "Total Waktu", color: "#1e88e5" },
   ].filter((s) => processingTimes[s.key]);
 
   return (
     <>
       {cards.length > 0 && <div className="row">{cards}</div>}
       {timeSections.length > 0 && (
-        <div className="card mt-3">
-          <div className="card-header">
-            <i className="bi bi-clock me-1" /> Waktu Proses
+        <div className="cs-card mt-3">
+          <div className="cs-card-header">
+            <i className="bi bi-clock" /> Waktu Proses
           </div>
-          <div className="card-body">
+          <div className="cs-card-body">
             <div className="row row-cols-2 row-cols-md-4 g-2">
               {timeSections.map((s) => (
                 <div className="col" key={s.key}>
                   <div className="text-center p-2">
-                    <i className={`bi ${s.icon}`} style={{ fontSize: 24 }} />
-                    <h5 className="mt-2 mb-0">{formatDuration(processingTimes[s.key])}</h5>
+                    <i className={`bi ${s.icon}`} style={{ fontSize: 22, color: s.color }} />
+                    <div className="cs-time-value">{formatDuration(processingTimes[s.key])}</div>
                     <small className="text-muted">{s.label}</small>
                   </div>
                 </div>

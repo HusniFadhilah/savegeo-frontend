@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import { activateGeeCredential, deleteGeeCredential, listGeeCredentials, uploadGeeCredential } from "../api";
+import { useRef, useState } from "react";
+import { activateGeeCredential, deleteGeeCredential, uploadGeeCredential } from "../api";
 import type { GeeCredential } from "../types";
 import { useAdmin } from "../AdminContext";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePagination from "@/components/ui/TablePagination";
 
 const MAX_FILE_BYTES = 1 * 1024 * 1024; // 1 MB — service-account JSON keys are tiny
 
 export default function GeeCredentials() {
   const { notify, refreshHealth } = useAdmin();
-  const [rows, setRows] = useState<GeeCredential[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    rows, loading, error, page, pageCount, pageSize,
+    recordsTotal, recordsFiltered, search, setSearch,
+    nextPage, prevPage, reload,
+  } = useServerTable<GeeCredential>("/admin/gee/credentials");
 
   const [formOpen, setFormOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -22,23 +26,6 @@ export default function GeeCredentials() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [busyId, setBusyId] = useState<number | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await listGeeCredentials();
-      setRows(r.credentials || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat credentials");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const validateFile = (f: File): string | null => {
     if (!f.name.toLowerCase().endsWith(".json")) return "File harus berformat .json";
@@ -72,7 +59,7 @@ export default function GeeCredentials() {
       setLabel("");
       setNotes("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      await load();
+      await reload();
       refreshHealth();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal upload";
@@ -88,7 +75,7 @@ export default function GeeCredentials() {
     try {
       await activateGeeCredential(id);
       notify("Credential diaktifkan, EE diinisialisasi ulang", "s");
-      await load();
+      await reload();
       refreshHealth();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal aktivasi", "e");
@@ -103,7 +90,7 @@ export default function GeeCredentials() {
     try {
       await deleteGeeCredential(id);
       notify("Credential dihapus", "s");
-      await load();
+      await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal hapus", "e");
     } finally {
@@ -228,7 +215,7 @@ export default function GeeCredentials() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && rows && rows.length === 0 && (
+              {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada credential. Upload service account JSON.
@@ -237,7 +224,7 @@ export default function GeeCredentials() {
               )}
               {!loading &&
                 !error &&
-                rows?.map((c) => (
+                rows.map((c) => (
                   <tr key={c.id}>
                     <td title={c.label}>{c.label}</td>
                     <td className="tbl-mono" title={c.project_id}>
@@ -284,6 +271,18 @@ export default function GeeCredentials() {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={page}
+          pageCount={pageCount}
+          recordsTotal={recordsTotal}
+          recordsFiltered={recordsFiltered}
+          pageSize={pageSize}
+          search={search}
+          onSearchChange={setSearch}
+          onPrev={prevPage}
+          onNext={nextPage}
+          searchPlaceholder="Cari label, project ID, email..."
+        />
       </div>
     </div>
   );

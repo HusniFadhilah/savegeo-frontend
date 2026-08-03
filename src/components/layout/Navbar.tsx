@@ -60,39 +60,42 @@ export default function Navbar() {
             <i className={`bi ${state === "connecting" ? "bi-arrow-repeat spin" : "bi-broadcast"}`} /> {statusLabel}
           </button>
 
-          <div className="dropdown">
-            <button
-              type="button"
-              className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <i className="bi bi-box-arrow-in-right" />
-              <span>{isAuthenticated ? user?.username : t("auth.loginAdmin")}</span>
-            </button>
-            {menuOpen && (
-              <ul className="dropdown-menu dropdown-menu-end shadow show" onMouseLeave={() => setMenuOpen(false)}>
-                {isAuthenticated && (
+          {isAuthenticated ? (
+            <div className="dropdown">
+              <button
+                type="button"
+                className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                onClick={() => setMenuOpen((v) => !v)}
+              >
+                <i className="bi bi-person-circle" />
+                <span>{user?.username}</span>
+              </button>
+              {menuOpen && (
+                <ul className="dropdown-menu dropdown-menu-end shadow show" onMouseLeave={() => setMenuOpen(false)}>
                   <li>
                     <h6 className="dropdown-header d-flex align-items-center gap-2 mb-0">
                       <i className="bi bi-person-circle" /> {user?.username}
                     </h6>
                   </li>
-                )}
-                <li>
-                  <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
-                    <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
-                  </Link>
-                </li>
-                {isAuthenticated && (
+                  <li>
+                    <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
+                      <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
+                    </Link>
+                  </li>
                   <li>
                     <button type="button" className="dropdown-item text-danger" onClick={handleLogout}>
                       <i className="bi bi-box-arrow-right me-2" /> {t("auth.logout")}
                     </button>
                   </li>
-                )}
-              </ul>
-            )}
-          </div>
+                </ul>
+              )}
+            </div>
+          ) : (
+            <Link className="btn btn-outline-light btn-sm d-flex align-items-center gap-2" to="/admin">
+              <i className="bi bi-box-arrow-in-right" />
+              <span>{t("auth.loginAdmin")}</span>
+            </Link>
+          )}
         </div>
       </div>
       <SystemStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} />

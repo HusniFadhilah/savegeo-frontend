@@ -61,6 +61,7 @@ export default function CarbonModule() {
   const visMin = getInt("carbon.vis_min", 0);
   const visMax = getInt("carbon.vis_max", 200);
   const visPalette = getArray("carbon.vis_palette");
+  const carbonLegendBins = getInt("carbon.legend_bins", 6);
 
   const [year, setYear] = useState(yearMax);
   const [zoom, setZoom] = useState(10);
@@ -102,11 +103,25 @@ export default function CarbonModule() {
 
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
 
+  useEffect(() => {
+    window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name } : null;
+    return () => {
+      window.currentAOI = null;
+    };
+  }, [aoi]);
+
   function patchCarbon(patch: Partial<CarbonPartial>) {
     setCarbonPartial((p) => ({ ...p, ...patch }));
   }
 
   const hasResults = Object.keys(results).length > 0;
+
+  useEffect(() => {
+    window.analysisResults = results as Record<string, unknown>;
+    return () => {
+      window.analysisResults = {};
+    };
+  }, [results]);
 
   async function handleRunAnalysis() {
     if (!aoi) {
@@ -159,7 +174,7 @@ export default function CarbonModule() {
     }
 
     if (runCarbon) {
-      setLoadingProgress(75, "Membangun model regresi karbon...");
+      setLoadingProgress(75, "Menerapkan model terlatih pada citra satelit...");
       const t0 = Date.now();
       try {
         newResults.carbon = await analyzeCarbon({
@@ -188,6 +203,7 @@ export default function CarbonModule() {
     } else if (errors.length) {
       setRunError(errors.join(" "));
     }
+    window._onSaveGeoAnalysisDone?.();
   }
 
   const reportContext: ReportContext | null = aoi
@@ -234,6 +250,7 @@ export default function CarbonModule() {
           <div className="mb-3">
             <label className="form-label">Tahun</label>
             <input
+              id="yearSlider"
               type="range"
               className="form-range"
               min={yearMin}
@@ -243,6 +260,9 @@ export default function CarbonModule() {
             />
             <div className="text-center">
               <strong>{year}</strong>
+              <span id="yearValue" className="visually-hidden">
+                {year}
+              </span>
             </div>
           </div>
 
@@ -278,6 +298,7 @@ export default function CarbonModule() {
           )}
 
           <button
+            id="runAnalysis"
             className="btn btn-primary w-100 mt-3"
             onClick={handleRunAnalysis}
             disabled={running || !aoi}
@@ -313,12 +334,13 @@ export default function CarbonModule() {
               aoi={aoi}
               zoom={zoom}
               results={results}
-              visMin={visMin}
-              visMax={visMax}
-              visPalette={visPalette}
-              showReference={carbonParams.showReference}
-              mapKey={mapKey}
-            />
+          visMin={visMin}
+          visMax={visMax}
+          visPalette={visPalette}
+          legendBins={carbonLegendBins}
+          showReference={carbonParams.showReference}
+          mapKey={mapKey}
+        />
 
             <div className="card">
               <div className="card-header">

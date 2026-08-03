@@ -55,6 +55,31 @@ export interface CompanyBoundary {
 }
 
 /**
+ * `industry_type` is a free-text `String(50)` column in the `companies`
+ * table (no backend catalog endpoint constrains it), so this genuinely
+ * belongs in the frontend per the KEEP_IN_FRONTEND audit finding. It used
+ * to be defined independently in 3 places (admin/types.ts, admin's
+ * CompanyBoundaries.tsx, carbon's AoiCompanyTab.tsx) with slightly
+ * different label text - single source of truth now.
+ */
+export const INDUSTRY_LABEL: Record<string, string> = {
+  mining: "Pertambangan",
+  forestry: "Kehutanan (HPH/HTI)",
+  plantation: "Perkebunan (HGU)",
+  energy: "Energi (PLTU/PLTS/Migas)",
+};
+
+export const INDUSTRY_OPTIONS: { value: string; label: string }[] = Object.entries(INDUSTRY_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+
+export const COMPANY_SOURCE_LABEL: Record<string, string> = {
+  manual: "Manual",
+  osm: "OpenStreetMap",
+  gfw: "GlobalForestWatch",
+};
+
+/**
  * Chat session/message shapes - corrected to match the actual backend
  * (savegeo/backend/app/db/models/chat_session.py, chat_message.py, and
  * app/api/routes/chat.py). Ids are numeric (SQL autoincrement PKs), not

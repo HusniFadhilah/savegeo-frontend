@@ -3,6 +3,7 @@ import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { AoiFeature } from "@/types/map";
 import type { DisasterSourcesMap, DemSlopeResult, EventMapResult } from "../types";
+import { RESULT_PANE } from "@/config/mapPanes";
 
 interface Props {
   aoi: AoiFeature | null;
@@ -54,7 +55,7 @@ export default function DisasterEventMap({ aoi, sources, demResult, eventResult,
           if (!item.configured) return null;
           const opacity = SOURCE_OPACITY[key] ?? 0.55;
           if (item.tile_url) {
-            return <TileLayer key={key} url={item.tile_url} opacity={opacity} attribution={item.name} />;
+            return <TileLayer key={key} url={item.tile_url} opacity={opacity} attribution={item.name} pane={RESULT_PANE} />;
           }
           if (item.wms_url && item.layers) {
             return (
@@ -66,6 +67,7 @@ export default function DisasterEventMap({ aoi, sources, demResult, eventResult,
                 transparent
                 opacity={opacity}
                 attribution={item.name}
+                pane={RESULT_PANE}
               />
             );
           }
@@ -77,11 +79,12 @@ export default function DisasterEventMap({ aoi, sources, demResult, eventResult,
           url={demResult.tile_url}
           opacity={0.58}
           attribution={demResult.is_official_demnas ? "BIG DEMNAS" : "USGS SRTM fallback"}
+          pane={RESULT_PANE}
         />
       )}
 
       {eventResult?.tile_url && (
-        <TileLayer url={eventResult.tile_url} opacity={0.72} attribution={eventResult.source || "Earth Engine"} />
+        <TileLayer url={eventResult.tile_url} opacity={0.72} attribution={eventResult.source || "Earth Engine"} pane={RESULT_PANE} />
       )}
 
       <FitToAoi aoi={aoi} fitSignal={fitSignal} />

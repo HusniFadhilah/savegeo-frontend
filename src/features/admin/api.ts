@@ -9,6 +9,7 @@ import type {
   OpenRouterModelInfo,
   CompanyBoundaryFull,
   AdminUserRow,
+  AdminRole,
 } from "./types";
 
 /**
@@ -17,12 +18,11 @@ import type {
  * fields or change paths without checking that file + savegeo/backend first.
  * Every call passes `{ auth: true }` so apiClient attaches the bearer token.
  *
- * NOTE: as of savegeo/backend/README.md, the company-boundary admin CRUD/
- * import endpoints, the OpenRouter model-list proxy, and the key-pool status
- * endpoint are NOT YET implemented server-side (explicitly called out as
- * "not carried over" in that README). The callers below are wired to the
- * documented legacy paths regardless, so the UI is ready the moment the
- * backend adds them; until then those sections will surface a fetch error.
+ * Company-boundary admin CRUD, the OpenRouter model-list proxy, and the
+ * key-pool status endpoint were added to savegeo/backend to close the 404s
+ * these callers used to hit - all three are live now. Import-from-OSM/GFW
+ * are not ported yet (external Overpass/CARTO integration, lower priority
+ * than the CRUD itself) - those two calls will still 404 until that lands.
  */
 
 // ── Health / EE ────────────────────────────────────────────────
@@ -136,6 +136,24 @@ export const changePassword = (oldPassword: string, newPassword: string) =>
     { old_password: oldPassword, new_password: newPassword },
     { auth: true },
   );
+
+export const listRoles = () => apiClient.get<{ roles: AdminRole[] }>("/admin/roles", { auth: true });
+
+export const createAdminUser = (payload: {
+  username: string;
+  password: string;
+  email?: string | null;
+  role_id?: number | null;
+  is_active?: boolean;
+}) => apiClient.post<{ message: string; user: AdminUserRow }>("/admin/users", payload, { auth: true });
+
+export const updateAdminUser = (
+  id: number,
+  payload: { email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
+) => apiClient.put<{ message: string; user: AdminUserRow }>(`/admin/users/${id}`, payload, { auth: true });
+
+export const deleteAdminUser = (id: number) =>
+  apiClient.delete<{ message: string }>(`/admin/users/${id}`, { auth: true });
 
 // ── Company boundaries ────────────────────────────────────────────
 export const listCompanies = () =>

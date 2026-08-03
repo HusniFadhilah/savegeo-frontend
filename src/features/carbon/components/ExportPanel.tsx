@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { exportGeoTiff } from "@/features/carbon/api";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
@@ -51,6 +51,19 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
 
   const { results, year, startMonth, endMonth, cloudThreshold } = reportContext;
   const layerOptions = buildLayerOptions(results);
+
+  useEffect(() => {
+    window.downloadStatistics = () => downloadStatisticsJson(reportContext);
+    window.downloadExecutiveSummary = () => generateMarkdownReport(reportContext);
+    window.exportToGoogleDrive = openModal;
+    return () => {
+      delete window.downloadStatistics;
+      delete window.downloadExecutiveSummary;
+      delete window.exportToGoogleDrive;
+    };
+    // openModal intentionally uses latest render state and is only called from the active panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportContext, layerOptions.length]);
 
   function openModal() {
     const first = layerOptions[0];
@@ -111,17 +124,17 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
       <div className="card-body">
         <div className="row">
           <div className="col-md-4 mb-2">
-            <button className="btn btn-primary w-100" onClick={openModal} disabled={!layerOptions.length}>
+            <button id="exportGeoTIFF" className="btn btn-primary w-100" onClick={openModal} disabled={!layerOptions.length}>
               <i className="bi bi-file-earmark-image me-1" /> Ekspor GeoTIFF
             </button>
           </div>
           <div className="col-md-4 mb-2">
-            <button className="btn btn-primary w-100" onClick={() => downloadStatisticsJson(reportContext)}>
+            <button id="downloadStats" className="btn btn-primary w-100" onClick={() => downloadStatisticsJson(reportContext)}>
               <i className="bi bi-filetype-json me-1" /> Unduh Statistik
             </button>
           </div>
           <div className="col-md-4 mb-2">
-            <button className="btn btn-primary w-100" onClick={() => generateMarkdownReport(reportContext)}>
+            <button id="exportExecSummary" className="btn btn-primary w-100" onClick={() => generateMarkdownReport(reportContext)}>
               <i className="bi bi-file-earmark-text me-1" /> Buat Laporan
             </button>
           </div>

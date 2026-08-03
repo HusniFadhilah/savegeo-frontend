@@ -20,7 +20,14 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   isFormData?: boolean;
 }
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+// GEE-backed analysis endpoints (carbon/vegetation/landcover/disaster/timeseries)
+// routinely take well over 30s for real compute - a flat 30s default caused
+// "Request timed out" failures on ordinary, successful analyses (verified: a
+// province-scale /analyze/carbon call took well over a minute end-to-end).
+// Bumped to 3 minutes; fast endpoints (health, lists, config) return in
+// milliseconds regardless, so this only changes how long a genuinely slow/
+// hung request is given before erroring out.
+const DEFAULT_TIMEOUT_MS = 180_000;
 
 let onUnauthorized: (() => void) | null = null;
 

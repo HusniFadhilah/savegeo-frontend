@@ -1,10 +1,188 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getConfig, resetAllConfig, saveConfig } from "../api";
 import { AI_PROVIDERS, CAT_COLORS, CAT_LABELS } from "../types";
 import type { AdminConfigCategories, AdminConfigItem } from "../types";
 import AiProviderConfig from "./AiProviderConfig";
 import KeyPool from "./KeyPool";
 import { useAdmin } from "../AdminContext";
+
+type NumericControl = {
+  mode: "range" | "number";
+  min?: number;
+  max?: number;
+  step?: number;
+  hint?: string;
+};
+
+function isBooleanConfig(item: AdminConfigItem, value: string) {
+  const type = item.value_type.toLowerCase();
+  const key = item.key.toLowerCase();
+  return (
+    type === "bool" ||
+    type === "boolean" ||
+    key.startsWith("enable_") ||
+    key.endsWith("_enabled") ||
+    key.endsWith(".enabled") ||
+    ["true", "false"].includes(value.toLowerCase())
+  );
+}
+
+function isColorConfig(item: AdminConfigItem, value: string) {
+  return /(^|[._-])(color|colour|hex|palette)([._-]|$)/i.test(item.key) || /^#?[0-9a-f]{6}$/i.test(value);
+}
+
+function normalizeColor(value: string) {
+  const trimmed = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed;
+  if (/^[0-9a-f]{6}$/i.test(trimmed)) return `#${trimmed}`;
+  return "#2e7d32";
+}
+
+function isPaletteConfig(item: AdminConfigItem, value: string) {
+  return /(^|[._-])palette([._-]|$)/i.test(item.key) || value.split(",").filter((part) => /^#?[0-9a-f]{6}$/i.test(part.trim())).length > 1;
+}
+
+function parsePalette(value: string) {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function serializePalette(colors: string[]) {
+  return colors.map((color) => color.trim().replace(/^#/, "")).filter(Boolean).join(",");
+}
+
+function getNumericControl(item: AdminConfigItem): NumericControl | null {
+  const key = item.key.toLowerCase();
+  const type = item.value_type.toLowerCase();
+  const numeric = type === "int" || type === "integer" || type === "float" || type === "number";
+  if (!numeric) return null;
+
+  if (key.includes("legend_bins")) return { mode: "range", min: 2, max: 20, step: 1, hint: "Jumlah range legenda" };
+  if (key.includes("cloud_threshold")) return { mode: "range", min: 0, max: 100, step: 1, hint: "Persentase awan maksimum" };
+  if (key.includes("threshold") && !key.includes("esa_threshold")) return { mode: "range", min: 0, max: 100, step: 1 };
+  if (key.includes("year") || key.endsWith(".min") || key.endsWith(".max") || key.includes("esri_") || key.includes("esa_")) {
+    return { mode: "range", min: 1984, max: new Date().getFullYear() + 1, step: 1, hint: "Tahun" };
+  }
+  if (key.includes("carbon_scale")) return { mode: "range", min: 1, max: 1000, step: 1 };
+  if (key.includes("veg_scale") || key.includes("lc_scale")) return { mode: "range", min: 1, max: 100, step: 1 };
+  if (key.includes("num_pixels")) return { mode: "range", min: 100, max: 10000, step: 100 };
+  if (key.includes("opacity")) return { mode: "range", min: 0, max: 1, step: 0.05 };
+  if (key.includes("max_pixels")) return { mode: "number", step: 1000000, hint: "Bisa memakai format 1e13" };
+  return { mode: "number", step: type === "int" || type === "integer" ? 1 : 0.01 };
+}
+
+function ConfigValueControl({
+  item,
+  value,
+  onChange,
+}: {
+  item: AdminConfigItem;
+  value: string;
+  onChange: (key: string, value: string) => void;
+}) {
+  const numeric = getNumericControl(item);
+  const title = item.description;
+  const paletteColors = parsePalette(value);
+
+  if (isBooleanConfig(item, value)) {
+    const checked = ["true", "1", "yes", "on"].includes(value.toLowerCase());
+    return (
+      <label className="cfg-switch" title={title}>
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(item.key, e.target.checked ? "true" : "false")} />
+        <span />
+        <strong>{checked ? "Aktif" : "Nonaktif"}</strong>
+      </label>
+    );
+  }
+
+  if (isPaletteConfig(item, value)) {
+    const normalized = paletteColors.length ? paletteColors : ["2e7d32"];
+    const updateColor = (index: number, nextColor: string) => {
+      const next = [...normalized];
+      next[index] = nextColor;
+      onChange(item.key, serializePalette(next));
+    };
+    const removeColor = (index: number) => {
+      const next = normalized.filter((_, i) => i !== index);
+      onChange(item.key, serializePalette(next.length ? next : ["2e7d32"]));
+    };
+    return (
+      <div className="cfg-palette-control">
+        <div className="cfg-palette-pickers">
+          {normalized.map((color, index) => (
+            <div className="cfg-palette-chip" key={`${index}-${color}`}>
+              <input type="color" title={`${title || item.key} #${index + 1}`} value={normalizeColor(color)} onChange={(e) => updateColor(index, e.target.value)} />
+              <button type="button" className="cfg-palette-remove" onClick={() => removeColor(index)} aria-label={`Hapus warna ${index + 1}`}>
+                <i className="bi bi-x" />
+              </button>
+            </div>
+          ))}
+          <button type="button" className="cfg-palette-add" onClick={() => onChange(item.key, serializePalette([...normalized, "2e7d32"]))}>
+            <i className="bi bi-plus-lg" /> Warna
+          </button>
+        </div>
+        <input title={title} value={value} onChange={(e) => onChange(item.key, e.target.value)} placeholder="440154,414487,2a788e" />
+      </div>
+    );
+  }
+
+  if (isColorConfig(item, value)) {
+    return (
+      <div className="cfg-color-control">
+        <input type="color" title={title} value={normalizeColor(value)} onChange={(e) => onChange(item.key, e.target.value)} />
+        <input title={title} value={value} onChange={(e) => onChange(item.key, e.target.value)} placeholder="#2e7d32" />
+      </div>
+    );
+  }
+
+  if (numeric?.mode === "range") {
+    const rangeValue = Number.isFinite(Number(value)) ? Number(value) : numeric.min ?? 0;
+    return (
+      <div className="cfg-range-control">
+        <input
+          type="range"
+          title={title}
+          min={numeric.min}
+          max={numeric.max}
+          step={numeric.step}
+          value={rangeValue}
+          onChange={(e) => onChange(item.key, e.target.value)}
+          style={{ "--cfg-range-pct": `${((rangeValue - (numeric.min ?? 0)) / ((numeric.max ?? 100) - (numeric.min ?? 0))) * 100}%` } as CSSProperties}
+        />
+        <input
+          type="number"
+          title={title}
+          min={numeric.min}
+          max={numeric.max}
+          step={numeric.step}
+          value={value}
+          onChange={(e) => onChange(item.key, e.target.value)}
+        />
+      </div>
+    );
+  }
+
+  if (numeric?.mode === "number") {
+    return (
+      <input
+        type="number"
+        title={title}
+        step={numeric.step}
+        value={value}
+        placeholder={numeric.hint}
+        onChange={(e) => onChange(item.key, e.target.value)}
+      />
+    );
+  }
+
+  if (item.value_type.toLowerCase() === "json" || value.trim().startsWith("{") || value.trim().startsWith("[")) {
+    return <textarea title={title} value={value} onChange={(e) => onChange(item.key, e.target.value)} rows={3} />;
+  }
+
+  return <input title={title} value={value} onChange={(e) => onChange(item.key, e.target.value)} />;
+}
 
 /** Full admin system-config editor: every category returned by GET /admin/config,
  * not just the 6 keys the dashboard's small "Live Config" panel (useConfigStore)
@@ -159,11 +337,7 @@ export default function ConfigEditor() {
                           </span>
                         </div>
                       ) : (
-                        <input
-                          title={item.description}
-                          value={values[item.key] ?? ""}
-                          onChange={(e) => handleChange(item.key, e.target.value)}
-                        />
+                        <ConfigValueControl item={item} value={values[item.key] ?? ""} onChange={handleChange} />
                       )}
                     </div>
                     <span className="cfg-type">{item.value_type}</span>

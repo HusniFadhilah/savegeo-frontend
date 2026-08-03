@@ -19,8 +19,12 @@ export type ClipMode = "clipped" | "full";
 export interface CarbonReferenceDatasetOption {
   value: string;
   label: string;
-  group: "Aboveground Biomass Carbon" | "Soil Carbon";
+  group: string;
   description: string;
+  year?: number | string | null;
+  yearRange?: number[] | string | null;
+  compatibleModelCount?: number;
+  source?: "api" | "fallback";
 }
 
 export interface CarbonModelCvMetrics {
@@ -85,6 +89,12 @@ export interface CarbonStats {
 export interface CarbonLayerResult {
   tile_url?: string;
   statistics?: CarbonStats;
+  unit?: string;
+  vis_params?: {
+    min?: number;
+    max?: number;
+    palette?: string[];
+  };
   inference_mode?: string;
 }
 

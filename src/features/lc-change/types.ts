@@ -1,13 +1,14 @@
 import type { AoiFeature } from "@/types/map";
 
-/** Dataset ids accepted by POST /analyze/landcover (and change-map). */
-export type LcDataset =
-  | "Dynamic_World"
-  | "ESA_WorldCover"
-  | "ESRI_LandCover"
-  | "MapBiomas_Indonesia"
-  | "JAXA_FNF4"
-  | "JAXA_FNF";
+/**
+ * Dataset ids accepted by POST /analyze/landcover (and change-map). Widened
+ * from a fixed 6-value union to `string` - the actual catalog is fetched
+ * live from GET /landcover/datasets (16 datasets as of writing, same
+ * endpoint the Landcover feature already calls via
+ * `features/landcover/api.ts`'s `fetchLandCoverDatasets()`), so pinning the
+ * type to a stale hardcoded list would fight the dynamic dropdown.
+ */
+export type LcDataset = string;
 
 export interface LcClassInfo {
   area: number;

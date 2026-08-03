@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
-import { CARBON_REFERENCE_DATASETS, CARBON_DATASET_YEARS } from "@/features/carbon/referenceDatasets";
+import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
+import { FALLBACK_CARBON_REFERENCE_DATASETS, CARBON_DATASET_YEARS } from "@/features/carbon/referenceDatasets";
 import type {
   CarbonModelInfo,
   CarbonModelListItem,
   CarbonModelMeta,
   CarbonParams,
+  CarbonReferenceDatasetOption,
   ClipMode,
 } from "@/features/carbon/types";
 import SearchableSelect from "@/components/ui/SearchableSelect";
@@ -98,6 +99,66 @@ export default function CarbonParamsPanel({
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelInfo, setModelInfo] = useState<CarbonModelInfo | null>(null);
   const [showModelInfo, setShowModelInfo] = useState(false);
+  const [datasets, setDatasets] = useState<CarbonReferenceDatasetOption[]>([]);
+  const [datasetsLoading, setDatasetsLoading] = useState(false);
+  const [datasetsError, setDatasetsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDatasetsLoading(true);
+    setDatasetsError(null);
+    listCarbonDatasets()
+      .then((list) => {
+        if (cancelled) return;
+        setDatasets(list);
+        if (list.length > 0 && !list.some((d) => d.value === params.referenceDataset)) {
+          onParamsChange({ referenceDataset: list[0].value });
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDatasets(FALLBACK_CARBON_REFERENCE_DATASETS.map((d) => ({ ...d, source: "fallback" })));
+        setDatasetsError("Catalog dataset karbon tidak dapat dimuat dari API. Menggunakan fallback lokal.");
+      })
+      .finally(() => {
+        if (!cancelled) setDatasetsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Per-dataset year options: prefer the selected dataset's own `year`/
+  // `yearRange` from the live catalog (e.g. WCMC is 2010-only, GEDI is
+  // 2019-2023) over the flat CARBON_DATASET_YEARS fallback, which offered
+  // the same year list regardless of which dataset was picked.
+  const selectedDatasetMeta = datasets.find((d) => d.value === params.referenceDataset);
+  const yearOptions = (() => {
+    const meta = selectedDatasetMeta;
+    if (meta?.yearRange) {
+      if (Array.isArray(meta.yearRange) && meta.yearRange.length === 2) {
+        const [start, end] = meta.yearRange;
+        if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+          const years: number[] = [];
+          for (let y = end; y >= start; y--) years.push(y);
+          return years;
+        }
+      }
+    }
+    if (meta?.year != null && Number.isFinite(Number(meta.year))) {
+      return [Number(meta.year)];
+    }
+    return CARBON_DATASET_YEARS;
+  })();
+
+  useEffect(() => {
+    if (!yearOptions.length) return;
+    if (!yearOptions.includes(params.datasetYear)) {
+      onParamsChange({ datasetYear: yearOptions[0] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.referenceDataset, datasets]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,7 +207,7 @@ export default function CarbonParamsPanel({
     };
   }, [params.modelName]);
 
-  const datasetMeta = CARBON_REFERENCE_DATASETS.find((d) => d.value === params.referenceDataset);
+  const datasetMeta = datasets.find((d) => d.value === params.referenceDataset);
   const grouped = groupByAlgorithm(models);
   const geeCount = models.filter((m) => m.metadata_json?.gee_deployable).length;
 
@@ -172,13 +233,43 @@ export default function CarbonParamsPanel({
         <SearchableSelect
           value={params.referenceDataset}
           onChange={(v) => onParamsChange({ referenceDataset: v })}
-          options={CARBON_REFERENCE_DATASETS.map((d) => ({
+          options={datasets.map((d) => ({
             value: d.value,
             label: d.label,
-            description: d.group,
+            description:
+              d.compatibleModelCount !== undefined
+                ? `${d.group} - ${d.compatibleModelCount} model compatible`
+                : d.group,
           }))}
           placeholder="-- Pilih Dataset Referensi --"
+          loading={datasetsLoading}
+          disabled={datasetsLoading || datasets.length === 0}
         />
+        <select
+          id="carbonReferenceDataset"
+          className="visually-hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          value={params.referenceDataset}
+          onChange={(e) => onParamsChange({ referenceDataset: e.target.value })}
+        >
+          {datasets.map((d) => (
+            <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+        {datasetsError && (
+          <small className="text-warning d-block mt-1">
+            <i className="bi bi-exclamation-triangle me-1" />
+            {datasetsError}
+          </small>
+        )}
+        {!datasetsLoading && datasets.length === 0 && (
+          <small className="text-muted d-block mt-1">
+            Belum ada dataset karbon aktif dari API. Cek registry dataset/model di backend.
+          </small>
+        )}
         {datasetMeta && (
           <small className="text-muted d-block mt-1">
             <i className="bi bi-info-circle me-1" />
@@ -224,6 +315,25 @@ export default function CarbonParamsPanel({
           loading={modelsLoading}
           disabled={modelsLoading}
         />
+        <select
+          id="carbonModelSelect"
+          className="visually-hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          value={params.modelName ?? ""}
+          onChange={(e) => {
+            const name = e.target.value || null;
+            onParamsChange({ modelName: name });
+            onModelSelect(models.find((m) => m.name === name) ?? null);
+          }}
+        >
+          <option value="">-- Pilih Model --</option>
+          {models.map((m) => (
+            <option key={m.name} value={m.name}>
+              {m.name}
+            </option>
+          ))}
+        </select>
         <small className="text-muted d-block mt-1">
           {models.length > 0 ? (
             <>
@@ -335,10 +445,11 @@ export default function CarbonParamsPanel({
         <label className="form-label">Tahun Dataset Referensi</label>
         <select
           className="form-select"
+          id="carbonDatasetYear"
           value={params.datasetYear}
           onChange={(e) => onParamsChange({ datasetYear: Number(e.target.value) })}
         >
-          {CARBON_DATASET_YEARS.map((y) => (
+          {yearOptions.map((y) => (
             <option key={y} value={y}>
               {y}
             </option>
@@ -351,6 +462,7 @@ export default function CarbonParamsPanel({
         <div className="d-flex gap-2 align-items-center">
           <select
             className="form-select"
+            id="carbonStartMonth"
             value={params.startMonth}
             onChange={(e) => onParamsChange({ startMonth: Number(e.target.value) })}
           >
@@ -363,6 +475,7 @@ export default function CarbonParamsPanel({
           <span className="text-muted">s/d</span>
           <select
             className="form-select"
+            id="carbonEndMonth"
             value={params.endMonth}
             onChange={(e) => onParamsChange({ endMonth: Number(e.target.value) })}
           >
@@ -378,6 +491,7 @@ export default function CarbonParamsPanel({
       <div className="mb-3">
         <label className="form-label">Ambang Awan (%)</label>
         <input
+          id="carbonCloudSlider"
           type="range"
           className="form-range"
           min={0}

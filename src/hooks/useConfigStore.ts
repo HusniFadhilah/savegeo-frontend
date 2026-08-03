@@ -21,6 +21,7 @@ const DEFAULTS: Record<string, string | number> = {
   "carbon.vis_min": 0,
   "carbon.vis_max": 200,
   "carbon.vis_palette": "440154,414487,2a788e,22a884,7ad151,fde725",
+  "carbon.legend_bins": 6,
   "app.name": "SAVEGEO",
   "app.version": "1.0.0",
 };

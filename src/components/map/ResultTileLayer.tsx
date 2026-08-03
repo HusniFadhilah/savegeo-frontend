@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
+import { RESULT_PANE } from "@/config/mapPanes";
 
 interface Props {
   /** Remount (and thus re-add) whenever this changes, e.g. the active result tab key. */
@@ -27,6 +28,7 @@ export default function ResultTileLayer({ layerKey, tileUrl, opacity, attributio
     const layer = L.tileLayer(tileUrl, {
       attribution: attribution ?? "© Google Earth Engine",
       className: "gee-tile-layer",
+      pane: map.getPane(RESULT_PANE) ? RESULT_PANE : undefined,
       maxZoom: 18,
       opacity,
       errorTileUrl: TRANSPARENT_TILE,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import "@/styles/admin.css";
 import { AdminContext, type ToastType } from "./AdminContext";
@@ -82,12 +83,12 @@ export default function AdminDashboard() {
       <div className="admin-panel">
         <div className="layout">
           <div className="sidebar">
-            <div className="sb-logo">
+            <Link to="/" className="sb-logo" style={{ textDecoration: "none" }}>
               <img src="/logo.jpg" alt="SAVEGEO" className="sb-logo-img" />
               <div className="sb-logo-text">
                 SAVEGEO <small>Admin Panel v1.0</small>
               </div>
-            </div>
+            </Link>
             <div className="sb-nav">
               {NAV_SECTIONS.map((grp) => (
                 <div key={grp.section}>

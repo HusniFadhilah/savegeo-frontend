@@ -1,22 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePagination from "@/components/ui/TablePagination";
 import {
   deleteCompany,
   importCompaniesFromGFW,
   importCompaniesFromOSM,
-  listCompanies,
   saveCompany,
   toggleCompanyActive,
 } from "../api";
-import { INDUSTRY_LABEL, SOURCE_LABEL } from "../types";
+import { INDUSTRY_LABEL, INDUSTRY_OPTIONS, SOURCE_LABEL } from "../types";
 import type { CompanyBoundaryFull } from "../types";
 import { useAdmin } from "../AdminContext";
-
-const INDUSTRY_OPTIONS = [
-  { value: "mining", label: "Pertambangan" },
-  { value: "forestry", label: "Kehutanan (HPH/HTI)" },
-  { value: "plantation", label: "Perkebunan (HGU)" },
-  { value: "energy", label: "Energi (PLTU/PLTS/Migas)" },
-];
 
 const GEOJSON_TYPES = new Set([
   "Feature",
@@ -55,13 +49,15 @@ function validateGeoJsonText(text: string): string | null {
 
 export default function CompanyBoundaries() {
   const { notify } = useAdmin();
-  const [all, setAll] = useState<CompanyBoundaryFull[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<number | null>(null);
-
-  const [search, setSearch] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
+  const {
+    rows, loading, error, page, pageCount, pageSize,
+    recordsTotal, recordsFiltered, search, setSearch,
+    nextPage, prevPage, reload,
+  } = useServerTable<CompanyBoundaryFull>("/admin/companies", {
+    extraParams: industryFilter ? { industry_type: industryFilter } : {},
+  });
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   // manual add form
   const [formOpen, setFormOpen] = useState(false);
@@ -89,33 +85,6 @@ export default function CompanyBoundaries() {
   });
   const [importLog, setImportLog] = useState("");
   const [importing, setImporting] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await listCompanies();
-      setAll(r.companies || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data perusahaan");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const filtered = useMemo(() => {
-    if (!all) return [];
-    const q = search.toLowerCase();
-    return all.filter(
-      (c) =>
-        (!industryFilter || c.industry_type === industryFilter) &&
-        (!q || c.name.toLowerCase().includes(q) || (c.company_name || "").toLowerCase().includes(q)),
-    );
-  }, [all, search, industryFilter]);
 
   const pickFile = (f: File | null) => {
     if (!f) return;
@@ -197,7 +166,7 @@ export default function CompanyBoundaries() {
       notify("Company boundary berhasil disimpan", "s");
       setFormOpen(false);
       resetForm();
-      await load();
+      await reload();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan";
       setFormError(msg);
@@ -211,7 +180,7 @@ export default function CompanyBoundaries() {
     setBusyId(id);
     try {
       await toggleCompanyActive(id, isActive);
-      await load();
+      await reload();
     } catch {
       notify("Gagal mengubah status", "e");
     } finally {
@@ -225,7 +194,7 @@ export default function CompanyBoundaries() {
     try {
       await deleteCompany(id);
       notify("Dihapus", "s");
-      await load();
+      await reload();
     } catch {
       notify("Gagal menghapus", "e");
     } finally {
@@ -246,7 +215,7 @@ export default function CompanyBoundaries() {
     try {
       const r = await importCompaniesFromOSM(types);
       setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
-      await load();
+      await reload();
     } catch (err) {
       setImportLog(`Error: ${err instanceof Error ? err.message : "Gagal import OSM"}`);
     } finally {
@@ -260,7 +229,7 @@ export default function CompanyBoundaries() {
     try {
       const r = await importCompaniesFromGFW(dataset);
       setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
-      await load();
+      await reload();
     } catch (err) {
       setImportLog(`Error: ${err instanceof Error ? err.message : "Gagal import GFW"}`);
     } finally {
@@ -477,7 +446,7 @@ export default function CompanyBoundaries() {
               </option>
             ))}
           </select>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && `${filtered.length} entri`}</span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && `${recordsFiltered} entri`}</span>
         </div>
 
         {/* Table */}
@@ -520,7 +489,7 @@ export default function CompanyBoundaries() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && filtered.length === 0 && (
+              {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada data. Tambah manual atau import dari open data.
@@ -529,7 +498,7 @@ export default function CompanyBoundaries() {
               )}
               {!loading &&
                 !error &&
-                filtered.map((c) => (
+                rows.map((c) => (
                   <tr key={c.id}>
                     <td title={c.name}>{c.name.length > 30 ? `${c.name.slice(0, 28)}…` : c.name}</td>
                     <td>{c.company_name || "—"}</td>
@@ -566,6 +535,19 @@ export default function CompanyBoundaries() {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={page}
+          pageCount={pageCount}
+          recordsTotal={recordsTotal}
+          recordsFiltered={recordsFiltered}
+          pageSize={pageSize}
+          search={search}
+          onSearchChange={setSearch}
+          onPrev={prevPage}
+          onNext={nextPage}
+          searchPlaceholder="Cari nama, perusahaan..."
+          showSearch={false}
+        />
       </div>
     </div>
   );

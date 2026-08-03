@@ -71,9 +71,14 @@ export function fetchIndonesiaGeometry(): Promise<GeoJSON.GeoJSON> {
   return apiClient.get<GeoJSON.GeoJSON>("/regions/indonesia/geometry");
 }
 
-/** GET /regions/geometry returns the raw geometry object directly (backend already unwraps the upstream envelope). */
-export function fetchRegionGeometry(endpoint: string, code: string): Promise<GeoJSON.Geometry> {
-  return apiClient.get<GeoJSON.Geometry>(
+/**
+ * GET /regions/geometry passes through the upstream admin-boundary API's response
+ * unmodified (matches the legacy Flask contract) - in practice this is usually a
+ * FeatureCollection, not a bare Geometry. Callers must normalize via
+ * AoiRegionTab's `toFeature()` (or equivalent) before using it as an AOI.
+ */
+export function fetchRegionGeometry(endpoint: string, code: string): Promise<GeoJSON.GeoJSON> {
+  return apiClient.get<GeoJSON.GeoJSON>(
     `/regions/geometry?endpoint=${encodeURIComponent(endpoint)}&code=${encodeURIComponent(code)}`,
   );
 }

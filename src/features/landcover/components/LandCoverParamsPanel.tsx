@@ -52,6 +52,33 @@ export default function LandCoverParamsPanel({ params, onParamsChange }: Props) 
           }))}
           placeholder="Cari dataset LULC..."
         />
+        <select
+          id="landcoverDatasetSelect"
+          className="visually-hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          multiple
+          value={params.datasets}
+          onChange={(e) =>
+            onParamsChange({
+              datasets: Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value),
+            })
+          }
+        >
+          {datasetList.map((ds) => (
+            <option key={ds.key} value={ds.key}>
+              {ds.name}
+            </option>
+          ))}
+          {!datasetList.length &&
+            ["Dynamic_World", "ESA_WorldCover", "ESRI_LandCover", "MODIS_LandCover", "Copernicus_LandCover"].map(
+              (key) => (
+                <option key={key} value={key}>
+                  {key.replace(/_/g, " ")}
+                </option>
+              ),
+            )}
+        </select>
         <small className="text-muted d-block mt-1">
           Pilih satu atau beberapa dataset LULC.
         </small>
@@ -107,8 +134,9 @@ export default function LandCoverParamsPanel({ params, onParamsChange }: Props) 
         <label className="form-label">Rentang Bulan (Dynamic World)</label>
         <div className="d-flex gap-2">
           <select
-            className="form-select"
-            value={params.startMonth}
+          className="form-select"
+          id="lcStartMonth"
+          value={params.startMonth}
             onChange={(e) => onParamsChange({ startMonth: Number(e.target.value) })}
           >
             {MONTHS.map((m, i) => (
@@ -119,8 +147,9 @@ export default function LandCoverParamsPanel({ params, onParamsChange }: Props) 
           </select>
           <span className="align-self-center">s/d</span>
           <select
-            className="form-select"
-            value={params.endMonth}
+          className="form-select"
+          id="lcEndMonth"
+          value={params.endMonth}
             onChange={(e) => onParamsChange({ endMonth: Number(e.target.value) })}
           >
             {MONTHS.map((m, i) => (

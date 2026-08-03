@@ -2,19 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { listCompanies, getCompanyGeojson } from "@/features/carbon/api";
 import type { CompanyBoundary } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
+import { INDUSTRY_LABEL as TYPE_LABEL } from "@/types/api";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
 }
-
-const TYPE_LABEL: Record<string, string> = {
-  mining: "Pertambangan",
-  forestry: "Kehutanan",
-  plantation: "Perkebunan",
-  energy: "Energi",
-};
 
 /**
  * Ported from module-carbon.html's #aoiCompany tab + main.js
@@ -94,30 +88,35 @@ export default function AoiCompanyTab({ onApply }: Props) {
   }
 
   return (
-    <div>
-      <div className="d-flex gap-2 mb-2 flex-wrap align-items-center">
-        <input
-          type="text"
-          className="form-control form-control-sm"
-          placeholder="Cari nama perusahaan..."
-          style={{ maxWidth: 200 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          className="form-select form-select-sm"
-          style={{ minWidth: 160 }}
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-        >
-          <option value="">Semua jenis industri</option>
-          {Object.entries(TYPE_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <div style={{ minWidth: 160 }}>
+    <div className="co-aoi">
+      <div className="row g-2 mb-3">
+        <div className="col-md-5">
+          <div className="co-aoi-search">
+            <i className="bi bi-search" />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Cari nama perusahaan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="col-md-3">
+          <select
+            className="form-select"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="">Semua jenis industri</option>
+            {Object.entries(TYPE_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-md-4">
           <SearchableSelect
             value={provinceFilter}
             onChange={setProvinceFilter}
@@ -128,49 +127,55 @@ export default function AoiCompanyTab({ onApply }: Props) {
         </div>
       </div>
 
-      {loading && (
-        <div className="text-muted small mb-2">
-          <span className="spinner-border spinner-border-sm me-1" /> Memuat data...
-        </div>
-      )}
-      {!loading && !filtered.length && (
-        <div className="text-muted small mb-2">
-          Tidak ada data perusahaan. Tambahkan melalui Panel Admin.
-        </div>
-      )}
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
 
-      <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #dee2e6", borderRadius: 6 }}>
-        {filtered.map((c) => {
-          const areaStr = c.area_ha
-            ? `${c.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 0 })} ha`
-            : "";
-          return (
-            <div
-              key={c.id}
-              className="p-2"
-              style={{
-                cursor: "pointer",
-                borderBottom: "1px solid #dee2e6",
-                fontSize: 13,
-                background: selectedId === c.id ? "#e8f4fe" : undefined,
-              }}
-              onClick={() => setSelectedId(c.id)}
-            >
-              <div className="fw-semibold">{c.name}</div>
-              <div className="text-muted small">
-                {TYPE_LABEL[c.industry_type] || c.industry_type}
-                {c.sub_type ? ` · ${c.sub_type}` : ""}
-                {c.province ? ` · ${c.province}` : ""}
-                {areaStr ? ` · ${areaStr}` : ""}
+      {loading ? (
+        <div className="co-aoi-empty">
+          <span className="spinner-border spinner-border-sm me-2" /> Memuat data perusahaan...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="co-aoi-empty">
+          <i className="bi bi-building-slash" />
+          <div>Tidak ada data perusahaan.</div>
+          <small className="text-muted">Tambahkan melalui Panel Admin.</small>
+        </div>
+      ) : (
+        <div className="co-aoi-list">
+          {filtered.map((c) => {
+            const areaStr = c.area_ha
+              ? `${c.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 0 })} ha`
+              : "";
+            const isSelected = selectedId === c.id;
+            return (
+              <div
+                key={c.id}
+                className={`co-aoi-item ${isSelected ? "selected" : ""}`}
+                onClick={() => setSelectedId(c.id)}
+              >
+                <div className="co-aoi-item-check">
+                  <i className={`bi ${isSelected ? "bi-check-circle-fill" : "bi-circle"}`} />
+                </div>
+                <div className="co-aoi-item-body">
+                  <div className="co-aoi-item-name">{c.name}</div>
+                  <div className="co-aoi-item-meta">
+                    <span className="co-aoi-tag">{TYPE_LABEL[c.industry_type] || c.industry_type}</span>
+                    {c.sub_type && <span>{c.sub_type}</span>}
+                    {c.province && (
+                      <span>
+                        <i className="bi bi-geo-alt" /> {c.province}
+                      </span>
+                    )}
+                    {areaStr && <span>{areaStr}</span>}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {selected && (
-        <button className="btn btn-success mt-2" onClick={handleUseAsAoi} disabled={applying}>
+        <button className="btn btn-success mt-3" onClick={handleUseAsAoi} disabled={applying}>
           {applying ? (
             <>
               <span className="spinner-border spinner-border-sm me-1" /> Memuat...

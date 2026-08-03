@@ -1,7 +1,20 @@
+import { useEffect, useRef, useState } from "react";
 import { useUiStore } from "@/hooks/useUiStore";
 
 export default function LoadingOverlay() {
   const loading = useUiStore((s) => s.loading);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(0);
+
+  useEffect(() => {
+    if (!loading.visible) return;
+    startRef.current = performance.now();
+    setElapsed(0);
+    const id = setInterval(() => {
+      setElapsed((performance.now() - startRef.current) / 1000);
+    }, 100);
+    return () => clearInterval(id);
+  }, [loading.visible]);
 
   if (!loading.visible) return null;
 
@@ -21,7 +34,10 @@ export default function LoadingOverlay() {
             style={{ width: `${loading.progress}%` }}
           />
         </div>
-        <div className="small text-muted mt-2">Estimasi tahap proses</div>
+        <div className="small text-muted mt-2">Estimasi tahap: ±{loading.progress}%</div>
+        <div className="loading-timer mt-1">
+          <i className="bi bi-clock" /> {elapsed.toFixed(1)}s
+        </div>
       </div>
     </div>
   );

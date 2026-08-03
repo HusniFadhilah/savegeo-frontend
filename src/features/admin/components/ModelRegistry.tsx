@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { deleteModel, listModels, setDefaultModel, toggleModelActive, uploadModel } from "../api";
+import { useRef, useState } from "react";
+import { deleteModel, setDefaultModel, toggleModelActive, uploadModel } from "../api";
 import type { MlModel } from "../types";
 import { useAdmin } from "../AdminContext";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePagination from "@/components/ui/TablePagination";
 
 const ALGOS = ["Ridge", "Lasso", "Linear", "ElasticNet", "RandomForest", "XGBoost"];
 const TYPES = ["carbon", "vegetation", "landcover"];
@@ -63,9 +65,11 @@ function ModelStatusBadges({ m }: { m: MlModel }) {
 
 export default function ModelRegistry() {
   const { notify } = useAdmin();
-  const [rows, setRows] = useState<MlModel[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    rows, loading, error, page, pageCount, pageSize,
+    recordsTotal, recordsFiltered, search, setSearch,
+    nextPage, prevPage, reload,
+  } = useServerTable<MlModel>("/admin/models");
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -81,23 +85,6 @@ export default function ModelRegistry() {
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await listModels();
-      setRows(r.models || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat models");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const validateFile = (f: File): string | null => {
     const lower = f.name.toLowerCase();
@@ -158,7 +145,7 @@ export default function ModelRegistry() {
       setFile(null);
       setName("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      await load();
+      await reload();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal upload";
       setFormError(msg);
@@ -173,7 +160,7 @@ export default function ModelRegistry() {
     try {
       await setDefaultModel(id);
       notify("Default model diperbarui", "s");
-      await load();
+      await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
     } finally {
@@ -186,7 +173,7 @@ export default function ModelRegistry() {
     try {
       await toggleModelActive(id, current);
       notify("Status model diperbarui", "s");
-      await load();
+      await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
     } finally {
@@ -200,7 +187,7 @@ export default function ModelRegistry() {
     try {
       await deleteModel(id);
       notify("Model dihapus", "s");
-      await load();
+      await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
     } finally {
@@ -347,7 +334,7 @@ export default function ModelRegistry() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && rows && rows.length === 0 && (
+              {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada model. Upload model ML terlebih dahulu.
@@ -356,7 +343,7 @@ export default function ModelRegistry() {
               )}
               {!loading &&
                 !error &&
-                rows?.map((m) => {
+                rows.map((m) => {
                   const featureCount = m.metrics?.n_features ?? (m.metadata_json?.n_features as number) ?? m.feature_names?.length ?? 0;
                   const sampleCount = m.metrics?.n_samples ?? (m.metadata_json?.n_samples as number) ?? "—";
                   const updatedAt = m.updated_at ? new Date(m.updated_at).toLocaleDateString("id-ID") : "—";
@@ -416,6 +403,18 @@ export default function ModelRegistry() {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={page}
+          pageCount={pageCount}
+          recordsTotal={recordsTotal}
+          recordsFiltered={recordsFiltered}
+          pageSize={pageSize}
+          search={search}
+          onSearchChange={setSearch}
+          onPrev={prevPage}
+          onNext={nextPage}
+          searchPlaceholder="Cari nama model, algoritma..."
+        />
       </div>
     </div>
   );

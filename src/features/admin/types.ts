@@ -98,11 +98,21 @@ export interface CompanyBoundaryFull {
 }
 
 export interface AdminUserRow {
+  id: number;
   username: string;
   email?: string | null;
   is_active: boolean;
+  role?: string | null;
   created_at?: string | null;
   last_login?: string | null;
+}
+
+export interface AdminRole {
+  id: number;
+  name: string;
+  description?: string | null;
+  is_default: boolean;
+  permissions: string[];
 }
 
 export interface AiProviderDef {
@@ -150,17 +160,10 @@ export const CAT_COLORS: Record<string, string> = {
   ai: "badge-purple",
 };
 
-export const INDUSTRY_LABEL: Record<string, string> = {
-  mining: "Pertambangan",
-  forestry: "Kehutanan",
-  plantation: "Perkebunan",
-  energy: "Energi",
-};
-
-export const SOURCE_LABEL: Record<string, string> = {
-  manual: "Manual",
-  osm: "OpenStreetMap",
-  gfw: "GlobalForestWatch",
-};
+// Canonical definitions moved to src/types/api.ts (shared with the carbon
+// feature's company AOI picker, which had its own drifting copy) -
+// re-exported here so existing imports of `INDUSTRY_LABEL`/`SOURCE_LABEL`
+// from this module keep working unchanged.
+export { INDUSTRY_LABEL, INDUSTRY_OPTIONS, COMPANY_SOURCE_LABEL as SOURCE_LABEL } from "@/types/api";
 
 export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co";
