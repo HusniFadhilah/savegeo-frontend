@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "./lib/geo";
 import type {
   CarbonDeltaResponse,
@@ -117,8 +118,8 @@ export async function analyzeCarbon({
     // day of endMonth, not "first day of next month". The old `-28` truncated
     // the last 0-3 days of any longer month from every non-GEE carbon composite.
     const lastDayOfEndMonth = new Date(params.year, params.endMonth, 0).getDate();
-    return apiClient.post<CarbonResult>(
-      "/analyze/carbon-local",
+    return runAnalysisJob<CarbonResult>(
+      "carbon_local",
       {
         aoi,
         model_name: selectedModel.name,
@@ -134,8 +135,8 @@ export async function analyzeCarbon({
     );
   }
 
-  return apiClient.post<CarbonResult>(
-    "/analyze/carbon",
+  return runAnalysisJob<CarbonResult>(
+    "carbon",
     {
       aoi,
       year: params.year,
