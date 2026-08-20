@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { LandCoverDatasetCatalog, LandCoverParams, LandCoverResult } from "./types";
 
@@ -25,5 +26,5 @@ export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCove
     payload.end_date = params.endDate || `${year}-12-31`;
   }
 
-  return apiClient.post<LandCoverResult>("/analyze/landcover", payload);
+  return runAnalysisJob<LandCoverResult>("landcover", payload, { timeoutMs: 650_000 });
 }
