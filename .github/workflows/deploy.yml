@@ -76,6 +76,19 @@ jobs:
           rsync -az --delete \
             -e "sshpass -e ssh -p 6970" \
             dist/ ubuntu@192.168.17.55:/home/ubuntu/savegeo/frontend/dist/
+          sshpass -e ssh -p 6970 ubuntu@192.168.17.55 \
+            'mkdir -p /home/ubuntu/savegeo/frontend/deploy'
+          rsync -az \
+            -e "sshpass -e ssh -p 6970" \
+            deploy/savegeo-apache.conf ubuntu@192.168.17.55:/home/ubuntu/savegeo/frontend/deploy/savegeo-apache.conf
+          sshpass -e ssh -p 6970 ubuntu@192.168.17.55 '
+            set -euo pipefail
+            sudo install -m 0644 \
+              /home/ubuntu/savegeo/frontend/deploy/savegeo-apache.conf \
+              /etc/apache2/sites-available/savegeo.len.co.id.conf
+            sudo apache2ctl configtest
+            sudo systemctl reload apache2
+          '
           curl --fail --silent --show-error \
             --resolve savegeo.len.co.id:80:192.168.17.55 \
             http://savegeo.len.co.id/ >/dev/null
