@@ -100,6 +100,50 @@ export default function CarbonTimeSeriesPanel({ result, zoom, center }: Props) {
           </div>
         </div>
 
+        <div className="table-responsive mb-3">
+          <table className="table table-sm mb-0" style={{ fontSize: ".8rem" }}>
+            <thead>
+              <tr className="text-muted">
+                <th>Tahun</th>
+                <th>Densitas</th>
+                <th>Citra Dipakai</th>
+                <th>% Bebas Awan</th>
+                <th>Sumber</th>
+              </tr>
+            </thead>
+            <tbody>
+              {series.map((p) => {
+                const lowQuality = p.valid_pixel_pct != null && p.valid_pixel_pct < 70;
+                return (
+                  <tr key={p.year} className={lowQuality ? "table-warning" : ""}>
+                    <td className="fw-bold">{p.year}</td>
+                    <td>{p.mean_density} Mg/ha</td>
+                    <td>{p.images_used ?? "-"} scene</td>
+                    <td className={lowQuality ? "text-danger fw-bold" : ""}>
+                      {p.valid_pixel_pct != null ? `${p.valid_pixel_pct}%` : "-"}
+                    </td>
+                    <td>
+                      {p.gap_filled ? (
+                        <span className="text-warning" title="Sebagian piksel diisi dari jendela +/-90 hari karena awan tebal di periode utama">
+                          <i className="bi bi-exclamation-triangle" /> gap-filled
+                        </span>
+                      ) : (
+                        <span className="text-success">
+                          <i className="bi bi-check-circle" /> periode utama
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <small className="text-muted d-block mt-1">
+            <i className="bi bi-info-circle" /> Baris kuning = kualitas citra rendah tahun itu (&lt;70% bebas awan) -
+            cek ini dulu sebelum baca kenaikan/penurunan sebagai perubahan karbon yang nyata.
+          </small>
+        </div>
+
         <div style={{ height: 320 }}>
           <Line
             data={{

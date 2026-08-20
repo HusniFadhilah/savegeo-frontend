@@ -1,16 +1,7 @@
-import type L from "leaflet";
-import type { AoiFeature } from "@/types/map";
-
-export type AoiSource = "drawn" | "upload" | "admin" | "coordinate" | "company";
-
-/** Mirrors legacy `currentAOI` (main.js) - single source of truth for the module. */
-export interface AoiState {
-  source: AoiSource;
-  name: string;
-  areaKm2: number | null;
-  feature: AoiFeature;
-  bounds: L.LatLngBounds | null;
-}
+/** AoiState/AoiSource moved to @/hooks/useAoiStore (shared cross-module store,
+ * mirrors legacy `currentAOI` from main.js) - re-exported here so existing
+ * `from "@/features/carbon/types"` imports keep working. */
+export type { AoiState, AoiSource } from "@/hooks/useAoiStore";
 
 export type AnalysisType = "landcover" | "vegetation" | "carbon" | "combined";
 
@@ -96,6 +87,8 @@ export interface CarbonParams {
   datasetYear: number;
   modelName: string | null;
   showReference: boolean;
+  /** "scl" | "qa60" | "s2cloudless" - see GET /vegetation/cloud-mask-techniques (shared catalog). */
+  cloudMaskTechnique: string;
 }
 
 export interface CarbonStats {
@@ -180,6 +173,11 @@ export interface CarbonDeltaSeriesPoint {
   carbon_dioxide_equivalent_tons: number;
   /** Only present when the request set include_tiles:true (timelapse playback). */
   tile_url: string | null;
+  /** Data quality for THIS year's composite specifically - use this before reading a
+   * year-over-year swing as real biomass change (see analyze_carbon_delta docs). */
+  images_used: number | null;
+  valid_pixel_pct: number | null;
+  gap_filled: boolean | null;
 }
 
 export interface CarbonDeltaEntry {

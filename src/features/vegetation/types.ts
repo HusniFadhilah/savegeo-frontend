@@ -42,6 +42,22 @@ export interface VegetationParams {
   indices: string[];
   /** Satellite provider key (see GET /vegetation/satellites), e.g. "sentinel2" | "landsat8" | "landsat9". */
   satellite: string;
+  /** "scl" | "qa60" | "s2cloudless" - see GET /vegetation/cloud-mask-techniques. Sentinel-2 only, ignored for Landsat. */
+  cloudMaskTechnique: CloudMaskTechnique;
+}
+
+export type CloudMaskTechnique = "scl" | "qa60" | "s2cloudless";
+
+export interface CloudMaskTechniqueInfo {
+  label: string;
+  description: string;
+}
+
+/** GET /vegetation/cloud-mask-techniques response - shared by both the
+ * Vegetation and Carbon params panels (same Sentinel-2 masking options). */
+export interface CloudMaskTechniqueCatalogResponse {
+  techniques: Record<CloudMaskTechnique, CloudMaskTechniqueInfo>;
+  default: CloudMaskTechnique;
 }
 
 /** POST /timeseries response - monthly mean of one vegetation index across one year. */

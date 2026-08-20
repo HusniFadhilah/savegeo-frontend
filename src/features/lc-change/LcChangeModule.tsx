@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AoiFeature } from "@/types/map";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
+import { useAoiStore } from "@/hooks/useAoiStore";
+import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear } from "./api";
@@ -23,10 +25,11 @@ type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
  * matrix. Full port of `frontend-nextjs2` LCChange (main.js) +
  * module-lc-change.html, adapted to this app's foundation:
  *  - AOI: legacy reused the Carbon module's global `currentAOI`. This app
- *    has no shared cross-module AOI store yet (Carbon module is itself only
- *    a placeholder with local state), so LC-Change draws its own AOI via
- *    `AoiDrawingTools` on the "before" map. See report for the shared-store
- *    recommendation.
+ *    now shares AOI across modules via `useAoiStore` (see @/hooks/useAoiStore) -
+ *    an AOI set in the Carbon module's AoiPanel (admin/coordinate/draw/upload/
+ *    company tabs) shows up here too. LC-Change can still (re)draw/clear the
+ *    AOI directly via `AoiDrawingTools` on the "before" map, which writes
+ *    back to the same shared store.
  *  - Charts: legacy used Plotly (Sankey/heatmap/bar/stacked-area), which
  *    isn't installed here (only chart.js/react-chartjs-2). The transition
  *    matrix is a color-scaled HTML table instead of a Plotly heatmap; net
@@ -50,7 +53,25 @@ export default function LcChangeModule() {
   const maxYear = getInt("year.max", new Date().getFullYear());
   const minYear = getInt("year.min", 2015);
 
-  const [aoi, setAoi] = useState<AoiFeature | null>(null);
+  const aoiState = useAoiStore((s) => s.aoi);
+  const setAoiState = useAoiStore((s) => s.setAoi);
+  const aoi: AoiFeature | null = aoiState?.feature ?? null;
+  // Memoized: AoiDrawingTools' effect depends on this `onChange` identity to
+  // decide whether to tear down/recreate its Leaflet FeatureGroup - an inline
+  // function here would get a new identity every render (tab switch, dataset
+  // fetch, etc.), churning that effect and wiping the just-synced AOI layer
+  // (SyncAoiToGroup won't redraw it since none of *its* deps changed).
+  const handleAoiChange = useCallback(
+    (feature: AoiFeature | null) => {
+      if (!feature) {
+        setAoiState(null);
+        return;
+      }
+      const bounds = boundsFromGeoJSON(feature);
+      setAoiState({ source: "drawn", name: "Poligon Kustom", areaKm2: areaKm2(feature, bounds), feature, bounds });
+    },
+    [setAoiState],
+  );
   const [dataset, setDataset] = useState<LcDataset>("Dynamic_World");
   const [years, setYears] = useState<number[]>([maxYear - 1, maxYear]);
   const [startMonth, setStartMonth] = useState(1);
@@ -274,7 +295,7 @@ export default function LcChangeModule() {
               </div>
             )}
             {aoi && (
-              <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-2" onClick={() => setAoi(null)}>
+              <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-2" onClick={() => setAoiState(null)}>
                 <i className="fas fa-eraser" /> Hapus AOI
               </button>
             )}
@@ -413,13 +434,13 @@ export default function LcChangeModule() {
               <div className="card-header">
                 <ul className="nav nav-tabs card-header-tabs">
                   <li className="nav-item">
-                    <button className={`nav-link ${tab === "matrix" ? "active" : ""}`} onClick={() => setTab("matrix")}>
+                    <button className={`nav-link ${tab === "matrix" ? "active" : "text-white"}`} onClick={() => setTab("matrix")}>
                       <i className="fas fa-th" /> Matriks Transisi
                     </button>
                   </li>
                   <li className="nav-item">
                     <button
-                      className={`nav-link ${tab === "netchange" ? "active" : ""}`}
+                      className={`nav-link ${tab === "netchange" ? "active" : "text-white"}`}
                       onClick={() => setTab("netchange")}
                     >
                       <i className="fas fa-balance-scale" /> Net Change
@@ -427,19 +448,19 @@ export default function LcChangeModule() {
                   </li>
                   <li className="nav-item">
                     <button
-                      className={`nav-link ${tab === "timeseries" ? "active" : ""}`}
+                      className={`nav-link ${tab === "timeseries" ? "active" : "text-white"}`}
                       onClick={() => setTab("timeseries")}
                     >
                       <i className="fas fa-chart-area" /> Time Series
                     </button>
                   </li>
                   <li className="nav-item">
-                    <button className={`nav-link ${tab === "maps" ? "active" : ""}`} onClick={() => setTab("maps")}>
+                    <button className={`nav-link ${tab === "maps" ? "active" : "text-white"}`} onClick={() => setTab("maps")}>
                       <i className="fas fa-map-location-dot" /> Peta Perubahan
                     </button>
                   </li>
                   <li className="nav-item">
-                    <button className={`nav-link ${tab === "hotspot" ? "active" : ""}`} onClick={() => setTab("hotspot")}>
+                    <button className={`nav-link ${tab === "hotspot" ? "active" : "text-white"}`} onClick={() => setTab("hotspot")}>
                       <i className="fas fa-map-pin" /> Hotspot
                     </button>
                   </li>
@@ -456,7 +477,7 @@ export default function LcChangeModule() {
                 {tab === "maps" && (
                   <BeforeAfterMaps
                     aoi={aoi}
-                    onAoiChange={setAoi}
+                    onAoiChange={handleAoiChange}
                     dataset={dataset}
                     yearA={yearA}
                     yearB={yearB}
@@ -502,7 +523,7 @@ export default function LcChangeModule() {
         {!hasResults && (
           <BeforeAfterMaps
             aoi={aoi}
-            onAoiChange={setAoi}
+            onAoiChange={handleAoiChange}
             dataset={dataset}
             yearA={null}
             yearB={null}

@@ -146,6 +146,7 @@ export async function analyzeCarbon({
       reference_dataset: params.referenceDataset,
       dataset_year: params.datasetYear,
       model_name: params.modelName || null,
+      cloud_mask_technique: params.cloudMaskTechnique,
       vis_min: visMin,
       vis_max: visMax,
       vis_palette: visPalette.length ? visPalette : undefined,
@@ -163,6 +164,7 @@ export interface AnalyzeCarbonDeltaArgs {
   endMonth: number;
   cloudThreshold: number;
   modelName: string | null;
+  cloudMaskTechnique: string;
   /** true = also generate a map tile per year (timelapse playback), costs one getMapId() round trip per year. */
   includeTiles: boolean;
   visMin: number;
@@ -183,6 +185,7 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
       end_month: args.endMonth,
       cloud_threshold: args.cloudThreshold,
       model_name: args.modelName || null,
+      cloud_mask_technique: args.cloudMaskTechnique,
       include_tiles: args.includeTiles,
       vis_min: args.visMin,
       vis_max: args.visMax,

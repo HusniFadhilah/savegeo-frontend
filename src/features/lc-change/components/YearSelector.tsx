@@ -53,7 +53,12 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
       if (end < maxYear) end += 1;
       else start -= 1;
     }
-    onChange([start, end]);
+    // Every year in [start, end], not just the two endpoints - a 2015-2026
+    // drag should analyze all 12 years in between, not skip straight from
+    // 2015 to 2026.
+    const range: number[] = [];
+    for (let y = start; y <= end; y++) range.push(y);
+    onChange(range);
   };
 
   const spanPct = (v: number) => ((v - minYear) / Math.max(1, maxYear - minYear)) * 100;

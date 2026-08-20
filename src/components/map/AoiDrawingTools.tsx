@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet-draw";
@@ -88,4 +88,34 @@ export function setAoiOnMap(map: L.Map, group: L.FeatureGroup, feature: AoiFeatu
   layer.eachLayer((l) => group.addLayer(l));
   const bounds = group.getBounds();
   if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+}
+
+/**
+ * Redraws a persisted/shared AOI (e.g. from `useAoiStore`) into this map's own
+ * draw `FeatureGroup` on mount. `AoiDrawingTools` only ever populates that
+ * group from an interactive draw/edit event or an explicit `setAoiOnMap`
+ * call - a brand-new map instance (module remounted after a route change,
+ * a second map showing the same AOI, etc.) starts with an empty group and
+ * never gets the existing AOI drawn into it otherwise, even though the AOI
+ * *state* itself is still there. Only syncs while the group is empty, so it
+ * won't clobber a shape the user is actively drawing/editing in this map.
+ */
+export function SyncAoiToGroup({
+  aoi,
+  groupRef,
+}: {
+  aoi: AoiFeature | null;
+  groupRef: RefObject<L.FeatureGroup | null>;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    const group = groupRef.current;
+    if (!group) return;
+    if (!aoi) {
+      group.clearLayers();
+      return;
+    }
+    if (group.getLayers().length === 0) setAoiOnMap(map, group, aoi);
+  }, [aoi, map, groupRef]);
+  return null;
 }

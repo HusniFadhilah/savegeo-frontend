@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
+import { useAoiStore } from "@/hooks/useAoiStore";
 import { ApiError } from "@/services/apiClient";
 import AoiPanel from "./components/AoiPanel";
 import AnalysisTypeSelector from "./components/AnalysisTypeSelector";
@@ -26,7 +27,6 @@ import {
 import { boundsToPayload } from "@/features/carbon/lib/geo";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type {
-  AoiState,
   AnalysisType,
   CarbonParams,
   CarbonModelListItem,
@@ -68,7 +68,8 @@ export default function CarbonModule() {
 
   const [year, setYear] = useState(yearMax);
   const [zoom, setZoom] = useState(10);
-  const [aoi, setAoi] = useState<AoiState | null>(null);
+  const aoi = useAoiStore((s) => s.aoi);
+  const setAoi = useAoiStore((s) => s.setAoi);
   const [analysisType, setAnalysisType] = useState<AnalysisType>("carbon");
 
   const [carbonPartial, setCarbonPartial] = useState<CarbonPartial>({
@@ -80,6 +81,7 @@ export default function CarbonModule() {
     datasetYear: CARBON_DATASET_YEARS[0],
     modelName: null,
     showReference: true,
+    cloudMaskTechnique: "scl",
   });
   const [selectedModel, setSelectedModel] = useState<CarbonModelListItem | null>(null);
 
@@ -103,6 +105,7 @@ export default function CarbonModule() {
     cloudThreshold: 40,
     indices: DEFAULT_VEGETATION_INDICES,
     satellite: "sentinel2",
+    cloudMaskTechnique: "scl",
   });
 
   // P0 "time-series & timelapse" for vegetation - carbon-only-style toggle,
@@ -118,8 +121,12 @@ export default function CarbonModule() {
     datasets: ["Dynamic_World"],
     dwMode: "mode",
     includeImprobableClasses: false,
+    dateMode: "year",
     startMonth: 1,
     endMonth: 6,
+    selectedMonth: 7,
+    startDate: `${yearMax}-01-01`,
+    endDate: `${yearMax}-12-31`,
   });
 
   const [running, setRunning] = useState(false);
@@ -184,6 +191,7 @@ export default function CarbonModule() {
         endMonth: carbonParams.endMonth,
         cloudThreshold: carbonParams.cloudThreshold,
         modelName: carbonParams.modelName,
+        cloudMaskTechnique: carbonParams.cloudMaskTechnique,
         includeTiles: deltaIncludeTiles,
         visMin,
         visMax,
@@ -228,6 +236,7 @@ export default function CarbonModule() {
         index: vegTsIndex,
         cloudThreshold: vegParams.cloudThreshold,
         satellite: vegParams.satellite,
+        cloudMaskTechnique: vegParams.cloudMaskTechnique,
       });
       setVegTsResult(res);
     } catch (err) {
@@ -525,6 +534,7 @@ export default function CarbonModule() {
           {(analysisType === "landcover" || analysisType === "combined") && (
             <LandCoverParamsPanel
               params={lcParams}
+              year={year}
               onParamsChange={(patch) => setLcParams((p) => ({ ...p, ...patch }))}
             />
           )}
