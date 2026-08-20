@@ -95,8 +95,8 @@ export interface AnalyzeCarbonArgs {
 // tends to run long (native_classifier/many-feature models, big AOIs), so give
 // it more headroom than the default before the frontend gives up on a request
 // the backend is still legitimately working on.
-const CARBON_TIMEOUT_MS = 300_000; // 5 min
-const CARBON_DELTA_TIMEOUT_MS = 600_000; // 10 min - repeats the single-year pipeline once per year in range
+const CARBON_TIMEOUT_MS = 650_000; // ~11 min - aligned with production proxy timeout for long GEE analyses
+const CARBON_DELTA_TIMEOUT_MS = 900_000; // 15 min - repeats the single-year pipeline once per year in range
 
 export async function analyzeCarbon({
   aoi,
