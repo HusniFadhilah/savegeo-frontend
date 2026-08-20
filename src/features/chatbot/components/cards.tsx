@@ -1,5 +1,6 @@
 import { actionLabel } from "../utils/actionLabel";
-import type { ChatAction, QuickAction } from "../types";
+import { zoomToFeature, highlightPolygon } from "../mapActions";
+import type { ChatAction, QuickAction, ResultCard, ResultSource } from "../types";
 
 /* ── Warnings block ────────────────────────────────────────────── */
 export function WarningsBlock({ warnings }: { warnings: string[] }) {
@@ -237,4 +238,153 @@ export function BoundaryDownloadCard({
       </div>
     </div>
   );
+}
+
+/* ── Geo-AI Assistant result cards (spec section 14) ────────────────
+ * Rendered from `resultCard` LogEntry items - one per entry in a geoai-mode
+ * response's `cards[]`. Every card carries its `source` for provenance
+ * (spec section 10 - "never invent numbers"), shown as a small footer note.
+ */
+
+function SourceFootnote({ source }: { source?: ResultSource }) {
+  if (!source?.source) return null;
+  const bits = [source.dataset, source.period].filter(Boolean).join(" · ");
+  return (
+    <div className="sgc-card-source">
+      <i className="bi bi-check2-circle" /> {source.source}
+      {bits ? ` (${bits})` : ""}
+    </div>
+  );
+}
+
+export function MetricResultCard({ card }: { card: Extract<ResultCard, { type: "metric" }> }) {
+  return (
+    <div className="sgc-result-card sgc-metric-card">
+      <div className="sgc-result-card-title">{card.title}</div>
+      <div className="sgc-metric-row">
+        {card.metrics.map((m, i) => (
+          <div key={i} className="sgc-metric-item">
+            <div className="sgc-metric-value">
+              {m.value}
+              {m.unit ? <span className="sgc-metric-unit"> {m.unit}</span> : null}
+            </div>
+            <div className="sgc-metric-label">{m.label}</div>
+          </div>
+        ))}
+      </div>
+      <SourceFootnote source={card.source} />
+    </div>
+  );
+}
+
+export function HotspotResultCard({
+  card,
+  onDetails,
+}: {
+  card: Extract<ResultCard, { type: "hotspot" }>;
+  onDetails: (message: string) => void;
+}) {
+  return (
+    <div className="sgc-result-card sgc-hotspot-card">
+      <div className="sgc-result-card-title">{card.title}</div>
+      <div className="sgc-metric-row">
+        <div className="sgc-metric-item">
+          <div className="sgc-metric-value">{card.area_ha.toLocaleString("id-ID")} ha</div>
+          <div className="sgc-metric-label">Area</div>
+        </div>
+        <div className="sgc-metric-item">
+          <div className="sgc-metric-value">{card.metric_value}</div>
+          <div className="sgc-metric-label">{card.metric_label}</div>
+        </div>
+        {card.period && (
+          <div className="sgc-metric-item">
+            <div className="sgc-metric-value">{card.period}</div>
+            <div className="sgc-metric-label">Periode</div>
+          </div>
+        )}
+      </div>
+      <div className="sgc-action-row">
+        <button type="button" className="sgc-chip" onClick={() => zoomToFeature(card.geometry)}>
+          <i className="bi bi-zoom-in" /> Zoom
+        </button>
+        <button
+          type="button"
+          className="sgc-chip"
+          onClick={() => highlightPolygon(card.geometry, { label: card.title })}
+        >
+          <i className="bi bi-pin-map" /> Highlight
+        </button>
+        <button
+          type="button"
+          className="sgc-chip"
+          onClick={() => onDetails(`Detail untuk ${card.title} (id ${card.id})`)}
+        >
+          <i className="bi bi-info-circle" /> Detail
+        </button>
+      </div>
+      <SourceFootnote source={card.source} />
+    </div>
+  );
+}
+
+export function ComparisonResultCard({ card }: { card: Extract<ResultCard, { type: "comparison" }> }) {
+  return (
+    <div className="sgc-result-card sgc-comparison-card">
+      <div className="sgc-result-card-title">{card.title}</div>
+      <div className="sgc-comparison-row">
+        <div className="sgc-comparison-col">
+          <div className="sgc-comparison-col-label">Sebelum</div>
+          <pre className="sgc-comparison-pre">{JSON.stringify(card.before, null, 1)}</pre>
+        </div>
+        <div className="sgc-comparison-col">
+          <div className="sgc-comparison-col-label">Sesudah</div>
+          <pre className="sgc-comparison-pre">{JSON.stringify(card.after, null, 1)}</pre>
+        </div>
+      </div>
+      <SourceFootnote source={card.source} />
+    </div>
+  );
+}
+
+export function WarningResultCard({ card }: { card: Extract<ResultCard, { type: "warning" }> }) {
+  return (
+    <div className="sgc-warnings">
+      <div className="sgc-warning-title">
+        <i className="bi bi-exclamation-triangle" /> Catatan
+      </div>
+      <p className="sgc-warning-item">{card.message}</p>
+    </div>
+  );
+}
+
+export function SuggestedActionResultCard({
+  card,
+  onSelect,
+}: {
+  card: Extract<ResultCard, { type: "suggested_action" }>;
+  onSelect: (message: string) => void;
+}) {
+  return (
+    <button type="button" className="sgc-chip sgc-suggested-action-chip" onClick={() => onSelect(card.message)}>
+      {card.label}
+    </button>
+  );
+}
+
+/** Dispatches a ResultCard union member to its component. */
+export function ResultCardView({ card, onSend }: { card: ResultCard; onSend: (message: string) => void }) {
+  switch (card.type) {
+    case "metric":
+      return <MetricResultCard card={card} />;
+    case "hotspot":
+      return <HotspotResultCard card={card} onDetails={onSend} />;
+    case "comparison":
+      return <ComparisonResultCard card={card} />;
+    case "warning":
+      return <WarningResultCard card={card} />;
+    case "suggested_action":
+      return <SuggestedActionResultCard card={card} onSelect={onSend} />;
+    default:
+      return null;
+  }
 }

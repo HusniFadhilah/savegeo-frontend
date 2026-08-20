@@ -8,11 +8,13 @@ import {
   fetchIslandGeometry,
   fetchIndonesiaGeometry,
   fetchRegionGeometry,
+  type LocationSearchResult,
 } from "@/services/analysisService";
 import { ApiError } from "@/services/apiClient";
 import type { RegionOption } from "@/types/api";
 import type { AoiFeature, AoiGeometry } from "@/types/map";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import AsyncLocationSelect from "@/components/ui/AsyncLocationSelect";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
@@ -57,6 +59,21 @@ function toFeature(input: GeoJSON.GeoJSON): AoiFeature {
   return { type: "Feature", geometry: asGeometry(input as GeoJSON.Geometry), properties: {} };
 }
 
+/** Build a rectangular AOI Feature from a Nominatim bbox - the fallback used
+ * when a search result has no real boundary polygon (e.g. a plain street
+ * address, which Nominatim only ever returns as a point + a small bbox). */
+function bboxToFeature(bbox: [number, number, number, number], name: string): AoiFeature {
+  const [west, south, east, north] = bbox;
+  return {
+    type: "Feature",
+    properties: { name },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+    },
+  };
+}
+
 /** Flatten multiple Polygon/MultiPolygon geometries into one MultiPolygon. */
 function mergeToMultiPolygon(geoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[]): GeoJSON.MultiPolygon {
   const coordinates: GeoJSON.Position[][][] = [];
@@ -91,6 +108,10 @@ export default function AoiRegionTab({ onApply }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Optional free-text search inside the "Seluruh Indonesia" scope - if left
+  // empty, "Muat Wilayah" still loads the whole-Indonesia geometry unchanged.
+  const [searchedLocation, setSearchedLocation] = useState<LocationSearchResult | null>(null);
 
   useEffect(() => {
     fetchProvinces()
@@ -153,6 +174,16 @@ export default function AoiRegionTab({ onApply }: Props) {
     setLoading(true);
     try {
       if (scope === "indonesia") {
+        if (searchedLocation) {
+          const feature = searchedLocation.geojson
+            ? toFeature(searchedLocation.geojson)
+            : searchedLocation.bbox
+              ? bboxToFeature(searchedLocation.bbox, searchedLocation.display_name)
+              : null;
+          if (!feature) throw new Error("Lokasi ini tidak punya area yang bisa dipakai sebagai AOI");
+          onApply(feature, searchedLocation.display_name);
+          return;
+        }
         const geometry = await fetchIndonesiaGeometry();
         if (!geometry) throw new Error("Geometri tidak ditemukan");
         onApply(toFeature(geometry), "Seluruh Indonesia");
@@ -282,6 +313,25 @@ export default function AoiRegionTab({ onApply }: Props) {
             placeholder="-- Pilih Pulau --"
             clearable
           />
+        </div>
+      )}
+
+      {scope === "indonesia" && (
+        <div className="mb-3">
+          <label className="form-label">Cari lokasi (opsional)</label>
+          <AsyncLocationSelect
+            selectedLabel={searchedLocation?.display_name}
+            onSelect={setSearchedLocation}
+            onClear={() => setSearchedLocation(null)}
+            placeholder="Kota, kabupaten, provinsi, kecamatan, kelurahan, jalan/alamat..."
+          />
+          <small className="text-muted d-block mt-1">
+            {searchedLocation
+              ? searchedLocation.geojson
+                ? "Batas wilayah asli ditemukan untuk lokasi ini."
+                : "Lokasi ini tidak punya batas wilayah persis - AOI dipakai dari perkiraan area (bbox)."
+              : "Kosongkan untuk memakai seluruh wilayah Indonesia."}
+          </small>
         </div>
       )}
 

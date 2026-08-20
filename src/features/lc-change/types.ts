@@ -83,6 +83,54 @@ export interface LcChangeMapResponse {
  */
 export type ChangeMapMode = "normal" | "changed" | "destination";
 
+export interface LcHotspotParams {
+  aoi: LcAoiPayload;
+  dataset: LcDataset;
+  from_year: number;
+  to_year: number;
+  start_month: number;
+  end_month: number;
+  /** Coarser than the classification's native resolution (default 3x) - keeps reduceToVectors fast. */
+  vector_scale?: number;
+  /** Drop connected-component slivers smaller than this before ranking (default 1 ha). */
+  min_area_ha?: number;
+  /** Cap on ranked results returned (default 20, max 100). */
+  top_n?: number;
+}
+
+export interface LcClassBadge {
+  value: number;
+  label: string;
+  color: string;
+}
+
+/** One ranked change polygon from POST /analyze/landcover-hotspots. */
+export interface LcHotspot {
+  area_ha: number;
+  from_class: LcClassBadge;
+  to_class: LcClassBadge;
+  centroid: [number, number] | null;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  /** Mean Dynamic World classification confidence (0-1) for this polygon, null for datasets with no per-pixel confidence source. */
+  confidence: number | null;
+}
+
+/** Response body of POST /analyze/landcover-hotspots (flat dict, not success/data wrapped). */
+export interface LcHotspotResponse {
+  dataset: LcDataset;
+  dataset_name: string;
+  from_year: number;
+  to_year: number;
+  from_effective_year: number;
+  to_effective_year: number;
+  resolution: string;
+  vector_scale: number;
+  min_area_ha: number;
+  hotspot_count: number;
+  confidence_available: boolean;
+  hotspots: LcHotspot[];
+}
+
 export interface TransitionData {
   matrix: Record<string, Record<string, number>>;
   allClasses: string[];

@@ -166,4 +166,188 @@ export const CAT_COLORS: Record<string, string> = {
 // from this module keep working unchanged.
 export { INDUSTRY_LABEL, INDUSTRY_OPTIONS, COMPANY_SOURCE_LABEL as SOURCE_LABEL } from "@/types/api";
 
-export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co";
+export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co" | "ds" | "sp";
+
+/** GET /admin/satellite-providers row - merged registry defaults + DB
+ * override, plus admin-only bookkeeping fields not exposed on the public
+ * GET /vegetation/satellites picker. */
+export interface SatelliteProviderRow {
+  key: string;
+  name: string;
+  provider: string;
+  gee_collection: string;
+  band_role_map: Record<string, string>;
+  resolution_m: number;
+  resolution_label: string;
+  revisit_days: number;
+  swath_km: number;
+  launch: string;
+  start_year: number;
+  bands_available: string[];
+  description: string;
+  is_active: boolean;
+  display_order: number;
+  /** true = an override row exists in the DB (has actually been edited); false = pure registry default still in effect. */
+  has_override: boolean;
+}
+
+// ── Disaster Intelligence Dashboard (Admin) ─────────────────────────
+// Mirrors savegeo/backend/docs/disaster-redesign-contract.md section A response
+// shapes 1:1 (each model's `.to_dict()`). Do not rename fields without checking
+// that doc + the backend models under app/db/models/ first.
+
+export type DisasterType =
+  | "flood"
+  | "landslide"
+  | "forest_fire"
+  | "earthquake"
+  | "tsunami"
+  | "volcanic_eruption"
+  | "storm"
+  | "drought"
+  | "other";
+
+export type DisasterEventStatus = "draft" | "processing" | "ready_for_review" | "published" | "archived";
+
+export type DisasterSeverity = "low" | "medium" | "high" | "critical";
+
+export interface DisasterEvent {
+  id: number;
+  name: string;
+  disaster_type: DisasterType | string;
+  location_name?: string | null;
+  province: string[];
+  district: string[];
+  event_date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status: DisasterEventStatus | string;
+  severity?: DisasterSeverity | string | null;
+  description?: string | null;
+  source?: string | null;
+  thumbnail?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface DisasterAoi {
+  id: number;
+  event_id: number;
+  /** Only present when the backend includes geometry (AOI.to_dict(include_geojson=True), the default). */
+  geojson?: GeoJSON.Feature | GeoJSON.Geometry | Record<string, unknown>;
+  area_ha?: number | null;
+  centroid?: { lat: number; lng: number } | null;
+  bbox?: number[] | null;
+  source: string;
+  created_at?: string | null;
+}
+
+export type ImageryPhase = "pre" | "post";
+
+export interface SatelliteImagery {
+  id: number;
+  event_id: number;
+  phase: ImageryPhase | string;
+  satellite: string;
+  acquisition_date: string;
+  sensor?: string | null;
+  resolution_m?: number | null;
+  cloud_coverage_pct?: number | null;
+  data_source?: string | null;
+  is_primary: boolean;
+  preview_tile_url?: string | null;
+  created_at?: string | null;
+}
+
+export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published";
+
+export interface AnalysisRun {
+  id: number;
+  event_id: number;
+  model_id: string;
+  model_version?: string | null;
+  aoi_id: number;
+  pre_imagery_id?: number | null;
+  post_imagery_id?: number | null;
+  status: AnalysisRunStatus | string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error_message?: string | null;
+  created_at?: string | null;
+}
+
+export interface AnalysisResult {
+  id: number;
+  run_id: number;
+  tile_url?: string | null;
+  statistics?: Record<string, unknown> | null;
+  /** Only present when the backend was asked for it (`include_features=True`) - always null for MVP's 3 real models. */
+  features?: GeoJSON.FeatureCollection | null;
+  legend: { label: string; color: string }[];
+  confidence_summary?: Record<string, unknown> | null;
+  is_published: boolean;
+  published_at?: string | null;
+  publication_version: number;
+  created_at?: string | null;
+}
+
+export interface AnalysisRunWithResult {
+  run: AnalysisRun;
+  result: AnalysisResult | null;
+}
+
+/** One entry from `app/registries/disaster_model_registry.py::list_models()`. */
+export interface DisasterModelRegistryEntry {
+  model_id: string;
+  backend_label: string;
+  user_label: string;
+  category: string;
+  version: string;
+  input_type: string[];
+  output_type: string;
+  satellite?: string | null;
+  description: string;
+  enabled: boolean;
+}
+
+export type HotspotImpactLevel = "low" | "medium" | "high" | "critical";
+
+export interface Hotspot {
+  id: number;
+  event_id: number;
+  analysis_result_id?: number | null;
+  name: string;
+  impact_level: HotspotImpactLevel | string;
+  geojson: GeoJSON.Feature | GeoJSON.Geometry | Record<string, unknown>;
+  stats?: Record<string, unknown> | null;
+  is_published: boolean;
+  created_at?: string | null;
+}
+
+export interface DisasterAuditLogEntry {
+  id: number;
+  admin_user_id?: number | null;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  detail?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  created_at?: string | null;
+}
+
+/** `GET /admin/disasters/{id}` response shape. */
+export interface DisasterEventDetail {
+  event: DisasterEvent;
+  aoi: DisasterAoi | null;
+  imagery: { pre: SatelliteImagery[]; post: SatelliteImagery[] };
+  runs: AnalysisRunWithResult[];
+}
+
+/** `GET /admin/disasters/{id}/qc` response shape. */
+export interface DisasterQcStatus {
+  aoi_configured: boolean;
+  pre_imagery_available: boolean;
+  post_imagery_available: boolean;
+  analyses: { model_id: string; status: string; has_statistics: boolean; has_legend: boolean; has_confidence: boolean }[];
+  ready_to_publish: boolean;
+}

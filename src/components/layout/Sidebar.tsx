@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
@@ -16,6 +17,7 @@ const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
 export default function Sidebar() {
   const { activeModule, setActiveModule, sidebarCollapsed, toggleSidebar } = useUiStore();
   const { language, setLanguage, t } = useI18nStore();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -23,6 +25,17 @@ export default function Sidebar() {
   const menuRef = useRef<HTMLUListElement>(null);
 
   const selectModule = (m: DashboardModule) => {
+    // "disaster" moved out of the in-page module-tab system into its own
+    // login-gated route (`/pemetaan-bencana` - the redesigned Disaster
+    // Intelligence Dashboard). The old in-page module still exists (now just
+    // the legacy BMKG/DEM/InaRISK panels, folded into the new dashboard's
+    // "Additional Sources" section too) but is no longer reachable from here
+    // to avoid two different things both being called "Pemetaan Bencana".
+    if (m === "disaster") {
+      navigate("/pemetaan-bencana");
+      setMobileOpen(false);
+      return;
+    }
     setActiveModule(m);
     setMobileOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });

@@ -1,0 +1,241 @@
+import { useEffect, useState } from "react";
+import { listSatelliteProvidersAdmin, resetSatelliteProvider, saveSatelliteProvider } from "../api";
+import type { SatelliteProviderRow } from "../types";
+import { useAdmin } from "../AdminContext";
+
+type EditableFields = Pick<
+  SatelliteProviderRow,
+  "name" | "provider" | "resolution_label" | "description" | "gee_collection" | "is_active" | "display_order"
+>;
+
+function toEditable(row: SatelliteProviderRow): EditableFields {
+  return {
+    name: row.name,
+    provider: row.provider,
+    resolution_label: row.resolution_label,
+    description: row.description,
+    gee_collection: row.gee_collection,
+    is_active: row.is_active,
+    display_order: row.display_order,
+  };
+}
+
+/**
+ * Admin editor for the satellite_providers DB overlay (app/db/models/
+ * satellite_provider_entry.py) on top of app/registries/
+ * satellite_provider_registry.py's static defaults - closes the last gap
+ * from the "jangan hardcode, simpan ke DB" request: until now this table
+ * was only editable via direct SQL. `gee_collection` here is the same field
+ * that actually drives which GEE ImageCollection gets queried (verified
+ * live) - editing it changes real analysis behavior, not just display text.
+ */
+export default function SatelliteProviders() {
+  const { notify } = useAdmin();
+  const [rows, setRows] = useState<SatelliteProviderRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draft, setDraft] = useState<EditableFields | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    listSatelliteProvidersAdmin()
+      .then((res) => setRows((res.satellites ?? []).sort((a, b) => a.display_order - b.display_order)))
+      .catch(() => notify("Gagal memuat daftar provider satelit", "e"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startEdit = (row: SatelliteProviderRow) => {
+    setEditingKey(row.key);
+    setDraft(toEditable(row));
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setDraft(null);
+  };
+
+  const save = async (key: string) => {
+    if (!draft) return;
+    setSaving(true);
+    try {
+      await saveSatelliteProvider(key, draft);
+      notify(`Provider "${key}" disimpan`, "s");
+      cancelEdit();
+      load();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Gagal menyimpan", "e");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetOverride = async (row: SatelliteProviderRow) => {
+    if (!row.has_override) return;
+    if (!confirm(`Hapus override "${row.key}" dan kembali ke default registry?`)) return;
+    try {
+      await resetSatelliteProvider(row.key);
+      notify(`Override "${row.key}" dihapus`, "s");
+      load();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Gagal reset", "e");
+    }
+  };
+
+  const toggleActive = async (row: SatelliteProviderRow) => {
+    try {
+      await saveSatelliteProvider(row.key, { is_active: !row.is_active });
+      load();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Gagal ubah status", "e");
+    }
+  };
+
+  if (loading) return <div className="p-3 text-muted">Memuat...</div>;
+
+  return (
+    <div>
+      <p className="text-muted mb-3" style={{ fontSize: ".85rem" }}>
+        <i className="bi bi-info-circle me-1" />
+        Overlay database di atas katalog statis (registry tetap jadi fallback kalau tidak ada baris DB). Mengubah{" "}
+        <code>GEE Collection</code> beneran mengganti sumber citra yang dipakai analisis vegetasi - hati-hati.
+      </p>
+
+      {editingKey && (
+        <div className="mb-3">
+          <label className="form-label small text-muted">Deskripsi ({editingKey})</label>
+          <textarea
+            className="form-control form-control-sm"
+            rows={2}
+            value={draft?.description ?? ""}
+            onChange={(e) => setDraft((d) => (d ? { ...d, description: e.target.value } : d))}
+          />
+        </div>
+      )}
+
+      <div className="table-responsive">
+        <table className="table table-sm table-hover align-middle">
+          <thead className="table-light">
+            <tr>
+              <th>Key</th>
+              <th>Nama</th>
+              <th>Provider</th>
+              <th>Resolusi</th>
+              <th>GEE Collection</th>
+              <th>Aktif</th>
+              <th>Override?</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const isEditing = editingKey === row.key;
+              return (
+                <tr key={row.key}>
+                  <td>
+                    <code>{row.key}</code>
+                  </td>
+                  <td style={{ minWidth: 160 }}>
+                    {isEditing ? (
+                      <input
+                        className="form-control form-control-sm"
+                        value={draft?.name ?? ""}
+                        onChange={(e) => setDraft((d) => (d ? { ...d, name: e.target.value } : d))}
+                      />
+                    ) : (
+                      row.name
+                    )}
+                  </td>
+                  <td style={{ minWidth: 140 }}>
+                    {isEditing ? (
+                      <input
+                        className="form-control form-control-sm"
+                        value={draft?.provider ?? ""}
+                        onChange={(e) => setDraft((d) => (d ? { ...d, provider: e.target.value } : d))}
+                      />
+                    ) : (
+                      row.provider
+                    )}
+                  </td>
+                  <td style={{ minWidth: 140 }}>
+                    {isEditing ? (
+                      <input
+                        className="form-control form-control-sm"
+                        value={draft?.resolution_label ?? ""}
+                        onChange={(e) => setDraft((d) => (d ? { ...d, resolution_label: e.target.value } : d))}
+                      />
+                    ) : (
+                      row.resolution_label
+                    )}
+                  </td>
+                  <td style={{ minWidth: 220 }}>
+                    {isEditing ? (
+                      <input
+                        className="form-control form-control-sm font-monospace"
+                        value={draft?.gee_collection ?? ""}
+                        onChange={(e) => setDraft((d) => (d ? { ...d, gee_collection: e.target.value } : d))}
+                      />
+                    ) : (
+                      <code style={{ fontSize: ".75rem" }}>{row.gee_collection}</code>
+                    )}
+                  </td>
+                  <td>
+                    <div className="form-check form-switch mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={row.is_active}
+                        onChange={() => toggleActive(row)}
+                        disabled={isEditing}
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    {row.has_override ? (
+                      <span className="badge bg-warning text-dark">DB override</span>
+                    ) : (
+                      <span className="badge bg-secondary">default registry</span>
+                    )}
+                  </td>
+                  <td className="text-end" style={{ whiteSpace: "nowrap" }}>
+                    {isEditing ? (
+                      <>
+                        <button className="btn btn-sm btn-success me-1" disabled={saving} onClick={() => save(row.key)}>
+                          <i className="bi bi-check-lg" />
+                        </button>
+                        <button className="btn btn-sm btn-outline-secondary" disabled={saving} onClick={cancelEdit}>
+                          <i className="bi bi-x-lg" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn btn-sm btn-outline-primary me-1" onClick={() => startEdit(row)}>
+                          <i className="bi bi-pencil" />
+                        </button>
+                        {row.has_override && (
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            title="Hapus override, kembali ke default"
+                            onClick={() => resetOverride(row)}
+                          >
+                            <i className="bi bi-arrow-counterclockwise" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  );
+}

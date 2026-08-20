@@ -635,11 +635,79 @@ body {
 }
 
 .loading-content {
+  position: relative;
   background: white;
   padding: 30px;
   border-radius: 10px;
   text-align: center;
   width: min(520px, calc(100vw - 32px));
+}
+
+.loading-minimize-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: 1px solid #d1d5db;
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  color: #495057;
+  cursor: pointer;
+}
+
+.loading-minimize-btn:hover {
+  background: #e9ecef;
+}
+
+/* Minimized state: small corner pill, no full-viewport blocking - the rest
+   of the app stays fully clickable while the request keeps running. */
+.loading-pill {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  padding: 10px 14px;
+  cursor: pointer;
+  max-width: 280px;
+}
+
+.loading-pill-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2e7d32;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.loading-pill-text {
+  min-width: 0;
+}
+
+.loading-pill-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-pill-sub {
+  font-size: 0.72rem;
+  color: #6c757d;
+}
+
+.loading-pill-expand {
+  color: #adb5bd;
+  flex-shrink: 0;
 }
 
 .spinner {

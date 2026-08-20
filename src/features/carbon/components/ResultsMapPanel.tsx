@@ -5,6 +5,8 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
+import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
+import { registerMap } from "@/features/chatbot/mapActions";
 import type { AoiState } from "@/features/carbon/types";
 import type { CarbonLayerResult } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
@@ -35,7 +37,13 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
 
   if (results.vegetation) {
     if (results.vegetation.rgb_tile_url) {
-      tabs.push({ key: "rgb", label: "RGB", icon: "bi-image", tileUrl: results.vegetation.rgb_tile_url });
+      const sat = results.vegetation.satellite;
+      tabs.push({
+        key: "rgb",
+        label: sat ? `RGB (${sat.name})` : "RGB",
+        icon: "bi-image",
+        tileUrl: results.vegetation.rgb_tile_url,
+      });
     }
     for (const [index, stats] of Object.entries(results.vegetation.indices || {})) {
       tabs.push({ key: index, label: index, icon: "bi-flower1", tileUrl: stats.tile_url });
@@ -175,9 +183,18 @@ export default function ResultsMapPanel({
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
 
+  // Swipe/compare: overlays a second layer on the same map with a draggable
+  // divider (satellite RGB vs. land cover vs. carbon stock, or the same
+  // layer across two separate analysis runs kept in `results`).
+  const [compareOn, setCompareOn] = useState(true);
+  const [compareKey, setCompareKey] = useState<string | null>(null);
+  const [compareOrientation, setCompareOrientation] = useState<SwipeOrientation>("vertical");
+
   useEffect(() => {
     setActiveKey(tabs[0]?.key ?? null);
     setOpacity(1);
+    setCompareOn(true);
+    setCompareKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
 
@@ -209,6 +226,16 @@ export default function ResultsMapPanel({
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
 
+  const compareTabs = tabs.filter((t) => t.key !== activeKey);
+  useEffect(() => {
+    if (!compareOn) return;
+    if (compareKey && compareTabs.some((t) => t.key === compareKey)) return;
+    setCompareKey(compareTabs[0]?.key ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compareOn, activeKey]);
+  const compareTab = compareTabs.find((t) => t.key === compareKey) ?? null;
+  const compareLegend = buildLegend(compareKey, results, visMin, visMax, visPalette, legendBins);
+
   return (
     <div className="card">
       <div className="card-header">
@@ -216,45 +243,107 @@ export default function ResultsMapPanel({
       </div>
       <div className="card-body">
         {tabs.length > 0 && (
-          <ul className="nav nav-tabs mb-3">
-            {tabs.map((tab) => (
-              <li className="nav-item" key={tab.key}>
-                <button
-                  type="button"
-                  className={`nav-link ${activeKey === tab.key ? "active" : ""}`}
-                  onClick={() => setActiveKey(tab.key)}
-                >
-                  <i className={`bi ${tab.icon} me-1`} />
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
+            <ul className="nav nav-tabs mb-0 flex-grow-1">
+              {tabs.map((tab) => (
+                <li className="nav-item" key={tab.key}>
+                  <button
+                    type="button"
+                    className={`nav-link ${activeKey === tab.key ? "active" : ""}`}
+                    onClick={() => setActiveKey(tab.key)}
+                  >
+                    <i className={`bi ${tab.icon} me-1`} />
+                    {tab.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {tabs.length > 1 && (
+              <button
+                type="button"
+                className={`btn btn-sm ${compareOn ? "btn-primary" : "btn-outline-secondary"} flex-shrink-0`}
+                onClick={() => setCompareOn((v) => !v)}
+                title="Bandingkan dua layer dengan slider geser"
+              >
+                <i className="fas fa-arrows-alt-h me-1" /> Bandingkan
+              </button>
+            )}
+          </div>
         )}
 
-        <div style={{ position: "relative" }}>
-          <MapView
-            key={mapKey}
-            id="carbonResultMap"
-            className="result-map"
-            center={center}
-            zoom={zoom}
-          >
-            <BasemapSwitcher />
-            <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
-            {activeTab?.tileUrl && (
-              <>
-                <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
-                <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
-              </>
-            )}
-          </MapView>
-          {legend.entries.length > 0 && (
-            <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 1000, maxWidth: 220 }}>
-              <MapLegend title={legend.title} entries={legend.entries} />
+        {compareOn && tabs.length > 1 && (
+          <div className="d-flex align-items-center gap-2 flex-wrap mb-2" style={{ fontSize: ".85rem" }}>
+            <span className="text-muted">Bandingkan <strong>{activeTab?.label}</strong> dengan:</span>
+            <select
+              className="form-select form-select-sm"
+              style={{ maxWidth: 220 }}
+              value={compareKey ?? ""}
+              onChange={(e) => setCompareKey(e.target.value)}
+            >
+              {compareTabs.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {compareOn && compareTab ? (
+          <div style={{ position: "relative" }}>
+            <SwipeCompareMap
+              id="carbonCompareMap"
+              beforeUrl={activeTab?.tileUrl ?? null}
+              afterUrl={compareTab.tileUrl ?? null}
+              beforeLabel={activeTab?.label ?? "Layer A"}
+              afterLabel={compareTab.label}
+              orientation={compareOrientation}
+              onOrientationChange={setCompareOrientation}
+              center={center}
+              zoom={zoom}
+            >
+              <BasemapSwitcher />
+              <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
+            </SwipeCompareMap>
+            <div className="row g-2 mt-1">
+              {legend.entries.length > 0 && (
+                <div className="col-md-6">
+                  <MapLegend title={legend.title} entries={legend.entries} />
+                </div>
+              )}
+              {compareLegend.entries.length > 0 && (
+                <div className="col-md-6">
+                  <MapLegend title={compareLegend.title} entries={compareLegend.entries} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div style={{ position: "relative" }}>
+            <MapView
+              key={mapKey}
+              id="carbonResultMap"
+              className="result-map"
+              center={center}
+              zoom={zoom}
+              onMapReady={(map) => registerMap("results", map)}
+            >
+              <BasemapSwitcher />
+              <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
+              {activeTab?.tileUrl && (
+                <>
+                  <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
+                  <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+                </>
+              )}
+            </MapView>
+            {legend.entries.length > 0 && (
+              <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 1000, maxWidth: 220 }}>
+                <MapLegend title={legend.title} entries={legend.entries} />
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab && !activeTab.tileUrl && (
           <div className="alert alert-info mt-2 mb-0 py-2 small">

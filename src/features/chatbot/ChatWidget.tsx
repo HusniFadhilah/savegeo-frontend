@@ -25,6 +25,8 @@ export default function ChatWidget() {
           onHistoryClick={chat.toggleSessionPanel}
           onNewChatClick={chat.newChat}
           onCloseClick={chat.close}
+          aoiName={chat.aoiName}
+          period={chat.period}
         />
         <SessionSidebar
           open={chat.sessionPanelOpen}
@@ -45,6 +47,7 @@ export default function ChatWidget() {
           onCancelConfirm={chat.cancelConfirmCard}
           onSelectChoice={chat.selectChoice}
           onResolveAoiOffer={chat.resolveAoiOffer}
+          onSendMessage={(msg) => chat.sendMessage(msg, { prefill: true })}
         />
         <QuickActionChips actions={chat.quickActions} onSelect={(msg) => chat.sendMessage(msg, { prefill: true })} />
         <ChatInputArea

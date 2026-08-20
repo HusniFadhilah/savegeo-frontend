@@ -1,5 +1,7 @@
 import { chatbotApi } from "./api";
 import { getAppValue } from "./windowBridge";
+import { zoomToLocation, zoomToFeature, highlightPolygon } from "./mapActions";
+import { useUiStore } from "@/hooks/useUiStore";
 import type { ChatAction, QuickAction } from "./types";
 
 /**
@@ -19,7 +21,16 @@ export interface ActionRunContext {
   /** feature === null means "AOI already set on map, nothing to download". */
   offerBoundaryDownload: (name: string, feature: GeoJSON.Feature | null) => void;
   setFileInputAccept: (accept: string) => void;
+  /** geoai-mode: resolve a hotspot_id action field to that hotspot's geometry, from this turn's cards[]. */
+  getHotspotGeometry?: (hotspotId: string) => GeoJSON.Geometry | null;
 }
+
+const MODULE_FOR_KIND: Record<string, "carbon" | "lc-change"> = {
+  carbon: "carbon",
+  vegetation: "carbon",
+  landcover: "carbon",
+  landcover_transition: "lc-change",
+};
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -108,6 +119,21 @@ async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promis
       return void (action.choices?.length && ctx.addChoiceCard(action.question, action.choices));
     case "download_boundary_geojson":
       return downloadBoundaryGeoJSON(action, ctx);
+    case "zoom_to_location":
+      return void (action.lat != null && action.lng != null && zoomToLocation(action.lat, action.lng, action.zoom || 13));
+    case "zoom_to_feature":
+      return void (action.geometry && zoomToFeature(action.geometry));
+    case "highlight_polygon":
+      return void (action.geometry && highlightPolygon(action.geometry, { label: action.label }));
+    case "highlight_hotspot":
+    case "show_before_after": {
+      const geom = action.hotspot_id ? ctx.getHotspotGeometry?.(action.hotspot_id) : null;
+      return void (geom && highlightPolygon(geom));
+    }
+    case "open_analysis_result": {
+      const target = action.kind ? MODULE_FOR_KIND[action.kind] : null;
+      return void (target && useUiStore.getState().setActiveModule(target));
+    }
     default:
       return;
   }

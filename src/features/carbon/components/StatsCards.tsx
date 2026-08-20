@@ -51,7 +51,15 @@ export default function StatsCards({ results, processingTimes }: Props) {
     const c = results.carbon;
     const stats = c.carbon_estimated?.statistics || {};
     const areaInfo = c.area_info || {};
-    const perf = c.model_performance || {};
+    // `model_performance` was never actually populated by the backend (dead
+    // field, verified live) - the real R²/RMSE live under model_info.cv_metrics.
+    const cv = c.model_info?.cv_metrics || {};
+    const perf = {
+      r2_score: cv.r2_mean,
+      rmse: cv.rmse_mean,
+      rmse_std: cv.rmse_std,
+      cv_folds: cv.n_folds ?? cv.cv_folds,
+    };
     const hasCV = (perf.cv_folds ?? 0) > 0 && perf.r2_score !== undefined;
     const calculationMode = c.model_info?.calculation_mode || "unknown";
 

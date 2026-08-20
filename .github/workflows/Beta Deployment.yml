@@ -1,0 +1,105 @@
+name: Deploy React Production
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # =========================
+      # BUILD REACT
+      # =========================
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React
+        run: npm run build
+
+      # =========================
+      # INSTALL VPN / SSH
+      # =========================
+
+      - name: Install OpenVPN and SSH tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openvpn sshpass rsync netcat-openbsd
+
+      - name: Prepare VPN configuration
+        env:
+          VPN_CONFIG_B64: ${{ secrets.VPN_CONFIG_B64 }}
+          VPN_AUTH_B64: ${{ secrets.VPN_AUTH_B64 }}
+        run: |
+          echo "$VPN_CONFIG_B64" | base64 --decode > "$RUNNER_TEMP/client.ovpn"
+          echo "$VPN_AUTH_B64" | base64 --decode > "$RUNNER_TEMP/vpn-auth.txt"
+
+          chmod 600 "$RUNNER_TEMP/client.ovpn"
+          chmod 600 "$RUNNER_TEMP/vpn-auth.txt"
+
+      - name: Connect VPN
+        run: |
+          sudo openvpn \
+            --config "$RUNNER_TEMP/client.ovpn" \
+            --auth-user-pass "$RUNNER_TEMP/vpn-auth.txt" \
+            --daemon \
+            --log "$RUNNER_TEMP/openvpn.log"
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 30); do
+            if nc -z -w 3 192.168.17.55 6970; then
+              echo "Server reachable"
+              exit 0
+            fi
+
+            echo "Waiting VPN/server..."
+            sleep 3
+          done
+
+          echo "Server unreachable"
+          sudo cat "$RUNNER_TEMP/openvpn.log" || true
+          exit 1
+
+      # =========================
+      # SSH CONFIG
+      # =========================
+
+      - name: Configure known hosts
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # =========================
+      # DEPLOY REACT
+      # =========================
+
+      - name: Deploy React
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          rsync \
+            -avz \
+            --delete \
+            -e "sshpass -e ssh -p 6970" \
+            dist/ \
+            ubuntu@192.168.17.55:/var/www/my-react-app/

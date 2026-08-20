@@ -17,6 +17,7 @@ import AoiRegionTab from "./AoiRegionTab";
 import AoiCoordinateTab from "./AoiCoordinateTab";
 import AoiUploadTab from "./AoiUploadTab";
 import AoiCompanyTab from "./AoiCompanyTab";
+import { registerMap } from "@/features/chatbot/mapActions";
 
 interface Props {
   aoi: AoiState | null;
@@ -251,6 +252,7 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
           onMapReady={(map) => {
             mapRef.current = map;
             (window as unknown as { map?: L.Map | null }).map = map;
+            registerMap("aoi", map);
           }}
         >
           <BasemapSwitcher />

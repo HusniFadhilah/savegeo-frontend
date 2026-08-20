@@ -8,20 +8,6 @@ import type { AoiFeature, MapLegendEntry } from "@/types/map";
  * checking the backend contract.
  */
 
-export type DisasterType = "flood" | "fire" | "landslide";
-
-export const DISASTER_TYPE_LABELS: Record<DisasterType, string> = {
-  flood: "Banjir",
-  fire: "Kebakaran Lahan",
-  landslide: "Longsor",
-};
-
-export const DISASTER_TYPE_OPTIONS: { value: DisasterType; label: string }[] = [
-  { value: "flood", label: "Banjir" },
-  { value: "fire", label: "Kebakaran Lahan" },
-  { value: "landslide", label: "Longsor" },
-];
-
 /** Payload accepted by every /disaster/* endpoint that takes an AOI. */
 export type AoiPayload =
   | { geojson: AoiFeature }
@@ -69,29 +55,241 @@ export interface DemSlopeResult {
   legend?: MapLegendEntry[];
 }
 
-export interface EventPeriod {
-  start?: string;
-  end?: string;
+/**
+ * --- Disaster Intelligence Dashboard (redesign) types ---------------------
+ * Mirrors the shapes documented in
+ * `savegeo/backend/docs/disaster-redesign-contract.md` section B (User auth
+ * + user disaster routes) exactly - the backend routes matching these were
+ * being built in parallel, so these are coded against the doc, not against
+ * backend source. Field names mirror the SQLAlchemy models' `.to_dict()`
+ * output 1:1 (see `app/db/models/{disaster_event,disaster_aoi,
+ * satellite_imagery,analysis_run,analysis_result,hotspot}.py`).
+ */
+
+/** `DISASTER_TYPES` in `app/db/models/disaster_event.py`. */
+export type EventDisasterType =
+  | "flood"
+  | "landslide"
+  | "forest_fire"
+  | "earthquake"
+  | "tsunami"
+  | "volcanic_eruption"
+  | "storm"
+  | "drought"
+  | "other";
+
+export const EVENT_DISASTER_TYPE_LABELS: Record<EventDisasterType, string> = {
+  flood: "Banjir",
+  landslide: "Longsor",
+  forest_fire: "Kebakaran Hutan/Lahan",
+  earthquake: "Gempa Bumi",
+  tsunami: "Tsunami",
+  volcanic_eruption: "Erupsi Gunung Api",
+  storm: "Badai/Puting Beliung",
+  drought: "Kekeringan",
+  other: "Lainnya",
+};
+
+export const EVENT_DISASTER_TYPE_OPTIONS: { value: EventDisasterType; label: string }[] = Object.entries(
+  EVENT_DISASTER_TYPE_LABELS,
+).map(([value, label]) => ({ value: value as EventDisasterType, label }));
+
+export type EventStatus = "draft" | "processing" | "ready_for_review" | "published" | "archived";
+
+export type EventSeverity = "low" | "medium" | "high" | "critical";
+
+export const SEVERITY_LABELS: Record<EventSeverity, string> = {
+  low: "Rendah",
+  medium: "Sedang",
+  high: "Tinggi",
+  critical: "Kritis",
+};
+
+export const SEVERITY_OPTIONS: { value: EventSeverity; label: string }[] = Object.entries(SEVERITY_LABELS).map(
+  ([value, label]) => ({ value: value as EventSeverity, label }),
+);
+
+/** `DisasterEvent.to_dict()`. */
+export interface DisasterEventRecord {
+  id: number;
+  name: string;
+  disaster_type: EventDisasterType | string;
+  location_name: string | null;
+  province: string[];
+  district: string[];
+  event_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: EventStatus | string;
+  severity: EventSeverity | null;
+  description: string | null;
+  source: string | null;
+  thumbnail: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-export interface EventMapParams {
-  event_type: DisasterType;
-  aoi: AoiPayload;
-  before_start?: string;
-  before_end?: string;
-  after_start?: string;
-  after_end?: string;
+/** `GET /disasters` list item - event fields + published-analysis count. */
+export interface DisasterEventListItem extends DisasterEventRecord {
+  available_analysis_count: number;
 }
 
-export interface EventMapResult {
-  tile_url?: string;
-  source?: string;
-  area_ha?: number;
-  scale?: number | string;
-  title?: string;
-  method_note?: string;
-  event_type?: DisasterType | string;
-  before_period?: EventPeriod;
-  after_period?: EventPeriod;
-  legend?: MapLegendEntry[];
+export interface DisasterEventListParams {
+  disaster_type?: string;
+  year?: number | string;
+  province?: string;
+  severity?: string;
+  search?: string;
+}
+
+export interface DisasterEventListResponse {
+  events: DisasterEventListItem[];
+}
+
+/** `DisasterAOI.to_dict()` - read-only on the User side (no write fields). */
+export interface DisasterAoiRecord {
+  id: number;
+  event_id: number;
+  area_ha: number | null;
+  centroid: { lat: number; lng: number } | null;
+  bbox: [number, number, number, number] | null;
+  source: string;
+  created_at: string | null;
+  geojson: GeoJSON.Feature | GeoJSON.Geometry;
+}
+
+/** `SatelliteImagery.to_dict()`. */
+export interface SatelliteImageryRecord {
+  id: number;
+  event_id: number;
+  phase: "pre" | "post";
+  satellite: string;
+  acquisition_date: string;
+  sensor: string | null;
+  resolution_m: number | null;
+  cloud_coverage_pct: number | null;
+  data_source: string | null;
+  is_primary: boolean;
+  preview_tile_url: string | null;
+  created_at: string | null;
+}
+
+export interface DisasterImageryGroup {
+  pre: SatelliteImageryRecord[];
+  post: SatelliteImageryRecord[];
+}
+
+export interface DisasterPrimaryImagery {
+  pre: SatelliteImageryRecord | null;
+  post: SatelliteImageryRecord | null;
+}
+
+/** `GET /disasters/{id}`. */
+export interface DisasterEventDetailResponse {
+  event: DisasterEventRecord;
+  aoi: DisasterAoiRecord | null;
+  imagery: DisasterImageryGroup;
+  primary_imagery: DisasterPrimaryImagery;
+}
+
+export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published";
+
+/** `AnalysisRun.to_dict()`. */
+export interface AnalysisRunRecord {
+  id: number;
+  event_id: number;
+  model_id: string;
+  model_version: string | null;
+  aoi_id: number;
+  pre_imagery_id: number | null;
+  post_imagery_id: number | null;
+  status: AnalysisRunStatus;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  created_at: string | null;
+}
+
+/** `AnalysisResult.to_dict()` (`include_features` never requested by User
+ * routes - features are always null/empty for the 3 MVP models anyway, see
+ * contract doc's "MVP scope reality check"). */
+export interface AnalysisResultRecord {
+  id: number;
+  run_id: number;
+  tile_url: string | null;
+  statistics: Record<string, number | string | null> | null;
+  legend: MapLegendEntry[];
+  confidence_summary: Record<string, number | string | null> | null;
+  is_published: boolean;
+  published_at: string | null;
+  publication_version: number;
+  created_at: string | null;
+}
+
+/** One entry per *enabled* registry model - `GET /disasters/{id}/analyses`
+ * and `GET /disasters/{id}/layers` share this exact shape. */
+export interface DisasterAnalysisEntry {
+  model_id: string;
+  user_label: string;
+  category: string;
+  available: boolean;
+  run: AnalysisRunRecord | null;
+  result: AnalysisResultRecord | null;
+}
+
+export interface DisasterAnalysesResponse {
+  analyses: DisasterAnalysisEntry[];
+}
+
+export interface DisasterSatelliteLayers {
+  pre_tile_url: string | null;
+  post_tile_url: string | null;
+}
+
+/** `GET /disasters/{id}/layers`. */
+export interface DisasterLayersResponse {
+  satellite: DisasterSatelliteLayers;
+  analyses: DisasterAnalysisEntry[];
+}
+
+/** Only ever flood x forest per the contract doc - never fabricate other
+ * combinations client-side. Extra numeric fields (e.g.
+ * `forest_in_flood_extent_ha`) vary by pair, so this stays an index type. */
+export interface CrossLayerStat {
+  layers: string[];
+  label: string;
+  [key: string]: unknown;
+}
+
+/** `GET /disasters/{id}/statistics` - `kpis` flattened from each published
+ * result's statistics, namespaced by model_id. */
+export interface DisasterStatisticsResponse {
+  kpis: Record<string, Record<string, number | string | null>>;
+  cross_layer: CrossLayerStat[];
+}
+
+/** `Hotspot.to_dict()`. */
+export interface HotspotRecord {
+  id: number;
+  event_id: number;
+  analysis_result_id: number | null;
+  name: string;
+  impact_level: EventSeverity | string;
+  geojson: GeoJSON.Feature | GeoJSON.Geometry;
+  stats: Record<string, unknown> | null;
+  is_published: boolean;
+  created_at: string | null;
+}
+
+export interface DisasterHotspotsResponse {
+  hotspots: HotspotRecord[];
+}
+
+/** `GET /disasters/{id}/features` - always this empty shape for MVP (no
+ * per-object model output exists yet); still a real endpoint so the frontend
+ * doesn't need to special-case it. Not wired into any UI per the contract's
+ * "MVP scope reality check" (no feature-level filter/click UI for now). */
+export interface DisasterFeaturesResponse {
+  features: GeoJSON.FeatureCollection;
+  note: string;
 }

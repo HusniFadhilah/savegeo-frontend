@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import type { AoiPayload } from "./lib/geo";
 import type {
+  CarbonDeltaResponse,
   CarbonReferenceDatasetOption,
   CarbonModelInfo,
   CarbonModelListItem,
@@ -87,6 +88,16 @@ export interface AnalyzeCarbonArgs {
  * with `{error: "..."}`, which apiClient already throws as ApiError for -
  * callers should try/catch, not check a `.success` field.
  */
+// GEE round-trips (collection size check, gap-fill fallback check, valid-pixel
+// coverage check, model inference reduceRegion/sample, tile getMapId) chain
+// sequentially per request - real compute, not a hung connection. The 180s
+// apiClient default was already bumped once for this reason; carbon specifically
+// tends to run long (native_classifier/many-feature models, big AOIs), so give
+// it more headroom than the default before the frontend gives up on a request
+// the backend is still legitimately working on.
+const CARBON_TIMEOUT_MS = 300_000; // 5 min
+const CARBON_DELTA_TIMEOUT_MS = 600_000; // 10 min - repeats the single-year pipeline once per year in range
+
 export async function analyzeCarbon({
   aoi,
   params,
@@ -99,33 +110,86 @@ export async function analyzeCarbon({
 
   if (selectedModel && isNonGeeModel(meta)) {
     const pad = (n: number) => String(n).padStart(2, "0");
-    return apiClient.post<CarbonResult>("/analyze/carbon-local", {
-      aoi,
-      model_name: selectedModel.name,
-      start_date: `${params.year}-${pad(params.startMonth)}-01`,
-      end_date: `${params.year}-${pad(params.endMonth)}-28`,
-      scale: 250,
-      n_samples: 2000,
-      vis_min: visMin,
-      vis_max: visMax,
-      vis_palette: visPalette,
-    });
+    // /analyze/carbon-local forwards these straight into a STAC API `datetime`
+    // interval query (app/providers/stac_provider.py: `f"{start}/{end}"`),
+    // which per the STAC API spec is INCLUSIVE on both ends - unlike GEE's
+    // filterDate() (exclusive end), so the fix here is the actual last calendar
+    // day of endMonth, not "first day of next month". The old `-28` truncated
+    // the last 0-3 days of any longer month from every non-GEE carbon composite.
+    const lastDayOfEndMonth = new Date(params.year, params.endMonth, 0).getDate();
+    return apiClient.post<CarbonResult>(
+      "/analyze/carbon-local",
+      {
+        aoi,
+        model_name: selectedModel.name,
+        start_date: `${params.year}-${pad(params.startMonth)}-01`,
+        end_date: `${params.year}-${pad(params.endMonth)}-${pad(lastDayOfEndMonth)}`,
+        scale: 250,
+        n_samples: 2000,
+        vis_min: visMin,
+        vis_max: visMax,
+        vis_palette: visPalette,
+      },
+      { timeoutMs: CARBON_TIMEOUT_MS },
+    );
   }
 
-  return apiClient.post<CarbonResult>("/analyze/carbon", {
-    aoi,
-    year: params.year,
-    start_month: params.startMonth,
-    end_month: params.endMonth,
-    cloud_threshold: params.cloudThreshold,
-    clip_to_aoi: params.clipMode === "clipped",
-    reference_dataset: params.referenceDataset,
-    dataset_year: params.datasetYear,
-    model_name: params.modelName || null,
-    vis_min: visMin,
-    vis_max: visMax,
-    vis_palette: visPalette.length ? visPalette : undefined,
-  });
+  return apiClient.post<CarbonResult>(
+    "/analyze/carbon",
+    {
+      aoi,
+      year: params.year,
+      start_month: params.startMonth,
+      end_month: params.endMonth,
+      cloud_threshold: params.cloudThreshold,
+      clip_to_aoi: params.clipMode === "clipped",
+      reference_dataset: params.referenceDataset,
+      dataset_year: params.datasetYear,
+      model_name: params.modelName || null,
+      vis_min: visMin,
+      vis_max: visMax,
+      vis_palette: visPalette.length ? visPalette : undefined,
+    },
+    { timeoutMs: CARBON_TIMEOUT_MS },
+  );
+}
+
+export interface AnalyzeCarbonDeltaArgs {
+  aoi: AoiPayload;
+  startYear: number;
+  endYear: number;
+  interval: number;
+  startMonth: number;
+  endMonth: number;
+  cloudThreshold: number;
+  modelName: string | null;
+  /** true = also generate a map tile per year (timelapse playback), costs one getMapId() round trip per year. */
+  includeTiles: boolean;
+  visMin: number;
+  visMax: number;
+  visPalette: string[];
+}
+
+/** POST /analyze/carbon-delta - multi-year carbon time series (P0 "time-series & timelapse"). Flat body, no {success,data} envelope. */
+export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<CarbonDeltaResponse> {
+  return apiClient.post<CarbonDeltaResponse>(
+    "/analyze/carbon-delta",
+    {
+      aoi: args.aoi,
+      start_year: args.startYear,
+      end_year: args.endYear,
+      interval: args.interval,
+      start_month: args.startMonth,
+      end_month: args.endMonth,
+      cloud_threshold: args.cloudThreshold,
+      model_name: args.modelName || null,
+      include_tiles: args.includeTiles,
+      vis_min: args.visMin,
+      vis_max: args.visMax,
+      vis_palette: args.visPalette.length ? args.visPalette : undefined,
+    },
+    { timeoutMs: CARBON_DELTA_TIMEOUT_MS },
+  );
 }
 
 export function listCompanies() {

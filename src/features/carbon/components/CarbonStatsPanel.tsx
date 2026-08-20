@@ -19,7 +19,14 @@ export default function CarbonStatsPanel({ result }: Props) {
   const areaInfo = result.area_info || {};
   const modelInfo = result.model_info || {};
   const reference = result.carbon_reference;
-  const perf = result.model_performance;
+  const dataQuality = result.data_quality;
+  // `model_performance` was never actually populated by the backend (dead
+  // field, verified live against app/services/carbon_service.py) - the real
+  // R²/RMSE live under model_info.cv_metrics.
+  const cv = modelInfo.cv_metrics;
+  const perf = cv
+    ? { r2_score: cv.r2_mean, rmse: cv.rmse_mean, rmse_std: cv.rmse_std, cv_folds: cv.n_folds ?? cv.cv_folds }
+    : undefined;
 
   const calculationAreaHa = areaInfo.calculation_area_ha ?? areaInfo.area_ha ?? 0;
   const isClipped = modelInfo.calculation_mode === "clipped_aoi";
@@ -122,6 +129,7 @@ export default function CarbonStatsPanel({ result }: Props) {
             <div className="cs-model-used">
               <i className="bi bi-cpu me-1" />
               Model terlatih digunakan: <code>{modelInfo.model_name}</code>
+              {modelInfo.model_version ? <span className="text-muted"> (v{modelInfo.model_version})</span> : null}
             </div>
           )}
 
@@ -144,6 +152,46 @@ export default function CarbonStatsPanel({ result }: Props) {
           )}
         </div>
       </div>
+
+      {dataQuality && (
+        <div className="cs-card mt-3">
+          <div className="cs-card-header">
+            <i className="bi bi-shield-check" /> Kualitas Data &amp; Keyakinan
+          </div>
+          <div className="cs-card-body">
+            <div className="cs-config-grid">
+              <div className="cs-config-item">
+                <span className="cs-config-label">Piksel Bebas Awan</span>
+                <span className="cs-config-value">
+                  {dataQuality.valid_pixel_pct != null ? `${dataQuality.valid_pixel_pct.toFixed(1)}%` : "-"}
+                  {dataQuality.gap_filled ? (
+                    <span className="text-warning" title="Sebagian piksel diisi dari jendela waktu +/-90 hari karena banyak awan pada periode utama">
+                      {" "}
+                      <i className="bi bi-exclamation-triangle" /> gap-filled
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+              <div className="cs-config-item">
+                <span className="cs-config-label">Citra Digunakan</span>
+                <span className="cs-config-value">{dataQuality.images_used ?? "-"} scene</span>
+              </div>
+              <div className="cs-config-item">
+                <span className="cs-config-label">Variabilitas Spasial (CV)</span>
+                <span className="cs-config-value">
+                  {dataQuality.coefficient_of_variation_pct != null ? `${dataQuality.coefficient_of_variation_pct.toFixed(1)}%` : "-"}
+                </span>
+              </div>
+            </div>
+            <div className="cs-card-footer">
+              <i className="bi bi-info-circle me-1" />
+              CV = std dev ÷ mean densitas karbon di dalam AOI - variabilitas spasial, bukan interval keyakinan formal
+              (piksel citra berkorelasi spasial, bukan sampel independen). R²/RMSE di atas adalah akurasi model dari
+              cross-validation saat pelatihan, bukan spesifik untuk AOI ini.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

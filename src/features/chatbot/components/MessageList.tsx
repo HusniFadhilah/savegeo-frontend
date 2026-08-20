@@ -9,6 +9,7 @@ import {
   ChoiceCard,
   ConfirmActionCard,
   GuideStepCard,
+  ResultCardView,
   RetryChip,
   WarningsBlock,
 } from "./cards";
@@ -22,6 +23,7 @@ interface Props {
   onCancelConfirm: (entryId: string) => void;
   onSelectChoice: (entryId: string, index: number) => void;
   onResolveAoiOffer: (entryId: string, choice: "set" | "send") => void;
+  onSendMessage: (message: string) => void;
 }
 
 /** Scrollable chat log - renders each LogEntry via its kind, keeping insertion order. */
@@ -34,6 +36,7 @@ export default function MessageList({
   onCancelConfirm,
   onSelectChoice,
   onResolveAoiOffer,
+  onSendMessage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +122,8 @@ export default function MessageList({
                 filename={entry.filename}
               />
             );
+          case "resultCard":
+            return <ResultCardView key={entry.id} card={entry.card} onSend={onSendMessage} />;
           default:
             return null;
         }

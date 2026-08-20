@@ -12,6 +12,8 @@ import ModelRegistry from "./components/ModelRegistry";
 import ConfigEditor from "./components/ConfigEditor";
 import AdminUsers from "./components/AdminUsers";
 import CompanyBoundaries from "./components/CompanyBoundaries";
+import SatelliteProviders from "./components/SatelliteProviders";
+import DisasterManagement from "./components/disaster/DisasterManagement";
 
 const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; label: string }[] }[] = [
   { section: "Utama", items: [{ id: "ov", icon: "bi-grid-1x2-fill", label: "Overview" }] },
@@ -23,9 +25,16 @@ const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; 
       { id: "ml", icon: "bi-cpu-fill", label: "ML Models" },
       { id: "cf", icon: "bi-sliders", label: "System Config" },
       { id: "us", icon: "bi-shield-lock-fill", label: "Admin Users" },
+      { id: "sp", icon: "bi-camera-fill", label: "Satellite Providers" },
     ],
   },
-  { section: "Data Spasial", items: [{ id: "co", icon: "bi-building-fill", label: "Batas Perusahaan" }] },
+  {
+    section: "Data Spasial",
+    items: [
+      { id: "co", icon: "bi-building-fill", label: "Batas Perusahaan" },
+      { id: "ds", icon: "bi-exclamation-triangle-fill", label: "Disaster Management" },
+    ],
+  },
 ];
 
 const TITLES: Record<AdminSection, [string, string]> = {
@@ -35,7 +44,9 @@ const TITLES: Record<AdminSection, [string, string]> = {
   ml: ["ML Models", "Kelola model machine learning yang diupload"],
   cf: ["System Config", "Konfigurasi aplikasi tersimpan di database"],
   us: ["Admin Users", "Kelola akun administrator"],
+  sp: ["Satellite Providers", "Kelola sumber citra satelit (Sentinel-2/Landsat) + resolusi/koleksi GEE"],
   co: ["Batas Perusahaan", "Kelola batas wilayah konsesi dan perusahaan industri"],
+  ds: ["Disaster Management", "Kelola kejadian bencana, AOI, citra satelit, dan analisis"],
 };
 
 export default function AdminDashboard() {
@@ -139,7 +150,9 @@ export default function AdminDashboard() {
               {section === "ml" && <ModelRegistry />}
               {section === "cf" && <ConfigEditor />}
               {section === "us" && <AdminUsers />}
+              {section === "sp" && <SatelliteProviders />}
               {section === "co" && <CompanyBoundaries />}
+              {section === "ds" && <DisasterManagement />}
             </div>
           </div>
         </div>

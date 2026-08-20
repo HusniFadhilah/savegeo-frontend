@@ -37,12 +37,57 @@ export interface ChatAction {
   question?: string;
   choices?: QuickAction[];
   topic?: string;
+  /** geoai-mode map actions: zoom_to_feature / highlight_polygon carry the geometry inline. */
+  geometry?: GeoJSON.Geometry;
+  /** geoai-mode: highlight_hotspot / show_before_after reference a hotspot from this turn's cards[]. */
+  hotspot_id?: string;
+  /** geoai-mode: open_analysis_result. */
+  kind?: "carbon" | "vegetation" | "landcover" | "landcover_transition";
 }
 
 export interface ChatWarning {
   message?: string;
   [key: string]: unknown;
 }
+
+/** Provenance stamp carried by geoai-mode results, per "never invent numbers" (spec section 10). */
+export interface ResultSource {
+  source?: string;
+  analysis_id?: string | null;
+  dataset?: string | null;
+  period?: string | number | null;
+  generated_at?: string | null;
+}
+
+/** One reusable structured result card the Geo-AI Assistant can attach to a response. */
+export type ResultCard =
+  | {
+      type: "metric";
+      title: string;
+      metrics: { label: string; value: string | number; unit?: string }[];
+      source?: ResultSource;
+    }
+  | {
+      type: "hotspot";
+      id: string;
+      title: string;
+      area_ha: number;
+      metric_label: string;
+      metric_value: string | number;
+      period?: string;
+      geometry: GeoJSON.Geometry;
+      centroid?: [number, number] | null;
+      source?: ResultSource;
+    }
+  | {
+      type: "comparison";
+      title: string;
+      before: Record<string, unknown>;
+      after: Record<string, unknown>;
+      source?: ResultSource;
+    }
+  | { type: "warning"; message: string }
+  | { type: "suggested_action"; label: string; message: string };
 
 /** Response shape for POST /agent/control. */
 export interface AgentControlResponse {
@@ -52,6 +97,8 @@ export interface AgentControlResponse {
   message?: string;
   warnings?: (string | ChatWarning)[];
   actions?: ChatAction[];
+  /** geoai-mode only: structured result cards (spec section 14). */
+  cards?: ResultCard[];
   session_id?: number;
   retry_after?: number;
   error?: string;
@@ -64,6 +111,31 @@ export interface AgentControlResponse {
   execution?: {
     executed?: boolean;
     report?: { audience_summary?: string };
+  };
+}
+
+/**
+ * Richer grounding context sent to POST /agent/control when mode="geoai" -
+ * the actual AOI geometry + already-computed analysis results (not just
+ * booleans), so the assistant can answer without re-running anything. See
+ * windowBridge.ts buildGeoAiContext().
+ */
+export interface GeoAiContext {
+  aoi: GeoJSON.GeoJSON | null;
+  aoi_name: string | null;
+  area_ha: number | null;
+  bbox: [number, number, number, number] | null;
+  current_module: string;
+  period: string | null;
+  selected_year: number;
+  active_layer: string | null;
+  selected_feature: GeoJSON.Feature | null;
+  landcover_dataset: string | null;
+  results: {
+    carbon?: Record<string, unknown> | null;
+    vegetation?: Record<string, unknown> | null;
+    landcover?: Record<string, unknown> | null;
+    landcover_transition?: Record<string, unknown> | null;
   };
 }
 
@@ -158,4 +230,5 @@ export type LogEntry =
       file: PendingFileAttachment | null;
       cancelNote?: string;
     }
-  | { id: string; kind: "boundaryDownload"; name: string; downloadUrl: string; filename: string };
+  | { id: string; kind: "boundaryDownload"; name: string; downloadUrl: string; filename: string }
+  | { id: string; kind: "resultCard"; card: ResultCard };

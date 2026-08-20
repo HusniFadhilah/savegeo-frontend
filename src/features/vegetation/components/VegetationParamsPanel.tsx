@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { VegetationParams } from "@/features/vegetation/types";
+import type { SatelliteProvider, VegetationParams } from "@/features/vegetation/types";
 import { VEGETATION_INDICES } from "@/features/vegetation/indices";
-import { getVegetationCatalog } from "@/features/vegetation/api";
+import { getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 
 interface Props {
   params: VegetationParams;
@@ -32,6 +32,7 @@ const FALLBACK_BADGES: BadgeIndex[] = VEGETATION_INDICES.map((i) => ({
  */
 export default function VegetationParamsPanel({ params, onParamsChange }: Props) {
   const [badges, setBadges] = useState<BadgeIndex[]>(FALLBACK_BADGES);
+  const [satellites, setSatellites] = useState<Record<string, SatelliteProvider>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -48,10 +49,20 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       .catch(() => {
         /* keep static fallback badges */
       });
+    getVegetationSatellites()
+      .then((res) => {
+        if (cancelled || !res?.satellites) return;
+        setSatellites(res.satellites);
+      })
+      .catch(() => {
+        /* satellite picker just won't render options; backend still defaults to Sentinel-2 */
+      });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const activeSatellite = satellites[params.satellite];
 
   function toggleIndex(code: string) {
     const active = params.indices.includes(code);
@@ -62,8 +73,46 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
   return (
     <div id="vegetationParams">
       <h6 className="mb-3">
-        <i className="bi bi-flower1 me-1" /> Parameter Sentinel-2
+        <i className="bi bi-flower1 me-1" /> Parameter Citra
       </h6>
+
+      <div className="mb-3">
+        <label className="form-label">Provider Satelit</label>
+        <select
+          className="form-select"
+          value={params.satellite}
+          onChange={(e) => onParamsChange({ satellite: e.target.value })}
+          disabled={Object.keys(satellites).length === 0}
+        >
+          {Object.values(satellites).map((sat) => (
+            <option key={sat.key} value={sat.key}>
+              {sat.name} — {sat.resolution_label} · revisit {sat.revisit_days} hari
+            </option>
+          ))}
+        </select>
+        {activeSatellite && (
+          <div className="mt-2 p-2 border rounded" style={{ fontSize: ".78rem" }}>
+            <div className="d-flex flex-wrap gap-3 mb-1">
+              <span>
+                <i className="bi bi-building me-1" /> <strong>{activeSatellite.provider}</strong>
+              </span>
+              <span>
+                <i className="bi bi-aspect-ratio me-1" /> {activeSatellite.resolution_label}
+              </span>
+              <span>
+                <i className="bi bi-arrow-repeat me-1" /> Revisit {activeSatellite.revisit_days} hari
+              </span>
+              <span>
+                <i className="bi bi-calendar-event me-1" /> Sejak {activeSatellite.launch}
+              </span>
+            </div>
+            <div className="text-muted mb-1">{activeSatellite.description}</div>
+            <div className="text-muted">
+              <i className="bi bi-layers me-1" /> Band: {activeSatellite.bands_available.join(", ")}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mb-3">
         <label className="form-label">Rentang Bulan</label>

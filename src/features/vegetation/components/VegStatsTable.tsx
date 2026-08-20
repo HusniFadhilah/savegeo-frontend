@@ -14,7 +14,29 @@ export default function VegStatsTable({ result }: Props) {
   if (!entries.length) return null;
 
   return (
-    <div className="table-responsive mt-4">
+    <div className="mt-4">
+      {result.satellite && (
+        <div className="alert alert-light border py-2 mb-2 d-flex align-items-center gap-2 flex-wrap" style={{ fontSize: ".8rem" }}>
+          <i className="bi bi-camera-fill text-muted" />
+          <span>
+            Citra dari <strong>{result.satellite.name}</strong> ({result.satellite.provider}) ·{" "}
+            {result.satellite.resolution_label} · revisit {result.satellite.revisit_days} hari
+            {result.data_quality?.valid_pixel_pct != null && (
+              <>
+                {" "}
+                ·{" "}
+                <span className={result.data_quality.valid_pixel_pct >= 80 ? "text-success" : result.data_quality.valid_pixel_pct >= 50 ? "text-warning" : "text-danger"}>
+                  {result.data_quality.valid_pixel_pct.toFixed(1)}% bebas awan
+                </span>
+              </>
+            )}
+          </span>
+          {typeof result.collection_size === "number" && (
+            <span className="badge bg-secondary ms-auto">{result.collection_size} scene</span>
+          )}
+        </div>
+      )}
+      <div className="table-responsive">
       <table className="table table-striped table-hover">
         <thead className="table-primary">
           <tr>
@@ -43,6 +65,7 @@ export default function VegStatsTable({ result }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

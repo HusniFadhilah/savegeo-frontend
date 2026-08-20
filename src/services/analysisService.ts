@@ -82,3 +82,34 @@ export function fetchRegionGeometry(endpoint: string, code: string): Promise<Geo
     `/regions/geometry?endpoint=${encodeURIComponent(endpoint)}&code=${encodeURIComponent(code)}`,
   );
 }
+
+/** One Nominatim search result from GET /utils/geocode/search - a free-text
+ * place lookup (city/province/district/village/street/address, like Google
+ * Maps' search box), restricted to Indonesia. `geojson` is the real
+ * admin-boundary polygon when Nominatim has one (usually true for
+ * administrative areas, absent for a plain street address); `bbox` is
+ * always present as a fallback rectangle. */
+export interface LocationSearchResult {
+  osm_id: number;
+  lat: number;
+  lng: number;
+  display_name: string;
+  type: string;
+  class_: string;
+  bbox: [number, number, number, number] | null;
+  geojson: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+  address_info: { province: string; city: string; district: string; village: string };
+}
+
+export async function searchLocations(query: string): Promise<LocationSearchResult[]> {
+  const q = query.trim();
+  if (q.length < 3) return [];
+  try {
+    const res = await apiClient.get<{ results: LocationSearchResult[] }>(
+      `/utils/geocode/search?q=${encodeURIComponent(q)}&limit=8`,
+    );
+    return res?.results ?? [];
+  } catch {
+    return [];
+  }
+}

@@ -1,14 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools from "@/components/map/AoiDrawingTools";
 import MapLegend from "@/components/map/MapLegend";
+import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcYearResult } from "../types";
 import { translateLulcClass } from "../utils";
 import { RESULT_PANE } from "@/config/mapPanes";
+
+type ViewMode = "split" | "swipe";
 
 const AOI_STYLE = { color: "#ef4444", weight: 2, fillOpacity: 0.06 };
 
@@ -81,13 +84,32 @@ export default function BeforeAfterMaps({
   const beforeLegend = classLegend(yearA != null ? yearData[yearA]?.classes : undefined);
   const afterLegend = classLegend(yearB != null ? yearData[yearB]?.classes : undefined);
 
+  const [view, setView] = useState<ViewMode>("swipe");
+  const [swipeOrientation, setSwipeOrientation] = useState<SwipeOrientation>("vertical");
+
   return (
     <div>
       <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
         <p className="text-muted mb-0 me-auto" style={{ fontSize: ".8rem" }}>
-          <i className="fas fa-info-circle" /> Kiri = tahun awal ({yearA ?? "-"}) · Kanan = tahun akhir ({yearB ?? "-"}
-          )
+          <i className="fas fa-info-circle" /> {view === "split" ? "Kiri" : "Sebelum"} = tahun awal (
+          {yearA ?? "-"}) · {view === "split" ? "Kanan" : "Sesudah"} = tahun akhir ({yearB ?? "-"})
         </p>
+        <div className="btn-group btn-group-sm" role="group" aria-label="Tampilan peta">
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`}
+            onClick={() => setView("split")}
+          >
+            <i className="fas fa-columns" /> Berdampingan
+          </button>
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "swipe" ? "active" : ""}`}
+            onClick={() => setView("swipe")}
+          >
+            <i className="fas fa-arrows-alt-h" /> Geser (Slider)
+          </button>
+        </div>
         <div className="btn-group btn-group-sm" role="group" aria-label="Mode peta perubahan">
           <button
             type="button"
@@ -131,46 +153,76 @@ export default function BeforeAfterMaps({
         </div>
       )}
 
-      <div className="row g-2">
-        <div className="col-md-6">
-          <MapView id="lcChangeBeforeMap">
-            <BasemapSwitcher />
+      {view === "split" && (
+        <div className="row g-2">
+          <div className="col-md-6">
+            <MapView id="lcChangeBeforeMap">
+              <BasemapSwitcher />
+              <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
+              {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" pane={RESULT_PANE} />}
+              <FitToAoi aoi={aoi} />
+            </MapView>
+            <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
+          </div>
+          <div className="col-md-6">
+            <MapView id="lcChangeAfterMap">
+              <BasemapSwitcher />
+              {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
+              {afterTile && (
+                <TileLayer
+                  key={`${mode}-${afterTile}`}
+                  url={afterTile}
+                  opacity={mode === "destination" ? 0.9 : 0.88}
+                  attribution="Google Earth Engine"
+                  pane={RESULT_PANE}
+                />
+              )}
+              {mode === "changed" && changeMapData?.changed_tile_url && (
+                <TileLayer
+                  key={`changed-${changeMapData.changed_tile_url}`}
+                  url={changeMapData.changed_tile_url}
+                  opacity={0.78}
+                  attribution="Google Earth Engine"
+                  pane={RESULT_PANE}
+                />
+              )}
+              <FitToAoi aoi={aoi} />
+            </MapView>
+            <MapLegend
+              title={mode === "destination" ? `Kelas tujuan pada piksel berubah` : `Tutupan lahan ${yearB ?? ""}`}
+              entries={mode === "changed" ? [{ color: "#ff1744", label: "Area berubah" }] : afterLegend}
+            />
+          </div>
+        </div>
+      )}
+
+      {view === "swipe" && (
+        <div>
+          <SwipeCompareMap
+            id="lcChangeSwipeMap"
+            beforeUrl={beforeTile}
+            afterUrl={afterTile}
+            beforeLabel={`Tutupan lahan ${yearA ?? "-"}`}
+            afterLabel={`Tutupan lahan ${yearB ?? "-"}`}
+            orientation={swipeOrientation}
+            onOrientationChange={setSwipeOrientation}
+          >
             <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
-            {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" pane={RESULT_PANE} />}
             <FitToAoi aoi={aoi} />
-          </MapView>
-          <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
-        </div>
-        <div className="col-md-6">
-          <MapView id="lcChangeAfterMap">
-            <BasemapSwitcher />
-            {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
-            {afterTile && (
-              <TileLayer
-                key={`${mode}-${afterTile}`}
-                url={afterTile}
-                opacity={mode === "destination" ? 0.9 : 0.88}
-                attribution="Google Earth Engine"
-                pane={RESULT_PANE}
+          </SwipeCompareMap>
+          <div className="row g-2 mt-1">
+            <div className="col-md-6">
+              <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
+            </div>
+            <div className="col-md-6">
+              <MapLegend
+                title={mode === "destination" ? `Kelas tujuan pada piksel berubah` : `Tutupan lahan ${yearB ?? ""}`}
+                entries={mode === "changed" ? [{ color: "#ff1744", label: "Area berubah" }] : afterLegend}
               />
-            )}
-            {mode === "changed" && changeMapData?.changed_tile_url && (
-              <TileLayer
-                key={`changed-${changeMapData.changed_tile_url}`}
-                url={changeMapData.changed_tile_url}
-                opacity={0.78}
-                attribution="Google Earth Engine"
-                pane={RESULT_PANE}
-              />
-            )}
-            <FitToAoi aoi={aoi} />
-          </MapView>
-          <MapLegend
-            title={mode === "destination" ? `Kelas tujuan pada piksel berubah` : `Tutupan lahan ${yearB ?? ""}`}
-            entries={mode === "changed" ? [{ color: "#ff1744", label: "Area berubah" }] : afterLegend}
-          />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

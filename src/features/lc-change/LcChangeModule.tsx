@@ -14,8 +14,9 @@ import NetChangeChart from "./components/NetChangeChart";
 import TimeSeriesChart from "./components/TimeSeriesChart";
 import SummaryPanel from "./components/SummaryPanel";
 import BeforeAfterMaps from "./components/BeforeAfterMaps";
+import HotspotPanel from "./components/HotspotPanel";
 
-type Tab = "matrix" | "netchange" | "timeseries" | "maps";
+type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
 
 /**
  * Land Cover Change module - before/after year comparison with a transition
@@ -107,6 +108,31 @@ export default function LcChangeModule() {
     if (yearA == null || yearB == null) return null;
     return computeTransitions(yearData[yearA]?.classes || {}, yearData[yearB]?.classes || {});
   }, [yearA, yearB, yearData]);
+
+  // Mirror AOI + transition summary for the Geo-AI Assistant's grounding context
+  // (windowBridge.ts buildGeoAiContext()) - this module has its own AOI, separate
+  // from CarbonModule's window.currentAOI, so it needs its own bridge global.
+  useEffect(() => {
+    window.lcChangeState = {
+      aoi: aoi ? (aoi as unknown as GeoJSON.GeoJSON) : null,
+      dataset,
+      from_year: yearA,
+      to_year: yearB,
+      transition: trans
+        ? {
+            dataset,
+            from_year: yearA,
+            to_year: yearB,
+            gains: trans.gains,
+            losses: trans.losses,
+            matrix: trans.matrix,
+          }
+        : null,
+    };
+    return () => {
+      window.lcChangeState = null;
+    };
+  }, [aoi, dataset, yearA, yearB, trans]);
 
   const changeMapCacheKey =
     yearA != null && yearB != null ? `${dataset}:${yearA}:${yearB}:${startMonth}:${endMonth}` : null;
@@ -412,6 +438,11 @@ export default function LcChangeModule() {
                       <i className="fas fa-map-location-dot" /> Peta Perubahan
                     </button>
                   </li>
+                  <li className="nav-item">
+                    <button className={`nav-link ${tab === "hotspot" ? "active" : ""}`} onClick={() => setTab("hotspot")}>
+                      <i className="fas fa-map-pin" /> Hotspot
+                    </button>
+                  </li>
                 </ul>
               </div>
               <div className="card-body pt-3">
@@ -435,6 +466,16 @@ export default function LcChangeModule() {
                     changeMapData={changeMapData}
                     changeMapLoading={changeMapLoading}
                     changeMapError={changeMapError}
+                  />
+                )}
+                {tab === "hotspot" && (
+                  <HotspotPanel
+                    aoi={aoi}
+                    dataset={dataset}
+                    yearA={yearA}
+                    yearB={yearB}
+                    startMonth={startMonth}
+                    endMonth={endMonth}
                   />
                 )}
               </div>

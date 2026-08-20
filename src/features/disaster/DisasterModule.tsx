@@ -1,48 +1,57 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools from "@/components/map/AoiDrawingTools";
 import MapLegend from "@/components/map/MapLegend";
 import { ApiError } from "@/services/apiClient";
-import { useUiStore } from "@/hooks/useUiStore";
-import type { AoiFeature, MapLegendEntry } from "@/types/map";
-import { analyzeDemSlope, analyzeDisasterEvent, fetchBmkgAlerts, fetchDisasterSources } from "./api";
-import type { BmkgAlert, DemSlopeResult, DisasterSourcesMap, DisasterType, EventMapResult } from "./types";
-import { DISASTER_TYPE_LABELS } from "./types";
-import { defaultDateRange, toAoiPayload, type DisasterDateRange } from "./utils";
-import DisasterControlsPanel from "./components/DisasterControlsPanel";
+import type { AoiFeature } from "@/types/map";
+import { RESULT_PANE } from "@/config/mapPanes";
+import { analyzeDemSlope, fetchBmkgAlerts, fetchDisasterSources } from "./api";
+import type { BmkgAlert, DemSlopeResult, DisasterSourcesMap } from "./types";
+import { toAoiPayload } from "./utils";
+import AoiStatusCard from "./components/AoiStatusCard";
 import SourceStatusPanel from "./components/SourceStatusPanel";
 import BmkgAlerts from "./components/BmkgAlerts";
 import DemSlopeControls from "./components/DemSlopeControls";
-import EventSummary from "./components/EventSummary";
-import DisasterEventMap from "./components/DisasterEventMap";
+
+const SOURCE_OPACITY: Record<string, number> = {
+  inarisk: 0.62,
+  demnas: 0.48,
+};
+
+function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!aoi) return;
+    const bounds = L.geoJSON(aoi as unknown as GeoJSON.Feature).getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aoi]);
+  return null;
+}
 
 /**
- * Disaster Mapping module. Ports frontend-nextjs2's DisasterMapping object
- * (main.js ~L4957-5410) and module-disaster.html. Four sub-features:
- *   1. Official source status (InaRISK/DEMNAS configured check)
- *   2. BMKG early-warning alerts
- *   3. DEM/slope layer
- *   4. Before/after event-map detection ("Deteksi Area Terdampak")
+ * Legacy "Additional Sources" module-tab entry point - still wired into
+ * `pages/DashboardPage.tsx`'s module-tab system (`disaster` key), which is
+ * out of this feature's file boundary and left untouched, so this component
+ * must keep existing as the default export of this file.
  *
- * Note: the legacy DisasterMapping object literal defined `run()` twice -
- * a client-side simulated grid-risk scorer (main.js ~L5072-5138) that was
- * immediately shadowed/overwritten by a second `async run()` calling
- * apiClient.analyzeDisasterEvent() (~L5176-5241), since JS keeps only the
- * last property in an object literal. Only the real (event-map) behavior
- * ever executed in production, so only that version is ported here.
- *
- * AOI: the legacy app read a global `currentAOI` set by the Carbon module.
- * This rebuild has no shared cross-module AOI store yet, so this module
- * draws its own AOI directly on its map via <AoiDrawingTools>.
+ * The full Disaster Intelligence Dashboard redesign now lives at the
+ * dedicated `/pemetaan-bencana` route (`DisasterListPage.tsx` /
+ * `DisasterDashboard.tsx`), which supersedes this module's original
+ * before/after "Deteksi Area Terdampak" flow entirely - per the contract
+ * doc, that flow (`analyzeDisasterEvent` / `POST /disaster/event-map`) is
+ * being removed from the backend, so it and its dedicated UI
+ * (`EventSummary`, `DisasterEventMap`, `DisasterControlsPanel`) are removed
+ * here too. What's left is the 3 still-standalone sub-features (official
+ * source status, BMKG alerts, DEM/slope) against a locally-drawn AOI, now
+ * calling the same `/disaster/*` endpoints as user-authenticated requests
+ * (see `api.ts` - the backend now gates them behind `get_current_user`).
  */
 export default function DisasterModule() {
-  const showLoading = useUiStore((s) => s.showLoading);
-  const hideLoading = useUiStore((s) => s.hideLoading);
-
   const [aoi, setAoi] = useState<AoiFeature | null>(null);
-  const [disasterType, setDisasterType] = useState<DisasterType>("flood");
-  const [dates, setDates] = useState<DisasterDateRange>(() => defaultDateRange());
 
   const [sources, setSources] = useState<DisasterSourcesMap | null>(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
@@ -56,48 +65,9 @@ export default function DisasterModule() {
   const [demLoading, setDemLoading] = useState(false);
   const [demError, setDemError] = useState<string | null>(null);
 
-  const [eventResult, setEventResult] = useState<EventMapResult | null>(null);
-  const [eventLoading, setEventLoading] = useState(false);
-  const [eventError, setEventError] = useState<string | null>(null);
-
-  const [legend, setLegend] = useState<MapLegendEntry[]>([]);
-  const [fitSignal, setFitSignal] = useState(0);
-
-  const handleDateChange = (field: keyof DisasterDateRange, value: string) => {
-    setDates((prev) => ({ ...prev, [field]: value }));
-  };
-
   function errorMessage(err: unknown, fallback: string): string {
     if (err instanceof ApiError) return err.message;
     return fallback;
-  }
-
-  async function handleRun() {
-    if (!aoi) {
-      setEventError("Gambar AOI (poligon/kotak) di peta terlebih dahulu.");
-      return;
-    }
-    setEventLoading(true);
-    setEventError(null);
-    showLoading(`Memproses citra sebelum/sesudah untuk ${DISASTER_TYPE_LABELS[disasterType]}...`, "Mohon tunggu");
-    try {
-      const res = await analyzeDisasterEvent({
-        event_type: disasterType,
-        aoi: toAoiPayload(aoi),
-        before_start: dates.beforeStart,
-        before_end: dates.beforeEnd,
-        after_start: dates.afterStart,
-        after_end: dates.afterEnd,
-      });
-      setEventResult(res);
-      setLegend(res.legend ?? []);
-      setFitSignal((n) => n + 1);
-    } catch (err) {
-      setEventError(errorMessage(err, "Terjadi kesalahan jaringan saat memproses deteksi area terdampak."));
-    } finally {
-      setEventLoading(false);
-      hideLoading();
-    }
   }
 
   async function handleLoadSources() {
@@ -136,7 +106,6 @@ export default function DisasterModule() {
     try {
       const res = await analyzeDemSlope({ aoi: toAoiPayload(aoi), scale: 90 });
       setDemResult(res);
-      setLegend(res.legend ?? []);
     } catch (err) {
       setDemError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat DEM."));
     } finally {
@@ -144,59 +113,90 @@ export default function DisasterModule() {
     }
   }
 
+  const anyLoading = sourcesLoading || alertsLoading || demLoading;
+
   return (
     <div className="row g-3">
       <div className="col-lg-3">
-        <DisasterControlsPanel
-          aoi={aoi}
-          disasterType={disasterType}
-          onDisasterTypeChange={setDisasterType}
-          dates={dates}
-          onDateChange={handleDateChange}
-          onRun={handleRun}
-          onLoadSources={handleLoadSources}
-          onLoadBmkg={handleLoadBmkg}
-          onLoadDem={handleLoadDem}
-          runLoading={eventLoading}
-          sourcesLoading={sourcesLoading}
-          bmkgLoading={alertsLoading}
-          demLoading={demLoading}
-        />
+        <div className="sidebar h-100">
+          <h5 className="mb-3">
+            <i className="bi bi-sliders" /> Sumber Tambahan
+          </h5>
+          <AoiStatusCard aoi={aoi} />
+          <button
+            className="btn btn-outline-primary w-100 mt-2"
+            onClick={handleLoadSources}
+            disabled={anyLoading}
+          >
+            <i className="bi bi-database-fill" /> Muat Sumber Resmi
+          </button>
+          <button className="btn btn-outline-info w-100 mt-2" onClick={handleLoadBmkg} disabled={anyLoading}>
+            <i className="bi bi-cloud-rain-heavy-fill" /> Peringatan BMKG
+          </button>
+          <button className="btn btn-outline-secondary w-100 mt-2" onClick={handleLoadDem} disabled={anyLoading}>
+            <i className="bi bi-triangle-fill" /> Layer Kemiringan DEM
+          </button>
+          <div className="alert alert-secondary py-2 mt-3 mb-0" style={{ fontSize: ".78rem" }}>
+            Untuk dashboard intelijen bencana lengkap (analisis per-kejadian, statistik, hotspot), buka{" "}
+            <strong>Pemetaan Bencana</strong> di <code>/pemetaan-bencana</code>.
+          </div>
+        </div>
       </div>
 
       <div className="col-lg-9">
-        <div className="alert alert-info d-flex align-items-start gap-2">
-          <i className="bi bi-exclamation-triangle-fill mt-1" />
-          <div>
-            <strong>Pemetaan bencana berbasis observasi citra.</strong>
-            <div className="small">
-              Modul ini memetakan area terindikasi terdampak dari data sebelum/sesudah kejadian, bukan
-              prediksi risiko. Validasi lapangan dan laporan resmi tetap diperlukan.
-            </div>
-          </div>
-        </div>
-
         <SourceStatusPanel loading={sourcesLoading} error={sourcesError} sources={sources} />
         <BmkgAlerts loading={alertsLoading} error={alertsError} alerts={alerts} />
         <DemSlopeControls loading={demLoading} error={demError} result={demResult} />
 
-        <div className="mb-3">
-          <EventSummary loading={eventLoading} error={eventError} result={eventResult} />
-        </div>
-
         <MapView id="disasterMap" center={[-6.9667, 110.4167]} zoom={9}>
           <BasemapSwitcher />
           <AoiDrawingTools onChange={setAoi} />
-          <DisasterEventMap
-            aoi={aoi}
-            sources={sources}
-            demResult={demResult}
-            eventResult={eventResult}
-            fitSignal={fitSignal}
-          />
+
+          {aoi && (
+            <GeoJSON
+              key={JSON.stringify(aoi.geometry)}
+              data={aoi as unknown as GeoJSON.Feature}
+              style={{ color: "#1565c0", weight: 2, fill: false }}
+            />
+          )}
+
+          {sources &&
+            Object.entries(sources).map(([key, item]) => {
+              if (!item.configured) return null;
+              const opacity = SOURCE_OPACITY[key] ?? 0.55;
+              if (item.tile_url) {
+                return <TileLayer key={key} url={item.tile_url} opacity={opacity} attribution={item.name} pane={RESULT_PANE} />;
+              }
+              if (item.wms_url && item.layers) {
+                return (
+                  <WMSTileLayer
+                    key={key}
+                    url={item.wms_url}
+                    layers={item.layers}
+                    format="image/png"
+                    transparent
+                    opacity={opacity}
+                    attribution={item.name}
+                    pane={RESULT_PANE}
+                  />
+                );
+              }
+              return null;
+            })}
+
+          {demResult?.tile_url && (
+            <TileLayer
+              url={demResult.tile_url}
+              opacity={0.58}
+              attribution={demResult.is_official_demnas ? "BIG DEMNAS" : "USGS SRTM fallback"}
+              pane={RESULT_PANE}
+            />
+          )}
+
+          <FitToAoi aoi={aoi} />
         </MapView>
         <div className="mt-2">
-          <MapLegend entries={legend} />
+          <MapLegend entries={demResult?.legend ?? []} />
         </div>
       </div>
     </div>

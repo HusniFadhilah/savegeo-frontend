@@ -10,6 +10,19 @@ import type {
   CompanyBoundaryFull,
   AdminUserRow,
   AdminRole,
+  SatelliteProviderRow,
+  DisasterEvent,
+  DisasterEventDetail,
+  DisasterAoi,
+  SatelliteImagery,
+  ImageryPhase,
+  DisasterModelRegistryEntry,
+  AnalysisRun,
+  AnalysisRunWithResult,
+  AnalysisResult,
+  DisasterQcStatus,
+  Hotspot,
+  DisasterAuditLogEntry,
 } from "./types";
 
 /**
@@ -201,9 +214,187 @@ export const importCompaniesFromOSM = (industryTypes: string[]) =>
     { auth: true },
   );
 
+// ── Satellite providers (overlay on app/registries/satellite_provider_registry.py) ──
+export const listSatelliteProvidersAdmin = () =>
+  apiClient.get<{ satellites: SatelliteProviderRow[] }>("/admin/satellite-providers", { auth: true });
+
+export const saveSatelliteProvider = (key: string, patch: Partial<SatelliteProviderRow>) =>
+  apiClient.put<{ message: string; provider: SatelliteProviderRow }>(
+    `/admin/satellite-providers/${encodeURIComponent(key)}`,
+    patch,
+    { auth: true },
+  );
+
+/** Removes the DB override row - the provider reverts to its static registry default. */
+export const resetSatelliteProvider = (key: string) =>
+  apiClient.delete<{ message: string }>(`/admin/satellite-providers/${encodeURIComponent(key)}`, { auth: true });
+
 export const importCompaniesFromGFW = (dataset: string) =>
   apiClient.post<{ imported: number; skipped: number; error?: string }>(
     "/admin/companies/import/gfw",
     { dataset },
     { auth: true },
   );
+
+// ── Disaster Intelligence Dashboard (Admin) ─────────────────────────
+// Every function follows the shapes documented in
+// savegeo/backend/docs/disaster-redesign-contract.md section A - the
+// admin_disaster.py router this codes against was being built in parallel,
+// so match the doc, not any particular route file's current state.
+
+export const createDisasterEvent = (payload: {
+  name: string;
+  disaster_type: string;
+  location_name?: string;
+  province?: string[];
+  district?: string[];
+  event_date?: string;
+  start_date?: string;
+  end_date?: string;
+  severity?: string;
+  description?: string;
+  source?: string;
+  thumbnail?: string;
+}) => apiClient.post<DisasterEvent>("/admin/disasters", payload, { auth: true });
+
+export const listDisasterEvents = (params?: {
+  status?: string;
+  disaster_type?: string;
+  severity?: string;
+  year?: string | number;
+  search?: string;
+}) => {
+  const qs = new URLSearchParams();
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+    }
+  }
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return apiClient.get<{ events: DisasterEvent[] }>(`/admin/disasters${suffix}`, { auth: true });
+};
+
+export const getDisasterEvent = (id: number) =>
+  apiClient.get<DisasterEventDetail>(`/admin/disasters/${id}`, { auth: true });
+
+export const updateDisasterEvent = (
+  id: number,
+  payload: Partial<{
+    name: string;
+    disaster_type: string;
+    location_name: string;
+    province: string[];
+    district: string[];
+    event_date: string;
+    start_date: string;
+    end_date: string;
+    status: string;
+    severity: string;
+    description: string;
+    source: string;
+    thumbnail: string;
+  }>,
+) => apiClient.patch<DisasterEvent>(`/admin/disasters/${id}`, payload, { auth: true });
+
+export const deleteDisasterEvent = (id: number) =>
+  apiClient.delete<{ message: string }>(`/admin/disasters/${id}`, { auth: true });
+
+export const createDisasterAoi = (id: number, payload: { geojson: Record<string, unknown>; source?: string }) =>
+  apiClient.post<DisasterAoi>(`/admin/disasters/${id}/aoi`, payload, { auth: true });
+
+export const listDisasterImagery = (id: number, phase?: ImageryPhase) =>
+  apiClient.get<{ imagery: SatelliteImagery[] }>(
+    `/admin/disasters/${id}/imagery${phase ? `?phase=${phase}` : ""}`,
+    { auth: true },
+  );
+
+export const createDisasterImagery = (
+  id: number,
+  payload: {
+    phase: ImageryPhase;
+    satellite: string;
+    acquisition_date: string;
+    sensor?: string;
+    resolution_m?: number;
+    cloud_coverage_pct?: number;
+    data_source?: string;
+    is_primary?: boolean;
+  },
+) => apiClient.post<SatelliteImagery>(`/admin/disasters/${id}/imagery`, payload, { auth: true });
+
+export const setPrimaryImagery = (id: number, imageryId: number) =>
+  apiClient.post<SatelliteImagery>(`/admin/disasters/${id}/imagery/${imageryId}/primary`, undefined, {
+    auth: true,
+  });
+
+export const listDisasterModels = () =>
+  apiClient.get<{ models: DisasterModelRegistryEntry[] }>("/admin/disasters/models", { auth: true });
+
+export const createAnalysisRun = (
+  id: number,
+  payload: { model_id: string; aoi_id: number; pre_imagery_id?: number; post_imagery_id?: number },
+) => apiClient.post<AnalysisRun>(`/admin/disasters/${id}/analyses`, payload, { auth: true });
+
+export const listAnalysisRuns = (id: number) =>
+  apiClient.get<{ runs: AnalysisRunWithResult[] }>(`/admin/disasters/${id}/analyses`, { auth: true });
+
+export const runAnalysis = (runId: number) =>
+  apiClient.post<{ run: AnalysisRun; result: AnalysisResult }>(`/admin/analyses/${runId}/run`, undefined, {
+    auth: true,
+  });
+
+export const updateAnalysisStatus = (runId: number, status: string) =>
+  apiClient.patch<AnalysisRun>(`/admin/analyses/${runId}/status`, { status }, { auth: true });
+
+export const publishAnalysis = (runId: number) =>
+  apiClient.post<AnalysisResult>(`/admin/analyses/${runId}/publish`, undefined, { auth: true });
+
+export const unpublishAnalysis = (runId: number) =>
+  apiClient.post<AnalysisResult>(`/admin/analyses/${runId}/unpublish`, undefined, { auth: true });
+
+export const updateAnalysisResult = (
+  runId: number,
+  payload: Partial<{
+    statistics: Record<string, unknown>;
+    legend: { label: string; color: string }[];
+    confidence_summary: Record<string, unknown>;
+  }>,
+) => apiClient.patch<AnalysisResult>(`/admin/analyses/${runId}/result`, payload, { auth: true });
+
+export const deleteAnalysisResult = (runId: number) =>
+  apiClient.delete<{ message: string }>(`/admin/analyses/${runId}/result`, { auth: true });
+
+export const getDisasterQc = (id: number) =>
+  apiClient.get<DisasterQcStatus>(`/admin/disasters/${id}/qc`, { auth: true });
+
+export const listHotspots = (id: number) =>
+  apiClient.get<{ hotspots: Hotspot[] }>(`/admin/disasters/${id}/hotspots`, { auth: true });
+
+export const createHotspot = (
+  id: number,
+  payload: {
+    name: string;
+    impact_level: string;
+    geojson: Record<string, unknown>;
+    analysis_result_id?: number;
+    stats?: Record<string, unknown>;
+    is_published?: boolean;
+  },
+) => apiClient.post<Hotspot>(`/admin/disasters/${id}/hotspots`, payload, { auth: true });
+
+export const updateHotspot = (
+  hotspotId: number,
+  payload: Partial<{
+    name: string;
+    impact_level: string;
+    geojson: Record<string, unknown>;
+    stats: Record<string, unknown>;
+    is_published: boolean;
+  }>,
+) => apiClient.patch<Hotspot>(`/admin/hotspots/${hotspotId}`, payload, { auth: true });
+
+export const deleteHotspot = (hotspotId: number) =>
+  apiClient.delete<{ message: string }>(`/admin/hotspots/${hotspotId}`, { auth: true });
+
+export const getDisasterAudit = (id: number) =>
+  apiClient.get<{ logs: DisasterAuditLogEntry[] }>(`/admin/disasters/${id}/audit`, { auth: true });

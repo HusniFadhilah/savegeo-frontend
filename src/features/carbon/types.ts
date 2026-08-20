@@ -31,7 +31,26 @@ export interface CarbonModelCvMetrics {
   n_folds?: number;
   cv_folds?: number;
   rmse_mean?: number;
+  rmse_std?: number;
   r2_mean?: number;
+  r2_std?: number;
+  mae_mean?: number;
+  mae_std?: number;
+}
+
+/** Per-run data-quality/uncertainty signal (P0), distinct from the model's own
+ * training-time cv_metrics: this describes *this specific* AOI/date-range
+ * composite, not the model in general. See backend carbon_service.analyze_carbon. */
+export interface CarbonDataQuality {
+  valid_pixel_pct: number | null;
+  gap_filled: boolean | null;
+  images_used: number | null;
+  /** Spatial variability inside the AOI (std_dev/mean * 100), not a formal
+   * confidence interval - imagery pixels are spatially correlated, so a CI
+   * assuming independent samples would overstate precision. */
+  coefficient_of_variation_pct: number | null;
+  model_r2: number | null;
+  model_rmse: number | null;
 }
 
 export interface CarbonModelMeta {
@@ -122,8 +141,10 @@ export interface CarbonModelRunInfo {
   reference_dataset?: string;
   reference_dataset_year?: number | string;
   model_name?: string;
+  model_version?: string | null;
   target_pool?: string;
   cv_metrics?: CarbonModelCvMetrics;
+  images_used?: number | null;
 }
 
 export interface CarbonResult {
@@ -131,7 +152,13 @@ export interface CarbonResult {
   carbon_reference?: CarbonLayerResult & CarbonReferenceInfo;
   area_info: CarbonAreaInfo;
   model_info: CarbonModelRunInfo;
+  /** @deprecated never actually populated by the backend (verified against
+   * app/services/carbon_service.py's real return shape) - R²/RMSE live under
+   * `model_info.cv_metrics` instead. Kept only so old cached report exports
+   * embedding this shape don't break the type; do not read this at a new
+   * call site, read `data_quality`/`model_info.cv_metrics`. */
   model_performance?: { rmse?: number; r2_score?: number; cv_folds?: number; rmse_std?: number };
+  data_quality?: CarbonDataQuality;
   processing_time?: string;
 }
 
@@ -140,6 +167,45 @@ export interface AnalysisProcessingTimes {
   landcover?: string;
   carbon?: string;
   total?: string;
+}
+
+export interface CarbonDeltaSeriesPoint {
+  year: number;
+  mean_density: number;
+  std_dev: number;
+  min: number;
+  max: number;
+  area_ha: number;
+  total_carbon_tons: number;
+  carbon_dioxide_equivalent_tons: number;
+  /** Only present when the request set include_tiles:true (timelapse playback). */
+  tile_url: string | null;
+}
+
+export interface CarbonDeltaEntry {
+  from_year: number;
+  to_year: number;
+  delta_total_carbon_tons: number;
+  delta_mean_density: number;
+  delta_co2e_tons: number;
+  delta_total_carbon_percent: number;
+  direction: "increase" | "decrease" | "stable";
+}
+
+/** POST /analyze/carbon-delta response - multi-year carbon time series + year-over-year deltas. */
+export interface CarbonDeltaResponse {
+  series: CarbonDeltaSeriesPoint[];
+  deltas: CarbonDeltaEntry[];
+  summary: {
+    start_year: number;
+    end_year: number;
+    start_total_carbon_tons: number;
+    end_total_carbon_tons: number;
+    net_delta_total_carbon_tons: number;
+    net_delta_co2e_tons: number;
+  };
+  parameters: { start_month: number; end_month: number; cloud_threshold: number; scale: number; interval: number };
+  model_info: { model_name: string; algorithm?: string; scale: number };
 }
 
 export interface CompanyBoundary {

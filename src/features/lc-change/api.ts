@@ -1,5 +1,12 @@
 import { apiClient } from "@/services/apiClient";
-import type { LcAnalyzeParams, LcAnalyzeResponse, LcChangeMapParams, LcChangeMapResponse } from "./types";
+import type {
+  LcAnalyzeParams,
+  LcAnalyzeResponse,
+  LcChangeMapParams,
+  LcChangeMapResponse,
+  LcHotspotParams,
+  LcHotspotResponse,
+} from "./types";
 
 /**
  * LC-Change module API calls. Endpoint paths/payload/response shapes are
@@ -18,4 +25,9 @@ export function analyzeLandCoverYear(params: LcAnalyzeParams) {
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */
 export function analyzeLandCoverChangeMap(params: LcChangeMapParams) {
   return apiClient.post<LcChangeMapResponse>("/analyze/landcover-change-map", params);
+}
+
+/** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */
+export function analyzeLandCoverHotspots(params: LcHotspotParams) {
+  return apiClient.post<LcHotspotResponse>("/analyze/landcover-hotspots", params);
 }

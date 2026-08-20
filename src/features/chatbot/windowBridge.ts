@@ -19,6 +19,10 @@
  * file. Until then, those specific actions silently no-op.
  */
 
+import L from "leaflet";
+import { useUiStore } from "@/hooks/useUiStore";
+import type { GeoAiContext } from "./types";
+
 /** Minimal structural subset of a Leaflet map/tileLayer, enough for addMapLayer/flyTo fallbacks. */
 interface LeafletLikeMap {
   flyTo: (latlng: [number, number], zoom?: number, opts?: Record<string, unknown>) => void;
@@ -29,6 +33,24 @@ interface LeafletLikeNamespace {
     url: string,
     opts?: Record<string, unknown>,
   ) => { addTo: (map: LeafletLikeMap) => unknown };
+}
+
+/** Mirrored by LcChangeModule.tsx - that module has its own AOI/results, separate
+ * from CarbonModule's `window.currentAOI`/`window.analysisResults` (see
+ * buildGeoAiContext() below for why the Geo-AI Assistant needs both). */
+interface LcChangeBridgeState {
+  aoi: GeoJSON.GeoJSON | null;
+  dataset: string | null;
+  from_year: number | null;
+  to_year: number | null;
+  transition: {
+    dataset: string | null;
+    from_year: number | null;
+    to_year: number | null;
+    gains: Record<string, number>;
+    losses: Record<string, number>;
+    matrix: Record<string, Record<string, number>>;
+  } | null;
 }
 
 declare global {
@@ -48,7 +70,8 @@ declare global {
     setAOIFromGeoJSON?: (feature: GeoJSON.GeoJSON, name?: string) => void;
     loadGeoJSONAsAOI?: (feature: GeoJSON.GeoJSON) => void;
     LCChange?: { runAnalysis?: () => void };
-    currentAOI?: { geojson?: GeoJSON.GeoJSON; name?: string } | null;
+    currentAOI?: { geojson?: GeoJSON.GeoJSON; name?: string; areaKm2?: number | null } | null;
+    lcChangeState?: LcChangeBridgeState | null;
     drawnItems?: { toGeoJSON: () => GeoJSON.FeatureCollection } | null;
     map?: LeafletLikeMap | null;
     L?: LeafletLikeNamespace;
@@ -131,12 +154,7 @@ function optionValues(id: string): string[] {
 /** Collects a page-state snapshot sent alongside every chat message, for AI context. */
 export function getPageState() {
   const ar = getAppValue("analysisResults") || {};
-
-  let currentModule = "carbon";
-  (["carbon", "lc-change", "disaster", "details", "about", "guide"] as const).forEach((m) => {
-    const el = document.getElementById("module-" + m);
-    if (el && el.classList.contains("active")) currentModule = m.replace("-", "_");
-  });
+  const currentModule = useUiStore.getState().activeModule.replace("-", "_");
 
   const carbonData = (ar.carbon as Record<string, unknown>) || {};
   const hasCarbon = !!(carbonData.carbon_estimated || carbonData.tile_url);
@@ -188,6 +206,63 @@ export function getPageState() {
             statistics: Object.keys(vegStats).length ? vegStats : null,
           }
         : null,
+    },
+  };
+}
+
+function bboxOfGeoJSON(geo: GeoJSON.GeoJSON): [number, number, number, number] | null {
+  try {
+    const bounds = L.geoJSON(geo).getBounds();
+    if (!bounds.isValid()) return null;
+    return [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Richer grounding context for the Geo-AI Assistant (mode="geoai") - the
+ * actual AOI geometry and already-computed analysis results, not just
+ * booleans (contrast with the legacy getPageState() above). Merges state
+ * from both CarbonModule (`window.currentAOI`/`window.analysisResults`) and
+ * LcChangeModule (`window.lcChangeState`) since DashboardPage keeps every
+ * visited module mounted (see DashboardPage.tsx) - a user can be looking at
+ * LC-Change while an earlier Carbon run is still valid grounding data, so
+ * results are merged rather than switched on the active module; only the
+ * AOI (needed for live hotspot search geometry) prefers whichever module is
+ * currently in front of the user.
+ */
+export function buildGeoAiContext(): GeoAiContext {
+  const activeModule = useUiStore.getState().activeModule;
+  const carbonAoi = getAppValue("currentAOI") || null;
+  const lcState = getAppValue("lcChangeState") || null;
+
+  const preferLc = activeModule === "lc-change" && !!lcState?.aoi;
+  const aoi = preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || null;
+  const aoiName = preferLc ? "AOI (LC-Change)" : carbonAoi?.name || null;
+  const areaKm2 = !preferLc ? carbonAoi?.areaKm2 ?? null : null;
+
+  const ar = getAppValue("analysisResults") || {};
+  const period = preferLc && lcState?.from_year && lcState?.to_year
+    ? `${lcState.from_year}-${lcState.to_year}`
+    : String(SaveGeoContext.getCurrentYear());
+
+  return {
+    aoi,
+    aoi_name: aoiName,
+    area_ha: areaKm2 != null ? Math.round(areaKm2 * 100 * 100) / 100 : null,
+    bbox: aoi ? bboxOfGeoJSON(aoi) : null,
+    current_module: activeModule.replace("-", "_"),
+    period,
+    selected_year: SaveGeoContext.getCurrentYear(),
+    active_layer: getAppValue("activeResultLayerName") || null,
+    selected_feature: null, // no feature-selection concept wired in the app yet - honestly null, not fabricated
+    landcover_dataset: lcState?.dataset || null,
+    results: {
+      carbon: (ar.carbon as Record<string, unknown>) || null,
+      vegetation: (ar.vegetation as Record<string, unknown>) || null,
+      landcover: (ar.landcover as Record<string, unknown>) || null,
+      landcover_transition: lcState?.transition || null,
     },
   };
 }

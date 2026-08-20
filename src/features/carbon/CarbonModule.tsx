@@ -13,10 +13,12 @@ import VegetationParamsPanel from "@/features/vegetation/components/VegetationPa
 import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
 import LandCoverResultTables from "@/features/landcover/components/LandCoverResultTables";
-import { analyzeVegetation } from "@/features/vegetation/api";
+import { analyzeVegetation, analyzeVegetationTimeSeries } from "@/features/vegetation/api";
+import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
 import { analyzeLandCover } from "@/features/landcover/api";
-import { analyzeCarbon } from "@/features/carbon/api";
-import { DEFAULT_VEGETATION_INDICES } from "@/features/vegetation/indices";
+import { analyzeCarbon, analyzeCarbonDelta } from "@/features/carbon/api";
+import CarbonTimeSeriesPanel from "./components/CarbonTimeSeriesPanel";
+import { DEFAULT_VEGETATION_INDICES, VEGETATION_INDICES } from "@/features/vegetation/indices";
 import {
   DEFAULT_CARBON_REFERENCE_DATASET,
   CARBON_DATASET_YEARS,
@@ -28,9 +30,10 @@ import type {
   AnalysisType,
   CarbonParams,
   CarbonModelListItem,
+  CarbonDeltaResponse,
   AnalysisProcessingTimes,
 } from "@/features/carbon/types";
-import type { VegetationParams } from "@/features/vegetation/types";
+import type { VegetationParams, VegetationTimeSeriesResponse } from "@/features/vegetation/types";
 import type { LandCoverParams } from "@/features/landcover/types";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 
@@ -80,12 +83,36 @@ export default function CarbonModule() {
   });
   const [selectedModel, setSelectedModel] = useState<CarbonModelListItem | null>(null);
 
+  // P0 "time-series & timelapse" - carbon-only, mutually exclusive with the
+  // single-year combined analysis below (only shown/usable when
+  // analysisType === "carbon"). IDs on the checkbox/inputs match what
+  // features/chatbot/actionExecutor.ts's carbon_delta_* cases already expect
+  // (those were dead until this UI existed).
+  const [deltaEnabled, setDeltaEnabled] = useState(false);
+  const [deltaStartYear, setDeltaStartYear] = useState(yearMax - 4);
+  const [deltaEndYear, setDeltaEndYear] = useState(yearMax);
+  const [deltaInterval, setDeltaInterval] = useState(1);
+  const [deltaIncludeTiles, setDeltaIncludeTiles] = useState(true);
+  const [deltaResult, setDeltaResult] = useState<CarbonDeltaResponse | null>(null);
+  const [deltaRunning, setDeltaRunning] = useState(false);
+  const [deltaError, setDeltaError] = useState<string | null>(null);
+
   const [vegParams, setVegParams] = useState<VegetationParams>({
     startMonth: 6,
     endMonth: 9,
     cloudThreshold: 40,
     indices: DEFAULT_VEGETATION_INDICES,
+    satellite: "sentinel2",
   });
+
+  // P0 "time-series & timelapse" for vegetation - carbon-only-style toggle,
+  // mutually exclusive with the single-year combined analysis (only usable
+  // when analysisType === "vegetation", monthly series for one index/year).
+  const [vegTsEnabled, setVegTsEnabled] = useState(false);
+  const [vegTsIndex, setVegTsIndex] = useState("NDVI");
+  const [vegTsResult, setVegTsResult] = useState<VegetationTimeSeriesResponse | null>(null);
+  const [vegTsRunning, setVegTsRunning] = useState(false);
+  const [vegTsError, setVegTsError] = useState<string | null>(null);
 
   const [lcParams, setLcParams] = useState<LandCoverParams>({
     datasets: ["Dynamic_World"],
@@ -104,7 +131,7 @@ export default function CarbonModule() {
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
 
   useEffect(() => {
-    window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name } : null;
+    window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name, areaKm2: aoi.areaKm2 } : null;
     return () => {
       window.currentAOI = null;
     };
@@ -123,7 +150,107 @@ export default function CarbonModule() {
     };
   }, [results]);
 
+  async function handleRunDelta() {
+    if (!aoi) {
+      setRunError("Pilih AOI terlebih dahulu.");
+      return;
+    }
+    const aoiPayload: AoiPayload = aoi.feature
+      ? { geojson: aoi.feature }
+      : aoi.bounds
+        ? boundsToPayload(aoi.bounds)
+        : null!;
+    if (!aoiPayload) {
+      setRunError("AOI tidak valid.");
+      return;
+    }
+    if (deltaStartYear >= deltaEndYear) {
+      setDeltaError("Tahun awal harus lebih kecil dari tahun akhir.");
+      return;
+    }
+
+    setDeltaRunning(true);
+    setDeltaError(null);
+    setRunError(null);
+    setResults({});
+    showLoading("Menghitung time-series karbon...", `${deltaStartYear} - ${deltaEndYear}`);
+    try {
+      const res = await analyzeCarbonDelta({
+        aoi: aoiPayload,
+        startYear: deltaStartYear,
+        endYear: deltaEndYear,
+        interval: deltaInterval,
+        startMonth: carbonParams.startMonth,
+        endMonth: carbonParams.endMonth,
+        cloudThreshold: carbonParams.cloudThreshold,
+        modelName: carbonParams.modelName,
+        includeTiles: deltaIncludeTiles,
+        visMin,
+        visMax,
+        visPalette,
+      });
+      setDeltaResult(res);
+      setMapKey((k) => k + 1);
+    } catch (err) {
+      setDeltaError(err instanceof ApiError ? err.message : "Gagal memuat time-series karbon.");
+      setDeltaResult(null);
+    } finally {
+      hideLoading();
+      setDeltaRunning(false);
+    }
+    window._onSaveGeoAnalysisDone?.();
+  }
+
+  async function handleRunVegTs() {
+    if (!aoi) {
+      setRunError("Pilih AOI terlebih dahulu.");
+      return;
+    }
+    const aoiPayload: AoiPayload = aoi.feature
+      ? { geojson: aoi.feature }
+      : aoi.bounds
+        ? boundsToPayload(aoi.bounds)
+        : null!;
+    if (!aoiPayload) {
+      setRunError("AOI tidak valid.");
+      return;
+    }
+
+    setVegTsRunning(true);
+    setVegTsError(null);
+    setRunError(null);
+    setResults({});
+    showLoading("Menghitung time-series vegetasi...", `${vegTsIndex} - ${year}`);
+    try {
+      const res = await analyzeVegetationTimeSeries({
+        aoi: aoiPayload,
+        year,
+        index: vegTsIndex,
+        cloudThreshold: vegParams.cloudThreshold,
+        satellite: vegParams.satellite,
+      });
+      setVegTsResult(res);
+    } catch (err) {
+      setVegTsError(err instanceof ApiError ? err.message : "Gagal memuat time-series vegetasi.");
+      setVegTsResult(null);
+    } finally {
+      hideLoading();
+      setVegTsRunning(false);
+    }
+    window._onSaveGeoAnalysisDone?.();
+  }
+
   async function handleRunAnalysis() {
+    if (deltaEnabled && analysisType === "carbon") {
+      await handleRunDelta();
+      return;
+    }
+    if (vegTsEnabled && analysisType === "vegetation") {
+      await handleRunVegTs();
+      return;
+    }
+    setDeltaResult(null);
+    setVegTsResult(null);
     if (!aoi) {
       setRunError("Pilih AOI terlebih dahulu.");
       return;
@@ -247,24 +374,94 @@ export default function CarbonModule() {
             />
           )}
 
-          <div className="mb-3">
-            <label className="form-label">Tahun</label>
-            <input
-              id="yearSlider"
-              type="range"
-              className="form-range"
-              min={yearMin}
-              max={yearMax}
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-            />
-            <div className="text-center">
-              <strong>{year}</strong>
-              <span id="yearValue" className="visually-hidden">
-                {year}
-              </span>
+          {analysisType === "carbon" && (
+            <div className="form-check form-switch mb-2">
+              <input
+                id="enableCarbonDelta"
+                className="form-check-input"
+                type="checkbox"
+                checked={deltaEnabled}
+                onChange={(e) => setDeltaEnabled(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="enableCarbonDelta">
+                <i className="bi bi-clock-history" /> Time-Series (multi-tahun)
+              </label>
             </div>
-          </div>
+          )}
+
+          {deltaEnabled && analysisType === "carbon" ? (
+            <div className="mb-3">
+              <label className="form-label">Rentang Tahun</label>
+              <div className="d-flex gap-2 align-items-center mb-1">
+                <input
+                  id="carbonDeltaStartYear"
+                  type="number"
+                  className="form-control form-control-sm"
+                  min={yearMin}
+                  max={yearMax}
+                  value={deltaStartYear}
+                  onChange={(e) => setDeltaStartYear(Number(e.target.value))}
+                />
+                <span className="text-muted">–</span>
+                <input
+                  id="carbonDeltaEndYear"
+                  type="number"
+                  className="form-control form-control-sm"
+                  min={yearMin}
+                  max={yearMax}
+                  value={deltaEndYear}
+                  onChange={(e) => setDeltaEndYear(Number(e.target.value))}
+                />
+              </div>
+              <div className="d-flex gap-2 align-items-center">
+                <label className="form-label mb-0 small text-muted" htmlFor="carbonDeltaInterval">
+                  Interval (tahun)
+                </label>
+                <input
+                  id="carbonDeltaInterval"
+                  type="number"
+                  className="form-control form-control-sm"
+                  style={{ width: 70 }}
+                  min={1}
+                  max={10}
+                  value={deltaInterval}
+                  onChange={(e) => setDeltaInterval(Math.max(1, Number(e.target.value)))}
+                />
+              </div>
+              <div className="form-check mt-2">
+                <input
+                  id="carbonDeltaIncludeTiles"
+                  className="form-check-input"
+                  type="checkbox"
+                  checked={deltaIncludeTiles}
+                  onChange={(e) => setDeltaIncludeTiles(e.target.checked)}
+                />
+                <label className="form-check-label small" htmlFor="carbonDeltaIncludeTiles">
+                  Sertakan tile peta (buat timelapse, lebih lambat)
+                </label>
+              </div>
+              {deltaError && <div className="alert alert-danger py-1 px-2 mt-2 small">{deltaError}</div>}
+            </div>
+          ) : (
+            <div className="mb-3">
+              <label className="form-label">Tahun</label>
+              <input
+                id="yearSlider"
+                type="range"
+                className="form-range"
+                min={yearMin}
+                max={yearMax}
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+              />
+              <div className="text-center">
+                <strong>{year}</strong>
+                <span id="yearValue" className="visually-hidden">
+                  {year}
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="mb-3">
             <label className="form-label">Zoom Peta</label>
@@ -290,6 +487,41 @@ export default function CarbonModule() {
             />
           )}
 
+          {analysisType === "vegetation" && (
+            <div className="form-check form-switch mb-2">
+              <input
+                id="enableVegTimeSeries"
+                className="form-check-input"
+                type="checkbox"
+                checked={vegTsEnabled}
+                onChange={(e) => setVegTsEnabled(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="enableVegTimeSeries">
+                <i className="bi bi-graph-up" /> Time-Series Bulanan
+              </label>
+            </div>
+          )}
+
+          {vegTsEnabled && analysisType === "vegetation" && (
+            <div className="mb-3">
+              <label className="form-label">Indeks (satu saja)</label>
+              <select
+                id="vegTsIndex"
+                className="form-select form-select-sm"
+                value={vegTsIndex}
+                onChange={(e) => setVegTsIndex(e.target.value)}
+              >
+                {VEGETATION_INDICES.map((idx) => (
+                  <option key={idx.code} value={idx.code}>
+                    {idx.label}
+                  </option>
+                ))}
+              </select>
+              <small className="text-muted d-block mt-1">Diproses per bulan (Jan-Des) untuk tahun terpilih di bawah.</small>
+              {vegTsError && <div className="alert alert-danger py-1 px-2 mt-2 small">{vegTsError}</div>}
+            </div>
+          )}
+
           {(analysisType === "landcover" || analysisType === "combined") && (
             <LandCoverParamsPanel
               params={lcParams}
@@ -301,9 +533,9 @@ export default function CarbonModule() {
             id="runAnalysis"
             className="btn btn-primary w-100 mt-3"
             onClick={handleRunAnalysis}
-            disabled={running || !aoi}
+            disabled={running || deltaRunning || vegTsRunning || !aoi}
           >
-            {running ? (
+            {running || deltaRunning || vegTsRunning ? (
               <>
                 <span className="spinner-border spinner-border-sm me-1" /> Menganalisis...
               </>
@@ -328,7 +560,13 @@ export default function CarbonModule() {
           </div>
         )}
 
-        {hasResults && aoi && (
+        {deltaResult && aoi && (
+          <CarbonTimeSeriesPanel result={deltaResult} zoom={zoom} center={aoi.bounds ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng] : [-2.5, 118]} />
+        )}
+
+        {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}
+
+        {hasResults && aoi && !deltaResult && !vegTsResult && (
           <>
             <ResultsMapPanel
               aoi={aoi}

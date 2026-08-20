@@ -1,7 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
 import type { ChatSession } from "@/types/api";
-import type { AgentControlResponse, ChatPageState, PendingFileAttachment } from "./types";
+import type { AgentControlResponse, ChatPageState, GeoAiContext, PendingFileAttachment } from "./types";
 
 /**
  * Same endpoint family as the legacy vanilla chatbot (savegeo-chatbot.js
@@ -20,6 +20,10 @@ import type { AgentControlResponse, ChatPageState, PendingFileAttachment } from 
 export interface SendAgentControlArgs {
   message: string;
   pageState: ChatPageState;
+  /** "geoai" (default, grounded tool-calling assistant) or "control" (legacy UI-automation planner). */
+  mode?: "geoai" | "control";
+  /** Required when mode="geoai" - see windowBridge.ts buildGeoAiContext(). */
+  context?: GeoAiContext;
   imageB64?: string | null;
   attachment?: PendingFileAttachment | null;
   sessionId?: number | null;
@@ -30,7 +34,9 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
   const payload: Record<string, unknown> = {
     message: args.message,
     page_state: args.pageState,
+    mode: args.mode || "geoai",
   };
+  if (args.context) payload.context = args.context;
   if (args.imageB64) payload.image = args.imageB64;
   if (args.sessionId) payload.session_id = args.sessionId;
   if (args.attachment) {

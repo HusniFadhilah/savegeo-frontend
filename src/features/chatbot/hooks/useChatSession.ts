@@ -4,7 +4,8 @@ import type { ChatSession } from "@/types/api";
 import { chatbotApi } from "../api";
 import { runActions, type ActionRunContext } from "../actionExecutor";
 import { CHAT_I18N } from "../i18n";
-import { captureMapScreenshot, getAppValue, getPageState } from "../windowBridge";
+import { buildSuggestedPrompts } from "../suggestedPrompts";
+import { captureMapScreenshot, getAppValue, getPageState, buildGeoAiContext } from "../windowBridge";
 import {
   aoiFeatureFromGeoJSON,
   aoiNameFromGeoJSON,
@@ -21,9 +22,11 @@ import type {
   AgentControlResponse,
   ChatAction,
   ChatWarning,
+  GeoAiContext,
   LogEntry,
   PendingFileAttachment,
   QuickAction,
+  ResultCard,
 } from "../types";
 
 export const DEFAULT_FILE_ACCEPT = "image/*,.pdf,.txt,.csv,.json,.geojson,.kml,.md,.docx,.zip,.shp";
@@ -73,6 +76,9 @@ export function useChatSession() {
   /** Set right before an intentional abort-and-immediately-retry, so the AbortError handler in
    *  callBackend knows to skip showing a "Permintaan dibatalkan" retry chip for this one. */
   const suppressAbortChipRef = useRef(false);
+  /** hotspot id -> geometry from the most recent geoai response's hotspot cards, so
+   *  highlight_hotspot/show_before_after actions (and follow-up turns) can resolve them. */
+  const hotspotGeometriesRef = useRef<Record<string, GeoJSON.Geometry>>({});
 
   isOpenRef.current = isOpen;
   isLoadingRef.current = isLoading;
@@ -185,6 +191,10 @@ export function useChatSession() {
           }
           const warnings = normalizeWarnings(parsed.warnings);
           if (warnings.length) newLog.push({ id: makeId("warn"), kind: "warnings", warnings });
+          if (parsed.cards?.length) {
+            registerHotspotCards(parsed.cards);
+            parsed.cards.forEach((card) => newLog.push({ id: makeId("card"), kind: "resultCard", card }));
+          }
           if (parsed.actions?.length) {
             newLog.push({
               id: makeId("hist"),
@@ -230,6 +240,7 @@ export function useChatSession() {
     resetToWelcome();
     clearPendingImage();
     clearPendingFile();
+    hotspotGeometriesRef.current = {};
     if (sessionPanelOpen) setSessionPanelOpen(false);
   }
 
@@ -472,6 +483,8 @@ export function useChatSession() {
       const resp = await chatbotApi.sendAgentControl({
         message,
         pageState: getPageState(),
+        mode: "geoai",
+        context: buildGeoAiContext(),
         imageB64: image,
         attachment: file,
         sessionId: sessionIdRef.current,
@@ -521,6 +534,12 @@ export function useChatSession() {
     void callBackend(message, image, file);
   }
 
+  function registerHotspotCards(cards: ResultCard[]) {
+    for (const card of cards) {
+      if (card.type === "hotspot") hotspotGeometriesRef.current[card.id] = card.geometry;
+    }
+  }
+
   function handleResponse(resp: AgentControlResponse) {
     if (resp.plan && !resp.actions) {
       handleLegacyResponse(resp);
@@ -530,9 +549,14 @@ export function useChatSession() {
     const msg = resp.message || "";
     const warnings = normalizeWarnings(resp.warnings);
     const actions = resp.actions || [];
+    const cards = resp.cards || [];
 
     if (msg) appendMessage("assistant", msg);
     if (warnings.length) appendEntry({ id: makeId("warn"), kind: "warnings", warnings });
+    if (cards.length) {
+      registerHotspotCards(cards);
+      cards.forEach((card) => appendEntry({ id: makeId("card"), kind: "resultCard", card }));
+    }
 
     actions
       .filter((a) => a.type === "ask_user")
@@ -620,6 +644,7 @@ export function useChatSession() {
         });
       },
       setFileInputAccept: (accept) => setFileInputAccept(accept),
+      getHotspotGeometry: (hotspotId) => hotspotGeometriesRef.current[hotspotId] || null,
     };
 
     await runActions(actions, ctx, (_action, i, total) => {
@@ -650,6 +675,8 @@ export function useChatSession() {
     setQuickActionsVisible(true);
   }
 
+  const geoContext: GeoAiContext | null = isOpen ? buildGeoAiContext() : null;
+
   return {
     // panel state
     isOpen,
@@ -658,9 +685,12 @@ export function useChatSession() {
     open,
     close,
     status,
+    // context bar (spec section 13)
+    aoiName: geoContext?.aoi_name ?? null,
+    period: geoContext?.aoi ? geoContext.period : null,
     // log
     log,
-    quickActions: quickActionsVisible ? t().quickActions : [],
+    quickActions: quickActionsVisible ? buildSuggestedPrompts(geoContext ?? buildGeoAiContext()) : [],
     // attachments
     pendingImage,
     pendingFile,

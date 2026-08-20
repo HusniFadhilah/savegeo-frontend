@@ -1,6 +1,6 @@
 import { apiClient } from "@/services/apiClient";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
-import type { VegetationParams, VegetationResult } from "./types";
+import type { SatelliteProvider, VegetationParams, VegetationResult, VegetationTimeSeriesResponse } from "./types";
 
 /** POST /analyze/vegetation returns the VegetationResult dict directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function analyzeVegetation(aoi: AoiPayload, year: number, params: VegetationParams) {
@@ -11,6 +11,41 @@ export function analyzeVegetation(aoi: AoiPayload, year: number, params: Vegetat
     end_month: params.endMonth,
     cloud_threshold: params.cloudThreshold,
     indices: params.indices,
+    satellite: params.satellite,
+  });
+}
+
+export interface SatelliteCatalogResponse {
+  satellites: Record<string, SatelliteProvider>;
+  default: string;
+}
+
+/** GET /vegetation/satellites - static, no-GEE catalog of selectable satellite
+ * imagery providers (Sentinel-2/Landsat 8/Landsat 9) with resolution/revisit/spec
+ * metadata, for the satellite-picker UI. */
+export function getVegetationSatellites() {
+  return apiClient.get<SatelliteCatalogResponse>("/vegetation/satellites");
+}
+
+export interface VegetationTimeSeriesArgs {
+  aoi: AoiPayload;
+  year: number;
+  index: string;
+  cloudThreshold: number;
+  scale?: number;
+  satellite: string;
+}
+
+/** POST /timeseries - monthly mean of one index over one year (P0 "time-series & timelapse"). Flat body, no {success,data} envelope. */
+export function analyzeVegetationTimeSeries(args: VegetationTimeSeriesArgs) {
+  return apiClient.post<VegetationTimeSeriesResponse>("/timeseries", {
+    aoi: args.aoi,
+    year: args.year,
+    index: args.index,
+    interval: "monthly",
+    cloud_threshold: args.cloudThreshold,
+    scale: args.scale,
+    satellite: args.satellite,
   });
 }
 

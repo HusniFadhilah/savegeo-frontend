@@ -434,6 +434,53 @@
 .sgc-download-link { color: #1e6b3c; font-weight: 600; text-decoration: none; }
 .sgc-download-link:hover { text-decoration: underline; }
 
+/* ── Geo-AI Assistant context bar (AOI / period, spec section 13) ───── */
+#sgc-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: #f0f7f2;
+  border-bottom: 1px solid #d9ebe0;
+  font-size: 11.5px;
+  color: #1e6b3c;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.sgc-context-item { display: flex; align-items: center; gap: 4px; font-weight: 500; }
+.sgc-context-item i { font-size: 11px; opacity: 0.8; }
+.sgc-context-empty { color: #9ca3af; font-style: italic; }
+
+/* ── Geo-AI result cards (spec section 14) ───────────────────────── */
+.sgc-result-card { background: #f7fbf8; border: 1px solid #c3ddc9; border-radius: 10px; padding: 11px 13px; font-size: 13px; margin: 4px 0; }
+.sgc-result-card-title { font-weight: 700; color: #14532d; margin-bottom: 8px; font-size: 13px; }
+.sgc-metric-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 4px; }
+.sgc-metric-item { min-width: 70px; }
+.sgc-metric-value { font-size: 16px; font-weight: 700; color: #1e6b3c; line-height: 1.2; }
+.sgc-metric-unit { font-size: 11px; font-weight: 500; color: #4b5563; }
+.sgc-metric-label { font-size: 11px; color: #6b7280; margin-top: 1px; }
+.sgc-card-source { font-size: 10.5px; color: #9ca3af; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+
+.sgc-hotspot-card { border-left: 4px solid #ef4444; }
+.sgc-hotspot-card .sgc-action-row { margin-top: 8px; }
+
+.sgc-comparison-card .sgc-comparison-row { display: flex; gap: 10px; }
+.sgc-comparison-col { flex: 1; min-width: 0; }
+.sgc-comparison-col-label { font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 3px; }
+.sgc-comparison-pre {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  overflow-x: auto;
+  max-height: 140px;
+  margin: 0;
+}
+
+.sgc-suggested-action-chip { border-color: #4a72c4; color: #2952a3; }
+.sgc-suggested-action-chip:hover { background: #4a72c4; color: #fff; }
+
 /* ── Mobile ───────────────────────────────────────────────────── */
 @media (max-width: 540px) {
   #sgc-panel { right: 0; bottom: 0; left: 0; width: 100%; max-height: 90dvh; border-radius: 14px 14px 0 0; }
