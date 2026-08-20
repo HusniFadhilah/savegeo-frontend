@@ -1,0 +1,81 @@
+name: Build and deploy SAVEGEO frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: savegeo-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install, test, and build
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_APP_ENV: production
+        run: |
+          npm ci
+          npm test -- --passWithNoTests
+          npm run build
+
+      - name: Install VPN and deployment tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openvpn sshpass rsync netcat-openbsd
+
+      - name: Connect VPN
+        env:
+          VPN_CONFIG_B64: ${{ secrets.VPN_CONFIG_B64 }}
+          VPN_AUTH_B64: ${{ secrets.VPN_AUTH_B64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$VPN_CONFIG_B64" | base64 --decode > "$RUNNER_TEMP/client.ovpn"
+          printf '%s' "$VPN_AUTH_B64" | base64 --decode > "$RUNNER_TEMP/vpn-auth.txt"
+          chmod 600 "$RUNNER_TEMP/client.ovpn" "$RUNNER_TEMP/vpn-auth.txt"
+          sudo openvpn --config "$RUNNER_TEMP/client.ovpn" \
+            --auth-user-pass "$RUNNER_TEMP/vpn-auth.txt" \
+            --daemon --log "$RUNNER_TEMP/openvpn.log"
+          for i in $(seq 1 30); do
+            nc -z -w 3 192.168.17.55 6970 && exit 0
+            sleep 3
+          done
+          sudo cat "$RUNNER_TEMP/openvpn.log" || true
+          exit 1
+
+      - name: Configure SSH host verification
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy static files
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p 6970 ubuntu@192.168.17.55 \
+            'mkdir -p /home/ubuntu/savegeo/frontend/dist'
+          rsync -az --delete \
+            -e "sshpass -e ssh -p 6970" \
+            dist/ ubuntu@192.168.17.55:/home/ubuntu/savegeo/frontend/dist/
+          curl --fail --silent --show-error \
+            --resolve savegeo.len.co.id:80:192.168.17.55 \
+            http://savegeo.len.co.id/ >/dev/null
