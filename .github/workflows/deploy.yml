@@ -81,6 +81,9 @@ jobs:
           rsync -az \
             -e "sshpass -e ssh -p 6970" \
             deploy/savegeo-apache.conf ubuntu@192.168.17.55:/home/ubuntu/savegeo/frontend/deploy/savegeo-apache.conf
+          rsync -az \
+            -e "sshpass -e ssh -p 6970" \
+            deploy/savegeo-nginx-timeouts.conf ubuntu@192.168.17.55:/home/ubuntu/savegeo/frontend/deploy/savegeo-nginx-timeouts.conf
           sshpass -e ssh -p 6970 ubuntu@192.168.17.55 '
             set -euo pipefail
             sudo install -m 0644 \
@@ -88,6 +91,13 @@ jobs:
               /etc/apache2/sites-available/savegeo.len.co.id.conf
             sudo apache2ctl configtest
             sudo systemctl reload apache2
+            if command -v nginx >/dev/null 2>&1; then
+              sudo install -m 0644 \
+                /home/ubuntu/savegeo/frontend/deploy/savegeo-nginx-timeouts.conf \
+                /etc/nginx/conf.d/savegeo-timeouts.conf
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
           '
           curl --fail --silent --show-error \
             --resolve savegeo.len.co.id:80:192.168.17.55 \
