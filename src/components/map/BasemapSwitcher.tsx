@@ -2,6 +2,7 @@ import { useMap } from "react-leaflet";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { useBasemaps } from "@/hooks/useBasemaps";
+import { useBasemapContext } from "./BasemapContext";
 
 /**
  * Layer-switcher control (top-right), mirrors legacy `addBasemapSwitcher`.
@@ -14,7 +15,10 @@ export default function BasemapSwitcher() {
   const map = useMap();
   const { basemaps } = useBasemaps();
   const layersRef = useRef<Record<string, L.TileLayer>>({});
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Shared with ImageryAttribution (same MapView instance) via BasemapContext,
+  // instead of local state - so the satellite capture-date lookup knows when
+  // this map has switched away from/back to the satellite basemap.
+  const { activeBasemapId: activeId, setActiveBasemapId: setActiveId } = useBasemapContext();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -34,7 +38,7 @@ export default function BasemapSwitcher() {
         if (map.hasLayer(l)) map.removeLayer(l);
       });
     };
-  }, [basemaps, map]);
+  }, [basemaps, map, setActiveId]);
 
   const switchTo = (id: string) => {
     const layers = layersRef.current;

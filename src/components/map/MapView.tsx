@@ -1,9 +1,11 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
+import ImageryAttribution from "@/components/map/ImageryAttribution";
+import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
 
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
@@ -71,22 +73,34 @@ export default function MapView({ id, children, onMapReady, center, zoom, classN
   const { basemaps } = useBasemaps();
   const defaultBasemap = basemaps.find((b) => b.isDefault) ?? basemaps[0];
 
+  // Tracks which basemap this map instance is showing, for ImageryAttribution
+  // (satellite capture-date lookup) - defaults to whatever's actually
+  // rendered below even when no <BasemapSwitcher/> child is present to write
+  // it explicitly (e.g. SwipeCompareMap never renders one).
+  const [activeBasemapId, setActiveBasemapId] = useState<string | null>(null);
+  useEffect(() => {
+    if (defaultBasemap && activeBasemapId === null) setActiveBasemapId(defaultBasemap.id);
+  }, [defaultBasemap, activeBasemapId]);
+
   return (
-    <MapContainer
-      id={id}
-      center={center ?? INDONESIA_CENTER}
-      zoom={zoom ?? INDONESIA_ZOOM}
-      className={className ?? "savegeo-map"}
-      preferCanvas
-    >
-      {defaultBasemap && (
-        <TileLayer url={defaultBasemap.url} attribution={defaultBasemap.attribution} maxZoom={defaultBasemap.maxZoom} />
-      )}
-      <InvalidateOnResize />
-      <ReadyNotifier onMapReady={onMapReady} />
-      <ResultPaneSetup />
-      <FullscreenControl />
-      {children}
-    </MapContainer>
+    <BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId }}>
+      <MapContainer
+        id={id}
+        center={center ?? INDONESIA_CENTER}
+        zoom={zoom ?? INDONESIA_ZOOM}
+        className={className ?? "savegeo-map"}
+        preferCanvas
+      >
+        {defaultBasemap && (
+          <TileLayer url={defaultBasemap.url} attribution={defaultBasemap.attribution} maxZoom={defaultBasemap.maxZoom} />
+        )}
+        <InvalidateOnResize />
+        <ReadyNotifier onMapReady={onMapReady} />
+        <ResultPaneSetup />
+        <FullscreenControl />
+        <ImageryAttribution />
+        {children}
+      </MapContainer>
+    </BasemapContext.Provider>
   );
 }

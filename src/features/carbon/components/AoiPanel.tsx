@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
-import AoiDrawingTools, { setAoiOnMap } from "@/components/map/AoiDrawingTools";
+import AoiDrawingTools, { setAoiOnMap, SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
 import type { AoiFeature, AoiGeometry } from "@/types/map";
@@ -257,6 +257,7 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
         >
           <BasemapSwitcher />
           <AoiDrawingTools onChange={handleDrawChange} externalGroupRef={groupRef} />
+          <SyncAoiToGroup aoi={aoi?.feature ?? null} groupRef={groupRef} />
         </MapView>
 
         {aoi && (

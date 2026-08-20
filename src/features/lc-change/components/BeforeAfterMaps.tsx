@@ -3,7 +3,7 @@ import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
-import AoiDrawingTools from "@/components/map/AoiDrawingTools";
+import AoiDrawingTools, { SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
 import MapLegend from "@/components/map/MapLegend";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
@@ -159,6 +159,7 @@ export default function BeforeAfterMaps({
             <MapView id="lcChangeBeforeMap">
               <BasemapSwitcher />
               <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
+              <SyncAoiToGroup aoi={aoi} groupRef={drawGroupRef} />
               {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" pane={RESULT_PANE} />}
               <FitToAoi aoi={aoi} />
             </MapView>
@@ -208,6 +209,7 @@ export default function BeforeAfterMaps({
             onOrientationChange={setSwipeOrientation}
           >
             <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
+            <SyncAoiToGroup aoi={aoi} groupRef={drawGroupRef} />
             <FitToAoi aoi={aoi} />
           </SwipeCompareMap>
           <div className="row g-2 mt-1">

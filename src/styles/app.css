@@ -1320,6 +1320,35 @@
   font-weight: 600;
 }
 
+/* ImageryAttribution enhances Leaflet's own bottom-right AttributionControl
+   in place (see components/map/ImageryAttribution.tsx) - collapsed to one
+   truncated line by default, click anywhere on it to expand and read the
+   full credit line plus (satellite basemap only) the imagery capture date. */
+.savegeo-attribution {
+  max-width: 55vw;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.savegeo-attribution:not(.savegeo-attribution-expanded) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.savegeo-attribution-expanded {
+  white-space: normal;
+}
+
+.savegeo-attribution-date {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.savegeo-attribution:not(.savegeo-attribution-expanded) .savegeo-attribution-date {
+  display: none;
+}
+
 .fullscreen-control-btn {
   display: flex;
   align-items: center;

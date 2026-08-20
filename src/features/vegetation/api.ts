@@ -1,6 +1,12 @@
 import { apiClient } from "@/services/apiClient";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
-import type { SatelliteProvider, VegetationParams, VegetationResult, VegetationTimeSeriesResponse } from "./types";
+import type {
+  CloudMaskTechniqueCatalogResponse,
+  SatelliteProvider,
+  VegetationParams,
+  VegetationResult,
+  VegetationTimeSeriesResponse,
+} from "./types";
 
 /** POST /analyze/vegetation returns the VegetationResult dict directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function analyzeVegetation(aoi: AoiPayload, year: number, params: VegetationParams) {
@@ -12,6 +18,7 @@ export function analyzeVegetation(aoi: AoiPayload, year: number, params: Vegetat
     cloud_threshold: params.cloudThreshold,
     indices: params.indices,
     satellite: params.satellite,
+    cloud_mask_technique: params.cloudMaskTechnique,
   });
 }
 
@@ -27,6 +34,13 @@ export function getVegetationSatellites() {
   return apiClient.get<SatelliteCatalogResponse>("/vegetation/satellites");
 }
 
+/** GET /vegetation/cloud-mask-techniques - static, no-GEE catalog of selectable
+ * Sentinel-2 cloud-masking techniques (SCL/QA60/s2cloudless), shared by the
+ * Vegetation and Carbon params panels. */
+export function getCloudMaskTechniques() {
+  return apiClient.get<CloudMaskTechniqueCatalogResponse>("/vegetation/cloud-mask-techniques");
+}
+
 export interface VegetationTimeSeriesArgs {
   aoi: AoiPayload;
   year: number;
@@ -34,6 +48,7 @@ export interface VegetationTimeSeriesArgs {
   cloudThreshold: number;
   scale?: number;
   satellite: string;
+  cloudMaskTechnique: string;
 }
 
 /** POST /timeseries - monthly mean of one index over one year (P0 "time-series & timelapse"). Flat body, no {success,data} envelope. */
@@ -46,6 +61,7 @@ export function analyzeVegetationTimeSeries(args: VegetationTimeSeriesArgs) {
     cloud_threshold: args.cloudThreshold,
     scale: args.scale,
     satellite: args.satellite,
+    cloud_mask_technique: args.cloudMaskTechnique,
   });
 }
 

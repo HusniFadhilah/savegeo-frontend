@@ -1,50 +1,7 @@
-import { useState, type CSSProperties, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
-
-function LoginIllustration() {
-  return (
-    <div className="login-visual-stage" role="img" aria-label="Visual bumi realistis untuk pemantauan karbon satelit">
-      <span className="login-orbit login-orbit-a" aria-hidden="true" />
-      <span className="login-orbit login-orbit-b" aria-hidden="true" />
-      <span className="login-earth-shell" aria-hidden="true">
-        <img className="login-earth" src="/images/login-earth-globe-indonesia.png" alt="" />
-      </span>
-      <div className="login-scan-line login-scan-line-a" aria-hidden="true" />
-      <div className="login-scan-line login-scan-line-b" aria-hidden="true" />
-      <div className="login-floating-card login-floating-card-a">
-        <span className="login-card-kicker">NDVI</span>
-        <svg className="login-mini-chart" viewBox="0 0 92 34" aria-hidden="true">
-          <path className="login-chart-grid" d="M4 27 H88 M4 17 H88 M4 7 H88" />
-          <path className="login-chart-line" d="M5 25 C17 20 22 22 31 15 C41 7 50 13 58 10 C70 5 77 8 87 4" />
-        </svg>
-        <span className="login-card-note">vegetasi stabil</span>
-      </div>
-      <div className="login-floating-card login-floating-card-b">
-        <span className="login-card-kicker">Carbon</span>
-        <div className="login-bar-chart" aria-hidden="true">
-          <span style={{ "--bar-h": "46%" } as CSSProperties} />
-          <span style={{ "--bar-h": "62%" } as CSSProperties} />
-          <span style={{ "--bar-h": "78%" } as CSSProperties} />
-          <span style={{ "--bar-h": "56%" } as CSSProperties} />
-        </div>
-        <span className="login-card-note">tren naik</span>
-      </div>
-      <div className="login-floating-card login-floating-card-c">
-        <span className="login-card-kicker">AOI</span>
-        <div className="login-aoi-grid" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-        <span className="login-card-note">area aktif</span>
-      </div>
-    </div>
-  );
-}
+import LoginIllustration from "@/components/auth/LoginIllustration";
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuthStore();
@@ -61,7 +18,14 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-illust-side">
         <div className="login-illust-content">
-          <LoginIllustration />
+          <LoginIllustration
+            ariaLabel="Visual bumi realistis untuk pemantauan karbon satelit"
+            cards={[
+              { kicker: "NDVI", note: "vegetasi stabil" },
+              { kicker: "Carbon", note: "tren naik" },
+              { kicker: "AOI", note: "area aktif" },
+            ]}
+          />
           <h2>SAVEGEO</h2>
           <p>Pemantauan stok karbon berbasis citra satelit &amp; machine learning.</p>
         </div>

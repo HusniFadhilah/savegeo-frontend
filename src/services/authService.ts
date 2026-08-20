@@ -2,19 +2,27 @@ import type { LoginResponse, AdminUser } from "@/types/api";
 import { apiClient } from "@/services/apiClient";
 
 /**
- * sessionStorage (not localStorage): token dies with the tab, never persists
- * across sessions on a shared machine. We only ever store the bearer token +
- * minimal user display info here, nothing else sensitive.
+ * localStorage (not sessionStorage): token persists across tabs/windows and
+ * browser restarts, cleared only by explicit logout or the backend rejecting
+ * an expired token (see apiClient's 401 handling). Previously sessionStorage,
+ * which is scoped per-tab - logging in in one tab left every other tab
+ * (including one you already had open, or a fresh one you open next) still
+ * showing the login form, which read as "I just logged in and it's asking
+ * again" even though nothing was actually broken. Trade-off: on a shared
+ * machine, anyone using the same browser profile inherits the session until
+ * someone logs out - only use this build on a personal machine. We only ever
+ * store the bearer token + minimal user display info here, nothing else
+ * sensitive.
  */
 const TOKEN_KEY = "savegeo_admin_token";
 const USER_KEY = "savegeo_admin_user";
 
 export function getAuthToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function getStoredUser(): AdminUser | null {
-  const raw = sessionStorage.getItem(USER_KEY);
+  const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as AdminUser;
@@ -24,13 +32,13 @@ export function getStoredUser(): AdminUser | null {
 }
 
 export function clearAuthToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
 function storeAuth(res: LoginResponse): void {
-  sessionStorage.setItem(TOKEN_KEY, res.token);
-  sessionStorage.setItem(USER_KEY, JSON.stringify(res.user));
+  localStorage.setItem(TOKEN_KEY, res.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(res.user));
 }
 
 export const authService = {

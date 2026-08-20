@@ -8,13 +8,22 @@ export function fetchLandCoverDatasets() {
 }
 
 export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCoverParams) {
-  return apiClient.post<LandCoverResult>("/analyze/landcover", {
+  const dateMode = params.dateMode ?? "year";
+  const selectedMonth = params.selectedMonth ?? params.startMonth;
+  const payload: Record<string, unknown> = {
     aoi,
     year,
     datasets: params.datasets,
     dw_mode: params.dwMode,
     include_improbable_classes: params.includeImprobableClasses,
-    start_month: params.startMonth,
-    end_month: params.endMonth,
-  });
+    start_month: dateMode === "year" ? params.startMonth : selectedMonth,
+    end_month: dateMode === "year" ? params.endMonth : selectedMonth,
+  };
+
+  if (dateMode === "date") {
+    payload.start_date = params.startDate || `${year}-01-01`;
+    payload.end_date = params.endDate || `${year}-12-31`;
+  }
+
+  return apiClient.post<LandCoverResult>("/analyze/landcover", payload);
 }

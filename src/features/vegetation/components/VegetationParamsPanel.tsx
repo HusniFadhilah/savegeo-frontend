@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { SatelliteProvider, VegetationParams } from "@/features/vegetation/types";
+import type { CloudMaskTechnique, CloudMaskTechniqueInfo, SatelliteProvider, VegetationParams } from "@/features/vegetation/types";
 import { VEGETATION_INDICES } from "@/features/vegetation/indices";
-import { getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
+import { getCloudMaskTechniques, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 
 interface Props {
   params: VegetationParams;
@@ -33,6 +33,7 @@ const FALLBACK_BADGES: BadgeIndex[] = VEGETATION_INDICES.map((i) => ({
 export default function VegetationParamsPanel({ params, onParamsChange }: Props) {
   const [badges, setBadges] = useState<BadgeIndex[]>(FALLBACK_BADGES);
   const [satellites, setSatellites] = useState<Record<string, SatelliteProvider>>({});
+  const [techniques, setTechniques] = useState<Record<string, CloudMaskTechniqueInfo>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -57,12 +58,22 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       .catch(() => {
         /* satellite picker just won't render options; backend still defaults to Sentinel-2 */
       });
+    getCloudMaskTechniques()
+      .then((res) => {
+        if (cancelled || !res?.techniques) return;
+        setTechniques(res.techniques);
+      })
+      .catch(() => {
+        /* technique picker just won't render options; backend still defaults to SCL */
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const activeSatellite = satellites[params.satellite];
+  const activeTechnique = techniques[params.cloudMaskTechnique];
+  const isLandsat = params.satellite !== "sentinel2";
 
   function toggleIndex(code: string) {
     const active = params.indices.includes(code);
@@ -111,6 +122,29 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
               <i className="bi bi-layers me-1" /> Band: {activeSatellite.bands_available.join(", ")}
             </div>
           </div>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Teknik Pemrosesan Awan</label>
+        <select
+          className="form-select"
+          value={params.cloudMaskTechnique}
+          onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
+          disabled={isLandsat || Object.keys(techniques).length === 0}
+        >
+          {Object.entries(techniques).map(([key, info]) => (
+            <option key={key} value={key}>
+              {info.label}
+            </option>
+          ))}
+        </select>
+        {isLandsat ? (
+          <small className="text-muted d-block mt-1">
+            Landsat pakai masking QA_PIXEL sendiri - opsi ini hanya berlaku untuk Sentinel-2.
+          </small>
+        ) : (
+          activeTechnique && <small className="text-muted d-block mt-1">{activeTechnique.description}</small>
         )}
       </div>
 

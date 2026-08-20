@@ -103,6 +103,15 @@ export default function DetailsModule() {
                           </td>
                           <td>PT LEN Industri (Persero)</td>
                         </tr>
+                        <tr>
+                          <td>Heru Permana, S.St.</td>
+                          <td>
+                            <span className="badge bg-info">
+                              VP of Intelligent Product Innovation & VP of Critical System Innovation
+                            </span>
+                          </td>
+                          <td>PT LEN Industri (Persero)</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>

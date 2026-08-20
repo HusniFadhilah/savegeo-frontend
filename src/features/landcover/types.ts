@@ -43,6 +43,10 @@ export interface LandCoverParams {
   datasets: string[];
   dwMode: "mode" | "hillshade" | "probability";
   includeImprobableClasses: boolean;
+  dateMode: "year" | "month" | "date";
   startMonth: number;
   endMonth: number;
+  selectedMonth: number;
+  startDate?: string;
+  endDate?: string;
 }

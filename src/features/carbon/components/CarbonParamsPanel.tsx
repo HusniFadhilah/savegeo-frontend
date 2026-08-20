@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
+import { getCloudMaskTechniques } from "@/features/vegetation/api";
+import type { CloudMaskTechnique, CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { FALLBACK_CARBON_REFERENCE_DATASETS, CARBON_DATASET_YEARS } from "@/features/carbon/referenceDatasets";
 import type {
   CarbonModelInfo,
@@ -102,6 +104,22 @@ export default function CarbonParamsPanel({
   const [datasets, setDatasets] = useState<CarbonReferenceDatasetOption[]>([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
   const [datasetsError, setDatasetsError] = useState<string | null>(null);
+  const [techniques, setTechniques] = useState<Record<string, CloudMaskTechniqueInfo>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getCloudMaskTechniques()
+      .then((res) => {
+        if (cancelled || !res?.techniques) return;
+        setTechniques(res.techniques);
+      })
+      .catch(() => {
+        /* technique picker just won't render options; backend still defaults to SCL */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -502,6 +520,25 @@ export default function CarbonParamsPanel({
         <div className="text-center">
           <strong>{params.cloudThreshold}</strong>%
         </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Teknik Pemrosesan Awan</label>
+        <select
+          className="form-select"
+          value={params.cloudMaskTechnique}
+          onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
+          disabled={Object.keys(techniques).length === 0}
+        >
+          {Object.entries(techniques).map(([key, info]) => (
+            <option key={key} value={key}>
+              {info.label}
+            </option>
+          ))}
+        </select>
+        {techniques[params.cloudMaskTechnique] && (
+          <small className="text-muted d-block mt-1">{techniques[params.cloudMaskTechnique].description}</small>
+        )}
       </div>
 
       <div className="mb-3">

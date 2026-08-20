@@ -42,6 +42,11 @@ export interface LcAnalyzeParams {
   datasets: LcDataset[];
   start_month: number;
   end_month: number;
+  /** "Mode Tanggal Analisis: Tanggal" - explicit day-level window (Dynamic World
+   * only; other datasets always use the full `year` regardless). Backend derives
+   * `year` from `start_date` itself when both are given - see analyze_landcover. */
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface LcChangeMapParams {
@@ -51,6 +56,10 @@ export interface LcChangeMapParams {
   to_year: number;
   start_month: number;
   end_month: number;
+  /** Same day-level window as LcAnalyzeParams, reapplied to both from_year and
+   * to_year (only the month/day portion is used - see backend _reyear_date). */
+  start_date?: string;
+  end_date?: string;
 }
 
 /** Response body of POST /analyze/landcover-change-map (flat dict, not success/data wrapped). */
@@ -96,6 +105,9 @@ export interface LcHotspotParams {
   min_area_ha?: number;
   /** Cap on ranked results returned (default 20, max 100). */
   top_n?: number;
+  /** Same day-level window as LcChangeMapParams (reapplied per from_year/to_year). */
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface LcClassBadge {

@@ -690,7 +690,7 @@ export function useChatSession() {
     period: geoContext?.aoi ? geoContext.period : null,
     // log
     log,
-    quickActions: quickActionsVisible ? buildSuggestedPrompts(geoContext ?? buildGeoAiContext()) : [],
+    quickActions: quickActionsVisible ? buildSuggestedPrompts(geoContext ?? buildGeoAiContext(), language) : [],
     // attachments
     pendingImage,
     pendingFile,

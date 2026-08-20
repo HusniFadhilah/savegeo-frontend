@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
+import LoginIllustration from "@/components/auth/LoginIllustration";
 
 interface Props {
   /** AppRoutes.tsx only adds the 2 list/dashboard routes (no separate
@@ -32,6 +33,14 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
     <div className="login-page">
       <div className="login-illust-side">
         <div className="login-illust-content">
+          <LoginIllustration
+            ariaLabel="Visual bumi realistis untuk pemantauan dampak bencana satelit"
+            cards={[
+              { kicker: "Banjir", note: "area terdampak" },
+              { kicker: "Longsor", note: "titik rawan" },
+              { kicker: "Dampak", note: "wilayah terpantau" },
+            ]}
+          />
           <h2>SAVEGEO</h2>
           <p>Dashboard Intelijen Bencana &mdash; pemantauan dampak bencana berbasis citra satelit.</p>
         </div>
