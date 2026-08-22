@@ -1,8 +1,19 @@
 import { apiClient } from "@/services/apiClient";
-import type { GetSceneTileParams, ImagerySceneListResponse, ImagerySceneTileResponse, ListScenesParams } from "./types";
+import type {
+  GetSceneTileParams,
+  ImageryProviderCatalogResponse,
+  ImagerySceneListResponse,
+  ImagerySceneTileResponse,
+  ListScenesParams,
+} from "./types";
+
+/** GET /imagery/providers - static, no-GEE catalog of selectable satellite/sensor providers for the scene browser. */
+export function getImageryProviders() {
+  return apiClient.get<ImageryProviderCatalogResponse>("/imagery/providers");
+}
 
 /**
- * POST /imagery/scenes - list real Sentinel-2/Landsat scenes (exact
+ * POST /imagery/scenes - list real Sentinel-1/2/3/5P/Landsat scenes (exact
  * acquisition date+time, no compositing) for an AOI + date range. Flat body,
  * no {success,data} envelope - same convention as every other endpoint here.
  */
@@ -16,11 +27,13 @@ export function listImageryScenes(params: ListScenesParams) {
   });
 }
 
-/** POST /imagery/scene-tile - RGB tile for exactly one scene (no compositing). */
+/** POST /imagery/scene-tile - tile for exactly one scene (no compositing), visualized per its sensor type (RGB/SAR/gas colormap). */
 export function getImagerySceneTile(params: GetSceneTileParams) {
   return apiClient.post<ImagerySceneTileResponse>("/imagery/scene-tile", {
     satellite: params.satellite,
     scene_id: params.sceneId,
     aoi: params.aoi,
+    sar_mode: params.sarMode,
+    cloud_mask_technique: params.cloudMaskTechnique,
   });
 }

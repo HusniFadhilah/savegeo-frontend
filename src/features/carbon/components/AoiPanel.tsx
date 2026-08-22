@@ -18,6 +18,8 @@ import AoiCoordinateTab from "./AoiCoordinateTab";
 import AoiUploadTab from "./AoiUploadTab";
 import AoiCompanyTab from "./AoiCompanyTab";
 import { registerMap } from "@/features/chatbot/mapActions";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
+import MapClickPicker from "@/components/map/MapClickPicker";
 
 interface Props {
   aoi: AoiState | null;
@@ -109,6 +111,9 @@ function findByDisplayName<T extends { name: string }>(items: T[], wanted: strin
  */
 export default function AoiPanel({ aoi, onAoiChange }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>("admin");
+  const [open, setOpen] = useState(true);
+  const [coordLat, setCoordLat] = useState("-6.9667");
+  const [coordLon, setCoordLon] = useState("110.4167");
   const mapRef = useRef<L.Map | null>(null);
   const groupRef = useRef<L.FeatureGroup | null>(null);
 
@@ -215,12 +220,34 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
     [onAoiChange],
   );
 
+  useEffect(() => {
+    if (!open) return;
+    // Leaflet doesn't notice its container growing back from display:none -
+    // nudge it once the collapse transition/reflow has settled.
+    const t = setTimeout(() => mapRef.current?.invalidateSize(), 260);
+    return () => clearTimeout(t);
+  }, [open]);
+
   return (
     <div className="card">
-      <div className="card-header">
-        <i className="bi bi-geo-alt-fill" /> Area of Interest (AOI)
-      </div>
-      <div className="card-body">
+      <button
+        type="button"
+        className="card-header d-flex align-items-center justify-content-between w-100 border-0 text-start"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span>
+          <i className="bi bi-geo-alt-fill" /> Area of Interest (AOI)
+          {aoi && !open && (
+            <span className="ms-2 fw-normal" style={{ fontSize: ".8rem", opacity: 0.85 }}>
+              &middot; {aoi.name}
+              {aoi.areaKm2 != null && <> ({aoi.areaKm2.toFixed(2)} km²)</>}
+            </span>
+          )}
+        </span>
+        <i className={`bi ${open ? "bi-chevron-up" : "bi-chevron-down"}`} />
+      </button>
+      <div className="card-body" style={{ display: open ? "block" : "none" }}>
         <div className="aoi-tabs mb-3">
           {TABS.map((tab) => (
             <button
@@ -240,7 +267,13 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
             <AoiRegionTab onApply={(f, n) => applyAoi(f, n, "admin")} />
           )}
           {activeTab === "coordinate" && (
-            <AoiCoordinateTab onApply={(f, n) => applyAoi(f, n, "coordinate")} />
+            <AoiCoordinateTab
+              onApply={(f, n) => applyAoi(f, n, "coordinate")}
+              lat={coordLat}
+              lon={coordLon}
+              onLatChange={setCoordLat}
+              onLonChange={setCoordLon}
+            />
           )}
           {activeTab === "draw" && (
             <div className="alert alert-info py-2 small mb-0">
@@ -268,6 +301,14 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
           <BasemapSwitcher />
           <AoiDrawingTools onChange={handleDrawChange} externalGroupRef={groupRef} />
           <SyncAoiToGroup aoi={aoi?.feature ?? null} groupRef={groupRef} />
+          <MapClickPicker
+            active={activeTab === "coordinate"}
+            onPick={(lat, lng) => {
+              setCoordLat(lat.toFixed(5));
+              setCoordLon(lng.toFixed(5));
+            }}
+          />
+          <MapCursorPosition />
         </MapView>
 
         {aoi && (

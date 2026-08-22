@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { getHealth, getGeeStatus, listModels, getConfig, reinitEE } from "../api";
 import type { AdminSection } from "../types";
 import { useAdmin } from "../AdminContext";
+import { useAuthStore } from "@/hooks/useAuthStore";
+
+function greetingForHour(h: number): string {
+  if (h < 11) return "Selamat pagi";
+  if (h < 15) return "Selamat siang";
+  if (h < 19) return "Selamat sore";
+  return "Selamat malam";
+}
 
 interface OverviewData {
   eeOk: boolean;
@@ -13,10 +21,12 @@ interface OverviewData {
 
 export default function DashboardOverview({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const { refreshHealth, notify } = useAdmin();
+  const { user } = useAuthStore();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reiniting, setReiniting] = useState(false);
+  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const load = async () => {
     setLoading(true);
@@ -48,43 +58,79 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const hero = (
+    <div className="adm-hero">
+      <div>
+        <div className="adm-hero-greeting">{greetingForHour(new Date().getHours())}</div>
+        <div className="adm-hero-title">{user?.username ?? "Admin"} 👋</div>
+        <div className="adm-hero-sub">
+          <i className="bi bi-calendar3 me-1" /> {today}
+        </div>
+      </div>
+      <div className="adm-hero-icon">
+        <i className="bi bi-speedometer2" />
+      </div>
+    </div>
+  );
+
   if (loading) {
-    return <div className="adm-loading">Memuat overview...</div>;
+    return (
+      <>
+        {hero}
+        <div className="adm-loading">Memuat overview...</div>
+      </>
+    );
   }
   if (error || !data) {
     return (
-      <div className="alert alert-danger py-2 px-3 small">
-        {error || "Gagal memuat data"}{" "}
-        <button type="button" className="btn-sm" onClick={load}>
-          Coba lagi
-        </button>
-      </div>
+      <>
+        {hero}
+        <div className="alert alert-danger py-2 px-3 small">
+          {error || "Gagal memuat data"}{" "}
+          <button type="button" className="btn-sm" onClick={load}>
+            Coba lagi
+          </button>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {hero}
       <div className="stat-grid">
         <div className="stat-card">
+          <div className="stat-icon">
+            <i className="bi bi-cpu-fill" />
+          </div>
           <div className="stat-val">{data.eeOk ? "Aktif" : "Offline"}</div>
           <div className="stat-label">Earth Engine</div>
           <span className={`stat-badge ${data.eeOk ? "badge-green" : "badge-red"}`}>
             {data.eeOk ? "initialized" : "not ready"}
           </span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card accent-blue">
+          <div className="stat-icon">
+            <i className="bi bi-key-fill" />
+          </div>
           <div className="stat-val" style={{ fontSize: 13, paddingTop: 4 }}>
             {data.activeCredLabel}
           </div>
           <div className="stat-label">Credential Aktif</div>
           <span className="stat-badge badge-blue">service account</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card accent-blue">
+          <div className="stat-icon">
+            <i className="bi bi-diagram-3-fill" />
+          </div>
           <div className="stat-val">{data.modelCount}</div>
           <div className="stat-label">ML Models</div>
           <span className="stat-badge badge-blue">carbon</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card accent-gray">
+          <div className="stat-icon">
+            <i className="bi bi-sliders" />
+          </div>
           <div className="stat-val">{data.cfgCount}</div>
           <div className="stat-label">Config Keys</div>
           <span className="stat-badge badge-gray">kategori</span>

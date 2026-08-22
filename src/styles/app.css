@@ -1358,6 +1358,19 @@
   font-size: 1rem;
 }
 
+.map-cursor-pos {
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e293b;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
 .opacity-control {
   position: relative;
   background: white;
@@ -2598,6 +2611,12 @@
 }
 
 .guide-doc-card {
+  /* Grid items default to `min-width: auto` too (same shrink-refusal as flex
+     items) - without this, the dataset table's `min-width: 1320px` still
+     pushes this card (and so `.guide-doc-section`) wider than the page even
+     after `<main>` itself is allowed to shrink (see app-container in
+     legacy-base.css), just one level further down the tree. */
+  min-width: 0;
   padding: 16px;
   border: 1px solid #e4ece7;
   border-radius: 12px;

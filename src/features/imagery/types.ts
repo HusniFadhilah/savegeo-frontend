@@ -1,5 +1,41 @@
 import type { AoiPayload } from "@/features/carbon/lib/geo";
-import type { SatelliteProvider } from "@/features/vegetation/types";
+
+/** How a scene-tile is rendered - see imagery_provider_registry.py for the full rationale. */
+export type ImageryVisualization = "rgb" | "sar" | "single_band";
+
+/**
+ * One entry from GET /imagery/providers - deliberately its OWN type, not
+ * reused from vegetation/types.ts's SatelliteProvider: that one assumes every
+ * entry has optical red/green/blue bands for vegetation-index math, which
+ * doesn't hold for Sentinel-1 (SAR, no true color) or Sentinel-5P (single
+ * gas-concentration band, no RGB at all).
+ */
+export interface ImageryProvider {
+  key: string;
+  name: string;
+  provider: string;
+  /** Dropdown subgroup label (e.g. "Optik", "Radar (SAR)", "Atmosfer (Gas)", "Malam Hari (Night Lights)"). */
+  group: string;
+  gee_collection: string;
+  visualization: ImageryVisualization;
+  /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
+  color_mode?: "natural" | "false_color";
+  description?: string;
+  resolution_m: number;
+  revisit_days: number;
+  start_year: number;
+  /** GEE scene-level property name for cloud %, or null if this sensor has no such concept (SAR, gas products, night-lights) - drives whether the cloud-filter UI shows at all. */
+  cloud_property: string | null;
+  /** "single_band" only - physical unit of the mapped quantity (e.g. "mol/m²", "ppb", "nW/cm²/sr"). */
+  unit?: string;
+  /** Per-pixel cloud-MASKING techniques this provider's scene-tile supports (Sentinel-2 only: L2A has all 3, L1C/TOA lacks "scl" - no SCL band on that product). null/absent = masking not offered, only the scene-level max_cloud_cover FILTER applies (if cloud_property is set at all). */
+  cloud_mask_techniques?: string[] | null;
+}
+
+export interface ImageryProviderCatalogResponse {
+  providers: Record<string, ImageryProvider>;
+  default: string;
+}
 
 /** One real satellite scene as returned by POST /imagery/scenes - no compositing, exact acquisition timestamp (with time-of-day). */
 export interface ImageryScene {
@@ -7,13 +43,14 @@ export interface ImageryScene {
   id: string;
   /** ISO 8601 UTC, e.g. "2023-06-28T03:19:45.094Z" - real overpass time, not just a date. */
   acquired_at: string;
+  /** null for sensors with no scene-level cloud property (SAR, gas products) - not "no data". */
   cloud_cover_pct: number | null;
 }
 
 export interface ImagerySceneListResponse {
   scenes: ImageryScene[];
   count: number;
-  satellite: SatelliteProvider;
+  satellite: ImageryProvider;
   /** true if results were capped (backend limits to 200 scenes per request). */
   truncated: boolean;
 }
@@ -21,7 +58,7 @@ export interface ImagerySceneListResponse {
 export interface ImagerySceneTileResponse {
   scene_id: string;
   tile_url: string;
-  satellite: SatelliteProvider;
+  satellite: ImageryProvider;
 }
 
 export interface ListScenesParams {
@@ -32,8 +69,14 @@ export interface ListScenesParams {
   maxCloudCover?: number;
 }
 
+export type SarMode = "grayscale" | "composite";
+
 export interface GetSceneTileParams {
   satellite: string;
   sceneId: string;
   aoi?: AoiPayload;
+  /** Sentinel-1 only - "grayscale" (single VV band) or "composite" (VV/VH/VV-VH false color). Ignored by other providers. */
+  sarMode?: SarMode;
+  /** Sentinel-2 only (L2A/L1C) - "scl" | "qa60" | "s2cloudless", opt-in per-pixel cloud mask on top of the default raw/unmasked view. Ignored (and silently remapped if unsupported, e.g. "scl" on L1C) by the backend for providers without cloud_mask_techniques. */
+  cloudMaskTechnique?: string;
 }

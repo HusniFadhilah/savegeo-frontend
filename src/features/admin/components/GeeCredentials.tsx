@@ -181,7 +181,7 @@ export default function GeeCredentials() {
         </div>
 
         <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
+          <table className="tbl tbl-wide">
             <colgroup>
               <col style={{ width: "15%" }} />
               <col style={{ width: "14%" }} />

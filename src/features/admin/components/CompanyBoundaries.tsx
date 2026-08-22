@@ -451,7 +451,7 @@ export default function CompanyBoundaries() {
 
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
+          <table className="tbl tbl-wide">
             <colgroup>
               <col style={{ width: "22%" }} />
               <col style={{ width: "18%" }} />

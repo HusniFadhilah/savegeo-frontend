@@ -17,14 +17,21 @@
   --sb-bg: var(--primary-dark, #1b5e20);
   --sb-border: rgba(255, 255, 255, 0.06);
   --sb-text: #c1c5cc;
-  --sb-active-bg: rgba(2, 103, 61, 0.15);
+  --sb-active-bg: rgba(76, 175, 80, 0.16);
   --sb-active-border: var(--primary-light, #4caf50);
   --sb-active-text: #e2e8f0;
-  --content-bg: #f8fafc;
+  --content-bg: #f4f7f6;
   --card-bg: #ffffff;
-  --border: #e2e8f0;
+  --border: #e5e9ec;
   --text: #1e293b;
   --text-muted: #64748b;
+  --accent: var(--primary-color, #2e7d32);
+  --accent-dark: var(--primary-dark, #1b5e20);
+  --accent-light: var(--primary-light, #4caf50);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --radius: 12px;
 
   font-family: "Montserrat", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
@@ -45,7 +52,7 @@
 .admin-panel .sidebar {
   width: 220px;
   padding: 20px 5px;
-  background: linear-gradient(180deg, var(--sb-bg) 0%, #143d18 100%);
+  background: linear-gradient(195deg, var(--sb-bg) 0%, #0f2e12 100%);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -56,7 +63,7 @@
   z-index: 100;
   border-radius: 0;
   max-height: 100%;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.18);
 }
 
 .admin-panel .main {
@@ -71,13 +78,42 @@
 .admin-panel .topbar {
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
-  padding: 0.65rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+.admin-panel .topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Hamburger for the mobile off-canvas drawer (see .sidebar's max-width: 560px
+   rule below) - hidden on desktop where the sidebar is always visible. */
+.admin-panel .sb-mobile-toggle {
+  display: none;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.admin-panel .sb-backdrop {
+  display: none;
 }
 
 .admin-panel .page-content {
@@ -87,18 +123,19 @@
 
 /* ─── Sidebar ─── */
 .admin-panel .sb-logo {
-  padding: 0.65rem 0.75rem;
+  padding: 0.65rem 0.75rem 1rem;
+  margin-bottom: 0.3rem;
   border-bottom: 1px solid var(--sb-border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .admin-panel .sb-logo-img {
   height: 40px;
-  border-radius: 8px;
+  border-radius: 10px;
   object-fit: cover;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   flex-shrink: 0;
 }
 
@@ -129,29 +166,55 @@
   padding: 0.3rem 0;
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.admin-panel .sb-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-panel .sb-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
 }
 
 .admin-panel .sb-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0.45rem 0.75rem;
-  margin: 10px 0.4rem;
-  border-radius: 6px;
+  gap: 9px;
+  padding: 0.5rem 0.75rem;
+  margin: 3px 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   border-left: 2px solid transparent;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s ease, transform 0.15s ease;
   text-decoration: none;
 }
 
 .admin-panel .sb-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   transform: translateX(2px);
 }
 
 .admin-panel .sb-item.active {
   background: var(--sb-active-bg);
   border-left-color: var(--sb-active-border);
+  box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.18);
+}
+
+.admin-panel .sb-item.active::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sb-active-border);
+  box-shadow: 0 0 6px 1px var(--sb-active-border);
 }
 
 .admin-panel .sb-item i {
@@ -175,10 +238,11 @@
 
 .admin-panel .sb-item.active span {
   color: var(--sb-active-text);
+  font-weight: 600;
 }
 
 .admin-panel .sb-foot {
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 0.75rem;
   border-top: 1px solid var(--sb-border);
   display: flex;
   align-items: center;
@@ -186,8 +250,8 @@
 }
 
 .admin-panel .sb-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary-light, #4caf50), var(--primary-dark, #1b5e20));
   display: flex;
@@ -197,7 +261,7 @@
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
 .admin-panel .sb-foot-name {
@@ -241,10 +305,11 @@
 .admin-panel .ee-badge {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
   border: 1px solid;
 }
 
@@ -264,51 +329,109 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .admin-panel .ee-badge.ok .ee-dot {
   background: #22c55e;
+  animation: eePulse 2s ease-in-out infinite;
 }
 
 .admin-panel .ee-badge.fail .ee-dot {
   background: #ef4444;
 }
 
+@keyframes eePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+}
+
 /* ─── Cards / Stat cards ─── */
 .admin-panel .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .admin-panel .card-header-custom {
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.1rem;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .admin-panel .card-body-custom {
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .admin-panel .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 1.25rem;
 }
 
 .admin-panel .stat-card {
+  position: relative;
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.1rem;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.admin-panel .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #d7dee2;
+}
+
+.admin-panel .stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--stat-accent, var(--accent)), transparent 130%);
+  opacity: 0.9;
+}
+
+.admin-panel .stat-card.accent-blue {
+  --stat-accent: #1d4ed8;
+}
+
+.admin-panel .stat-card.accent-amber {
+  --stat-accent: #d97706;
+}
+
+.admin-panel .stat-card.accent-gray {
+  --stat-accent: #64748b;
+}
+
+.admin-panel .stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 15px;
+  margin-bottom: 0.6rem;
+  background: color-mix(in srgb, var(--stat-accent, var(--accent)) 14%, white);
+  color: var(--stat-accent, var(--accent));
 }
 
 .admin-panel .stat-val {
@@ -327,9 +450,9 @@
 .admin-panel .stat-badge {
   display: inline-block;
   font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: 5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-top: 6px;
   font-weight: 500;
 }
 
@@ -372,11 +495,105 @@
   border-radius: 4px;
 }
 
+/* ─── Overview hero banner ───
+ * Same photo + smooth gradient-fade recipe as AboutModule's `.about-hero`
+ * (see app.css) - a real image (`::after`, furthest back) with a layered
+ * green gradient over it (`::before`, on top of the image but behind the
+ * text) instead of a flat color gradient, so the photo shows through on the
+ * right and fades into solid green on the left where the text sits. */
+.admin-panel .adm-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 130px;
+  padding: 1.35rem 1.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.admin-panel .adm-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: url("/images/research-hero-agriculture.jpg") center / cover no-repeat;
+  opacity: 0.9;
+}
+
+.admin-panel .adm-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 15% 48%, rgba(9, 54, 23, 0.86) 0%, rgba(9, 54, 23, 0.62) 34%, rgba(9, 54, 23, 0) 66%),
+    linear-gradient(100deg, rgba(8, 57, 23, 0.98) 0%, rgba(12, 72, 29, 0.92) 30%, rgba(21, 96, 39, 0.66) 58%, rgba(31, 109, 43, 0.24) 100%),
+    linear-gradient(180deg, rgba(5, 37, 18, 0.38) 0%, rgba(5, 37, 18, 0.62) 100%);
+}
+
+.admin-panel .adm-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-panel .adm-hero-greeting {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 4px;
+}
+
+.admin-panel .adm-hero-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.admin-panel .adm-hero-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 4px;
+}
+
+.admin-panel .adm-hero-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  backdrop-filter: blur(2px);
+}
+
 /* ─── Table ─── */
 .admin-panel .tbl {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+/* `.tbl` also covers small 2-column key/value tables (no <thead>, no need to
+   ever scroll) alongside real multi-column datatables, so there's no one
+   right min-width for the shared class. `table-layout: fixed` + `width:
+   100%` alone always shrinks a table to fit its container - the `overflow-x:
+   auto` wrapper every multi-column caller already uses around theirs never
+   gets anything to actually scroll, so columns just get starved instead
+   (headers wrapping to 2-3 lines, cells ellipsis-truncating everything on
+   narrow screens). Real datatables opt into a floor to overflow past via
+   this modifier (see AdminUsers/CompanyBoundaries/ModelRegistry/etc.). */
+.admin-panel .tbl-wide {
+  min-width: 640px;
 }
 
 .admin-panel .tbl th {
@@ -389,6 +606,7 @@
   border-bottom: 1px solid var(--border);
   text-align: left;
   background: #f8fafc;
+  white-space: nowrap;
 }
 
 .admin-panel .tbl td {
@@ -417,32 +635,40 @@
 /* ─── Buttons ─── */
 .admin-panel .btn-sm {
   font-size: 13px;
-  padding: 0.3rem 0.55rem;
-  border-radius: 5px;
+  padding: 0.32rem 0.6rem;
+  border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--card-bg);
   color: var(--text);
   cursor: pointer;
   line-height: 1.4;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 
 .admin-panel .btn-sm:hover {
   background: #f1f5f9;
 }
 
+.admin-panel .btn-sm:active {
+  transform: translateY(1px);
+}
+
 .admin-panel .btn-sm:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .admin-panel .btn-sm.primary {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.25);
 }
 
 .admin-panel .btn-sm.primary:hover {
-  background: #1e40af;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.32);
+  filter: brightness(1.04);
 }
 
 .admin-panel .btn-sm.danger {
@@ -1195,10 +1421,23 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 560px) {
+  /* Off-canvas drawer instead of the sidebar dumping full-width/inline above
+     the topbar (the old `position: static; width: 100%` here forced a
+     visitor to scroll past the entire nav before seeing any content). */
   .admin-panel .sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    max-width: 82vw;
+    height: 100vh;
+    z-index: 1040;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .admin-panel .sidebar.mobile-open {
+    transform: translateX(0);
   }
 
   .admin-panel .main {
@@ -1208,6 +1447,35 @@
 
   .admin-panel .layout {
     flex-direction: column;
+  }
+
+  .admin-panel .sb-mobile-toggle {
+    display: flex;
+  }
+
+  .admin-panel .sb-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1030;
+  }
+
+  /* Hamburger moves to the right edge of the topbar; EE status + Reinit EE
+     (topbar-right) just get out of the way entirely - there's no room for
+     them next to the title on a phone, and both are one tap away once
+     inside a section anyway. */
+  .admin-panel .topbar-left {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .admin-panel .sb-mobile-toggle {
+    order: 2;
+  }
+
+  .admin-panel .topbar-right {
+    display: none;
   }
 }
 
@@ -1220,6 +1488,58 @@
   .admin-panel .three-col,
   .admin-panel .four-col {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-panel .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Narrow-screen form/table stacking ───
+ * cfg-row (System Config) and cfg-provider-card assume enough horizontal
+ * room for a fixed-width label + input + type column side by side; below
+ * ~640px that cramps the input down to a few characters wide instead of
+ * actually stacking. kp-row (Key Pool) has the same fixed-label problem. */
+@media (max-width: 640px) {
+  .admin-panel .cfg-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 4px;
+  }
+
+  .admin-panel .cfg-key {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  .admin-panel .cfg-type {
+    order: 2;
+    text-align: left;
+  }
+
+  .admin-panel .cfg-val {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .admin-panel .cfg-provider-card {
+    flex-wrap: wrap;
+  }
+
+  .admin-panel .cfg-provider-hint {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .admin-panel .kp-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-panel .kp-label {
+    width: auto;
   }
 }
 

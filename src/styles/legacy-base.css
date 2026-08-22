@@ -108,6 +108,18 @@ body {
   width: 100%;
 }
 
+/* Flex items default to `min-width: auto`, i.e. they refuse to shrink below
+   their content's intrinsic width - a wide-table `min-width` deep inside
+   `<main>` (e.g. GuideModule's dataset-docs table, `min-width: 1320px`)
+   otherwise pushes `<main>`, and so the whole `.app-container` row, wider
+   than the viewport instead of the table's own `overflow-x: auto` wrapper
+   containing the scroll. This is the actual fix, not more overflow rules
+   deeper in the tree - without it, ANY sufficiently wide element anywhere
+   inside `<main>` breaks page-level layout the same way. */
+.app-container > main {
+  min-width: 0;
+}
+
 /* ============================================
    MAIN SIDEBAR NAVIGATION (FLEXBOX - NOT FIXED)
    ============================================ */

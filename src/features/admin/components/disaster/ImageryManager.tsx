@@ -176,7 +176,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
         </div>
 
         <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
+          <table className="tbl tbl-wide">
             <colgroup>
               <col style={{ width: "20%" }} />
               <col style={{ width: "14%" }} />

@@ -184,7 +184,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
 
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
+          <table className="tbl tbl-wide">
             <colgroup>
               <col style={{ width: "24%" }} />
               <col style={{ width: "14%" }} />

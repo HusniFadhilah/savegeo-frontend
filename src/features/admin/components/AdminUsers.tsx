@@ -201,7 +201,7 @@ export default function AdminUsers() {
         )}
 
         <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
+          <table className="tbl tbl-wide">
             <thead>
               <tr>
                 <th>User</th>

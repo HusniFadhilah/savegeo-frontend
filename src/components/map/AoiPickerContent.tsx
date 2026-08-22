@@ -7,6 +7,8 @@ import AoiRegionTab from "@/features/carbon/components/AoiRegionTab";
 import AoiCoordinateTab from "@/features/carbon/components/AoiCoordinateTab";
 import AoiUploadTab from "@/features/carbon/components/AoiUploadTab";
 import AoiCompanyTab from "@/features/carbon/components/AoiCompanyTab";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
+import MapClickPicker from "@/components/map/MapClickPicker";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
@@ -30,6 +32,8 @@ interface Props {
 
 export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "admin" }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+  const [coordLat, setCoordLat] = useState("-6.9667");
+  const [coordLon, setCoordLon] = useState("110.4167");
   const mapRef = useRef<L.Map | null>(null);
   const groupRef = useRef<L.FeatureGroup | null>(null);
 
@@ -75,7 +79,15 @@ export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "a
 
       <div className="tab-content mb-3">
         {activeTab === "admin" && <AoiRegionTab onApply={(f, n) => applyAoi(f, n, "admin")} />}
-        {activeTab === "coordinate" && <AoiCoordinateTab onApply={(f, n) => applyAoi(f, n, "coordinate")} />}
+        {activeTab === "coordinate" && (
+          <AoiCoordinateTab
+            onApply={(f, n) => applyAoi(f, n, "coordinate")}
+            lat={coordLat}
+            lon={coordLon}
+            onLatChange={setCoordLat}
+            onLonChange={setCoordLon}
+          />
+        )}
         {activeTab === "draw" && (
           <div className="alert alert-info py-2 small mb-0">
             <i className="bi bi-info-circle me-1" />
@@ -96,6 +108,14 @@ export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "a
         <BasemapSwitcher />
         <AoiDrawingTools onChange={handleDrawChange} externalGroupRef={groupRef} />
         <SyncAoiToGroup aoi={aoi?.feature ?? null} groupRef={groupRef} />
+        <MapClickPicker
+          active={activeTab === "coordinate"}
+          onPick={(lat, lng) => {
+            setCoordLat(lat.toFixed(5));
+            setCoordLon(lng.toFixed(5));
+          }}
+        />
+        <MapCursorPosition />
       </MapView>
 
       {aoi && (

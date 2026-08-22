@@ -77,31 +77,35 @@ export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) 
           <h6 className="text-success mb-2">
             <i className="fas fa-arrow-up" /> Kelas Bertambah
           </h6>
-          <table className="table table-sm table-hover mb-0">
-            <thead className="table-success">
-              <tr>
-                <th>Kelas</th>
-                <th>Perubahan</th>
-                <th>% Total</th>
-              </tr>
-            </thead>
-            <tbody>{makeRows(Object.entries(gains), "+", "text-success", totalAreaA, dataset, yearData)}</tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="table table-sm table-hover mb-0">
+              <thead className="table-success">
+                <tr>
+                  <th>Kelas</th>
+                  <th>Perubahan</th>
+                  <th>% Total</th>
+                </tr>
+              </thead>
+              <tbody>{makeRows(Object.entries(gains), "+", "text-success", totalAreaA, dataset, yearData)}</tbody>
+            </table>
+          </div>
         </div>
         <div className="col-md-6">
           <h6 className="text-danger mb-2">
             <i className="fas fa-arrow-down" /> Kelas Berkurang
           </h6>
-          <table className="table table-sm table-hover mb-0">
-            <thead className="table-danger">
-              <tr>
-                <th>Kelas</th>
-                <th>Perubahan</th>
-                <th>% Total</th>
-              </tr>
-            </thead>
-            <tbody>{makeRows(Object.entries(losses), "−", "text-danger", totalAreaA, dataset, yearData)}</tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="table table-sm table-hover mb-0">
+              <thead className="table-danger">
+                <tr>
+                  <th>Kelas</th>
+                  <th>Perubahan</th>
+                  <th>% Total</th>
+                </tr>
+              </thead>
+              <tbody>{makeRows(Object.entries(losses), "−", "text-danger", totalAreaA, dataset, yearData)}</tbody>
+            </table>
+          </div>
         </div>
       </div>
       {bigVal > 0.5 && (

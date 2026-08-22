@@ -3,15 +3,20 @@ import type { AoiFeature } from "@/types/map";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
+  /** Controlled so a map click (see MapClickPicker in AoiPanel) can fill these too. */
+  lat: string;
+  lon: string;
+  onLatChange: (v: string) => void;
+  onLonChange: (v: string) => void;
 }
 
 /**
  * Ported from module-carbon.html's #aoiCoord tab + main.js setCoordinateAOI():
  * builds a square buffer polygon (approx. km -> degrees) around a lat/lon.
+ * Lat/lon are lifted to AoiPanel so clicking the map (MapClickPicker) can
+ * fill them too, not just typing them in here.
  */
-export default function AoiCoordinateTab({ onApply }: Props) {
-  const [lat, setLat] = useState("-6.9667");
-  const [lon, setLon] = useState("110.4167");
+export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLonChange }: Props) {
   const [buffer, setBuffer] = useState("10");
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +47,12 @@ export default function AoiCoordinateTab({ onApply }: Props) {
 
   return (
     <div>
+      <div className="alert alert-info py-2 small mb-3">
+        <i className="bi bi-info-circle me-1" />
+        Klik langsung di peta di bawah untuk mengisi Latitude/Longitude, atau ketik manual. <strong>Buffer</strong>{" "}
+        memperbesar titik itu jadi persegi AOI selebar <em>2 &times; buffer</em> km (buffer ke segala arah dari
+        titik) - makin besar buffer, makin luas area yang dianalisis dan makin lama/berisiko timeout prosesnya.
+      </div>
       <div className="row">
         <div className="col-md-4 mb-3">
           <label className="form-label">Latitude</label>
@@ -50,7 +61,7 @@ export default function AoiCoordinateTab({ onApply }: Props) {
             className="form-control"
             step="0.0001"
             value={lat}
-            onChange={(e) => setLat(e.target.value)}
+            onChange={(e) => onLatChange(e.target.value)}
           />
         </div>
         <div className="col-md-4 mb-3">
@@ -60,7 +71,7 @@ export default function AoiCoordinateTab({ onApply }: Props) {
             className="form-control"
             step="0.0001"
             value={lon}
-            onChange={(e) => setLon(e.target.value)}
+            onChange={(e) => onLonChange(e.target.value)}
           />
         </div>
         <div className="col-md-4 mb-3">

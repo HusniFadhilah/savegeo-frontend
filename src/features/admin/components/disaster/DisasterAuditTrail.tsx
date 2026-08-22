@@ -47,7 +47,7 @@ export default function DisasterAuditTrail({ eventId }: Props) {
         )}
         {!loading && !error && logs.length > 0 && (
           <div style={{ overflowX: "auto" }}>
-            <table className="tbl">
+            <table className="tbl tbl-wide">
               <colgroup>
                 <col style={{ width: "18%" }} />
                 <col style={{ width: "18%" }} />

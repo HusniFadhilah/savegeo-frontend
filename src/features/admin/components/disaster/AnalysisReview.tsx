@@ -221,35 +221,37 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
                   <i className={`bi ${qc.post_imagery_available ? "bi-check-circle-fill text-success" : "bi-x-circle-fill text-danger"}`} /> Citra pasca-bencana tersedia
                 </span>
               </div>
-              <table className="tbl" style={{ marginBottom: 8 }}>
-                <thead>
-                  <tr>
-                    <th>Model</th>
-                    <th>Status</th>
-                    <th>Statistik</th>
-                    <th>Legenda</th>
-                    <th>Kepercayaan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {qc.analyses.map((a, i) => (
-                    <tr key={`${a.model_id}-${i}`}>
-                      <td>{a.model_id}</td>
-                      <td>{RUN_STATUS_LABEL[a.status] || a.status}</td>
-                      <td>{a.has_statistics ? "✓" : "—"}</td>
-                      <td>{a.has_legend ? "✓" : "—"}</td>
-                      <td>{a.has_confidence ? "✓" : "—"}</td>
-                    </tr>
-                  ))}
-                  {qc.analyses.length === 0 && (
+              <div style={{ overflowX: "auto" }}>
+                <table className="tbl tbl-wide" style={{ marginBottom: 8 }}>
+                  <thead>
                     <tr>
-                      <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                        Belum ada analisis.
+                      <th>Model</th>
+                      <th>Status</th>
+                      <th>Statistik</th>
+                      <th>Legenda</th>
+                      <th>Kepercayaan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qc.analyses.map((a, i) => (
+                      <tr key={`${a.model_id}-${i}`}>
+                        <td>{a.model_id}</td>
+                        <td>{RUN_STATUS_LABEL[a.status] || a.status}</td>
+                        <td>{a.has_statistics ? "✓" : "—"}</td>
+                        <td>{a.has_legend ? "✓" : "—"}</td>
+                        <td>{a.has_confidence ? "✓" : "—"}</td>
+                      </tr>
+                    ))}
+                    {qc.analyses.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                          Belum ada analisis.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+              </div>
               <span className={`stat-badge ${qc.ready_to_publish ? "badge-green" : "badge-amber"}`}>
                 {qc.ready_to_publish ? "Siap dipublikasikan" : "Belum siap dipublikasikan"}
               </span>

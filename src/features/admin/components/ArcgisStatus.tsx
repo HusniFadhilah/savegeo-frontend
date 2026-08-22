@@ -38,6 +38,7 @@ export default function ArcgisStatus() {
           <div style={{ color: "var(--danger-color, #e53935)" }}>Gagal memuat status ArcGIS: {error}</div>
         )}
         {!loading && !error && status && (
+          <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <tbody>
               <tr>
@@ -100,6 +101,7 @@ export default function ArcgisStatus() {
               </tr>
             </tbody>
           </table>
+          </div>
         )}
         <div
           style={{

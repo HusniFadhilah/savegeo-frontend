@@ -9,11 +9,11 @@ import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
-import { getVegetationSatellites } from "@/features/vegetation/api";
-import type { SatelliteProvider } from "@/features/vegetation/types";
 import type { AoiFeature } from "@/types/map";
-import { getImagerySceneTile, listImageryScenes } from "./api";
-import type { ImageryScene } from "./types";
+import { getCloudMaskTechniques } from "@/features/vegetation/api";
+import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
+import { getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
+import type { ImageryProvider, ImageryScene, SarMode } from "./types";
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 type ViewMode = "single" | "compare";
@@ -88,18 +88,39 @@ export default function ImageryModule() {
     [setAoiState],
   );
 
-  const [satellites, setSatellites] = useState<Record<string, SatelliteProvider>>({});
+  const [satellites, setSatellites] = useState<Record<string, ImageryProvider>>({});
   const [satellite, setSatellite] = useState("sentinel2");
   useEffect(() => {
     let cancelled = false;
-    getVegetationSatellites()
+    getImageryProviders()
       .then((res) => {
         if (cancelled) return;
-        setSatellites(res.satellites);
+        setSatellites(res.providers);
         setSatellite(res.default);
       })
       .catch(() => {
         /* keep default */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // Sentinel-1 only - how to render its scene tile (see imagery_provider_registry.py).
+  const [sarMode, setSarMode] = useState<SarMode>("grayscale");
+
+  // Sentinel-2 only (both L2A/L1C) - optional per-pixel cloud mask, reusing
+  // the same SCL/QA60/s2cloudless catalog already shared by Vegetation/Carbon.
+  const [cloudMaskTechniques, setCloudMaskTechniques] = useState<Record<string, CloudMaskTechniqueInfo>>({});
+  const [cloudMaskTechnique, setCloudMaskTechnique] = useState<string>("scl");
+  useEffect(() => {
+    let cancelled = false;
+    getCloudMaskTechniques()
+      .then((res) => {
+        if (cancelled) return;
+        setCloudMaskTechniques(res.techniques);
+      })
+      .catch(() => {
+        /* keep empty - technique dropdown just won't show labels/descriptions */
       });
     return () => {
       cancelled = true;
@@ -136,6 +157,22 @@ export default function ImageryModule() {
   const [compareError, setCompareError] = useState<string | null>(null);
 
   const satelliteMeta = satellites[satellite];
+
+  // Fixed group order (SearchableSelect renders a group header whenever an
+  // option's group differs from the previous option's - it does NOT sort by
+  // group itself, so the array must already come in group order).
+  const GROUP_ORDER = ["Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
+  const satelliteOptions = useMemo(() => {
+    return Object.values(satellites)
+      .sort((a, b) => {
+        const gi = GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group);
+        return gi !== 0 ? gi : a.name.localeCompare(b.name);
+      })
+      // Resolution shown right in the option label (user request) - lets you
+      // compare sensors at a glance without selecting each one first.
+      .map((s) => ({ value: s.key, label: `${s.name} · ${s.resolution_m}m`, group: s.group }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [satellites]);
 
   const searchScenes = async () => {
     if (!aoi) {
@@ -190,6 +227,8 @@ export default function ImageryModule() {
         satellite,
         sceneId: scene.id,
         aoi: aoi ? { geojson: aoi } : undefined,
+        sarMode,
+        cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
       });
       setTileUrl(res.tile_url);
     } catch (err) {
@@ -214,8 +253,20 @@ export default function ImageryModule() {
     setCompareTileB(null);
     try {
       const [resA, resB] = await Promise.all([
-        getImagerySceneTile({ satellite, sceneId: compareSceneAId, aoi: aoi ? { geojson: aoi } : undefined }),
-        getImagerySceneTile({ satellite, sceneId: compareSceneBId, aoi: aoi ? { geojson: aoi } : undefined }),
+        getImagerySceneTile({
+          satellite,
+          sceneId: compareSceneAId,
+          aoi: aoi ? { geojson: aoi } : undefined,
+          sarMode,
+          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+        }),
+        getImagerySceneTile({
+          satellite,
+          sceneId: compareSceneBId,
+          aoi: aoi ? { geojson: aoi } : undefined,
+          sarMode,
+          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+        }),
       ]);
       setCompareTileA(resA.tile_url);
       setCompareTileB(resB.tile_url);
@@ -238,8 +289,8 @@ export default function ImageryModule() {
           <span className="analysis-eyebrow">Citra Satelit</span>
           <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit</h1>
           <p>
-            Cari scene berdasarkan tanggal akuisisi, cek awan, lalu tampilkan citra true-color asli atau bandingkan dua
-            scene secara berdampingan.
+            Cari scene berdasarkan tanggal akuisisi (optik: Sentinel-2/3, Landsat 8/9; radar: Sentinel-1; gas atmosfer:
+            Sentinel-5P), lalu tampilkan citra asli atau bandingkan dua scene secara berdampingan.
           </p>
         </div>
         <div className="analysis-hero-status">
@@ -311,14 +362,57 @@ export default function ImageryModule() {
               id="imagerySatellite"
               value={satellite}
               onChange={setSatellite}
-              options={Object.values(satellites).map((s) => ({ value: s.key, label: s.name }))}
+              options={satelliteOptions}
             />
             {satelliteMeta && (
-              <small className="text-muted d-block mt-1">
-                {satelliteMeta.resolution_label} · revisit ~{satelliteMeta.revisit_days} hari · sejak {satelliteMeta.start_year}
-              </small>
+              <>
+                <small className="text-muted d-block mt-1">
+                  {satelliteMeta.resolution_m}m · revisit ~{satelliteMeta.revisit_days} hari · sejak {satelliteMeta.start_year}
+                </small>
+                {(satelliteMeta.visualization !== "rgb" || satelliteMeta.color_mode === "false_color") && (
+                  <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
+                    <i className="fas fa-circle-info" />{" "}
+                    {satelliteMeta.visualization === "sar"
+                      ? "Radar SAR - bukan foto optik, tidak ada foto RGB asli."
+                      : satelliteMeta.color_mode === "false_color"
+                        ? "False-color - bukan foto warna natural (tidak ada band biru asli pada sensor ini)."
+                        : satelliteMeta.group === "VIIRS"
+                          ? `Citra lampu malam (${satelliteMeta.unit ?? "satu-band"}) - bukan foto siang hari.`
+                          : `Peta konsentrasi gas (${satelliteMeta.unit ?? "satu-band"}) - bukan foto RGB.`}
+                    {satelliteMeta.description ? <span className="d-block mt-1">{satelliteMeta.description}</span> : null}
+                  </div>
+                )}
+              </>
             )}
           </div>
+
+          {satelliteMeta?.visualization === "sar" && (
+            <div className="mb-3">
+              <label className="form-label fw-bold">
+                <i className="fas fa-satellite-dish" /> Mode Tampilan SAR
+              </label>
+              <div className="btn-group btn-group-sm w-100" role="group">
+                <button
+                  type="button"
+                  className={`btn ${sarMode === "grayscale" ? "btn-primary" : "btn-outline-secondary"}`}
+                  onClick={() => setSarMode("grayscale")}
+                >
+                  Grayscale (VV)
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${sarMode === "composite" ? "btn-primary" : "btn-outline-secondary"}`}
+                  onClick={() => setSarMode("composite")}
+                >
+                  Komposit Warna
+                </button>
+              </div>
+              <small className="text-muted d-block mt-1">
+                Grayscale: intensitas pantulan VV saja. Komposit: R=VV, G=VH, B=selisih VV−VH (kombinasi umum untuk
+                membedakan tutupan lahan).
+              </small>
+            </div>
+          )}
 
           <div className="mb-3">
             <label className="form-label fw-bold">
@@ -345,41 +439,67 @@ export default function ImageryModule() {
             <small className="text-muted">Semua scene asli di rentang ini akan dicari (maks. 200 hasil).</small>
           </div>
 
-          <div className="mb-3">
-            <div className="form-check form-switch mb-1">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="imageryCloudFilterSwitch"
-                checked={cloudFilterEnabled}
-                onChange={(e) => setCloudFilterEnabled(e.target.checked)}
-              />
-              <label className="form-check-label fw-bold" htmlFor="imageryCloudFilterSwitch">
-                <i className="fas fa-cloud" /> Filter Tutupan Awan
-              </label>
-            </div>
-            {cloudFilterEnabled && (
-              <div className="d-flex align-items-center gap-2">
+          {satelliteMeta?.cloud_property ? (
+            <div className="mb-3">
+              <div className="form-check form-switch mb-1">
                 <input
-                  type="range"
-                  className="form-range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={maxCloudCover}
-                  onChange={(e) => setMaxCloudCover(Number(e.target.value))}
+                  className="form-check-input"
+                  type="checkbox"
+                  id="imageryCloudFilterSwitch"
+                  checked={cloudFilterEnabled}
+                  onChange={(e) => setCloudFilterEnabled(e.target.checked)}
                 />
-                <span className="badge bg-secondary" style={{ minWidth: 48 }}>
-                  ≤{maxCloudCover}%
-                </span>
+                <label className="form-check-label fw-bold" htmlFor="imageryCloudFilterSwitch">
+                  <i className="fas fa-cloud" /> Filter Tutupan Awan
+                </label>
               </div>
-            )}
-            {!cloudFilterEnabled && (
-              <small className="text-muted d-block">
-                Nonaktif: semua scene ditampilkan apa adanya (termasuk yang sangat berawan) supaya bisa dinilai sendiri.
+              {cloudFilterEnabled && (
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    type="range"
+                    className="form-range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={maxCloudCover}
+                    onChange={(e) => setMaxCloudCover(Number(e.target.value))}
+                  />
+                  <span className="badge bg-secondary" style={{ minWidth: 48 }}>
+                    ≤{maxCloudCover}%
+                  </span>
+                </div>
+              )}
+              {cloudFilterEnabled && satelliteMeta?.cloud_mask_techniques && satelliteMeta.cloud_mask_techniques.length > 0 && (
+                <div className="mt-2">
+                  <label className="form-label small fw-semibold mb-1">Teknik Masking Awan (opsional)</label>
+                  <SearchableSelect
+                    value={satelliteMeta.cloud_mask_techniques.includes(cloudMaskTechnique) ? cloudMaskTechnique : satelliteMeta.cloud_mask_techniques[0]}
+                    onChange={setCloudMaskTechnique}
+                    options={satelliteMeta.cloud_mask_techniques.map((t) => ({
+                      value: t,
+                      label: cloudMaskTechniques[t]?.label ?? t.toUpperCase(),
+                    }))}
+                  />
+                  <small className="text-muted d-block mt-1">
+                    {cloudMaskTechniques[cloudMaskTechnique]?.description ??
+                      "Menyamarkan piksel awan pada citra yang ditampilkan (bukan sekadar memfilter daftar scene)."}
+                  </small>
+                </div>
+              )}
+              {!cloudFilterEnabled && (
+                <small className="text-muted d-block">
+                  Nonaktif: semua scene ditampilkan apa adanya (termasuk yang sangat berawan) supaya bisa dinilai sendiri.
+                </small>
+              )}
+            </div>
+          ) : (
+            satelliteMeta && (
+              <small className="text-muted d-block mb-3">
+                <i className="fas fa-circle-info" /> Sensor ini tidak punya properti tutupan awan per-scene - filter awan
+                tidak berlaku.
               </small>
-            )}
-          </div>
+            )
+          )}
 
           <hr />
 

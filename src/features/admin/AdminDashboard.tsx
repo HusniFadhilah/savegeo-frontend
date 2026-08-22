@@ -56,6 +56,18 @@ export default function AdminDashboard() {
   const [reiniting, setReiniting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mobile off-canvas drawer - the sidebar used to just go `position: static;
+  // width: 100%` below 560px, dumping the entire nav (all sections) inline
+  // above the topbar/content instead of collapsing, so a phone visitor had
+  // to scroll past the whole green menu before seeing anything else. Local
+  // state (not shared useUiStore - admin has its own section nav, not the
+  // main app's DashboardModule) mirrors the main app's Sidebar/Navbar pattern.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const selectSection = (id: AdminSection) => {
+    setSection(id);
+    setMobileNavOpen(false);
+  };
 
   const notify = useCallback((message: string, type: ToastType = "s") => {
     setToast({ message, type });
@@ -93,7 +105,9 @@ export default function AdminDashboard() {
     <AdminContext.Provider value={{ notify, refreshHealth, eeInitialized }}>
       <div className="admin-panel">
         <div className="layout">
-          <div className="sidebar">
+          {mobileNavOpen && <div className="sb-backdrop" onClick={() => setMobileNavOpen(false)} />}
+
+          <div className={`sidebar ${mobileNavOpen ? "mobile-open" : ""}`}>
             <Link to="/" className="sb-logo" style={{ textDecoration: "none" }}>
               <img src="/logo.jpg" alt="SAVEGEO" className="sb-logo-img" />
               <div className="sb-logo-text">
@@ -108,7 +122,7 @@ export default function AdminDashboard() {
                     <a
                       key={item.id}
                       className={`sb-item ${section === item.id ? "active" : ""}`}
-                      onClick={() => setSection(item.id)}
+                      onClick={() => selectSection(item.id)}
                     >
                       <i className={`bi ${item.icon}`} />
                       <span>{item.label}</span>
@@ -128,9 +142,20 @@ export default function AdminDashboard() {
 
           <div className="main">
             <div className="topbar">
-              <div>
-                <div className="topbar-title">{title}</div>
-                <div className="topbar-sub">{subtitle}</div>
+              <div className="topbar-left">
+                <button
+                  type="button"
+                  className="sb-mobile-toggle"
+                  onClick={() => setMobileNavOpen((v) => !v)}
+                  aria-label={mobileNavOpen ? "Tutup menu" : "Buka menu"}
+                  aria-expanded={mobileNavOpen}
+                >
+                  <i className={`bi ${mobileNavOpen ? "bi-x-lg" : "bi-list"}`} />
+                </button>
+                <div>
+                  <div className="topbar-title">{title}</div>
+                  <div className="topbar-sub">{subtitle}</div>
+                </div>
               </div>
               <div className="topbar-right">
                 <div className={`ee-badge ${eeInitialized ? "ok" : "fail"}`}>
