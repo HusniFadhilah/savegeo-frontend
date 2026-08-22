@@ -116,6 +116,10 @@ export interface CarbonReferenceInfo {
   resolution?: number;
   year?: number | string;
   tile_url?: string;
+  /** Registry notes - for several datasets (e.g. ESA_CCI) this is the only
+   * place the AGB→carbon conversion factor (×0.47) is documented; the
+   * backend has always sent it, the UI just never rendered it. */
+  description?: string;
 }
 
 export interface CarbonAreaInfo {
@@ -138,6 +142,10 @@ export interface CarbonModelRunInfo {
   target_pool?: string;
   cv_metrics?: CarbonModelCvMetrics;
   images_used?: number | null;
+  /** Satellite-imagery year the model ran inference on - distinct from
+   * `carbon_reference.year`, the (usually much older) vintage of the
+   * biomass ground-truth dataset the model was trained against. */
+  analysis_year?: number;
 }
 
 export interface CarbonResult {

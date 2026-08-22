@@ -16,6 +16,14 @@ export interface LcClassInfo {
   color: string;
 }
 
+/** Dynamic World per-pixel classification-confidence summary (see backend `_dw_confidence_stats`). */
+export interface LcDwConfidence {
+  mean_confidence: number | null;
+  min_confidence: number | null;
+  low_confidence_threshold: number;
+  low_confidence_pixel_pct: number | null;
+}
+
 /** One dataset bucket as returned by POST /analyze/landcover, keyed by dataset id. */
 export interface LcYearResult {
   classes: Record<string, LcClassInfo>;
@@ -27,6 +35,13 @@ export interface LcYearResult {
   dataset_name?: string;
   date_range?: { start: string; end: string };
   fallback_reason?: string | null;
+  /** Dynamic World only - the probability threshold actually applied (null = no threshold). */
+  dw_probability_threshold?: number | null;
+  /** Dynamic World only - present regardless of whether a threshold was applied. */
+  confidence?: LcDwConfidence | null;
+  /** Dynamic World only - non-null when the requested window starts before
+   * the collection's first image (2015-06-27) or extends past today (YTD). */
+  coverage_note?: string | null;
 }
 
 /** Response body of POST /analyze/landcover - flat dict keyed by dataset id (not success/data wrapped). */
@@ -47,6 +62,8 @@ export interface LcAnalyzeParams {
    * `year` from `start_date` itself when both are given - see analyze_landcover. */
   start_date?: string;
   end_date?: string;
+  /** Dynamic World only - min per-pixel class probability to keep (0-1). Omit/undefined = no threshold (backend default). */
+  dw_probability_threshold?: number;
 }
 
 export interface LcChangeMapParams {
@@ -60,6 +77,8 @@ export interface LcChangeMapParams {
    * to_year (only the month/day portion is used - see backend _reyear_date). */
   start_date?: string;
   end_date?: string;
+  /** Dynamic World only - min per-pixel class probability to keep (0-1). */
+  dw_probability_threshold?: number;
 }
 
 /** Response body of POST /analyze/landcover-change-map (flat dict, not success/data wrapped). */
@@ -108,6 +127,8 @@ export interface LcHotspotParams {
   /** Same day-level window as LcChangeMapParams (reapplied per from_year/to_year). */
   start_date?: string;
   end_date?: string;
+  /** Dynamic World only - min per-pixel class probability to keep (0-1). */
+  dw_probability_threshold?: number;
 }
 
 export interface LcClassBadge {

@@ -20,6 +20,33 @@ import HotspotPanel from "./components/HotspotPanel";
 
 type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
 
+/** Soft warning threshold - see same constant in carbon/components/AoiPanel.tsx for rationale. */
+const AOI_TIMEOUT_RISK_KM2 = 500;
+
+/**
+ * "Mode Tanggal Analisis" (Tahun/Bulan/Tanggal) - 3 mockups the user provided.
+ * Only Dynamic World actually honors month/day-level windows on the backend
+ * (analyze_landcover: every other dataset ignores start_month/end_month and
+ * start_date/end_date, always using the full calendar year - see the "Berlaku
+ * untuk Dynamic World" note already on the month range control). "Tahun" =
+ * full Jan-Dec (no extra params beyond `year`); "Bulan" = existing month-range
+ * selects; "Tanggal" = explicit day-level start/end, re-yeared per year by the
+ * backend (`_reyear_date`)/derived from the date itself (`analyze_landcover`).
+ */
+type DateMode = "year" | "month" | "date";
+
+/** MM-DD (no year - re-yeared per analyzed year, both by this component and the backend). */
+const DEFAULT_TANGGAL_START = "01-01";
+const DEFAULT_TANGGAL_END = "12-31";
+
+/** Builds a real YYYY-MM-DD for a given calendar year from a "MM-DD" fragment, for sending to the backend or a native date input. */
+function tanggalToIso(year: number, monthDay: string): string {
+  return `${year}-${monthDay}`;
+}
+
+/** Native <input type="date"> needs a full date; year is cosmetic here (backend/this component only look at month/day). */
+const TANGGAL_INPUT_YEAR = 2000;
+
 /**
  * Land Cover Change module - before/after year comparison with a transition
  * matrix. Full port of `frontend-nextjs2` LCChange (main.js) +
@@ -76,6 +103,15 @@ export default function LcChangeModule() {
   const [years, setYears] = useState<number[]>([maxYear - 1, maxYear]);
   const [startMonth, setStartMonth] = useState(1);
   const [endMonth, setEndMonth] = useState(1);
+  const [dateMode, setDateMode] = useState<DateMode>("month");
+  const [tanggalStart, setTanggalStart] = useState(DEFAULT_TANGGAL_START);
+  const [tanggalEnd, setTanggalEnd] = useState(DEFAULT_TANGGAL_END);
+  // Dynamic World per-pixel confidence threshold (audit #8) - undefined = no
+  // threshold (backend still returns confidence stats using its own 0.5
+  // diagnostic default; this only controls whether low-confidence pixels get
+  // masked out of the classification itself).
+  const [dwThresholdEnabled, setDwThresholdEnabled] = useState(false);
+  const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(0.5);
 
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
@@ -156,7 +192,9 @@ export default function LcChangeModule() {
   }, [aoi, dataset, yearA, yearB, trans]);
 
   const changeMapCacheKey =
-    yearA != null && yearB != null ? `${dataset}:${yearA}:${yearB}:${startMonth}:${endMonth}` : null;
+    yearA != null && yearB != null
+      ? `${dataset}:${yearA}:${yearB}:${dateMode}:${startMonth}:${endMonth}:${tanggalStart}:${tanggalEnd}`
+      : null;
   const changeMapData = changeMapCacheKey ? changeMapCache[changeMapCacheKey] ?? null : null;
 
   // Fetch the changed-pixel map for the current pair whenever it's needed
@@ -176,6 +214,9 @@ export default function LcChangeModule() {
       to_year: yearB,
       start_month: startMonth,
       end_month: endMonth,
+      // Single day-level window, re-yeared by the backend per from_year/to_year
+      // (_reyear_date) - not per-year like the main analyze_landcover call.
+      ...(dateMode === "date" ? { start_date: tanggalToIso(yearA, tanggalStart), end_date: tanggalToIso(yearB, tanggalEnd) } : {}),
     })
       .then((data) => {
         if (cancelled) return;
@@ -197,6 +238,25 @@ export default function LcChangeModule() {
   const onDatasetChange = (value: LcDataset) => {
     setDataset(value);
   };
+
+  /** Per-year request params for the current dateMode (see DateMode above). */
+  const dateParamsForYear = useCallback(
+    (year: number): { start_month: number; end_month: number; start_date?: string; end_date?: string } => {
+      if (dateMode === "year") return { start_month: 1, end_month: 12 };
+      if (dateMode === "date") {
+        const sd = tanggalToIso(year, tanggalStart);
+        const ed = tanggalToIso(year, tanggalEnd);
+        return {
+          start_month: Number(tanggalStart.slice(0, 2)),
+          end_month: Number(tanggalEnd.slice(0, 2)),
+          start_date: sd,
+          end_date: ed,
+        };
+      }
+      return { start_month: startMonth, end_month: endMonth };
+    },
+    [dateMode, tanggalStart, tanggalEnd, startMonth, endMonth],
+  );
 
   const runAnalysis = async () => {
     if (!aoi) {
@@ -224,8 +284,8 @@ export default function LcChangeModule() {
           aoi: { geojson: aoi },
           year,
           datasets: [dataset],
-          start_month: startMonth,
-          end_month: endMonth,
+          ...dateParamsForYear(year),
+          ...(dataset === "Dynamic_World" && dwThresholdEnabled ? { dw_probability_threshold: dwProbabilityThreshold } : {}),
         });
         const bucket = res[dataset];
         if (bucket?.classes) {
@@ -288,10 +348,17 @@ export default function LcChangeModule() {
             {aoi ? (
               <div className="alert alert-success py-2 mb-0" style={{ fontSize: ".8rem" }}>
                 <i className="fas fa-check-circle" /> AOI tergambar ({aoi.geometry.type})
+                {aoiState?.areaKm2 != null && <> &middot; {aoiState.areaKm2.toFixed(2)} km²</>}
               </div>
             ) : (
               <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
                 <i className="fas fa-exclamation-triangle" /> Gambar AOI (polygon/rectangle) di peta kiri di bawah.
+              </div>
+            )}
+            {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
+              <div className="alert alert-warning py-2 mb-0 mt-2" style={{ fontSize: ".8rem" }}>
+                <i className="fas fa-triangle-exclamation" /> AOI besar ({aoiState.areaKm2.toFixed(0)} km²) - analisis per
+                tahun bisa lambat/timeout, apalagi untuk banyak tahun sekaligus. Pertimbangkan area lebih kecil.
               </div>
             )}
             {aoi && (
@@ -325,35 +392,139 @@ export default function LcChangeModule() {
 
           <div className="mb-3">
             <label className="form-label fw-bold">
-              <i className="fas fa-calendar" /> Rentang Bulan
+              <i className="fas fa-calendar" /> Mode Tanggal Analisis
             </label>
-            <div className="d-flex align-items-center gap-2">
-              <select
-                className="form-select form-select-sm"
-                value={startMonth}
-                onChange={(e) => setStartMonth(Number(e.target.value))}
+            <div className="btn-group w-100" role="group">
+              <button
+                type="button"
+                className={`btn btn-sm ${dateMode === "year" ? "btn-warning" : "btn-outline-secondary"}`}
+                onClick={() => setDateMode("year")}
               >
-                {monthOptions.map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-              <span className="text-muted">–</span>
-              <select
-                className="form-select form-select-sm"
-                value={endMonth}
-                onChange={(e) => setEndMonth(Number(e.target.value))}
+                Tahun
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${dateMode === "month" ? "btn-warning" : "btn-outline-secondary"}`}
+                onClick={() => setDateMode("month")}
               >
-                {monthOptions.map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+                Bulan
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${dateMode === "date" ? "btn-warning" : "btn-outline-secondary"}`}
+                onClick={() => setDateMode("date")}
+              >
+                Tanggal
+              </button>
             </div>
-            <small className="text-muted">Berlaku untuk Dynamic World</small>
+
+            {dateMode === "year" && (
+              <small className="text-muted d-block mt-2">Seluruh tahun (Jan–Des) untuk setiap tahun yang dipilih.</small>
+            )}
+
+            {dateMode === "month" && (
+              <div className="mt-2">
+                <div className="d-flex align-items-center gap-2">
+                  <select
+                    className="form-select form-select-sm"
+                    value={startMonth}
+                    onChange={(e) => setStartMonth(Number(e.target.value))}
+                  >
+                    {monthOptions.map((m, i) => (
+                      <option key={m} value={i + 1}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-muted">–</span>
+                  <select
+                    className="form-select form-select-sm"
+                    value={endMonth}
+                    onChange={(e) => setEndMonth(Number(e.target.value))}
+                  >
+                    {monthOptions.map((m, i) => (
+                      <option key={m} value={i + 1}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {dateMode === "date" && (
+              <div className="mt-2">
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    value={tanggalToIso(TANGGAL_INPUT_YEAR, tanggalStart)}
+                    onChange={(e) => setTanggalStart(e.target.value.slice(5))}
+                  />
+                  <span className="text-muted">–</span>
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    value={tanggalToIso(TANGGAL_INPUT_YEAR, tanggalEnd)}
+                    onChange={(e) => setTanggalEnd(e.target.value.slice(5))}
+                  />
+                </div>
+                <small className="text-muted d-block mt-1">
+                  Hanya bulan/tanggal dipakai - diterapkan ke setiap tahun yang dianalisis.
+                </small>
+              </div>
+            )}
+
+            {dataset !== "Dynamic_World" && dateMode !== "year" && (
+              <small className="text-warning d-block mt-1">
+                <i className="fas fa-triangle-exclamation" /> Dataset ini selalu memakai satu tahun penuh - jendela
+                bulan/tanggal hanya berlaku untuk Dynamic World.
+              </small>
+            )}
           </div>
+
+          {dataset === "Dynamic_World" && (
+            <div className="mb-3">
+              <div className="form-check form-switch mb-1">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="lcDwThresholdSwitch"
+                  checked={dwThresholdEnabled}
+                  onChange={(e) => setDwThresholdEnabled(e.target.checked)}
+                />
+                <label className="form-check-label fw-bold" htmlFor="lcDwThresholdSwitch">
+                  <i className="fas fa-shield-halved" /> Ambang Keyakinan DW
+                </label>
+              </div>
+              {dwThresholdEnabled && (
+                <>
+                  <div className="d-flex align-items-center gap-2">
+                    <input
+                      type="range"
+                      className="form-range"
+                      min={0.1}
+                      max={0.9}
+                      step={0.05}
+                      value={dwProbabilityThreshold}
+                      onChange={(e) => setDwProbabilityThreshold(Number(e.target.value))}
+                    />
+                    <span className="badge bg-secondary" style={{ minWidth: 48 }}>
+                      {Math.round(dwProbabilityThreshold * 100)}%
+                    </span>
+                  </div>
+                  <small className="text-muted d-block">
+                    Piksel dengan keyakinan kelas di bawah ambang ini disamarkan (tidak dihitung).
+                  </small>
+                </>
+              )}
+              {!dwThresholdEnabled && (
+                <small className="text-muted d-block">
+                  Statistik keyakinan tetap ditampilkan meski ambang tidak diaktifkan.
+                </small>
+              )}
+            </div>
+          )}
 
           <hr />
 
@@ -430,6 +601,60 @@ export default function LcChangeModule() {
               </div>
             </div>
 
+            {(() => {
+              const badges: JSX.Element[] = [];
+              for (const [label, y] of [
+                ["A", yearA],
+                ["B", yearB],
+              ] as const) {
+                const r = y != null ? yearData[y] : undefined;
+                if (!r) continue;
+                if (r.coverage_note) {
+                  badges.push(
+                    <div key={`coverage-${label}`} className="alert alert-info py-2 mb-2 d-flex align-items-start gap-2">
+                      <i className="fas fa-circle-info mt-1 flex-shrink-0" />
+                      <div style={{ fontSize: ".8rem" }}>
+                        <strong>Tahun {label} ({r.year}):</strong> {r.coverage_note}
+                      </div>
+                    </div>,
+                  );
+                }
+                if (r.requested_year != null && r.requested_year !== r.year) {
+                  badges.push(
+                    <div key={`fallback-${label}`} className="alert alert-warning py-2 mb-2 d-flex align-items-start gap-2">
+                      <i className="fas fa-triangle-exclamation mt-1 flex-shrink-0" />
+                      <div style={{ fontSize: ".8rem" }}>
+                        <strong>Tahun {label} ({r.requested_year}):</strong> data tidak tersedia untuk tahun yang diminta -
+                        menampilkan <strong>{r.year}</strong> sebagai gantinya{r.fallback_reason ? ` (${r.fallback_reason})` : ""}.
+                      </div>
+                    </div>,
+                  );
+                }
+                if (r.confidence) {
+                  const c = r.confidence;
+                  const low = c.low_confidence_pixel_pct ?? 0;
+                  const warn = low >= 15;
+                  badges.push(
+                    <div
+                      key={`conf-${label}`}
+                      className={`alert ${warn ? "alert-warning" : "alert-secondary"} py-2 mb-2 d-flex align-items-start gap-2`}
+                    >
+                      <i className={`fas ${warn ? "fa-triangle-exclamation" : "fa-shield-halved"} mt-1 flex-shrink-0`} />
+                      <div style={{ fontSize: ".8rem" }}>
+                        <strong>Keyakinan Dynamic World, tahun {label} ({r.year}):</strong> rata-rata{" "}
+                        {c.mean_confidence != null ? `${Math.round(c.mean_confidence * 100)}%` : "-"}, min{" "}
+                        {c.min_confidence != null ? `${Math.round(c.min_confidence * 100)}%` : "-"} -{" "}
+                        {c.low_confidence_pixel_pct != null ? `${c.low_confidence_pixel_pct}%` : "-"} piksel di bawah ambang{" "}
+                        {Math.round(c.low_confidence_threshold * 100)}%
+                        {r.dw_probability_threshold ? " (piksel ini sudah disamarkan dari hasil)" : ""}.
+                      </div>
+                    </div>,
+                  );
+                }
+              }
+              return badges.length ? <div className="mb-3">{badges}</div> : null;
+            })()}
+
             <div className="card mb-3">
               <div className="card-header">
                 <ul className="nav nav-tabs card-header-tabs">
@@ -497,6 +722,8 @@ export default function LcChangeModule() {
                     yearB={yearB}
                     startMonth={startMonth}
                     endMonth={endMonth}
+                    startDate={dateMode === "date" && yearA != null ? tanggalToIso(yearA, tanggalStart) : undefined}
+                    endDate={dateMode === "date" && yearB != null ? tanggalToIso(yearB, tanggalEnd) : undefined}
                   />
                 )}
               </div>

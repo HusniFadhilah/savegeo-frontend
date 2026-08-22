@@ -38,6 +38,33 @@ function ClipController({ percent, orientation }: { percent: number; orientation
   return null;
 }
 
+/**
+ * Disables/enables map panning (drag-to-move, incl. touch drag) without
+ * touching zoom (scroll/pinch/+-/double-click zoom are separate Leaflet
+ * options, left untouched) - user request: dragging the swipe divider handle
+ * could accidentally also pan the map underneath it (pointer events landing
+ * just off the handle), shifting the comparison framing mid-drag. Locked by
+ * default; a small toggle button lets the user re-enable panning if they
+ * need to reposition before locking again.
+ */
+function PanLockController({ locked }: { locked: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    // Leaflet's Dragging handler covers both mouse and touch drag uniformly
+    // (the old separate Tap handler was for a delayed-click workaround, not
+    // panning, and isn't present in this Leaflet version's types/runtime).
+    if (locked) {
+      map.dragging.disable();
+    } else {
+      map.dragging.enable();
+    }
+    return () => {
+      map.dragging.enable();
+    };
+  }, [map, locked]);
+  return null;
+}
+
 interface Props {
   id: string;
   beforeUrl: string | null;
@@ -74,6 +101,7 @@ export default function SwipeCompareMap({
   children,
 }: Props) {
   const [percent, setPercent] = useState(50);
+  const [panLocked, setPanLocked] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
@@ -121,6 +149,7 @@ export default function SwipeCompareMap({
           <TileLayer key={afterUrl} url={afterUrl} opacity={opacity} pane={AFTER_PANE} attribution="Google Earth Engine" />
         )}
         <ClipController percent={percent} orientation={orientation} />
+        <PanLockController locked={panLocked} />
       </MapView>
 
       <div className="swipe-label swipe-label-before">{beforeLabel}</div>
@@ -156,6 +185,14 @@ export default function SwipeCompareMap({
             onClick={() => onOrientationChange("horizontal")}
           >
             <i className="fas fa-grip-lines" />
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${panLocked ? "btn-primary" : "btn-outline-secondary"}`}
+            title={panLocked ? "Posisi peta terkunci (geser divider tidak menggeser peta) - klik untuk buka kunci" : "Posisi peta bebas digeser - klik untuk kunci lagi"}
+            onClick={() => setPanLocked((v) => !v)}
+          >
+            <i className={`fas ${panLocked ? "fa-lock" : "fa-lock-open"}`} />
           </button>
         </div>
       )}

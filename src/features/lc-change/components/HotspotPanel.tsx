@@ -16,6 +16,11 @@ interface Props {
   yearB: number | null;
   startMonth: number;
   endMonth: number;
+  /** "Mode Tanggal Analisis: Tanggal" - explicit day-level window (Dynamic World
+   * only; re-yeared per from_year/to_year on the backend). undefined = use
+   * startMonth/endMonth instead (Tahun/Bulan modes). */
+  startDate?: string;
+  endDate?: string;
 }
 
 const AOI_STYLE = { color: "#94a3b8", weight: 1, dashArray: "4 3", fillOpacity: 0 };
@@ -55,7 +60,7 @@ function FlyToHotspot({ target }: { target: LcHotspot | null }) {
  * transition and (Dynamic World only) confidence; clicking a row or a
  * polygon on the map flies to/highlights it.
  */
-export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, endMonth }: Props) {
+export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, endMonth, startDate, endDate }: Props) {
   const [minAreaHa, setMinAreaHa] = useState(1);
   const [topN, setTopN] = useState(20);
   const [running, setRunning] = useState(false);
@@ -78,6 +83,7 @@ export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, e
         to_year: yearB,
         start_month: startMonth,
         end_month: endMonth,
+        ...(startDate && endDate ? { start_date: startDate, end_date: endDate } : {}),
         min_area_ha: minAreaHa,
         top_n: topN,
       });
@@ -96,7 +102,7 @@ export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, e
     setResult(null);
     setSelected(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aoi, dataset, yearA, yearB, startMonth, endMonth]);
+  }, [aoi, dataset, yearA, yearB, startMonth, endMonth, startDate, endDate]);
 
   const hotspots = result?.hotspots ?? [];
   const maxArea = useMemo(() => Math.max(1, ...hotspots.map((h) => h.area_ha)), [hotspots]);

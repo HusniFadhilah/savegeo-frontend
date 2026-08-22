@@ -145,7 +145,8 @@ function switchModule(moduleName: string | undefined, _ctx: ActionRunContext): P
     landcover: "carbon",
     lc_change: "lc-change",
     disaster: "disaster",
-    details: "details",
+    // "details" folded into "about" (merged Detail Program into Tentang Program).
+    details: "about",
     about: "about",
     guide: "guide",
   };

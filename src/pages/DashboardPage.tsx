@@ -3,20 +3,22 @@ import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import CarbonModule from "@/features/carbon/CarbonModule";
 import LcChangeModule from "@/features/lc-change/LcChangeModule";
+import ImageryModule from "@/features/imagery/ImageryModule";
 import DisasterModule from "@/features/disaster/DisasterModule";
+import CropMonitoringModule from "@/features/crop-monitoring/CropMonitoringModule";
 import GuideModule from "@/components/modules/GuideModule";
 import AboutModule from "@/components/modules/AboutModule";
-import DetailsModule from "@/components/modules/DetailsModule";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useConfigStore } from "@/hooks/useConfigStore";
 
 const MODULES: Record<DashboardModule, React.ComponentType> = {
   carbon: CarbonModule,
   "lc-change": LcChangeModule,
+  imagery: ImageryModule,
   disaster: DisasterModule,
+  "crop-monitoring": CropMonitoringModule,
   guide: GuideModule,
   about: AboutModule,
-  details: DetailsModule,
 };
 
 /**

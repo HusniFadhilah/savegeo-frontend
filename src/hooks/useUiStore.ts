@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-export type DashboardModule = "carbon" | "lc-change" | "disaster" | "guide" | "about" | "details";
+// "details" (Detail Program Penelitian) merged into "about" (Tentang Program)
+// - one page, tabbed, instead of two near-identical stacked-card pages.
+export type DashboardModule = "carbon" | "lc-change" | "imagery" | "disaster" | "crop-monitoring" | "guide" | "about";
 
 interface LoadingState {
   visible: boolean;
@@ -32,7 +34,7 @@ const STORAGE_SIDEBAR = "sidebarCollapsed";
 
 function readInitialModule(): DashboardModule {
   const saved = localStorage.getItem(STORAGE_MODULE);
-  const valid: DashboardModule[] = ["carbon", "lc-change", "disaster", "guide", "about", "details"];
+  const valid: DashboardModule[] = ["carbon", "lc-change", "imagery", "disaster", "crop-monitoring", "guide", "about"];
   return (valid as string[]).includes(saved || "") ? (saved as DashboardModule) : "carbon";
 }
 

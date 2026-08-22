@@ -26,6 +26,16 @@ interface Props {
 
 type TabKey = "admin" | "coordinate" | "draw" | "upload" | "company";
 
+/**
+ * Soft warning threshold (not a hard block - backend `max_pixels` already
+ * caps compute via bestEffort scaling). Picked from this session's own
+ * timeout debugging: company-sized boundaries (tens of km²) ran fine,
+ * district-scale AOIs (hundreds-thousands of km²) were where the 650s/900s
+ * carbon timeouts actually started showing up. Audit item: "AOI size vs
+ * timeout risk" had no user-facing warning at all before this.
+ */
+const AOI_TIMEOUT_RISK_KM2 = 500;
+
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: "admin", label: "Indonesia Admin", icon: "bi-map-fill" },
   { key: "coordinate", label: "Koordinat", icon: "bi-pin-map-fill" },
@@ -265,6 +275,13 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
             <i className="bi bi-check-circle-fill me-1" />
             AOI: <strong>{aoi.name}</strong>
             {aoi.areaKm2 != null && <> &middot; {aoi.areaKm2.toFixed(2)} km²</>}
+          </div>
+        )}
+        {aoi?.areaKm2 != null && aoi.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
+          <div className="alert alert-warning mt-2 mb-0 py-2" style={{ fontSize: ".8rem" }}>
+            <i className="fas fa-triangle-exclamation me-1" />
+            AOI besar ({aoi.areaKm2.toFixed(0)} km²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat
+            atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.
           </div>
         )}
       </div>

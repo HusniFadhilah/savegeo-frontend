@@ -40,6 +40,29 @@ export default function CarbonStatsPanel({ result }: Props) {
         <i className="bi bi-tree me-1" /> Analisis Stok Karbon
       </h5>
 
+      {reference?.year != null && modelInfo.analysis_year != null && reference.year !== modelInfo.analysis_year && (
+        <div className="alert alert-warning py-2 mb-3" style={{ fontSize: ".85rem" }}>
+          <i className="bi bi-exclamation-triangle-fill me-1" />
+          Ini adalah <strong>prediksi model</strong> untuk citra satelit tahun{" "}
+          <strong>{modelInfo.analysis_year}</strong>, bukan pengukuran biomassa langsung tahun itu. Model dilatih
+          menggunakan data referensi biomassa <strong>{reference.name || reference.full_name}</strong> tahun{" "}
+          <strong>{reference.year}</strong> - akurasinya bergantung pada seberapa valid hubungan citra-ke-biomassa itu
+          tetap berlaku di tahun {modelInfo.analysis_year}.
+        </div>
+      )}
+
+      {reference?.resolution != null && modelInfo.scale != null && reference.resolution >= modelInfo.scale * 3 && (
+        <div className="alert alert-warning py-2 mb-3" style={{ fontSize: ".85rem" }}>
+          <i className="bi bi-grid-3x3-gap-fill me-1" />
+          <strong>Perbedaan resolusi:</strong> model divalidasi (R²/RMSE di atas) terhadap referensi{" "}
+          <strong>{reference.name || reference.full_name}</strong> pada resolusi native{" "}
+          <strong>{reference.resolution}m</strong>, tapi prediksi di sini ditampilkan pada grid{" "}
+          <strong>{modelInfo.scale}m</strong>. Piksel individu pada resolusi {modelInfo.scale}m{" "}
+          <em>tidak</em> divalidasi satu-per-satu terhadap ground truth - akurasi yang terukur berlaku pada agregat
+          skala {reference.resolution}m, bukan per-piksel {modelInfo.scale}m.
+        </div>
+      )}
+
       <div className={`cs-mode-bar ${isClipped ? "cs-mode-bar-clipped" : "cs-mode-bar-full"}`}>
         <div className="cs-mode-col">
           <div className="cs-mode-title">
@@ -82,6 +105,7 @@ export default function CarbonStatsPanel({ result }: Props) {
               <div className="cs-card-footer">
                 <i className="bi bi-info-circle me-1" />
                 Referensi: {reference.full_name || reference.name}
+                {reference.description ? <span className="d-block mt-1 text-muted">{reference.description}</span> : null}
               </div>
             )}
           </div>
@@ -112,8 +136,15 @@ export default function CarbonStatsPanel({ result }: Props) {
         <div className="cs-card-body">
           <div className="cs-config-grid">
             <div className="cs-config-item">
+              <span className="cs-config-label">Tahun Citra (Analisis)</span>
+              <span className="cs-config-value">{modelInfo.analysis_year ?? "-"}</span>
+            </div>
+            <div className="cs-config-item">
               <span className="cs-config-label">Dataset Referensi</span>
-              <span className="cs-config-value">{reference?.name || reference?.full_name || "-"}</span>
+              <span className="cs-config-value">
+                {reference?.name || reference?.full_name || "-"}
+                {reference?.year != null ? ` (vintage ${reference.year})` : ""}
+              </span>
             </div>
             <div className="cs-config-item">
               <span className="cs-config-label">Skala Proses</span>
@@ -188,6 +219,13 @@ export default function CarbonStatsPanel({ result }: Props) {
               CV = std dev ÷ mean densitas karbon di dalam AOI - variabilitas spasial, bukan interval keyakinan formal
               (piksel citra berkorelasi spasial, bukan sampel independen). R²/RMSE di atas adalah akurasi model dari
               cross-validation saat pelatihan, bukan spesifik untuk AOI ini.
+              <br />
+              <i className="bi bi-exclamation-triangle me-1 mt-2 d-inline-block" />
+              <strong>Generalisasi spasial:</strong> fold cross-validation biasanya diambil dari sampel di dalam
+              wilayah pelatihan model yang sama (lihat nama model - {modelInfo.model_name ? <code>{modelInfo.model_name}</code> : "region tidak tercantum"}
+              ), bukan wilayah lain. Akurasi ini <em>tidak</em> otomatis berlaku jika AOI berada di
+              biome/kondisi yang berbeda dari data latih (mis. model dilatih di Jawa, dipakai untuk Papua/Aceh) -
+              validasi lapangan independen tetap disarankan sebelum dipakai di luar wilayah pelatihan.
             </div>
           </div>
         </div>

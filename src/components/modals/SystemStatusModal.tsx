@@ -21,12 +21,12 @@ function buildRows(data: HealthStatus | null): StatusRow[] {
     {
       icon: "bi-broadcast",
       label: "Google Earth Engine",
-      value: data.ee_initialized ? "Initialized" : "Inactive",
+      value: data.ee_initialized ? "Aktif" : "Tidak aktif",
       ok: data.ee_initialized,
     },
     {
       icon: "bi-key",
-      label: "Active Model",
+      label: "Model Aktif",
       value: data.active_model || "-",
       ok: Boolean(data.active_model),
     },
@@ -63,15 +63,15 @@ export default function SystemStatusModal({ open, onClose }: Props) {
         <div className="modal-card-header">
           <span>
             <i className="bi bi-activity me-2" />
-            System Status
+            Status Sistem
           </span>
-          <button type="button" className="btn-close" onClick={onClose} aria-label="Close" />
+          <button type="button" className="btn-close" onClick={onClose} aria-label="Tutup" />
         </div>
         <div className="modal-card-body">
-          {loading && <div className="text-center text-muted py-3">Loading...</div>}
+          {loading && <div className="text-center text-muted py-3">Memuat...</div>}
           {!loading && !data && (
             <div className="text-danger text-center py-2">
-              <i className="bi bi-x-circle me-1" /> Failed to fetch status.
+              <i className="bi bi-x-circle me-1" /> Gagal memuat status.
             </div>
           )}
           {!loading &&
@@ -88,10 +88,10 @@ export default function SystemStatusModal({ open, onClose }: Props) {
               </div>
             ))}
           {checkedAt && (
-            <div className="small text-muted mt-2">Updated: {checkedAt.toLocaleString("id-ID")}</div>
+            <div className="small text-muted mt-2">Diperbarui: {checkedAt.toLocaleString("id-ID")}</div>
           )}
           <button type="button" className="btn btn-sm btn-outline-secondary mt-3" onClick={refresh}>
-            <i className="bi bi-arrow-repeat me-1" /> Refresh
+            <i className="bi bi-arrow-repeat me-1" /> Muat Ulang
           </button>
         </div>
       </div>
