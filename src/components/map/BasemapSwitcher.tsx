@@ -4,6 +4,18 @@ import L from "leaflet";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import { useBasemapContext } from "./BasemapContext";
 
+interface ExtraBasemapOption {
+  id: string;
+  name: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+interface Props {
+  extraOptions?: ExtraBasemapOption[];
+}
+
 /**
  * Layer-switcher control (top-right), mirrors legacy `addBasemapSwitcher`.
  * Collapsed into a single icon button by default - the basemap list only
@@ -11,7 +23,7 @@ import { useBasemapContext } from "./BasemapContext";
  * stays the layer added to the map by MapView; this control only lets the
  * user opt into Roads/others, it never changes the initial default.
  */
-export default function BasemapSwitcher() {
+export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   const map = useMap();
   const { basemaps } = useBasemaps();
   const layersRef = useRef<Record<string, L.TileLayer>>({});
@@ -73,6 +85,21 @@ export default function BasemapSwitcher() {
                 onClick={() => switchTo(b.id)}
               >
                 {b.name}
+              </button>
+            ))}
+            {extraOptions.length > 0 && <div className="basemap-panel-divider" />}
+            {extraOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`basemap-option ${option.active ? "active" : ""}`}
+                disabled={option.disabled}
+                onClick={() => {
+                  option.onClick();
+                  setOpen(false);
+                }}
+              >
+                {option.name}
               </button>
             ))}
           </div>

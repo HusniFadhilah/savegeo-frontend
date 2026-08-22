@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import {
   fetchProvinces,
   fetchCities,
@@ -34,22 +35,23 @@ type Scope = "admin" | "island" | "indonesia";
  * single valid Feature<Polygon | MultiPolygon>.
  */
 function toFeature(input: GeoJSON.GeoJSON): AoiFeature {
+  const tt = useI18nStore.getState().t;
   const asGeometry = (geom: GeoJSON.Geometry | null | undefined): AoiGeometry => {
-    if (!geom) throw new Error("Geometri wilayah kosong");
+    if (!geom) throw new Error(tt("carbon.aoiRegion.err.emptyGeometry"));
     if (geom.type === "Polygon" || geom.type === "MultiPolygon") return geom;
     if (geom.type === "GeometryCollection") {
       const polys = geom.geometries.filter(
         (g): g is GeoJSON.Polygon | GeoJSON.MultiPolygon => g.type === "Polygon" || g.type === "MultiPolygon",
       );
-      if (!polys.length) throw new Error("Tidak ada geometri Polygon pada GeometryCollection");
+      if (!polys.length) throw new Error(tt("carbon.aoiRegion.err.noPolygonInCollection"));
       return mergeToMultiPolygon(polys);
     }
-    throw new Error(`Tipe geometri tidak didukung: ${geom.type}`);
+    throw new Error(`${tt("carbon.aoiRegion.err.unsupportedGeometry")}: ${geom.type}`);
   };
 
   if (input.type === "FeatureCollection") {
     const geometries = input.features.map((f) => f.geometry).filter((g): g is GeoJSON.Geometry => !!g);
-    if (!geometries.length) throw new Error("FeatureCollection wilayah kosong");
+    if (!geometries.length) throw new Error(tt("carbon.aoiRegion.err.emptyFeatureCollection"));
     const geometry = geometries.length === 1 ? asGeometry(geometries[0]) : mergeToMultiPolygon(geometries.map(asGeometry));
     return { type: "Feature", geometry, properties: {} };
   }
@@ -92,6 +94,7 @@ function mergeToMultiPolygon(geoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[]):
  * (per task instructions) instead of re-implementing raw fetches.
  */
 export default function AoiRegionTab({ onApply }: Props) {
+  const t = useI18nStore((s) => s.t);
   const [scope, setScope] = useState<Scope>("admin");
 
   const [islands, setIslands] = useState<RegionOption[]>([]);
@@ -116,12 +119,13 @@ export default function AoiRegionTab({ onApply }: Props) {
   useEffect(() => {
     fetchProvinces()
       .then((r) => setProvinces(r ?? []))
-      .catch(() => setError("Gagal memuat daftar provinsi"));
+      .catch(() => setError(t("carbon.aoiRegion.err.provinces")));
     fetchIslands()
       .then((r) => setIslands(r ?? []))
       .catch(() => {
         /* island scope is optional, ignore */
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleProvinceChange(code: string) {
@@ -137,7 +141,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       const r = await fetchCities(code);
       setCities(r ?? []);
     } catch {
-      setError("Gagal memuat daftar kota/kabupaten");
+      setError(t("carbon.aoiRegion.err.cities"));
     }
   }
 
@@ -152,7 +156,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       const r = await fetchDistricts(code);
       setDistricts(r ?? []);
     } catch {
-      setError("Gagal memuat daftar kecamatan");
+      setError(t("carbon.aoiRegion.err.districts"));
     }
   }
 
@@ -165,7 +169,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       const r = await fetchVillages(code);
       setVillages(r ?? []);
     } catch {
-      setError("Gagal memuat daftar desa/kelurahan");
+      setError(t("carbon.aoiRegion.err.villages"));
     }
   }
 
@@ -180,23 +184,23 @@ export default function AoiRegionTab({ onApply }: Props) {
             : searchedLocation.bbox
               ? bboxToFeature(searchedLocation.bbox, searchedLocation.display_name)
               : null;
-          if (!feature) throw new Error("Lokasi ini tidak punya area yang bisa dipakai sebagai AOI");
+          if (!feature) throw new Error(t("carbon.aoiRegion.err.noUsableArea"));
           onApply(feature, searchedLocation.display_name);
           return;
         }
         const geometry = await fetchIndonesiaGeometry();
-        if (!geometry) throw new Error("Geometri tidak ditemukan");
-        onApply(toFeature(geometry), "Seluruh Indonesia");
+        if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
+        onApply(toFeature(geometry), t("carbon.aoiRegion.wholeIndonesia"));
         return;
       }
       if (scope === "island") {
         if (!islandCode) {
-          setError("Pilih pulau terlebih dahulu");
+          setError(t("carbon.aoiRegion.err.selectIsland"));
           return;
         }
         const label = islands.find((i) => i.code === islandCode)?.name || islandCode;
         const geometry = await fetchIslandGeometry(islandCode);
-        if (!geometry) throw new Error("Geometri tidak ditemukan");
+        if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
         onApply(toFeature(geometry), label);
         return;
       }
@@ -206,7 +210,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       let code = provinceCode;
       let name = provinces.find((p) => p.code === provinceCode)?.name || "";
       if (!provinceCode) {
-        setError("Pilih provinsi terlebih dahulu");
+        setError(t("carbon.aoiRegion.err.selectProvince"));
         return;
       }
       if (cityCode) {
@@ -225,19 +229,19 @@ export default function AoiRegionTab({ onApply }: Props) {
         name = villages.find((v) => v.code === villageCode)?.name || name;
       }
       const geometry = await fetchRegionGeometry(endpoint, code);
-      if (!geometry) throw new Error("Geometri tidak ditemukan");
+      if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
       onApply(toFeature(geometry), name);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat wilayah");
+      setError(err instanceof ApiError ? err.message : t("carbon.aoiRegion.err.loadRegionFailed"));
     } finally {
       setLoading(false);
     }
   }
 
   const SCOPES: { key: Scope; label: string }[] = [
-    { key: "admin", label: "Provinsi / Kab-Kota / Kec / Desa" },
-    { key: "island", label: "Pulau" },
-    { key: "indonesia", label: "Seluruh Indonesia" },
+    { key: "admin", label: t("carbon.aoiRegion.scope.admin") },
+    { key: "island", label: t("carbon.aoiRegion.scope.island") },
+    { key: "indonesia", label: t("carbon.aoiRegion.scope.indonesia") },
   ];
 
   return (
@@ -258,44 +262,44 @@ export default function AoiRegionTab({ onApply }: Props) {
       {scope === "admin" && (
         <div className="row">
           <div className="col-md-6 mb-3">
-            <label className="form-label">Provinsi</label>
+            <label className="form-label">{t("carbon.aoiRegion.province")}</label>
             <SearchableSelect
               value={provinceCode}
               onChange={handleProvinceChange}
               options={provinces.map((p) => ({ value: p.code, label: p.name }))}
-              placeholder="-- Pilih Provinsi --"
+              placeholder={t("carbon.aoiRegion.provincePlaceholder")}
               clearable
             />
           </div>
           <div className="col-md-6 mb-3">
-            <label className="form-label">Kota/Kabupaten</label>
+            <label className="form-label">{t("carbon.aoiRegion.city")}</label>
             <SearchableSelect
               value={cityCode}
               onChange={handleCityChange}
               options={cities.map((c) => ({ value: c.code, label: c.name }))}
-              placeholder="-- Semua (level provinsi) --"
+              placeholder={t("carbon.aoiRegion.cityPlaceholder")}
               disabled={!provinceCode}
               clearable
             />
           </div>
           <div className="col-md-6 mb-3">
-            <label className="form-label">Kecamatan</label>
+            <label className="form-label">{t("carbon.aoiRegion.district")}</label>
             <SearchableSelect
               value={districtCode}
               onChange={handleDistrictChange}
               options={districts.map((d) => ({ value: d.code, label: d.name }))}
-              placeholder="-- Semua (level kota) --"
+              placeholder={t("carbon.aoiRegion.districtPlaceholder")}
               disabled={!cityCode}
               clearable
             />
           </div>
           <div className="col-md-6 mb-3">
-            <label className="form-label">Desa/Kelurahan</label>
+            <label className="form-label">{t("carbon.aoiRegion.village")}</label>
             <SearchableSelect
               value={villageCode}
               onChange={setVillageCode}
               options={villages.map((v) => ({ value: v.code, label: v.name }))}
-              placeholder="-- Semua (level kecamatan) --"
+              placeholder={t("carbon.aoiRegion.villagePlaceholder")}
               disabled={!districtCode}
               clearable
             />
@@ -305,12 +309,12 @@ export default function AoiRegionTab({ onApply }: Props) {
 
       {scope === "island" && (
         <div className="mb-3">
-          <label className="form-label">Pulau</label>
+          <label className="form-label">{t("carbon.aoiRegion.island")}</label>
           <SearchableSelect
             value={islandCode}
             onChange={setIslandCode}
             options={islands.map((i) => ({ value: i.code, label: i.name }))}
-            placeholder="-- Pilih Pulau --"
+            placeholder={t("carbon.aoiRegion.islandPlaceholder")}
             clearable
           />
         </div>
@@ -318,19 +322,19 @@ export default function AoiRegionTab({ onApply }: Props) {
 
       {scope === "indonesia" && (
         <div className="mb-3">
-          <label className="form-label">Cari lokasi (opsional)</label>
+          <label className="form-label">{t("carbon.aoiRegion.searchLocation")}</label>
           <AsyncLocationSelect
             selectedLabel={searchedLocation?.display_name}
             onSelect={setSearchedLocation}
             onClear={() => setSearchedLocation(null)}
-            placeholder="Kota, kabupaten, provinsi, kecamatan, kelurahan, jalan/alamat..."
+            placeholder={t("carbon.aoiRegion.searchPlaceholder")}
           />
           <small className="text-muted d-block mt-1">
             {searchedLocation
               ? searchedLocation.geojson
-                ? "Batas wilayah asli ditemukan untuk lokasi ini."
-                : "Lokasi ini tidak punya batas wilayah persis - AOI dipakai dari perkiraan area (bbox)."
-              : "Kosongkan untuk memakai seluruh wilayah Indonesia."}
+                ? t("carbon.aoiRegion.hasRealBoundary")
+                : t("carbon.aoiRegion.bboxFallback")
+              : t("carbon.aoiRegion.emptySearchHint")}
           </small>
         </div>
       )}
@@ -340,11 +344,11 @@ export default function AoiRegionTab({ onApply }: Props) {
       <button className="btn btn-success" onClick={handleLoad} disabled={loading}>
         {loading ? (
           <>
-            <span className="spinner-border spinner-border-sm me-1" /> Memuat...
+            <span className="spinner-border spinner-border-sm me-1" /> {t("carbon.aoiRegion.loading")}
           </>
         ) : (
           <>
-            <i className="bi bi-check-lg" /> Muat Wilayah
+            <i className="bi bi-check-lg" /> {t("carbon.aoiRegion.loadRegion")}
           </>
         )}
       </button>

@@ -93,14 +93,14 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
             <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
               {isLoading ? "Memproses..." : "Login"}
             </button>
-            {onSwitchToRegister && (
+            {/* {onSwitchToRegister && (
               <div className="text-center mt-3 small">
                 Belum punya akun?{" "}
                 <button type="button" className="btn btn-link p-0 align-baseline" onClick={onSwitchToRegister}>
                   Daftar
                 </button>
               </div>
-            )}
+            )} */}
           </form>
         </div>
       </div>

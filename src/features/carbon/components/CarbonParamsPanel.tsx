@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechnique, CloudMaskTechniqueInfo } from "@/features/vegetation/types";
@@ -56,35 +57,36 @@ function modelDate(model: CarbonModelListItem): string | undefined {
   return model.uploaded_at ?? model.metadata_json?.trained_at;
 }
 
-function formatDate(iso?: string): string {
+function formatDate(iso: string | undefined, locale: string): string {
   if (!iso) return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("id-ID");
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(locale);
 }
 
-function formatDateTime(iso?: string): string {
+function formatDateTime(iso: string | undefined, locale: string): string {
   if (!iso) return "N/A";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "N/A" : d.toLocaleString("id-ID");
+  return Number.isNaN(d.getTime()) ? "N/A" : d.toLocaleString(locale);
 }
 
 type CompatibilityTone = "green" | "gray" | "orange";
 
 function compatibilityInfo(
+  t: (key: string) => string,
   meta?: CarbonModelMeta,
   algorithm?: string,
 ): { text: string; tone: CompatibilityTone } {
   if (!meta) return { text: "N/A", tone: "gray" };
   if (meta.provider === "non_gee_stac" || meta.provider === "local_raster") {
-    return { text: "Non-GEE (STAC)", tone: "gray" };
+    return { text: t("carbon.params.compat.nonGeeStac"), tone: "gray" };
   }
-  if (!meta.gee_deployable) return { text: "Statistik Saja", tone: "gray" };
-  if (meta.gee_algorithm_type === "native_classifier") return { text: "GEE Native", tone: "green" };
-  if (meta.gee_algorithm_type === "linear_expression") return { text: "GEE Direct", tone: "green" };
+  if (!meta.gee_deployable) return { text: t("carbon.params.compat.statsOnly"), tone: "gray" };
+  if (meta.gee_algorithm_type === "native_classifier") return { text: t("carbon.params.compat.geeNative"), tone: "green" };
+  if (meta.gee_algorithm_type === "linear_expression") return { text: t("carbon.params.compat.geeDirect"), tone: "green" };
   // Older models predate `gee_algorithm_type` — infer linear-direct from algorithm name.
   const algo = (algorithm || meta.algorithm || "").toLowerCase();
-  if (/^(ridge|lasso|linear|elastic_net)/.test(algo)) return { text: "GEE Direct", tone: "green" };
-  return { text: "Requires Surrogate", tone: "orange" };
+  if (/^(ridge|lasso|linear|elastic_net)/.test(algo)) return { text: t("carbon.params.compat.geeDirect"), tone: "green" };
+  return { text: t("carbon.params.compat.requiresSurrogate"), tone: "orange" };
 }
 
 /**
@@ -97,6 +99,9 @@ export default function CarbonParamsPanel({
   selectedModel,
   onModelSelect,
 }: Props) {
+  const t = useI18nStore((s) => s.t);
+  const language = useI18nStore((s) => s.language);
+  const locale = language === "id" ? "id-ID" : "en-US";
   const [models, setModels] = useState<CarbonModelListItem[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelInfo, setModelInfo] = useState<CarbonModelInfo | null>(null);
@@ -136,7 +141,7 @@ export default function CarbonParamsPanel({
       .catch(() => {
         if (cancelled) return;
         setDatasets(FALLBACK_CARBON_REFERENCE_DATASETS.map((d) => ({ ...d, source: "fallback" })));
-        setDatasetsError("Catalog dataset karbon tidak dapat dimuat dari API. Menggunakan fallback lokal.");
+        setDatasetsError(t("carbon.params.datasetLoadFailed"));
       })
       .finally(() => {
         if (!cancelled) setDatasetsLoading(false);
@@ -234,19 +239,18 @@ export default function CarbonParamsPanel({
   return (
     <div id="carbonParams">
       <h6 className="mb-3">
-        <i className="bi bi-tree me-1" /> Parameter Analisis Karbon
+        <i className="bi bi-tree me-1" /> {t("carbon.params.title")}
       </h6>
       <div className="alert alert-info py-2">
         <small>
           <i className="bi bi-info-circle me-1" />
-          Estimasi stok karbon di atas permukaan menggunakan citra Sentinel-2 dan dataset biomassa
-          referensi dengan regresi machine learning.
+          {t("carbon.params.intro")}
         </small>
       </div>
 
       <div className="mb-3">
         <label className="form-label">
-          <i className="bi bi-database me-1" /> Dataset Referensi
+          <i className="bi bi-database me-1" /> {t("carbon.params.referenceDataset")}
         </label>
         <SearchableSelect
           value={params.referenceDataset}
@@ -259,7 +263,7 @@ export default function CarbonParamsPanel({
                 ? `${d.group} - ${d.compatibleModelCount} model compatible`
                 : d.group,
           }))}
-          placeholder="-- Pilih Dataset Referensi --"
+          placeholder={t("carbon.params.referenceDatasetPlaceholder")}
           loading={datasetsLoading}
           disabled={datasetsLoading || datasets.length === 0}
         />
@@ -284,9 +288,7 @@ export default function CarbonParamsPanel({
           </small>
         )}
         {!datasetsLoading && datasets.length === 0 && (
-          <small className="text-muted d-block mt-1">
-            Belum ada dataset karbon aktif dari API. Cek registry dataset/model di backend.
-          </small>
+          <small className="text-muted d-block mt-1">{t("carbon.params.noDatasets")}</small>
         )}
         {datasetMeta && (
           <small className="text-muted d-block mt-1">
@@ -298,13 +300,12 @@ export default function CarbonParamsPanel({
 
       <div className="mb-3">
         <label className="form-label">
-          <i className="bi bi-cpu me-1" /> Model Terlatih
+          <i className="bi bi-cpu me-1" /> {t("carbon.params.trainedModel")}
         </label>
         <div className="alert alert-info py-2 mb-2">
           <small>
             <i className="bi bi-info-circle me-1" />
-            Hanya model Linear/Ridge/Lasso yang bisa di-deploy langsung ke Google Earth Engine
-            untuk peta tile. Model Random Forest dan sejenisnya hanya statistik.
+            {t("carbon.params.modelIntro")}
           </small>
         </div>
         <SearchableSelect
@@ -317,7 +318,7 @@ export default function CarbonParamsPanel({
           options={Object.entries(grouped).flatMap(([algo, list]) =>
             list.map((m) => {
               const score = modelScore(m);
-              const date = formatDate(modelDate(m));
+              const date = formatDate(modelDate(m), locale);
               const descParts = [date, score !== undefined ? `R²: ${score.toFixed(3)}` : null].filter(
                 Boolean,
               );
@@ -329,7 +330,7 @@ export default function CarbonParamsPanel({
               };
             }),
           )}
-          placeholder="-- Pilih Model --"
+          placeholder={t("carbon.params.modelPlaceholder")}
           loading={modelsLoading}
           disabled={modelsLoading}
         />
@@ -345,7 +346,7 @@ export default function CarbonParamsPanel({
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
         >
-          <option value="">-- Pilih Model --</option>
+          <option value="">{t("carbon.params.modelPlaceholder")}</option>
           {models.map((m) => (
             <option key={m.name} value={m.name}>
               {m.name}
@@ -356,13 +357,13 @@ export default function CarbonParamsPanel({
           {models.length > 0 ? (
             <>
               <i className="bi bi-check-circle text-success me-1" />
-              {models.length} model untuk {params.referenceDataset}
-              {geeCount > 0 ? ` (${geeCount} siap peta-tile GEE)` : " - tidak ada model peta-tile"}
+              {models.length} {t("carbon.params.modelCountSuffix")} {params.referenceDataset}
+              {geeCount > 0 ? ` (${geeCount} ${t("carbon.params.modelCountGeeReady")})` : ` - ${t("carbon.params.modelCountNoTiles")}`}
             </>
           ) : !modelsLoading ? (
             <>
               <i className="bi bi-exclamation-triangle text-warning me-1" />
-              Tidak ada model terlatih untuk dataset ini.
+              {t("carbon.params.noModelsForDataset")}
             </>
           ) : null}
         </small>
@@ -373,44 +374,46 @@ export default function CarbonParamsPanel({
             className="btn btn-sm btn-outline-primary mt-2"
             onClick={() => setShowModelInfo((s) => !s)}
           >
-            <i className="bi bi-info-circle me-1" /> {showModelInfo ? "Sembunyikan" : "Lihat"} Detail Model
+            <i className="bi bi-info-circle me-1" /> {showModelInfo ? t("carbon.params.hideDetail") : t("carbon.params.viewDetail")} {t("carbon.params.modelDetail")}
           </button>
         )}
         {showModelInfo && modelInfo && (
           <div className="cm-detail-card mt-2">
             <div className="cm-detail-title">
-              <i className="bi bi-info-circle" /> Detail Model
+              <i className="bi bi-info-circle" /> {t("carbon.params.modelDetail")}
             </div>
             <div className="cm-detail-grid">
-              <div className="cm-detail-label">Name</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.name")}</div>
               <div className="cm-detail-value cm-detail-mono">
                 {modelInfo.name || params.modelName || "N/A"}
               </div>
 
-              <div className="cm-detail-label">Algorithm</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.algorithm")}</div>
               <div className="cm-detail-value">
                 {modelInfo.algorithm || modelInfo.metadata_json?.algorithm || "N/A"}
               </div>
 
-              <div className="cm-detail-label">Trained</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.trained")}</div>
               <div className="cm-detail-value">
                 {formatDateTime(
                   modelInfo.trained_at ?? modelInfo.metadata_json?.trained_at ?? modelInfo.metrics?.trained_at,
+                  locale,
                 )}
               </div>
 
-              <div className="cm-detail-label">Samples</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.samples")}</div>
               <div className="cm-detail-value">
                 {modelInfo.n_samples ?? modelInfo.metrics?.n_samples ?? "N/A"}
               </div>
 
-              <div className="cm-detail-label">Version</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.version")}</div>
               <div className="cm-detail-value">{modelInfo.version || "N/A"}</div>
 
-              <div className="cm-detail-label">Compatibility</div>
+              <div className="cm-detail-label">{t("carbon.params.detail.compatibility")}</div>
               <div className="cm-detail-value">
                 {(() => {
                   const c = compatibilityInfo(
+                    t,
                     modelInfo.metadata_json,
                     modelInfo.algorithm ?? modelInfo.metadata_json?.algorithm,
                   );
@@ -420,13 +423,13 @@ export default function CarbonParamsPanel({
 
               {cv && (
                 <>
-                  <div className="cm-detail-label">CV Folds</div>
+                  <div className="cm-detail-label">{t("carbon.params.detail.cvFolds")}</div>
                   <div className="cm-detail-value">{cv.n_folds ?? cv.cv_folds ?? "N/A"}</div>
 
-                  <div className="cm-detail-label">Mean RMSE</div>
+                  <div className="cm-detail-label">{t("carbon.params.detail.meanRmse")}</div>
                   <div className="cm-detail-value">{cv.rmse_mean?.toFixed?.(2) ?? "N/A"}</div>
 
-                  <div className="cm-detail-label">Mean R²</div>
+                  <div className="cm-detail-label">{t("carbon.params.detail.meanR2")}</div>
                   <div className="cm-detail-value">{cv.r2_mean?.toFixed?.(3) ?? "N/A"}</div>
                 </>
               )}
@@ -439,7 +442,7 @@ export default function CarbonParamsPanel({
               const max = top[0][1] || 1;
               return (
                 <div className="cm-detail-features">
-                  <div className="cm-detail-label mb-1">Top 5 Features</div>
+                  <div className="cm-detail-label mb-1">{t("carbon.params.detail.topFeatures")}</div>
                   {top.map(([name, val]) => (
                     <div key={name} className="cm-feature-row">
                       <span className="cm-feature-name">{name}</span>
@@ -460,7 +463,7 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Tahun Dataset Referensi</label>
+        <label className="form-label">{t("carbon.params.datasetYear")}</label>
         <select
           className="form-select"
           id="carbonDatasetYear"
@@ -476,7 +479,7 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Rentang Tanggal Sentinel-2</label>
+        <label className="form-label">{t("carbon.params.dateRange")}</label>
         <div className="d-flex gap-2 align-items-center">
           <select
             className="form-select"
@@ -484,22 +487,22 @@ export default function CarbonParamsPanel({
             value={params.startMonth}
             onChange={(e) => onParamsChange({ startMonth: Number(e.target.value) })}
           >
-            {MONTHS.map((m, i) => (
+            {MONTHS.map((_m, i) => (
               <option key={i + 1} value={i + 1}>
-                {m}
+                {t(`carbon.params.months.${i + 1}`)}
               </option>
             ))}
           </select>
-          <span className="text-muted">s/d</span>
+          <span className="text-muted">{t("carbon.params.dateRangeSep")}</span>
           <select
             className="form-select"
             id="carbonEndMonth"
             value={params.endMonth}
             onChange={(e) => onParamsChange({ endMonth: Number(e.target.value) })}
           >
-            {MONTHS.map((m, i) => (
+            {MONTHS.map((_m, i) => (
               <option key={i + 1} value={i + 1}>
-                {m}
+                {t(`carbon.params.months.${i + 1}`)}
               </option>
             ))}
           </select>
@@ -507,7 +510,7 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Ambang Awan (%)</label>
+        <label className="form-label">{t("carbon.params.cloudThreshold")}</label>
         <input
           id="carbonCloudSlider"
           type="range"
@@ -523,7 +526,7 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Teknik Pemrosesan Awan</label>
+        <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
         <select
           className="form-select"
           value={params.cloudMaskTechnique}
@@ -543,7 +546,7 @@ export default function CarbonParamsPanel({
 
       <div className="mb-3">
         <label className="form-label">
-          <i className="bi bi-scissors me-1" /> Mode Tampilan
+          <i className="bi bi-scissors me-1" /> {t("carbon.params.displayMode")}
         </label>
         <div className="btn-group w-100" role="group">
           {(["clipped", "full"] as ClipMode[]).map((mode) => (
@@ -554,15 +557,13 @@ export default function CarbonParamsPanel({
               onClick={() => onParamsChange({ clipMode: mode })}
             >
               <i className={`bi ${mode === "clipped" ? "bi-scissors" : "bi-layers"} me-1`} />
-              {mode === "clipped" ? "Clipped" : "Full Tiles"}
+              {mode === "clipped" ? t("carbon.params.clipped") : t("carbon.params.fullTiles")}
             </button>
           ))}
         </div>
         <small className="text-muted d-block mt-1">
           <i className="bi bi-info-circle me-1" />
-          {params.clipMode === "clipped"
-            ? "Clipped: dipotong presisi sesuai batas AOI (lebih lambat)."
-            : "Full Tiles: seluruh tile tanpa dipotong (lebih cepat)."}
+          {params.clipMode === "clipped" ? t("carbon.params.clippedDesc") : t("carbon.params.fullTilesDesc")}
         </small>
       </div>
 
@@ -575,7 +576,7 @@ export default function CarbonParamsPanel({
           onChange={(e) => onParamsChange({ showReference: e.target.checked })}
         />
         <label className="form-check-label" htmlFor="showReference">
-          Tampilkan Dataset Referensi di Peta
+          {t("carbon.params.showReference")}
         </label>
       </div>
     </div>

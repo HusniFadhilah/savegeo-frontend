@@ -1,5 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import type {
+  DemTileResponse,
+  GetDemTileParams,
   GetSceneTileParams,
   ImageryProviderCatalogResponse,
   ImagerySceneListResponse,
@@ -35,5 +37,13 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
     aoi: params.aoi,
     sar_mode: params.sarMode,
     cloud_mask_technique: params.cloudMaskTechnique,
+  });
+}
+
+/** POST /imagery/dem-tile - DEMNAS terrain tile for the imagery browser, with SRTM fallback clearly flagged. */
+export function getImageryDemTile(params: GetDemTileParams) {
+  return apiClient.post<DemTileResponse>("/imagery/dem-tile", {
+    aoi: params.aoi,
+    scale: params.scale,
   });
 }

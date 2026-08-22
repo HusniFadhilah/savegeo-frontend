@@ -23,6 +23,16 @@ const PRODUCTIVITY_LEGEND: MapLegendEntry[] = [
   { color: "#c62828", label: "Rendah" },
 ];
 
+/** `flood.legend[].label` comes straight from `disaster_analysis_service.py`
+ * (shared with the Disaster module) in English - translated here at display
+ * time rather than touching that shared backend string, which other modules
+ * also read as-is. */
+const FLOOD_LEGEND_LABEL: Record<string, string> = {
+  "Existing Water": "Genangan Lama",
+  "New Inundation": "Genangan Baru",
+  "Receded Water": "Air Surut",
+};
+
 function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
   const tabs: Tab[] = [];
   if (sub.anomaly?.available && sub.anomaly.tile_url) {
@@ -34,7 +44,7 @@ function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
       label: "Banjir",
       icon: "bi-water",
       tileUrl: sub.flood.tile_url,
-      legend: sub.flood.legend.map((l) => ({ color: l.color, label: l.label })),
+      legend: sub.flood.legend.map((l) => ({ color: l.color, label: FLOOD_LEGEND_LABEL[l.label] ?? l.label })),
     });
   }
   if (sub.productivity_zones?.available && sub.productivity_zones.tile_url) {

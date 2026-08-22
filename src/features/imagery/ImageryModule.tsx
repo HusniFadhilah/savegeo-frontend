@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GeoJSON, TileLayer, useMap } from "react-leaflet";
+import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
@@ -12,11 +12,12 @@ import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
-import type { ImageryProvider, ImageryScene, SarMode } from "./types";
+import { getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
+import type { DemTileResponse, ImageryProvider, ImageryScene, SarMode } from "./types";
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 type ViewMode = "single" | "compare";
+type DemLayerMode = "none" | "dem" | "3d";
 
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   const map = useMap();
@@ -57,6 +58,29 @@ function cloudBadgeClass(pct: number | null): string {
   if (pct <= 20) return "bg-success";
   if (pct <= 60) return "bg-warning text-dark";
   return "bg-danger";
+}
+
+function formatElevation(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "-";
+  return `${Math.round(Number(value)).toLocaleString("id-ID")} m`;
+}
+
+function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source: string }) {
+  if (!tileUrl) {
+    return (
+      <div className="imagery-terrain-3d-empty">
+        <i className="bi bi-box" />
+        <span>Preview 3D tersedia untuk DEM berbasis tile/asset.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="imagery-terrain-3d" aria-label={`Preview 3D ${source}`}>
+      <div className="imagery-terrain-3d-plane" style={{ backgroundImage: `url("${tileUrl}")` }} />
+      <div className="imagery-terrain-3d-grid" />
+    </div>
+  );
 }
 
 /**
@@ -155,6 +179,11 @@ export default function ImageryModule() {
   const [compareTileB, setCompareTileB] = useState<string | null>(null);
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
+
+  const [demResult, setDemResult] = useState<DemTileResponse | null>(null);
+  const [demLoading, setDemLoading] = useState(false);
+  const [demError, setDemError] = useState<string | null>(null);
+  const [demLayerMode, setDemLayerMode] = useState<DemLayerMode>("none");
 
   const satelliteMeta = satellites[satellite];
 
@@ -277,9 +306,53 @@ export default function ImageryModule() {
     }
   };
 
+  const loadDemTerrain = async (mode: Exclude<DemLayerMode, "none">) => {
+    if (!aoi) {
+      setDemError("Pilih AOI terlebih dahulu sebelum memuat DEMNAS/3D.");
+      return;
+    }
+    setDemLayerMode(mode);
+    if (demResult) {
+      setDemError(null);
+      return;
+    }
+    setDemLoading(true);
+    setDemError(null);
+    setDemResult(null);
+    try {
+      const res = await getImageryDemTile({ aoi: { geojson: aoi }, scale: 30 });
+      setDemResult(res);
+    } catch (err) {
+      setDemError(err instanceof Error ? err.message : "Gagal memuat DEM/terrain.");
+    } finally {
+      setDemLoading(false);
+    }
+  };
+
   const sortedScenes = useMemo(
     () => [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1)),
     [scenes],
+  );
+
+  const mapLayerOptions = useMemo(
+    () => [
+      {
+        id: "demnas",
+        name: demLoading && demLayerMode === "dem" ? "DEMNAS..." : "DEMNAS",
+        active: demLayerMode === "dem",
+        disabled: demLoading,
+        onClick: () => void loadDemTerrain("dem"),
+      },
+      {
+        id: "terrain3d",
+        name: demLoading && demLayerMode === "3d" ? "3D..." : "3D Terrain",
+        active: demLayerMode === "3d",
+        disabled: demLoading,
+        onClick: () => void loadDemTerrain("3d"),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [demLayerMode, demLoading, demResult, aoi],
   );
 
   return (
@@ -290,7 +363,7 @@ export default function ImageryModule() {
           <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit</h1>
           <p>
             Cari scene berdasarkan tanggal akuisisi (optik: Sentinel-2/3, Landsat 8/9; radar: Sentinel-1; gas atmosfer:
-            Sentinel-5P), lalu tampilkan citra asli atau bandingkan dua scene secara berdampingan.
+            Sentinel-5P), lalu tampilkan citra asli, layer DEMNAS, 3D terrain, atau bandingkan dua scene.
           </p>
         </div>
         <div className="analysis-hero-status">
@@ -520,6 +593,11 @@ export default function ImageryModule() {
               </>
             )}
           </button>
+          {demError && (
+            <div className="alert alert-danger py-2 mt-2 mb-0" style={{ fontSize: ".8rem" }}>
+              {demError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -558,7 +636,7 @@ export default function ImageryModule() {
                 </button>
                 <button
                   type="button"
-                  className={`btn ${viewMode === "compare" ? "btn-primary" : "btn-outline-secondary"}`}
+                  className={`btn text-white ${viewMode === "compare" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setViewMode("compare")}
                 >
                   <i className="fas fa-arrows-alt-h" /> Bandingkan 2 Waktu
@@ -625,18 +703,69 @@ export default function ImageryModule() {
               <div className="card-header py-2">
                 <i className="bi bi-map" /> Peta
                 {selectedSceneId && (
-                  <span className="text-muted small ms-2">
+                  <span className="text-white small ms-2">
                     - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
                   </span>
                 )}
               </div>
               <div className="card-body p-2">
                 <MapView id="imagerySceneMap">
-                  <BasemapSwitcher />
+                  <BasemapSwitcher extraOptions={mapLayerOptions} />
                   {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                   {tileUrl && <TileLayer url={tileUrl} opacity={1} attribution="Google Earth Engine" pane={RESULT_PANE} />}
+                  {demLayerMode !== "none" && demResult?.tile_url && (
+                    <TileLayer url={demResult.tile_url} opacity={0.82} attribution={demResult.source} pane={RESULT_PANE} />
+                  )}
+                  {demLayerMode !== "none" && demResult?.wms_url && demResult.wms_layers && (
+                    <WMSTileLayer
+                      url={demResult.wms_url}
+                      layers={demResult.wms_layers}
+                      format="image/png"
+                      transparent
+                      opacity={0.82}
+                      attribution={demResult.source}
+                      pane={RESULT_PANE}
+                    />
+                  )}
                   <FitToAoi aoi={aoi} />
                 </MapView>
+                {demLoading && (
+                  <div className="alert alert-info py-2 mt-2 mb-0 small">
+                    <i className="fas fa-spinner fa-spin" /> Memuat DEMNAS/3D dari menu layer...
+                  </div>
+                )}
+                {demResult && demLayerMode !== "none" && (
+                  <div className="imagery-map-layer-info mt-2">
+                    <div>
+                      <span className={`badge ${demResult.is_official_demnas ? "bg-success" : "bg-warning text-dark"}`}>
+                        {demResult.is_official_demnas ? "BIG DEMNAS" : "Fallback DEM"}
+                      </span>
+                      <small className="text-muted ms-2">{demResult.source}</small>
+                    </div>
+                    {demResult.stats && (
+                      <div className="imagery-dem-summary">
+                        <div>
+                          <span>Min</span>
+                          <strong>{formatElevation(demResult.stats.min_elevation_m)}</strong>
+                        </div>
+                        <div>
+                          <span>Rata-rata</span>
+                          <strong>{formatElevation(demResult.stats.mean_elevation_m)}</strong>
+                        </div>
+                        <div>
+                          <span>Maks</span>
+                          <strong>{formatElevation(demResult.stats.max_elevation_m)}</strong>
+                        </div>
+                      </div>
+                    )}
+                    {demLayerMode === "3d" && <TerrainPreview3D tileUrl={demResult.tile_url} source={demResult.source} />}
+                    {!demResult.is_official_demnas && (
+                      <div className="alert alert-warning py-2 mb-0 small">
+                        DEMNAS belum dikonfigurasi di backend, sehingga layer ini memakai SRTM sebagai fallback.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -715,6 +844,7 @@ export default function ImageryModule() {
             )}
           </>
         )}
+
         </div>
       </div>
       <AoiPickerModal

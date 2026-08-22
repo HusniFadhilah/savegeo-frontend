@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
+import RichText from "@/components/ui/RichText";
 import type { AoiFeature } from "@/types/map";
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
  * fill them too, not just typing them in here.
  */
 export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLonChange }: Props) {
+  const t = useI18nStore((s) => s.t);
   const [buffer, setBuffer] = useState("10");
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +28,7 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
     const lonN = parseFloat(lon);
     const bufN = parseFloat(buffer);
     if (!Number.isFinite(latN) || !Number.isFinite(lonN) || !Number.isFinite(bufN)) {
-      setError("Masukkan koordinat dan buffer yang valid");
+      setError(t("carbon.aoiCoord.err.invalidInput"));
       return;
     }
     setError(null);
@@ -42,20 +45,18 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
       geometry: { type: "Polygon", coordinates: [coords] },
       properties: {},
     };
-    onApply(feature, `Titik (${latN.toFixed(4)}, ${lonN.toFixed(4)})`);
+    onApply(feature, `${t("carbon.aoiCoord.pointLabel")} (${latN.toFixed(4)}, ${lonN.toFixed(4)})`);
   }
 
   return (
     <div>
       <div className="alert alert-info py-2 small mb-3">
         <i className="bi bi-info-circle me-1" />
-        Klik langsung di peta di bawah untuk mengisi Latitude/Longitude, atau ketik manual. <strong>Buffer</strong>{" "}
-        memperbesar titik itu jadi persegi AOI selebar <em>2 &times; buffer</em> km (buffer ke segala arah dari
-        titik) - makin besar buffer, makin luas area yang dianalisis dan makin lama/berisiko timeout prosesnya.
+        <RichText text={t("carbon.aoiCoord.info")} />
       </div>
       <div className="row">
         <div className="col-md-4 mb-3">
-          <label className="form-label">Latitude</label>
+          <label className="form-label">{t("carbon.aoiCoord.latitude")}</label>
           <input
             type="number"
             className="form-control"
@@ -65,7 +66,7 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
           />
         </div>
         <div className="col-md-4 mb-3">
-          <label className="form-label">Longitude</label>
+          <label className="form-label">{t("carbon.aoiCoord.longitude")}</label>
           <input
             type="number"
             className="form-control"
@@ -75,7 +76,7 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
           />
         </div>
         <div className="col-md-4 mb-3">
-          <label className="form-label">Buffer (km)</label>
+          <label className="form-label">{t("carbon.aoiCoord.buffer")}</label>
           <input
             type="number"
             className="form-control"
@@ -88,7 +89,7 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
       </div>
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
       <button className="btn btn-success" onClick={handleApply}>
-        <i className="bi bi-check-lg" /> Set AOI
+        <i className="bi bi-check-lg" /> {t("carbon.aoiCoord.setAoi")}
       </button>
     </div>
   );

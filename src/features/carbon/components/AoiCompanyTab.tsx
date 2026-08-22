@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { listCompanies, getCompanyGeojson } from "@/features/carbon/api";
 import type { CompanyBoundary } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
@@ -16,6 +17,7 @@ interface Props {
  * picker with search + industry-type + province filters.
  */
 export default function AoiCompanyTab({ onApply }: Props) {
+  const t = useI18nStore((s) => s.t);
   const [companies, setCompanies] = useState<CompanyBoundary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Gagal memuat data perusahaan");
+          setError(err instanceof ApiError ? err.message : t("carbon.aoiCompany.err.loadFailed"));
         }
       })
       .finally(() => {
@@ -43,6 +45,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const provinces = useMemo(
@@ -73,7 +76,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
         raw && (raw as GeoJSON.Feature).type === "Feature"
           ? (raw as GeoJSON.Feature).geometry
           : (raw as GeoJSON.Geometry);
-      if (!geometry) throw new Error("GeoJSON kosong");
+      if (!geometry) throw new Error(t("carbon.aoiCompany.err.emptyGeojson"));
       const feature: AoiFeature = {
         type: "Feature",
         geometry: geometry as AoiFeature["geometry"],
@@ -81,7 +84,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
       };
       onApply(feature, selected.name);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat batas perusahaan");
+      setError(err instanceof ApiError ? err.message : t("carbon.aoiCompany.err.boundaryFailed"));
     } finally {
       setApplying(false);
     }
@@ -96,7 +99,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
             <input
               type="text"
               className="form-control"
-              placeholder="Cari nama perusahaan..."
+              placeholder={t("carbon.aoiCompany.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -108,7 +111,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
-            <option value="">Semua jenis industri</option>
+            <option value="">{t("carbon.aoiCompany.allIndustryTypes")}</option>
             {Object.entries(TYPE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -121,7 +124,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
             value={provinceFilter}
             onChange={setProvinceFilter}
             options={provinces.map((p) => ({ value: p, label: p }))}
-            placeholder="Semua provinsi"
+            placeholder={t("carbon.aoiCompany.allProvinces")}
             clearable
           />
         </div>
@@ -131,13 +134,13 @@ export default function AoiCompanyTab({ onApply }: Props) {
 
       {loading ? (
         <div className="co-aoi-empty">
-          <span className="spinner-border spinner-border-sm me-2" /> Memuat data perusahaan...
+          <span className="spinner-border spinner-border-sm me-2" /> {t("carbon.aoiCompany.loading")}
         </div>
       ) : filtered.length === 0 ? (
         <div className="co-aoi-empty">
           <i className="bi bi-building-slash" />
-          <div>Tidak ada data perusahaan.</div>
-          <small className="text-muted">Tambahkan melalui Panel Admin.</small>
+          <div>{t("carbon.aoiCompany.noData")}</div>
+          <small className="text-muted">{t("carbon.aoiCompany.addViaAdmin")}</small>
         </div>
       ) : (
         <div className="co-aoi-list">
@@ -178,11 +181,11 @@ export default function AoiCompanyTab({ onApply }: Props) {
         <button className="btn btn-success mt-3" onClick={handleUseAsAoi} disabled={applying}>
           {applying ? (
             <>
-              <span className="spinner-border spinner-border-sm me-1" /> Memuat...
+              <span className="spinner-border spinner-border-sm me-1" /> {t("carbon.aoiRegion.loading")}
             </>
           ) : (
             <>
-              <i className="bi bi-check-lg" /> Gunakan sebagai AOI
+              <i className="bi bi-check-lg" /> {t("carbon.aoiCompany.useAsAoi")}
             </>
           )}
         </button>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import AoiPanel from "./components/AoiPanel";
 import AnalysisTypeSelector from "./components/AnalysisTypeSelector";
@@ -47,6 +48,7 @@ type CarbonPartial = Omit<CarbonParams, "year">;
  * vegetation/land-cover tab in the sidebar).
  */
 export default function CarbonModule() {
+  const t = useI18nStore((s) => s.t);
   const configReady = useConfigStore((s) => s.ready);
   const configLoad = useConfigStore((s) => s.load);
   const getInt = useConfigStore((s) => s.getInt);
@@ -159,7 +161,7 @@ export default function CarbonModule() {
 
   async function handleRunDelta() {
     if (!aoi) {
-      setRunError("Pilih AOI terlebih dahulu.");
+      setRunError(t("carbon.err.selectAoi"));
       return;
     }
     const aoiPayload: AoiPayload = aoi.feature
@@ -168,11 +170,11 @@ export default function CarbonModule() {
         ? boundsToPayload(aoi.bounds)
         : null!;
     if (!aoiPayload) {
-      setRunError("AOI tidak valid.");
+      setRunError(t("carbon.err.invalidAoi"));
       return;
     }
     if (deltaStartYear >= deltaEndYear) {
-      setDeltaError("Tahun awal harus lebih kecil dari tahun akhir.");
+      setDeltaError(t("carbon.err.startBeforeEnd"));
       return;
     }
 
@@ -180,7 +182,7 @@ export default function CarbonModule() {
     setDeltaError(null);
     setRunError(null);
     setResults({});
-    showLoading("Menghitung time-series karbon...", `${deltaStartYear} - ${deltaEndYear}`);
+    showLoading(t("carbon.loading.deltaTitle"), `${deltaStartYear} - ${deltaEndYear}`);
     try {
       const res = await analyzeCarbonDelta({
         aoi: aoiPayload,
@@ -200,7 +202,7 @@ export default function CarbonModule() {
       setDeltaResult(res);
       setMapKey((k) => k + 1);
     } catch (err) {
-      setDeltaError(err instanceof ApiError ? err.message : "Gagal memuat time-series karbon.");
+      setDeltaError(err instanceof ApiError ? err.message : t("carbon.err.deltaFailed"));
       setDeltaResult(null);
     } finally {
       hideLoading();
@@ -211,7 +213,7 @@ export default function CarbonModule() {
 
   async function handleRunVegTs() {
     if (!aoi) {
-      setRunError("Pilih AOI terlebih dahulu.");
+      setRunError(t("carbon.err.selectAoi"));
       return;
     }
     const aoiPayload: AoiPayload = aoi.feature
@@ -220,7 +222,7 @@ export default function CarbonModule() {
         ? boundsToPayload(aoi.bounds)
         : null!;
     if (!aoiPayload) {
-      setRunError("AOI tidak valid.");
+      setRunError(t("carbon.err.invalidAoi"));
       return;
     }
 
@@ -228,7 +230,7 @@ export default function CarbonModule() {
     setVegTsError(null);
     setRunError(null);
     setResults({});
-    showLoading("Menghitung time-series vegetasi...", `${vegTsIndex} - ${year}`);
+    showLoading(t("carbon.loading.vegTsTitle"), `${vegTsIndex} - ${year}`);
     try {
       const res = await analyzeVegetationTimeSeries({
         aoi: aoiPayload,
@@ -240,7 +242,7 @@ export default function CarbonModule() {
       });
       setVegTsResult(res);
     } catch (err) {
-      setVegTsError(err instanceof ApiError ? err.message : "Gagal memuat time-series vegetasi.");
+      setVegTsError(err instanceof ApiError ? err.message : t("carbon.err.vegTsFailed"));
       setVegTsResult(null);
     } finally {
       hideLoading();
@@ -261,7 +263,7 @@ export default function CarbonModule() {
     setDeltaResult(null);
     setVegTsResult(null);
     if (!aoi) {
-      setRunError("Pilih AOI terlebih dahulu.");
+      setRunError(t("carbon.err.selectAoi"));
       return;
     }
     const aoiPayload: AoiPayload = aoi.feature
@@ -270,7 +272,7 @@ export default function CarbonModule() {
         ? boundsToPayload(aoi.bounds)
         : null!;
     if (!aoiPayload) {
-      setRunError("AOI tidak valid.");
+      setRunError(t("carbon.err.invalidAoi"));
       return;
     }
 
@@ -285,32 +287,32 @@ export default function CarbonModule() {
     const runLc = analysisType === "landcover" || analysisType === "combined";
     const runCarbon = analysisType === "carbon" || analysisType === "combined";
 
-    showLoading("Menjalankan analisis...", "Mempersiapkan permintaan...");
+    showLoading(t("carbon.loading.runningTitle"), t("carbon.loading.preparing"));
 
     if (runVeg) {
-      setLoadingProgress(15, "Memproses indeks vegetasi (citra Sentinel-2)...");
+      setLoadingProgress(15, t("carbon.loading.vegProgress"));
       const t0 = Date.now();
       try {
         newResults.vegetation = await analyzeVegetation(aoiPayload, year, vegParams);
       } catch (err) {
-        errors.push(`Vegetasi gagal: ${err instanceof ApiError ? err.message : "network error"}`);
+        errors.push(`${t("carbon.err.vegFailed")}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
       }
       times.vegetation = ((Date.now() - t0) / 1000).toFixed(2);
     }
 
     if (runLc) {
-      setLoadingProgress(45, "Memproses dataset tutupan lahan...");
+      setLoadingProgress(45, t("carbon.loading.lcProgress"));
       const t0 = Date.now();
       try {
         newResults.landcover = await analyzeLandCover(aoiPayload, year, lcParams);
       } catch (err) {
-        errors.push(`Land cover gagal: ${err instanceof ApiError ? err.message : "network error"}`);
+        errors.push(`${t("carbon.err.lcFailed")}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
       }
       times.landcover = ((Date.now() - t0) / 1000).toFixed(2);
     }
 
     if (runCarbon) {
-      setLoadingProgress(75, "Menerapkan model terlatih pada citra satelit...");
+      setLoadingProgress(75, t("carbon.loading.carbonProgress"));
       const t0 = Date.now();
       try {
         newResults.carbon = await analyzeCarbon({
@@ -322,7 +324,7 @@ export default function CarbonModule() {
           visPalette,
         });
       } catch (err) {
-        errors.push(`Karbon gagal: ${err instanceof ApiError ? err.message : "network error"}`);
+        errors.push(`${t("carbon.err.carbonFailed")}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
       }
       times.carbon = ((Date.now() - t0) / 1000).toFixed(2);
     }
@@ -335,7 +337,7 @@ export default function CarbonModule() {
     setMapKey((k) => k + 1);
 
     if (Object.keys(newResults).length === 0) {
-      setRunError(errors.join(" ") || "Tidak ada hasil analisis.");
+      setRunError(errors.join(" ") || t("carbon.err.noResults"));
     } else if (errors.length) {
       setRunError(errors.join(" "));
     }
@@ -363,46 +365,36 @@ export default function CarbonModule() {
         ? boundsToPayload(aoi.bounds)
         : null
     : null;
-  const analysisTypeLabel =
-    analysisType === "carbon"
-      ? "Carbon Stock"
-      : analysisType === "vegetation"
-        ? "Vegetation"
-        : analysisType === "landcover"
-          ? "Land Cover"
-          : "Combined";
+  const analysisTypeLabel = t(`carbon.statusChip.${analysisType}`);
   const carbonPeriodLabel = deltaEnabled && analysisType === "carbon" ? `${deltaStartYear}-${deltaEndYear}` : String(year);
 
   return (
     <div className="analysis-page analysis-page-carbon">
       <section className="analysis-hero analysis-hero-carbon" aria-labelledby="carbonHeroTitle">
         <div className="analysis-hero-main">
-          <span className="analysis-eyebrow">Estimasi Stok Karbon</span>
-          <h1 id="carbonHeroTitle">Estimasi Stok Karbon Berbasis Citra Satelit</h1>
-          <p>
-            Hitung cadangan karbon, indeks vegetasi, dan tutupan lahan dari AOI yang sama dengan model analitik yang
-            dapat dibandingkan per tahun.
-          </p>
+          <span className="analysis-eyebrow">{t("carbon.hero.eyebrow")}</span>
+          <h1 id="carbonHeroTitle">{t("carbon.hero.title")}</h1>
+          <p>{t("carbon.hero.subtitle")}</p>
         </div>
         <div className="analysis-hero-status">
           <div className="analysis-status-card">
             <i className="bi bi-bounding-box-circles" />
             <div>
-              <span>AOI</span>
-              <strong>{aoi?.name ?? "Belum dipilih"}</strong>
+              <span>{t("carbon.status.aoi")}</span>
+              <strong>{aoi?.name ?? t("carbon.status.aoiEmpty")}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-cpu" />
             <div>
-              <span>Analisis</span>
+              <span>{t("carbon.status.analysis")}</span>
               <strong>{analysisTypeLabel}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-calendar3" />
             <div>
-              <span>Periode</span>
+              <span>{t("carbon.status.period")}</span>
               <strong>{carbonPeriodLabel}</strong>
             </div>
           </div>
@@ -413,7 +405,7 @@ export default function CarbonModule() {
         <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">
-            <i className="bi bi-gear-fill me-1" /> Pengaturan
+            <i className="bi bi-gear-fill me-1" /> {t("carbon.sidebar.settings")}
           </h5>
 
           <AnalysisTypeSelector value={analysisType} onChange={setAnalysisType} />
@@ -437,14 +429,14 @@ export default function CarbonModule() {
                 onChange={(e) => setDeltaEnabled(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="enableCarbonDelta">
-                <i className="bi bi-clock-history" /> Time-Series (multi-tahun)
+                <i className="bi bi-clock-history" /> {t("carbon.sidebar.deltaToggle")}
               </label>
             </div>
           )}
 
           {deltaEnabled && analysisType === "carbon" ? (
             <div className="mb-3">
-              <label className="form-label">Rentang Tahun</label>
+              <label className="form-label">{t("carbon.sidebar.yearRange")}</label>
               <div className="d-flex gap-2 align-items-center mb-1">
                 <input
                   id="carbonDeltaStartYear"
@@ -468,7 +460,7 @@ export default function CarbonModule() {
               </div>
               <div className="d-flex gap-2 align-items-center">
                 <label className="form-label mb-0 small text-muted" htmlFor="carbonDeltaInterval">
-                  Interval (tahun)
+                  {t("carbon.sidebar.interval")}
                 </label>
                 <input
                   id="carbonDeltaInterval"
@@ -490,14 +482,14 @@ export default function CarbonModule() {
                   onChange={(e) => setDeltaIncludeTiles(e.target.checked)}
                 />
                 <label className="form-check-label small" htmlFor="carbonDeltaIncludeTiles">
-                  Sertakan tile peta (buat timelapse, lebih lambat)
+                  {t("carbon.sidebar.includeTiles")}
                 </label>
               </div>
               {deltaError && <div className="alert alert-danger py-1 px-2 mt-2 small">{deltaError}</div>}
             </div>
           ) : (
             <div className="mb-3">
-              <label className="form-label">Tahun</label>
+              <label className="form-label">{t("carbon.sidebar.year")}</label>
               <input
                 id="yearSlider"
                 type="range"
@@ -517,7 +509,7 @@ export default function CarbonModule() {
           )}
 
           <div className="mb-3">
-            <label className="form-label">Zoom Peta</label>
+            <label className="form-label">{t("carbon.sidebar.zoom")}</label>
             <input
               type="range"
               className="form-range"
@@ -550,14 +542,14 @@ export default function CarbonModule() {
                 onChange={(e) => setVegTsEnabled(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="enableVegTimeSeries">
-                <i className="bi bi-graph-up" /> Time-Series Bulanan
+                <i className="bi bi-graph-up" /> {t("carbon.sidebar.vegTsToggle")}
               </label>
             </div>
           )}
 
           {vegTsEnabled && analysisType === "vegetation" && (
             <div className="mb-3">
-              <label className="form-label">Indeks (satu saja)</label>
+              <label className="form-label">{t("carbon.sidebar.indexSingle")}</label>
               <select
                 id="vegTsIndex"
                 className="form-select form-select-sm"
@@ -570,7 +562,7 @@ export default function CarbonModule() {
                   </option>
                 ))}
               </select>
-              <small className="text-muted d-block mt-1">Diproses per bulan (Jan-Des) untuk tahun terpilih di bawah.</small>
+              <small className="text-muted d-block mt-1">{t("carbon.sidebar.vegTsHint")}</small>
               {vegTsError && <div className="alert alert-danger py-1 px-2 mt-2 small">{vegTsError}</div>}
             </div>
           )}
@@ -591,16 +583,16 @@ export default function CarbonModule() {
           >
             {running || deltaRunning || vegTsRunning ? (
               <>
-                <span className="spinner-border spinner-border-sm me-1" /> Menganalisis...
+                <span className="spinner-border spinner-border-sm me-1" /> {t("carbon.sidebar.analyzing")}
               </>
             ) : (
               <>
-                <i className="bi bi-play-fill me-1" /> Jalankan Analisis
+                <i className="bi bi-play-fill me-1" /> {t("carbon.sidebar.runAnalysis")}
               </>
             )}
           </button>
           {!aoi && (
-            <small className="text-muted d-block mt-2">Pilih AOI terlebih dahulu untuk mengaktifkan tombol.</small>
+            <small className="text-muted d-block mt-2">{t("carbon.sidebar.selectAoiHint")}</small>
           )}
         </div>
       </div>
@@ -636,7 +628,7 @@ export default function CarbonModule() {
 
             <div className="card">
               <div className="card-header">
-                <i className="bi bi-bar-chart-fill me-1" /> Statistik
+                <i className="bi bi-bar-chart-fill me-1" /> {t("carbon.results.statsHeader")}
               </div>
               <div className="card-body">
                 <StatsCards results={results} processingTimes={processingTimes} />

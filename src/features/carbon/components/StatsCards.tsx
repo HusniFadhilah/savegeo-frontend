@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
 import type { AnalysisProcessingTimes } from "@/features/carbon/types";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
@@ -34,6 +35,7 @@ function MetricCard({ icon, value, label, sub }: { icon: string; value: ReactNod
 
 /** Ported from main.js displayMetrics() + displayProcessingTimes(). */
 export default function StatsCards({ results, processingTimes }: Props) {
+  const t = useI18nStore((s) => s.t);
   const cards: ReactNode[] = [];
 
   if (results.vegetation?.indices) {
@@ -41,9 +43,9 @@ export default function StatsCards({ results, processingTimes }: Props) {
     const vals = Object.values(idx).map((v) => Number(v.mean)).filter((v) => Number.isFinite(v));
     const avgMean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
     cards.push(
-      <MetricCard key="veg-images" icon="bi-images" value={results.vegetation.collection_size ?? 0} label="Citra Ditemukan" />,
-      <MetricCard key="veg-count" icon="bi-flower21" value={Object.keys(idx).length} label="Indeks Dianalisis" />,
-      <MetricCard key="veg-mean" icon="bi-graph-up" value={avgMean.toFixed(3)} label="Rata-rata Nilai" />,
+      <MetricCard key="veg-images" icon="bi-images" value={results.vegetation.collection_size ?? 0} label={t("carbon.stats.imagesFound")} />,
+      <MetricCard key="veg-count" icon="bi-flower21" value={Object.keys(idx).length} label={t("carbon.stats.indicesAnalyzed")} />,
+      <MetricCard key="veg-mean" icon="bi-graph-up" value={avgMean.toFixed(3)} label={t("carbon.stats.avgValue")} />,
     );
   }
 
@@ -68,20 +70,20 @@ export default function StatsCards({ results, processingTimes }: Props) {
         key="carbon-density"
         icon="bi-tree"
         value={<>{(stats.mean ?? 0).toFixed(2)} <small>Mg/ha</small></>}
-        label="Rata-rata Densitas Karbon"
+        label={t("carbon.stats.avgDensity")}
       />,
       <MetricCard
         key="carbon-total"
         icon="bi-clipboard-data"
         value={<>{(areaInfo.total_carbon_tons ?? 0).toLocaleString()} <small>ton</small></>}
-        label="Total Stok Karbon"
-        sub={calculationMode === "clipped_aoi" ? "Dipotong sesuai AOI" : "Bounding box"}
+        label={t("carbon.stats.totalStock")}
+        sub={calculationMode === "clipped_aoi" ? t("carbon.stats.clippedToAoi") : t("carbon.stats.boundingBox")}
       />,
       <MetricCard
         key="carbon-co2"
         icon="bi-cloud"
         value={<>{(areaInfo.carbon_dioxide_equivalent_tons ?? 0).toLocaleString()} <small>ton</small></>}
-        label="Setara CO2"
+        label={t("carbon.stats.co2Equivalent")}
       />,
       hasCV ? (
         <MetricCard
@@ -92,11 +94,11 @@ export default function StatsCards({ results, processingTimes }: Props) {
               {(perf.r2_score ?? 0).toFixed(3)}
             </span>
           }
-          label="R² Score (CV)"
+          label={t("carbon.stats.r2Score")}
           sub={`RMSE: ${(perf.rmse ?? 0).toFixed(2)} Mg/ha`}
         />
       ) : (
-        <MetricCard key="carbon-rmse" icon="bi-bar-chart" value={(perf.rmse ?? 0).toFixed(2)} label="Model RMSE" />
+        <MetricCard key="carbon-rmse" icon="bi-bar-chart" value={(perf.rmse ?? 0).toFixed(2)} label={t("carbon.stats.modelRmse")} />
       ),
     );
   }
@@ -126,7 +128,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
             key="lc-area"
             icon="bi-globe-asia-australia"
             value={<>{totalArea.toLocaleString(undefined, { maximumFractionDigits: 1 })} <small>ha</small></>}
-            label="Luas Total"
+            label={t("carbon.stats.totalArea")}
           />,
         );
       }
@@ -137,21 +139,21 @@ export default function StatsCards({ results, processingTimes }: Props) {
             icon="bi-map"
             value={<>{dominantPct.toFixed(1)} <small>%</small></>}
             label={dominantClass.replace(/_/g, " ")}
-            sub="Kelas Dominan"
+            sub={t("carbon.stats.dominantClass")}
           />,
         );
       }
     }
     cards.push(
-      <MetricCard key="lc-count" icon="bi-layers" value={datasetEntries.length} label="Dataset Dianalisis" />,
+      <MetricCard key="lc-count" icon="bi-layers" value={datasetEntries.length} label={t("carbon.stats.datasetsAnalyzed")} />,
     );
   }
 
   const timeSections = [
-    { key: "vegetation" as const, icon: "bi-flower21", label: "Vegetasi", color: "#43a047" },
-    { key: "landcover" as const, icon: "bi-map", label: "Tutupan Lahan", color: "#1e88e5" },
-    { key: "carbon" as const, icon: "bi-tree", label: "Karbon", color: "#fb8c00" },
-    { key: "total" as const, icon: "bi-stopwatch", label: "Total Waktu", color: "#1e88e5" },
+    { key: "vegetation" as const, icon: "bi-flower21", label: t("carbon.stats.section.vegetation"), color: "#43a047" },
+    { key: "landcover" as const, icon: "bi-map", label: t("carbon.stats.section.landcover"), color: "#1e88e5" },
+    { key: "carbon" as const, icon: "bi-tree", label: t("carbon.stats.section.carbon"), color: "#fb8c00" },
+    { key: "total" as const, icon: "bi-stopwatch", label: t("carbon.stats.section.total"), color: "#1e88e5" },
   ].filter((s) => processingTimes[s.key]);
 
   return (
@@ -160,7 +162,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
       {timeSections.length > 0 && (
         <div className="cs-card mt-3">
           <div className="cs-card-header">
-            <i className="bi bi-clock" /> Waktu Proses
+            <i className="bi bi-clock" /> {t("carbon.stats.processingTime")}
           </div>
           <div className="cs-card-body">
             <div className="row row-cols-2 row-cols-md-4 g-2">

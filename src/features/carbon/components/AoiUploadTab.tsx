@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
+import { interpolate } from "@/i18n/translations";
 import type { AoiFeature } from "@/types/map";
 
 interface Props {
@@ -40,6 +42,7 @@ function normalizeToFeature(parsed: unknown): AoiFeature | null {
  * client-side. Extension whitelist + size cap enforced before any parsing.
  */
 export default function AoiUploadTab({ onApply }: Props) {
+  const t = useI18nStore((s) => s.t);
   const [status, setStatus] = useState<{ type: "info" | "success" | "danger"; text: string } | null>(
     null,
   );
@@ -52,16 +55,16 @@ export default function AoiUploadTab({ onApply }: Props) {
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
         setStatus({
           type: "danger",
-          text: `Format tidak didukung. Gunakan ${ALLOWED_EXTENSIONS.join(", ")}.`,
+          text: interpolate(t("carbon.aoiUpload.err.unsupportedFormat"), { formats: ALLOWED_EXTENSIONS.join(", ") }),
         });
         return;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        setStatus({ type: "danger", text: "Ukuran file melebihi batas 20MB." });
+        setStatus({ type: "danger", text: t("carbon.aoiUpload.err.tooLarge") });
         return;
       }
 
-      setStatus({ type: "info", text: "Memproses file..." });
+      setStatus({ type: "info", text: t("carbon.aoiUpload.processing") });
 
       try {
         let parsed: unknown;
@@ -71,7 +74,7 @@ export default function AoiUploadTab({ onApply }: Props) {
           try {
             parsed = JSON.parse(text);
           } catch {
-            throw new Error("File bukan JSON yang valid.");
+            throw new Error(t("carbon.aoiUpload.err.invalidJson"));
           }
         } else if (ext === ".kml" || ext === ".gpx") {
           const text = await file.text();
@@ -87,19 +90,19 @@ export default function AoiUploadTab({ onApply }: Props) {
 
         const feature = normalizeToFeature(parsed);
         if (!feature) {
-          throw new Error("File tidak berisi geometri yang valid.");
+          throw new Error(t("carbon.aoiUpload.err.noValidGeometry"));
         }
 
         onApply(feature, file.name);
-        setStatus({ type: "success", text: `File "${file.name}" berhasil dimuat sebagai AOI.` });
+        setStatus({ type: "success", text: interpolate(t("carbon.aoiUpload.loadedSuccess"), { name: file.name }) });
       } catch (err) {
         setStatus({
           type: "danger",
-          text: `Gagal memuat file: ${err instanceof Error ? err.message : "Unknown error"}`,
+          text: `${t("carbon.aoiUpload.err.loadFailed")}: ${err instanceof Error ? err.message : t("carbon.aoiUpload.err.unknown")}`,
         });
       }
     },
-    [onApply],
+    [onApply, t],
   );
 
   const handleDrop = useCallback(
@@ -114,7 +117,7 @@ export default function AoiUploadTab({ onApply }: Props) {
 
   return (
     <div>
-      <label className="form-label fw-semibold">Unggah file batas AOI</label>
+      <label className="form-label fw-semibold">{t("carbon.aoiUpload.label")}</label>
       <div
         className="border border-2 rounded p-4 text-center"
         style={{
@@ -132,7 +135,7 @@ export default function AoiUploadTab({ onApply }: Props) {
         onClick={() => inputRef.current?.click()}
       >
         <i className="bi bi-cloud-arrow-up-fill fs-2 text-muted mb-2 d-block" />
-        <p className="mb-2 text-muted small">Tarik &amp; letakkan file di sini, atau</p>
+        <p className="mb-2 text-muted small">{t("carbon.aoiUpload.dropHint")}</p>
         <button
           type="button"
           className="btn btn-sm btn-outline-primary"
@@ -141,7 +144,7 @@ export default function AoiUploadTab({ onApply }: Props) {
             inputRef.current?.click();
           }}
         >
-          <i className="bi bi-folder2-open me-1" /> Pilih File
+          <i className="bi bi-folder2-open me-1" /> {t("carbon.aoiUpload.chooseFile")}
         </button>
         <input
           ref={inputRef}
@@ -155,10 +158,7 @@ export default function AoiUploadTab({ onApply }: Props) {
           }}
         />
       </div>
-      <small className="text-muted d-block mt-1">
-        Format didukung: <code>.geojson</code>, <code>.json</code>, <code>.kml</code>,{" "}
-        <code>.gpx</code>, <code>.zip</code> (shapefile - ZIP berisi .shp + .dbf + .prj). Maks 20MB.
-      </small>
+      <small className="text-muted d-block mt-1">{t("carbon.aoiUpload.formatHint")}</small>
       {status && (
         <div className={`alert alert-${status.type} py-2 mt-2 mb-0 small`}>{status.text}</div>
       )}

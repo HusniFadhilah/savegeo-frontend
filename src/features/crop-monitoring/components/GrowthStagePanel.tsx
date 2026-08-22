@@ -1,3 +1,4 @@
+import { CONFIDENCE_LABEL, GROWTH_STAGE_LABEL } from "../utils";
 import type { Commodity, GrowthStageResult } from "../types";
 
 interface Props {
@@ -24,7 +25,7 @@ export default function GrowthStagePanel({ growthStage, commodity }: Props) {
             <div className="row g-2 mb-3">
               <div className="col-6 col-md-3">
                 <div className="text-muted small">Fase Saat Ini</div>
-                <div className="fw-bold">{growthStage.stage}</div>
+                <div className="fw-bold">{GROWTH_STAGE_LABEL[growthStage.stage_key] ?? growthStage.stage}</div>
               </div>
               <div className="col-6 col-md-3">
                 <div className="text-muted small">Umur Tanaman</div>
@@ -32,7 +33,7 @@ export default function GrowthStagePanel({ growthStage, commodity }: Props) {
               </div>
               <div className="col-6 col-md-3">
                 <div className="text-muted small">Keyakinan</div>
-                <div className="fw-bold text-capitalize">{growthStage.confidence}</div>
+                <div className="fw-bold">{CONFIDENCE_LABEL[growthStage.confidence] ?? growthStage.confidence}</div>
               </div>
               <div className="col-6 col-md-3">
                 <div className="text-muted small">Estimasi Panen</div>

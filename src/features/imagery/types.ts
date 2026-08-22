@@ -1,4 +1,5 @@
 import type { AoiPayload } from "@/features/carbon/lib/geo";
+import type { MapLegendEntry } from "@/types/map";
 
 /** How a scene-tile is rendered - see imagery_provider_registry.py for the full rationale. */
 export type ImageryVisualization = "rgb" | "sar" | "single_band";
@@ -79,4 +80,26 @@ export interface GetSceneTileParams {
   sarMode?: SarMode;
   /** Sentinel-2 only (L2A/L1C) - "scl" | "qa60" | "s2cloudless", opt-in per-pixel cloud mask on top of the default raw/unmasked view. Ignored (and silently remapped if unsupported, e.g. "scl" on L1C) by the backend for providers without cloud_mask_techniques. */
   cloudMaskTechnique?: string;
+}
+
+export interface DemTileStats {
+  min_elevation_m?: number | null;
+  mean_elevation_m?: number | null;
+  max_elevation_m?: number | null;
+}
+
+export interface DemTileResponse {
+  tile_url?: string | null;
+  wms_url?: string | null;
+  wms_layers?: string | null;
+  source: string;
+  source_kind: "gee_asset" | "xyz" | "wms";
+  is_official_demnas: boolean;
+  stats?: DemTileStats | null;
+  legend?: MapLegendEntry[];
+}
+
+export interface GetDemTileParams {
+  aoi: AoiPayload;
+  scale?: number;
 }

@@ -1,4 +1,8 @@
+import { Bar } from "react-chartjs-2";
+import { BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Tooltip } from "chart.js";
 import type { VegetationResult } from "@/features/vegetation/types";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 interface Props {
   result: VegetationResult;
@@ -65,6 +69,33 @@ export default function VegStatsTable({ result }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
+
+      <div className="card mt-3">
+        <div className="card-body">
+          <h6 className="mb-2">
+            <i className="bi bi-bar-chart-fill me-1" /> Perbandingan Min / Mean / Max per Indeks
+          </h6>
+          <div style={{ height: Math.max(220, entries.length * 42) }}>
+            <Bar
+              data={{
+                labels: entries.map(([index]) => index),
+                datasets: [
+                  { label: "Min", data: entries.map(([, s]) => s.min ?? 0), backgroundColor: "rgba(148,163,184,0.75)" },
+                  { label: "Mean", data: entries.map(([, s]) => s.mean ?? 0), backgroundColor: "rgba(46,125,50,0.85)" },
+                  { label: "Max", data: entries.map(([, s]) => s.max ?? 0), backgroundColor: "rgba(255,167,38,0.8)" },
+                ],
+              }}
+              options={{
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: "top" } },
+                scales: { x: { title: { display: true, text: "Nilai indeks" } } },
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1086,6 +1086,118 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.map-zoom-scale {
+  margin: 0 0 6px 6px !important;
+  min-width: 90px;
+  padding: 4px 6px 3px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  color: #1f2937;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.15;
+  backdrop-filter: blur(6px);
+}
+
+.map-zoom-scale__bar {
+  height: 4px;
+  max-width: 110px;
+  min-width: 32px;
+  border: solid #1f2937;
+  border-width: 0 1px 1px;
+}
+
+.map-zoom-scale__labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.map-zoom-scale__ratio {
+  color: #5b6472;
+  font-weight: 650;
+}
+
+.aoi-distance-tooltip {
+  padding: 6px 9px;
+  border: 1px solid rgba(27, 94, 32, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+  color: #17351f;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.aoi-distance-tooltip::before {
+  border-top-color: rgba(255, 255, 255, 0.94);
+}
+
+.leaflet-container.aoi-draw-empty .leaflet-draw-edit-edit,
+.leaflet-container.aoi-draw-empty .leaflet-draw-edit-remove {
+  display: none;
+}
+
+.aoi-curve-control__button {
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  color: #1f7a34;
+  cursor: pointer;
+  font-size: 0.96rem;
+  font-weight: 850;
+  line-height: 30px;
+  text-align: center;
+}
+
+.aoi-curve-control__button:hover,
+.aoi-curve-control__button:focus-visible,
+.aoi-curve-control__button.is-active {
+  background: #eef8f0;
+  outline: none;
+}
+
+.aoi-rectangle-control__button {
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  color: #1f7a34;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 850;
+  line-height: 30px;
+  text-align: center;
+}
+
+.aoi-rectangle-control__button:hover,
+.aoi-rectangle-control__button:focus-visible,
+.aoi-rectangle-control__button.is-active {
+  background: #e3f5e7;
+  outline: none;
+}
+
+.leaflet-container.is-drawing-rectangle {
+  cursor: crosshair;
+}
+
 .navbar-status-btn {
   border: none;
   cursor: pointer;
@@ -1314,10 +1426,20 @@
   border-top: 1px solid #eee;
 }
 
+.basemap-panel-divider {
+  height: 1px;
+  background: #e5e7eb;
+}
+
 .basemap-option.active {
   background: var(--primary-color, #2e7d32);
   color: white;
   font-weight: 600;
+}
+
+.basemap-option:disabled {
+  color: #9ca3af;
+  cursor: wait;
 }
 
 /* ImageryAttribution enhances Leaflet's own bottom-right AttributionControl
@@ -2545,15 +2667,20 @@
 }
 
 .guide-read-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  align-items: stretch;
 }
 
 .guide-read-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-width: 0;
   padding: 14px;
+  overflow-wrap: anywhere;
 }
 
 .guide-read-card-wide {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .guide-read-card > i {
@@ -2577,6 +2704,11 @@
   padding-left: 17px;
   color: #4b5563;
   font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.guide-read-card li + li {
+  margin-top: 4px;
 }
 
 .guide-export-card {
@@ -2979,6 +3111,102 @@
 .analysis-page-imagery .analysis-status-card i {
   background: #e8f4fb;
   color: #155e75;
+}
+
+.imagery-terrain-3d,
+.imagery-terrain-3d-empty {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(21, 94, 117, 0.16);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.2), transparent 48%),
+    linear-gradient(180deg, #ecfeff 0%, #f8fafc 45%, #dbeafe 100%);
+  perspective: 900px;
+}
+
+.imagery-terrain-3d::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 42%, rgba(15, 23, 42, 0.16));
+  pointer-events: none;
+}
+
+.imagery-terrain-3d-plane {
+  width: min(92%, 460px);
+  aspect-ratio: 1.35;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  background-position: center;
+  background-size: 150%;
+  box-shadow: 0 26px 42px rgba(15, 23, 42, 0.24);
+  transform: rotateX(58deg) rotateZ(-7deg) translateY(22px);
+  transform-origin: center;
+}
+
+.imagery-terrain-3d-grid {
+  position: absolute;
+  bottom: -38px;
+  width: 88%;
+  height: 118px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.22), transparent 66%);
+  filter: blur(14px);
+}
+
+.imagery-terrain-3d-empty {
+  color: #64748b;
+  gap: 10px;
+  min-height: 220px;
+  text-align: center;
+}
+
+.imagery-terrain-3d-empty i {
+  display: block;
+  font-size: 2rem;
+}
+
+.imagery-dem-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.imagery-dem-summary div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(21, 94, 117, 0.14);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.imagery-dem-summary span,
+.imagery-dem-summary strong {
+  display: block;
+}
+
+.imagery-dem-summary span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.imagery-dem-summary strong {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imagery-map-layer-info {
+  display: grid;
+  gap: 10px;
 }
 
 .analysis-status-card div {
@@ -3384,6 +3612,33 @@
 
   .guide-acc-trigger > i:not(.guide-acc-chevron) {
     display: none;
+  }
+
+  .guide-read-grid {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .guide-read-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 0 10px;
+    padding: 12px;
+  }
+
+  .guide-read-card > i {
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+
+  .guide-read-card h4 {
+    margin: 1px 0 6px;
+  }
+
+  .guide-read-card ul {
+    grid-column: 2;
+    padding-left: 16px;
+    font-size: 0.78rem;
   }
 
   .cm-empty-state {

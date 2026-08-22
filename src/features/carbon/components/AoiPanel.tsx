@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import L from "leaflet";
+import { useI18nStore } from "@/hooks/useI18nStore";
+import { interpolate } from "@/i18n/translations";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools, { setAoiOnMap, SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
@@ -38,13 +40,13 @@ type TabKey = "admin" | "coordinate" | "draw" | "upload" | "company";
  */
 const AOI_TIMEOUT_RISK_KM2 = 500;
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "admin", label: "Indonesia Admin", icon: "bi-map-fill" },
-  { key: "coordinate", label: "Koordinat", icon: "bi-pin-map-fill" },
-  { key: "draw", label: "Gambar di Peta", icon: "bi-vector-pen" },
-  { key: "upload", label: "Unggah File", icon: "bi-upload" },
-  { key: "company", label: "Perusahaan", icon: "bi-building-fill" },
-];
+const TAB_ICONS: Record<TabKey, string> = {
+  admin: "bi-map-fill",
+  coordinate: "bi-pin-map-fill",
+  draw: "bi-vector-pen",
+  upload: "bi-upload",
+  company: "bi-building-fill",
+};
 
 function normalizeName(value: string): string {
   return value
@@ -58,14 +60,14 @@ function geometryFromGeoJSON(input: GeoJSON.GeoJSON): AoiGeometry {
   if (input.type === "Feature") return geometryFromGeoJSON(input.geometry);
   if (input.type === "FeatureCollection") {
     const geometries = input.features.map((f) => f.geometry).filter((g): g is GeoJSON.Geometry => Boolean(g));
-    if (!geometries.length) throw new Error("GeoJSON tidak berisi geometry");
+    if (!geometries.length) throw new Error(useI18nStore.getState().t("carbon.aoi.err.noGeometry"));
     return mergeGeometry(geometries.map(geometryFromGeoJSON));
   }
   if (input.type === "Polygon" || input.type === "MultiPolygon") return input;
   if (input.type === "GeometryCollection") {
     return mergeGeometry(input.geometries.map(geometryFromGeoJSON));
   }
-  throw new Error(`Tipe geometry tidak didukung: ${input.type}`);
+  throw new Error(`${useI18nStore.getState().t("carbon.aoi.err.unsupportedGeometry")}: ${input.type}`);
 }
 
 function mergeGeometry(geometries: AoiGeometry[]): AoiGeometry {
@@ -110,6 +112,7 @@ function findByDisplayName<T extends { name: string }>(items: T[], wanted: strin
  * stays editable/deletable with the same toolbar.
  */
 export default function AoiPanel({ aoi, onAoiChange }: Props) {
+  const t = useI18nStore((s) => s.t);
   const [activeTab, setActiveTab] = useState<TabKey>("admin");
   const [open, setOpen] = useState(true);
   const [coordLat, setCoordLat] = useState("-6.9667");
@@ -149,12 +152,12 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
       }
     };
 
-    window.setAOIFromGeoJSON = (geojson, name = "AOI dari chatbot") => {
+    window.setAOIFromGeoJSON = (geojson, name = t("carbon.aoi.fromChatbot")) => {
       const feature = toAoiFeature(geojson);
       applyAoi(feature, name, "upload");
     };
     window.loadGeoJSONAsAOI = (geojson) => {
-      window.setAOIFromGeoJSON?.(geojson, "AOI dari file");
+      window.setAOIFromGeoJSON?.(geojson, t("carbon.aoi.fromFile"));
     };
     window.setAOIByAdminName = async (province, city, district, village) => {
       try {
@@ -215,17 +218,17 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
       }
       const bounds = boundsFromGeoJSON(feature);
       const area = areaKm2(feature, bounds);
-      onAoiChange({ source: "drawn", name: "Poligon Kustom", areaKm2: area, feature, bounds });
+      onAoiChange({ source: "drawn", name: t("carbon.aoi.customPolygon"), areaKm2: area, feature, bounds });
     },
-    [onAoiChange],
+    [onAoiChange, t],
   );
 
   useEffect(() => {
     if (!open) return;
     // Leaflet doesn't notice its container growing back from display:none -
     // nudge it once the collapse transition/reflow has settled.
-    const t = setTimeout(() => mapRef.current?.invalidateSize(), 260);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => mapRef.current?.invalidateSize(), 260);
+    return () => clearTimeout(timer);
   }, [open]);
 
   return (
@@ -237,7 +240,7 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
         aria-expanded={open}
       >
         <span>
-          <i className="bi bi-geo-alt-fill" /> Area of Interest (AOI)
+          <i className="bi bi-geo-alt-fill" /> {t("carbon.aoi.title")}
           {aoi && !open && (
             <span className="ms-2 fw-normal" style={{ fontSize: ".8rem", opacity: 0.85 }}>
               &middot; {aoi.name}
@@ -249,15 +252,15 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
       </button>
       <div className="card-body" style={{ display: open ? "block" : "none" }}>
         <div className="aoi-tabs mb-3">
-          {TABS.map((tab) => (
+          {(["admin", "coordinate", "draw", "upload", "company"] as TabKey[]).map((key) => (
             <button
-              key={tab.key}
+              key={key}
               type="button"
-              className={`aoi-tab ${activeTab === tab.key ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.key)}
+              className={`aoi-tab ${activeTab === key ? "active" : ""}`}
+              onClick={() => setActiveTab(key)}
             >
-              <i className={`bi ${tab.icon}`} />
-              {tab.label}
+              <i className={`bi ${TAB_ICONS[key]}`} />
+              {t(`carbon.aoi.tab.${key}`)}
             </button>
           ))}
         </div>
@@ -278,8 +281,7 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
           {activeTab === "draw" && (
             <div className="alert alert-info py-2 small mb-0">
               <i className="bi bi-info-circle me-1" />
-              Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi
-              AOI dan tetap bisa diedit/dihapus lewat toolbar peta.
+              {t("carbon.aoi.drawHint")}
             </div>
           )}
           {activeTab === "upload" && (
@@ -314,15 +316,14 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
         {aoi && (
           <div className="alert alert-success mt-3 mb-0 py-2">
             <i className="bi bi-check-circle-fill me-1" />
-            AOI: <strong>{aoi.name}</strong>
+            {t("carbon.aoi.selectedLabel")}: <strong>{aoi.name}</strong>
             {aoi.areaKm2 != null && <> &middot; {aoi.areaKm2.toFixed(2)} km²</>}
           </div>
         )}
         {aoi?.areaKm2 != null && aoi.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
           <div className="alert alert-warning mt-2 mb-0 py-2" style={{ fontSize: ".8rem" }}>
             <i className="fas fa-triangle-exclamation me-1" />
-            AOI besar ({aoi.areaKm2.toFixed(0)} km²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat
-            atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.
+            {interpolate(t("carbon.aoi.sizeWarning"), { area: aoi.areaKm2.toFixed(0) })}
           </div>
         )}
       </div>

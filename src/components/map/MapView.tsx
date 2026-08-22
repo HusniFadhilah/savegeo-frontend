@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
 import ImageryAttribution from "@/components/map/ImageryAttribution";
+import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
 
@@ -98,6 +99,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, classN
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
         <FullscreenControl />
+        <ZoomScaleControl />
         <ImageryAttribution />
         {children}
       </MapContainer>

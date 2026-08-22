@@ -58,6 +58,41 @@ export const WATER_STRESS_STYLE: Record<string, StatusStyle> = {
   Unknown: { label: "Tidak diketahui", color: "#757575", className: "text-muted", emoji: "⚪" },
 };
 
+/** Growth stage (sub-analysis D) - `stage_key` -> Indonesian label. Backend
+ * (`crop_registry.py`) sends English stage names/keys (Planting/Tillering/
+ * Heading/...) since they're mostly agronomy jargon with no single settled
+ * Indonesian term across every commodity - this was the untranslated gap:
+ * `GrowthStagePanel` was rendering `stage`/`confidence` straight from the
+ * API instead of through a label map like every other status field here.
+ * Keyed by `stage_key` (stable slug), covers every stage across all 5
+ * commodities in the registry (padi/jagung/kedelai/tebu/sawit). */
+export const GROWTH_STAGE_LABEL: Record<string, string> = {
+  planting: "Tanam",
+  establishment: "Pembentukan Awal",
+  tillering: "Pembentukan Anakan",
+  panicle_initiation: "Inisiasi Malai",
+  heading: "Keluar Malai (Heading)",
+  grain_filling: "Pengisian Biji",
+  maturity: "Pematangan",
+  harvest: "Panen",
+  vegetative: "Vegetatif",
+  tasseling: "Bunga Jantan (Tasseling)",
+  silking: "Rambut Tongkol (Silking)",
+  flowering: "Berbunga",
+  pod_filling: "Pengisian Polong",
+  germination: "Perkecambahan",
+  grand_growth: "Pertumbuhan Cepat",
+  nursery_transplant: "Pembibitan / Tanam Pindah",
+  immature: "Belum Produktif",
+  productive: "Produktif (Siklus Panen Berulang)",
+};
+
+export const CONFIDENCE_LABEL: Record<string, string> = {
+  high: "Tinggi",
+  medium: "Sedang",
+  low: "Rendah",
+};
+
 const FALLBACK_STYLE: StatusStyle = {
   label: "-",
   color: "#757575",

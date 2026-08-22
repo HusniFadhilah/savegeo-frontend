@@ -1,9 +1,11 @@
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title } from "chart.js";
-import { Pie } from "react-chartjs-2";
-import type { LandCoverResult } from "@/features/landcover/types";
+import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title } from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
+import type { LandCoverDatasetResult, LandCoverResult } from "@/features/landcover/types";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 
-ChartJS.register(ArcElement, Tooltip, Legend, Title);
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title);
+
+const COMPARE_COLORS = ["rgba(46,125,50,0.85)", "rgba(30,111,199,0.85)", "rgba(255,167,38,0.85)", "rgba(142,68,173,0.85)"];
 
 interface Props {
   result: LandCoverResult;
@@ -137,6 +139,57 @@ export default function LandCoverResultTables({ result }: Props) {
           </div>
         );
       })}
+
+      {entries.length > 1 && (() => {
+        const datasets = (entries as [string, unknown][]).filter(
+          (e): e is [string, LandCoverDatasetResult] => isLandCoverDatasetEntry(e[0], e[1]) && !!e[1] && "classes" in (e[1] as object),
+        );
+        if (datasets.length < 2) return null;
+
+        // Top 8 classes by their highest share in any one dataset, so the
+        // comparison stays readable instead of listing every class each
+        // dataset happens to detect.
+        const byClass = new Map<string, number>();
+        datasets.forEach(([, value]) => {
+          Object.entries(value.classes).forEach(([name, info]) => {
+            byClass.set(name, Math.max(byClass.get(name) ?? 0, Number(info.percentage || 0)));
+          });
+        });
+        const topClasses = [...byClass.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([name]) => name);
+        if (!topClasses.length) return null;
+
+        return (
+          <div className="card mb-4">
+            <div className="card-body">
+              <h6 className="mb-3">
+                <i className="bi bi-bar-chart-fill me-1" /> Perbandingan Antar Dataset (Top {topClasses.length} Kelas)
+              </h6>
+              <div style={{ height: Math.max(260, topClasses.length * 34) }}>
+                <Bar
+                  data={{
+                    labels: topClasses.map((name) => name.replace(/_/g, " ")),
+                    datasets: datasets.map(([key, value], i) => ({
+                      label: value.dataset_name || key.replace(/_/g, " "),
+                      data: topClasses.map((name) => Number(value.classes[name]?.percentage || 0)),
+                      backgroundColor: COMPARE_COLORS[i % COMPARE_COLORS.length],
+                    })),
+                  }}
+                  options={{
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "top" } },
+                    scales: { x: { title: { display: true, text: "% Luas AOI" } } },
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
