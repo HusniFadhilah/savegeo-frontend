@@ -2452,6 +2452,10 @@
 }
 
 .analysis-hero {
+  --analysis-hero-bg: #f6fdf8;
+  --analysis-hero-overlay: linear-gradient(100deg, rgba(246, 253, 248, 1) 0%, rgba(246, 253, 248, 0.98) 34%, rgba(246, 253, 248, 0.88) 55%, rgba(246, 253, 248, 0.64) 74%, rgba(246, 253, 248, 0.28) 100%);
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
   gap: 16px;
@@ -2460,32 +2464,68 @@
   padding: 20px;
   border: 1px solid #dbe8df;
   border-radius: 14px;
-  background:
-    linear-gradient(100deg, rgba(246, 253, 248, 0.98) 0%, rgba(240, 250, 245, 0.9) 48%, rgba(241, 248, 253, 0.45) 100%),
-    var(--analysis-hero-image) right center / auto 142% no-repeat;
+  background: var(--analysis-hero-bg);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
   overflow: hidden;
+  animation: analysisHeroIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.analysis-hero::before,
+.analysis-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.analysis-hero::before {
+  z-index: -2;
+  background: var(--analysis-hero-image) right center / cover no-repeat;
+  opacity: 0.32;
+  transform: scale(1.01);
+  transition:
+    opacity 0.45s ease,
+    transform 0.65s ease;
+}
+
+.analysis-hero::after {
+  z-index: -1;
+  background: var(--analysis-hero-overlay);
 }
 
 .analysis-hero-carbon {
-  --analysis-hero-image: url("/images/crop-monitoring-fields.jpg");
+  --analysis-hero-image: url("/images/carbon-forest-loss.jpg");
 }
 
 .analysis-hero-disaster {
-  --analysis-hero-image: url("/images/guide-hero-satellite.jpg");
+  --analysis-hero-image: url("/images/disaster-water-risk.jpg");
+  --analysis-hero-bg: #f4fbff;
+  --analysis-hero-overlay: linear-gradient(100deg, rgba(248, 252, 255, 1) 0%, rgba(248, 252, 255, 0.98) 34%, rgba(237, 247, 252, 0.88) 56%, rgba(230, 244, 249, 0.66) 74%, rgba(230, 244, 249, 0.3) 100%);
   border-color: #d8e5ef;
-  background:
-    linear-gradient(100deg, rgba(248, 252, 255, 0.98) 0%, rgba(237, 247, 252, 0.9) 48%, rgba(230, 244, 249, 0.42) 100%),
-    var(--analysis-hero-image) right center / auto 138% no-repeat;
 }
 
 .analysis-hero-lc {
-  --analysis-hero-image: url("/images/research-hero-agriculture.jpg");
+  --analysis-hero-image: url("/images/land-change-disturbance.jpg");
 }
 
 .analysis-hero-imagery {
-  --analysis-hero-image: url("/images/guide-hero-satellite.jpg");
+  --analysis-hero-image: url("/images/imagery-landsat-australia.jpg");
+  --analysis-hero-bg: #f5fcfb;
+  --analysis-hero-overlay: linear-gradient(100deg, rgba(247, 253, 251, 1) 0%, rgba(247, 253, 251, 0.98) 34%, rgba(240, 250, 247, 0.88) 56%, rgba(232, 246, 247, 0.66) 74%, rgba(232, 246, 247, 0.28) 100%);
   border-color: #d7e6ea;
+}
+
+.analysis-hero:hover {
+  border-color: rgba(46, 125, 50, 0.26);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+}
+
+.analysis-hero:hover::before {
+  opacity: 0.38;
+  transform: scale(1.035);
 }
 
 .analysis-hero-main {
@@ -2536,6 +2576,27 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
+  animation: analysisCardIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    transform 0.24s ease,
+    background-color 0.24s ease;
+}
+
+.analysis-status-card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.analysis-status-card:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.analysis-status-card:hover {
+  border-color: rgba(46, 125, 50, 0.24);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .analysis-status-card i {
@@ -2577,12 +2638,64 @@
   white-space: nowrap;
 }
 
+@keyframes analysisHeroIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes analysisCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-hero,
+  .analysis-status-card,
+  .cm-status-card,
+  .cm-hero {
+    animation: none;
+    transition: none;
+  }
+
+  .analysis-hero::before,
+  .cm-hero::before {
+    transition: none;
+    transform: none;
+  }
+
+  .analysis-hero:hover,
+  .analysis-status-card:hover,
+  .cm-status-card:hover,
+  .cm-hero:hover {
+    transform: none;
+  }
+
+  .analysis-hero:hover::before,
+  .cm-hero:hover::before {
+    transform: none;
+  }
+}
+
 /* Crop Monitoring module */
 .cm-page {
   padding: 4px 0 24px;
 }
 
 .cm-hero {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
   gap: 16px;
@@ -2591,10 +2704,46 @@
   padding: 20px;
   border: 1px solid #dbe8df;
   border-radius: 14px;
-  background:
-    linear-gradient(100deg, rgba(240, 253, 244, 0.98) 0%, rgba(240, 253, 244, 0.9) 46%, rgba(240, 253, 244, 0.42) 100%),
-    url("/images/crop-monitoring-fields.jpg") right center / auto 140% no-repeat;
+  background: #f0fdf4;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+  animation: analysisHeroIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.cm-hero::before,
+.cm-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cm-hero::before {
+  z-index: -2;
+  background: url("/images/crop-monitoring-fields.jpg") right center / cover no-repeat;
+  opacity: 0.34;
+  transform: scale(1.01);
+  transition:
+    opacity 0.45s ease,
+    transform 0.65s ease;
+}
+
+.cm-hero::after {
+  z-index: -1;
+  background: linear-gradient(100deg, rgba(240, 253, 244, 1) 0%, rgba(240, 253, 244, 0.98) 34%, rgba(240, 253, 244, 0.88) 55%, rgba(240, 253, 244, 0.64) 74%, rgba(240, 253, 244, 0.28) 100%);
+}
+
+.cm-hero:hover {
+  border-color: rgba(46, 125, 50, 0.26);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+}
+
+.cm-hero:hover::before {
+  opacity: 0.4;
+  transform: scale(1.035);
 }
 
 .cm-hero-main {
@@ -2642,6 +2791,18 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(10px);
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    transform 0.24s ease,
+    background-color 0.24s ease;
+}
+
+.cm-status-card:hover {
+  border-color: rgba(46, 125, 50, 0.24);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .cm-status-card i {
@@ -2789,9 +2950,7 @@
   padding: 30px;
   border: 1px dashed #b8d2bf;
   border-radius: 14px;
-  background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 253, 244, 0.88) 54%, rgba(240, 253, 244, 0.32) 100%),
-    url("/images/crop-monitoring-fields.jpg") right center / auto 120% no-repeat;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 252, 248, 0.96) 58%, rgba(240, 253, 244, 0.88) 100%);
 }
 
 .cm-empty-icon {
