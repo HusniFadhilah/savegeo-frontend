@@ -114,10 +114,46 @@ export default function DisasterModule() {
   }
 
   const anyLoading = sourcesLoading || alertsLoading || demLoading;
+  const configuredSources = sources ? Object.values(sources).filter((item) => item.configured).length : 0;
 
   return (
-    <div className="row g-3">
-      <div className="col-lg-3">
+    <div className="analysis-page analysis-page-disaster">
+      <section className="analysis-hero analysis-hero-disaster" aria-labelledby="disasterHeroTitle">
+        <div className="analysis-hero-main">
+          <span className="analysis-eyebrow">Pemetaan Bencana</span>
+          <h1 id="disasterHeroTitle">Pemetaan Risiko Bencana & Sumber Resmi</h1>
+          <p>
+            Gabungkan AOI, peringatan BMKG, sumber resmi, dan layer kemiringan DEM untuk membaca konteks risiko wilayah
+            secara cepat.
+          </p>
+        </div>
+        <div className="analysis-hero-status">
+          <div className="analysis-status-card">
+            <i className="bi bi-bounding-box" />
+            <div>
+              <span>AOI</span>
+              <strong>{aoi ? aoi.geometry.type : "Belum digambar"}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-database-check" />
+            <div>
+              <span>Sumber</span>
+              <strong>{sources ? `${configuredSources} aktif` : "Belum dimuat"}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-cloud-lightning-rain" />
+            <div>
+              <span>BMKG</span>
+              <strong>{alerts ? `${alerts.length} alert` : "Belum dimuat"}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="row g-3">
+        <div className="col-lg-3">
         <div className="sidebar h-100">
           <h5 className="mb-3">
             <i className="bi bi-sliders" /> Sumber Tambahan
@@ -197,6 +233,7 @@ export default function DisasterModule() {
         </MapView>
         <div className="mt-2">
           <MapLegend entries={demResult?.legend ?? []} />
+        </div>
         </div>
       </div>
     </div>

@@ -327,15 +327,54 @@ export default function LcChangeModule() {
   };
 
   const hasResults = activeYears.length >= 2 && trans != null && yearA != null && yearB != null;
+  const selectedYearRange = [...new Set(years)].sort((a, b) => a - b);
+  const yearRangeLabel = selectedYearRange.length
+    ? `${selectedYearRange[0]}-${selectedYearRange[selectedYearRange.length - 1]}`
+    : "-";
 
   const monthOptions = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des",
   ];
 
   return (
-    <div className="row g-3">
-      {/* Control panel */}
-      <div className="col-lg-3">
+    <div className="analysis-page analysis-page-lc">
+      <section className="analysis-hero analysis-hero-lc" aria-labelledby="lcChangeHeroTitle">
+        <div className="analysis-hero-main">
+          <span className="analysis-eyebrow">Perubahan Lahan</span>
+          <h1 id="lcChangeHeroTitle">Analisis Perubahan Tutupan Lahan Multi-Tahun</h1>
+          <p>
+            Bandingkan kelas tutupan lahan antarperiode, lihat transisi dominan, dan telusuri hotspot perubahan pada
+            AOI yang sama.
+          </p>
+        </div>
+        <div className="analysis-hero-status">
+          <div className="analysis-status-card">
+            <i className="bi bi-vector-pen" />
+            <div>
+              <span>AOI</span>
+              <strong>{aoiState?.areaKm2 != null ? `${aoiState.areaKm2.toFixed(2)} km2` : "Belum digambar"}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-layers" />
+            <div>
+              <span>Dataset</span>
+              <strong>{dataset.replace(/_/g, " ")}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-calendar-range" />
+            <div>
+              <span>Tahun</span>
+              <strong>{yearRangeLabel}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="row g-3">
+        {/* Control panel */}
+        <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">
             <i className="fas fa-cog" /> Pengaturan
@@ -762,6 +801,7 @@ export default function LcChangeModule() {
             changeMapError={null}
           />
         )}
+        </div>
       </div>
     </div>
   );

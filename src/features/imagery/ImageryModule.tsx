@@ -232,8 +232,43 @@ export default function ImageryModule() {
   );
 
   return (
-    <div className="row g-3">
-      <div className="col-lg-3">
+    <div className="analysis-page analysis-page-imagery">
+      <section className="analysis-hero analysis-hero-imagery" aria-labelledby="imageryHeroTitle">
+        <div className="analysis-hero-main">
+          <span className="analysis-eyebrow">Citra Satelit</span>
+          <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit Mentah</h1>
+          <p>
+            Cari scene berdasarkan tanggal akuisisi, cek awan, lalu tampilkan citra true-color asli atau bandingkan dua
+            scene secara berdampingan.
+          </p>
+        </div>
+        <div className="analysis-hero-status">
+          <div className="analysis-status-card">
+            <i className="bi bi-bounding-box-circles" />
+            <div>
+              <span>AOI</span>
+              <strong>{aoi ? aoi.geometry.type : "Belum digambar"}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-satellite" />
+            <div>
+              <span>Satelit</span>
+              <strong>{satelliteMeta?.name ?? satellite}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-images" />
+            <div>
+              <span>Scene</span>
+              <strong>{searched ? `${sortedScenes.length} ditemukan` : "Belum dicari"}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="row g-3">
+        <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">
             <i className="fas fa-camera" /> Citra Satelit
@@ -558,6 +593,7 @@ export default function ImageryModule() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

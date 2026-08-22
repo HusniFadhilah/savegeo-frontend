@@ -363,10 +363,54 @@ export default function CarbonModule() {
         ? boundsToPayload(aoi.bounds)
         : null
     : null;
+  const analysisTypeLabel =
+    analysisType === "carbon"
+      ? "Carbon Stock"
+      : analysisType === "vegetation"
+        ? "Vegetation"
+        : analysisType === "landcover"
+          ? "Land Cover"
+          : "Combined";
+  const carbonPeriodLabel = deltaEnabled && analysisType === "carbon" ? `${deltaStartYear}-${deltaEndYear}` : String(year);
 
   return (
-    <div className="row g-3">
-      <div className="col-lg-3">
+    <div className="analysis-page analysis-page-carbon">
+      <section className="analysis-hero analysis-hero-carbon" aria-labelledby="carbonHeroTitle">
+        <div className="analysis-hero-main">
+          <span className="analysis-eyebrow">Estimasi Stok Karbon</span>
+          <h1 id="carbonHeroTitle">Estimasi Stok Karbon Berbasis Citra Satelit</h1>
+          <p>
+            Hitung cadangan karbon, indeks vegetasi, dan tutupan lahan dari AOI yang sama dengan model analitik yang
+            dapat dibandingkan per tahun.
+          </p>
+        </div>
+        <div className="analysis-hero-status">
+          <div className="analysis-status-card">
+            <i className="bi bi-bounding-box-circles" />
+            <div>
+              <span>AOI</span>
+              <strong>{aoi?.name ?? "Belum dipilih"}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-cpu" />
+            <div>
+              <span>Analisis</span>
+              <strong>{analysisTypeLabel}</strong>
+            </div>
+          </div>
+          <div className="analysis-status-card">
+            <i className="bi bi-calendar3" />
+            <div>
+              <span>Periode</span>
+              <strong>{carbonPeriodLabel}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="row g-3">
+        <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">
             <i className="bi bi-gear-fill me-1" /> Pengaturan
@@ -611,6 +655,7 @@ export default function CarbonModule() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
