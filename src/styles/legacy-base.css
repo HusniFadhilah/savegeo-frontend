@@ -401,16 +401,22 @@ body {
 .app-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 18px;
   margin-top: auto;
   padding: 14px 18px;
   border-top: 1px solid #dfe8e2;
   background: #ffffff;
   color: #52615a;
-  text-align: center;
   box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.app-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-align: left;
 }
 
 .app-footer-logos {
@@ -429,21 +435,31 @@ body {
   padding: 4px;
 }
 
-.app-footer strong,
-.app-footer span {
+.app-footer-brand strong,
+.app-footer-brand span {
   display: block;
 }
 
-.app-footer strong {
+.app-footer-brand strong {
   color: var(--primary-dark);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   font-weight: 850;
 }
 
-.app-footer span {
+.app-footer-brand span {
   margin-top: 2px;
+  color: #64748b;
   font-size: 0.76rem;
   line-height: 1.45;
+}
+
+.app-footer-copy {
+  flex: none;
+  margin: 0;
+  color: #52615a;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-align: right;
 }
 
 /* Module containers */
@@ -1038,10 +1054,14 @@ body {
   }
 
   .app-footer {
-    align-items: center;
+    align-items: flex-start;
     flex-direction: column;
     gap: 8px;
     padding-bottom: 18px;
+  }
+
+  .app-footer-copy {
+    text-align: left;
   }
 }
 

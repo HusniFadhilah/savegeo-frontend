@@ -69,14 +69,19 @@ export default function DashboardPage() {
             })}
           </main>
           <footer className="app-footer">
-            <div className="app-footer-logos" aria-label="Mitra SaveGeo">
-              <img src={UNDIP_LOGO_URL} alt="Universitas Diponegoro" />
-              <img src={LEN_LOGO_URL} alt="PT LEN Industri" />
+            <div className="app-footer-brand">
+              <div className="app-footer-logos" aria-label="Mitra SaveGeo">
+                <img src={UNDIP_LOGO_URL} alt="Universitas Diponegoro" />
+                <img src={LEN_LOGO_URL} alt="PT LEN Industri" />
+              </div>
+              <div>
+                <strong>SaveGeo</strong>
+                <span>Geospatial System for Vegetation, Land Cover, and Carbon Estimation</span>
+              </div>
             </div>
-            <div>
-              <strong>SaveGeo</strong>
-              <span>Copyright &copy; 2025-{new Date().getFullYear()} Universitas Diponegoro & PT LEN Industri.</span>
-            </div>
+            <p className="app-footer-copy">
+              Copyright &copy; 2025-{new Date().getFullYear()} Universitas Diponegoro & PT LEN Industri.
+            </p>
           </footer>
         </div>
       </div>
