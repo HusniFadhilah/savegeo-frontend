@@ -65,7 +65,11 @@ const DATASET_DOCS = [
     resolution: "10-20m",
     period: "2015-sekarang",
     usedFor: "Indeks vegetasi, komposit optik, prediktor model karbon, crop health.",
-    notes: "Menggunakan cloud masking dan composite median agar citra tropis lebih stabil.",
+    method: "Optical multispectral, 13 band; cloud masking dan median composite untuk periode analisis.",
+    accuracy: "Akurasi radiometrik MSI <5% (goal 3%); kualitas hasil bergantung masking awan dan musim.",
+    sourceUrl: "https://dataspace.copernicus.eu/data-collections/copernicus-sentinel-missions/sentinel-2",
+    paperUrl: "https://s2.pages.eopf.copernicus.eu/pdfs-adfs/MSI/index.html",
+    notes: "Band 10/20/60m; revisit konstelasi sekitar 5 hari.",
   },
   {
     group: "Citra Satelit",
@@ -73,7 +77,11 @@ const DATASET_DOCS = [
     resolution: "10m",
     period: "2014-sekarang",
     usedFor: "Informasi radar untuk kelembaban permukaan, banjir, dan zona produktivitas.",
-    notes: "Lebih tahan awan dibanding citra optik; dipakai sebagai sumber pendukung.",
+    method: "C-band SAR GRD; backscatter VV/VH untuk indikator permukaan dan kelembaban.",
+    accuracy: "Tidak punya OA klasifikasi tunggal; robust terhadap awan, tetapi sensitif terhadap speckle/geometri.",
+    sourceUrl: "https://sentinels.copernicus.eu/copernicus/sentinel-1",
+    paperUrl: "https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD",
+    notes: "Dipakai sebagai layer pendukung ketika citra optik berawan.",
   },
   {
     group: "Land Cover",
@@ -81,7 +89,11 @@ const DATASET_DOCS = [
     resolution: "10m",
     period: "Near real-time",
     usedFor: "Klasifikasi tutupan lahan dinamis dan analisis perubahan cepat.",
-    notes: "Cocok untuk pemantauan aktual; mode kelas mayoritas lebih stabil untuk ringkasan.",
+    method: "Deep learning pada Sentinel-2 L1C; menghasilkan label top-1 dan probabilitas 9 kelas.",
+    accuracy: "Paper validasi global: single-date agreement mendekati konsensus annotator; studi pembanding melaporkan OA ~72%.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1",
+    paperUrl: "https://doi.org/10.1038/s41597-022-01307-4",
+    notes: "Mode kelas mayoritas lebih stabil untuk ringkasan multi-temporal.",
   },
   {
     group: "Land Cover",
@@ -89,7 +101,11 @@ const DATASET_DOCS = [
     resolution: "10m",
     period: "2020-2021",
     usedFor: "Baseline tutupan lahan global resolusi tinggi.",
-    notes: "Baik untuk pembanding kelas permukiman, vegetasi, lahan terbuka, dan air.",
+    method: "Random Forest berbasis Sentinel-1 dan Sentinel-2; produk tahunan global 11 kelas.",
+    accuracy: "Validasi resmi: OA 74.4% (2020 v100) dan 76.7% (2021 v200).",
+    sourceUrl: "https://esa-worldcover.org/en/data-access",
+    paperUrl: "https://doi.org/10.3390/rs14164101",
+    notes: "Perbandingan 2020 vs 2021 perlu hati-hati karena versi algoritma berbeda.",
   },
   {
     group: "Land Cover",
@@ -97,15 +113,23 @@ const DATASET_DOCS = [
     resolution: "10m",
     period: "Tahunan / time-series",
     usedFor: "LULC tahunan, validasi silang, dan visualisasi perubahan.",
-    notes: "Tersedia via GEE Community Catalog atau ArcGIS Living Atlas sesuai konfigurasi.",
+    method: "Deep learning Sentinel-2; kelas global tahunan untuk peta 10m.",
+    accuracy: "Impact Observatory menyebut Maps for Good 85%; studi pembanding global melaporkan Esri OA ~75%.",
+    sourceUrl: "https://livingatlas.arcgis.com/landcover/",
+    paperUrl: "https://doi.org/10.3390/rs14164101",
+    notes: "Dipakai sebagai pembanding tahunan; cakupan/kelas dapat berbeda dari Dynamic World/WorldCover.",
   },
   {
     group: "Land Cover",
-    name: "MODIS, Copernicus, GLC_FCS30D, JAXA, MapBiomas, JRC TMF",
-    resolution: "25-500m",
+    name: "MODIS MCD12Q1",
+    resolution: "500m",
     period: "Bervariasi",
-    usedFor: "Pembanding multi-skala, forest/non-forest, mangrove, moist forest, dan LULC historis.",
-    notes: "Dipakai sesuai ketersediaan tahun, cakupan wilayah, dan tujuan analisis.",
+    usedFor: "Pembanding historis multi-skala dan time-series tutupan lahan.",
+    method: "Supervised classification MODIS tahunan dengan beberapa skema kelas IGBP/UMD/LAI.",
+    accuracy: "Akurasi bervariasi per kelas/region; resolusi kasar, gunakan untuk konteks regional.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MCD12Q1",
+    paperUrl: "https://doi.org/10.1016/j.rse.2010.07.013",
+    notes: "Tidak cocok untuk detail lahan kecil karena resolusi 500m.",
   },
   {
     group: "Carbon Reference",
@@ -113,7 +137,23 @@ const DATASET_DOCS = [
     resolution: "300m",
     period: "2010",
     usedFor: "Baseline densitas karbon global untuk estimasi stok karbon.",
-    notes: "Dataset fallback utama pada katalog karbon.",
+    method: "Kompilasi dataset biomassa publik + ESA CCI land cover; BGB dari rasio root-to-shoot IPCC.",
+    accuracy: "Katalog GEE menyatakan dataset ini belum divalidasi; gunakan sebagai baseline kasar.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/WCMC_biomass_carbon_density_v1_0",
+    paperUrl: "https://doi.org/10.1098/rstb.2019.0128",
+    notes: "AGB+BGB dalam tonnes C/ha; tidak langsung sebanding dengan AGB-only.",
+  },
+  {
+    group: "Carbon Reference",
+    name: "ORNL / Spawn Biomass Carbon",
+    resolution: "300m",
+    period: "2010",
+    usedFor: "AGB, BGB, atau kombinasi AGB+BGB untuk referensi karbon global.",
+    method: "Harmonisasi peta biomassa berbasis remote sensing dan model empiris per land-cover.",
+    accuracy: "Menyediakan uncertainty pixel-level; validasi bergantung produk input per kelas lahan.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/NASA_ORNL_biomass_carbon_density_v1",
+    paperUrl: "https://doi.org/10.1038/s41597-020-0444-4",
+    notes: "Band agb/bgb sudah dalam Mg C/ha.",
   },
   {
     group: "Carbon Reference",
@@ -121,7 +161,11 @@ const DATASET_DOCS = [
     resolution: "1km",
     period: "2019-2023",
     usedFor: "Referensi biomassa dari lidar ruang angkasa, terutama area berhutan.",
-    notes: "Bagus untuk validasi area forest; resolusi lebih kasar daripada Sentinel-2.",
+    method: "Spaceborne lidar; L4B mengestimasi mean AGBD grid 1 km dari footprint GEDI L4A.",
+    accuracy: "Produk menyertakan standard error, percentage SE, dan quality flag; requirement GEDI L1: 20 Mg/ha atau 20%.",
+    sourceUrl: "https://doi.org/10.3334/ORNLDAAC/2017",
+    paperUrl: "https://daacweb-prod.ornl.gov/GEDI/guides/GEDI_L4B_Gridded_Biomass.html",
+    notes: "Cakupan nominal lintang ~52S sampai 52N; tidak wall-to-wall seperti citra optik.",
   },
   {
     group: "Carbon Reference",
@@ -129,23 +173,71 @@ const DATASET_DOCS = [
     resolution: "100m",
     period: "2010-2020",
     usedFor: "Above-ground biomass annual map untuk kalibrasi karbon.",
-    notes: "Direkomendasikan saat butuh baseline AGB tahunan yang lebih detail.",
+    method: "Multi-sensor biomass CCI; AGB (Mg biomass/ha) dikonversi ke karbon dengan faktor 0.47.",
+    accuracy: "Menyediakan layer standard error; akurasi bervariasi menurut biome dan kepadatan tutupan.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/ESA_CCI_Above_Ground_Biomass_V6_0",
+    paperUrl: "https://esa-cci.github.io/cci-notebook-viewers/external-notebooks/esa-cci/cci-notebooks/notebooks/biomass-cci/",
+    notes: "Gunakan tahun tersedia; tidak semua tahun kontinu di semua versi asset.",
   },
   {
     group: "Soil Carbon",
-    name: "OpenLandMap SOC & SoilGrids SOC",
+    name: "OpenLandMap SOC",
     resolution: "250m",
-    period: "2017 / multi-source",
-    usedFor: "Estimasi soil organic carbon dan statistik karbon tanah.",
-    notes: "SoilGrids dipakai untuk statistik titik; OpenLandMap tersedia untuk model GEE-deployable.",
+    period: "2019 / multi-source",
+    usedFor: "Soil organic carbon untuk indikator tanah dan model SOC.",
+    method: "Prediksi SOC berbasis machine learning dari profil tanah dan covariate lingkungan.",
+    accuracy: "Evaluasi mengikuti SoilGrids/OpenLandMap model; unit g/kg, bukan stok Mg C/ha.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/OpenLandMap_SOL_SOL_ORGANIC-CARBON_USDA-6A1C_M_v02",
+    paperUrl: "https://doi.org/10.1371/journal.pone.0169748",
+    notes: "Perlu bulk density dan kedalaman untuk konversi ke stok karbon tanah.",
+  },
+  {
+    group: "Soil Carbon",
+    name: "SoilGrids SOC",
+    resolution: "250m",
+    period: "2017 / v2.0",
+    usedFor: "Statistik titik SOC 0-30cm dan referensi tanah global.",
+    method: "Machine learning ensemble dari profil tanah global dan covariate lingkungan.",
+    accuracy: "Paper SoilGrids memakai repeated 10-fold cross-validation, melaporkan R2/RMSE per properti.",
+    sourceUrl: "https://www.isric.org/explore/soilgrids",
+    paperUrl: "https://doi.org/10.1371/journal.pone.0169748",
+    notes: "Di aplikasi dipakai untuk statistik titik; bukan layer tile peta.",
   },
   {
     group: "Crop Monitoring",
-    name: "CHIRPS, ERA5-Land, Open-Meteo Archive",
-    resolution: "Harian / agregat",
-    period: "Historis",
+    name: "CHIRPS Daily",
+    resolution: "0.05 derajat",
+    period: "1981-sekarang",
     usedFor: "Curah hujan, hari kering, indikator cuaca, dan risiko kekeringan.",
-    notes: "GEE path memakai CHIRPS/ERA5-Land; Open-Meteo tersedia sebagai opsi tanpa API key.",
+    method: "Blend thermal infrared precipitation estimate dengan observasi stasiun hujan.",
+    accuracy: "Kinerja bergantung densitas stasiun; CHIRPS menyediakan seri panjang untuk drought monitoring.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY",
+    paperUrl: "https://doi.org/10.1038/sdata.2015.66",
+    notes: "Cocok untuk agregasi harian/pentad/bulanan pada crop monitoring.",
+  },
+  {
+    group: "Crop Monitoring",
+    name: "ERA5-Land",
+    resolution: "0.1 derajat",
+    period: "Historis",
+    usedFor: "Suhu, kelembaban, evapotranspirasi, dan variabel meteorologi pendukung.",
+    method: "Reanalysis ECMWF land-surface, agregasi harian dari model cuaca dan observasi asimilatif.",
+    accuracy: "Bukan observasi langsung; bias lokal perlu dipertimbangkan untuk keputusan lapangan.",
+    sourceUrl: "https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR",
+    paperUrl: "https://doi.org/10.5194/essd-13-4349-2021",
+    notes: "Baik untuk indikator regional ketika data stasiun lokal tidak tersedia.",
+  },
+  {
+    group: "Crop Monitoring",
+    name: "Open-Meteo Archive",
+    resolution: "API titik/grid",
+    period: "Historis",
+    usedFor: "Fallback cuaca tanpa API key untuk crop monitoring.",
+    method: "API agregasi model/reanalysis cuaca historis.",
+    accuracy: "Tergantung sumber model yang dipilih Open-Meteo; gunakan sebagai pendukung, bukan validasi lapangan.",
+    sourceUrl: "https://open-meteo.com/en/docs/historical-weather-api",
+    paperUrl: "https://open-meteo.com/",
+    notes: "Opsi praktis untuk demo dan fallback konektivitas.",
   },
 ];
 
@@ -193,12 +285,29 @@ export default function GuideModule() {
   const [openId, setOpenId] = useState<StepId>("step1");
   const toggle = (id: StepId) => setOpenId((cur) => (cur === id ? ("" as StepId) : id));
   const [paramTab, setParamTab] = useState<ParamKey>("veg");
+  const [datasetSearch, setDatasetSearch] = useState("");
+  const datasetQuery = datasetSearch.trim().toLowerCase();
+  const filteredDatasetDocs = DATASET_DOCS.filter((dataset) =>
+    [
+      dataset.group,
+      dataset.name,
+      dataset.resolution,
+      dataset.period,
+      dataset.usedFor,
+      dataset.method,
+      dataset.accuracy,
+      dataset.notes,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(datasetQuery),
+  );
 
   return (
-    <div className="guide-page container-fluid mt-4">
-      <div className="guide-hero">
+    <div className="guide-page container-fluid mt-2">
+      <div className="guide-hero mb-3">
         <div className="guide-hero-icon">
-          <i className="bi bi-book-fill" />
+          <i className="bi bi-journal-text" />
         </div>
         <div className="guide-hero-body">
           <span className="guide-hero-eyebrow">Panduan Pengguna</span>
@@ -533,71 +642,104 @@ export default function GuideModule() {
             <h3>
               <i className="bi bi-play-fill" /> Menjalankan Analisis
             </h3>
-            <ol>
-              <li>Pastikan AOI sudah dipilih (terlihat di peta)</li>
-              <li>Pastikan parameter sudah diatur</li>
-              <li>
-                Klik tombol <strong>&quot;Jalankan Analisis&quot;</strong>
-              </li>
-              <li>Tunggu proses selesai (1-5 menit tergantung kompleksitas)</li>
-              <li>Loading indicator akan menunjukkan progress</li>
-            </ol>
+            <div className="guide-run-grid">
+              <div className="guide-run-step">
+                <span>1</span>
+                <strong>Cek AOI</strong>
+                <p>Pastikan area sudah dipilih dan luasnya wajar untuk jenis analisis.</p>
+              </div>
+              <div className="guide-run-step">
+                <span>2</span>
+                <strong>Cek Parameter</strong>
+                <p>Pilih dataset, tahun/periode, cloud threshold, model, dan opsi layer.</p>
+              </div>
+              <div className="guide-run-step">
+                <span>3</span>
+                <strong>Jalankan</strong>
+                <p>Klik tombol <strong>Jalankan Analisis</strong> dan biarkan proses berjalan sampai selesai.</p>
+              </div>
+              <div className="guide-run-step">
+                <span>4</span>
+                <strong>Review Output</strong>
+                <p>Baca peta, statistik, chart, dan catatan peringatan sebelum export.</p>
+              </div>
+            </div>
             <Note tone="info" title="Waktu Processing:">
               AOI kecil &amp; kondisi cuaca cerah di sisi cepat; AOI besar, banyak awan, atau server sibuk bisa
               mendekati batas atas.
             </Note>
-            <ul className="guide-timing-list">
-              <li>Vegetation: ~30 detik - 5 menit</li>
-              <li>Land Cover (satu tahun): ~1-3 menit</li>
-              <li>
-                Perbandingan LC-Change (multi-tahun): 1 request per tahun (~1-2 menit/tahun) - <em>bukan</em> sekali
-                jalan, jadi 5 tahun bisa ~5-10 menit total
-              </li>
-              <li>Carbon: ~2-8 menit (bisa sampai ~11 menit untuk AOI besar sebelum timeout)</li>
-              <li>Carbon time-series/delta (multi-tahun): sampai ~15 menit (mengulang proses per tahun)</li>
-              <li>Combined: ~5-15 menit, tergantung berapa banyak analisis digabung</li>
-            </ul>
+            <div className="guide-timing-grid">
+              <div>
+                <strong>Vegetation</strong>
+                <span>~30 detik - 5 menit</span>
+              </div>
+              <div>
+                <strong>Land Cover</strong>
+                <span>~1-3 menit per tahun</span>
+              </div>
+              <div>
+                <strong>LC-Change</strong>
+                <span>~1-2 menit/tahun; 5 tahun bisa ~5-10 menit</span>
+              </div>
+              <div>
+                <strong>Carbon</strong>
+                <span>~2-8 menit; AOI besar bisa mendekati timeout</span>
+              </div>
+              <div>
+                <strong>Carbon time-series</strong>
+                <span>sampai ~15 menit karena proses diulang per tahun</span>
+              </div>
+              <div>
+                <strong>Combined</strong>
+                <span>~5-15 menit sesuai jumlah analisis</span>
+              </div>
+            </div>
           </div>
 
           <div className="guide-block">
             <h3>
               <i className="bi bi-bar-chart-fill" /> Membaca Hasil Analisis
             </h3>
-            <div className="guide-results-grid">
-              <div>
-                <h4>1. Results Map</h4>
+            <div className="guide-read-grid">
+              <div className="guide-read-card">
+                <i className="bi bi-map-fill" />
+                <h4>Results Map</h4>
                 <ul>
                   <li>Tab untuk setiap layer hasil</li>
                   <li>Peta interaktif dengan zoom/pan</li>
                   <li>Legend menunjukkan skala nilai</li>
                 </ul>
               </div>
-              <div>
-                <h4>2. Metrics Cards</h4>
+              <div className="guide-read-card">
+                <i className="bi bi-speedometer2" />
+                <h4>Metrics Cards</h4>
                 <ul>
                   <li>Ringkasan nilai utama</li>
                   <li>Jumlah citra, area total, nilai rata-rata</li>
                   <li>Badge berwarna untuk interpretasi cepat</li>
                 </ul>
               </div>
-              <div>
-                <h4>3. Statistics Table</h4>
+              <div className="guide-read-card">
+                <i className="bi bi-table" />
+                <h4>Statistics Table</h4>
                 <ul>
                   <li>Detail statistik per indeks/kelas</li>
                   <li>Min, Mean, Max, Std Dev</li>
                   <li>Deskripsi untuk setiap metrik</li>
                 </ul>
               </div>
-              <div>
-                <h4>4. Charts & Visualization</h4>
+              <div className="guide-read-card">
+                <i className="bi bi-bar-chart-fill" />
+                <h4>Charts & Visualization</h4>
                 <ul>
                   <li>Bar chart untuk perbandingan</li>
                   <li>Pie chart untuk distribusi (land cover)</li>
                   <li>Line chart untuk trend (time series)</li>
                 </ul>
               </div>
-              <div>
-                <h4>5. Carbon-Specific Results</h4>
+              <div className="guide-read-card guide-read-card-wide">
+                <i className="bi bi-tree-fill" />
+                <h4>Carbon-Specific Results</h4>
                 <ul>
                   <li>
                     <strong>Carbon Density:</strong> Mean, Std Dev, Min, Max (Mg/ha)
@@ -778,9 +920,24 @@ export default function GuideModule() {
         </div>
 
         <div className="guide-doc-card">
-          <h3>
-            <i className="bi bi-database-fill" /> Dataset
-          </h3>
+          <div className="guide-doc-toolbar">
+            <h3>
+              <i className="bi bi-database-fill" /> Dataset
+            </h3>
+            <label className="guide-doc-search">
+              <i className="bi bi-search" />
+              <input
+                type="search"
+                value={datasetSearch}
+                onChange={(e) => setDatasetSearch(e.target.value)}
+                placeholder="Cari dataset, metode, akurasi..."
+                aria-label="Cari dokumentasi dataset"
+              />
+            </label>
+          </div>
+          <div className="guide-doc-meta">
+            Menampilkan <strong>{filteredDatasetDocs.length}</strong> dari <strong>{DATASET_DOCS.length}</strong> dataset.
+          </div>
           <div className="guide-table-wrap">
             <table className="guide-table guide-doc-table">
               <thead>
@@ -790,11 +947,13 @@ export default function GuideModule() {
                   <th>Resolusi</th>
                   <th>Periode</th>
                   <th>Dipakai Untuk</th>
-                  <th>Catatan</th>
+                  <th>Metode</th>
+                  <th>Akurasi / Validasi</th>
+                  <th>Sumber</th>
                 </tr>
               </thead>
               <tbody>
-                {DATASET_DOCS.map((dataset) => (
+                {filteredDatasetDocs.map((dataset) => (
                   <tr key={`${dataset.group}-${dataset.name}`}>
                     <td>
                       <span className="guide-doc-badge">{dataset.group}</span>
@@ -805,9 +964,30 @@ export default function GuideModule() {
                     <td>{dataset.resolution}</td>
                     <td>{dataset.period}</td>
                     <td>{dataset.usedFor}</td>
-                    <td>{dataset.notes}</td>
+                    <td>
+                      {dataset.method}
+                      <small>{dataset.notes}</small>
+                    </td>
+                    <td>{dataset.accuracy}</td>
+                    <td>
+                      <div className="guide-doc-links">
+                        <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">
+                          Dataset
+                        </a>
+                        <a href={dataset.paperUrl} target="_blank" rel="noreferrer">
+                          Paper/Dok.
+                        </a>
+                      </div>
+                    </td>
                   </tr>
                 ))}
+                {filteredDatasetDocs.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="guide-empty-cell">
+                      Tidak ada dataset yang cocok dengan pencarian.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

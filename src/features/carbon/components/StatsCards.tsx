@@ -42,7 +42,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
     const avgMean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
     cards.push(
       <MetricCard key="veg-images" icon="bi-images" value={results.vegetation.collection_size ?? 0} label="Citra Ditemukan" />,
-      <MetricCard key="veg-count" icon="bi-flower1" value={Object.keys(idx).length} label="Indeks Dianalisis" />,
+      <MetricCard key="veg-count" icon="bi-flower21" value={Object.keys(idx).length} label="Indeks Dianalisis" />,
       <MetricCard key="veg-mean" icon="bi-graph-up" value={avgMean.toFixed(3)} label="Rata-rata Nilai" />,
     );
   }
@@ -148,7 +148,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
   }
 
   const timeSections = [
-    { key: "vegetation" as const, icon: "bi-flower1", label: "Vegetasi", color: "#43a047" },
+    { key: "vegetation" as const, icon: "bi-flower21", label: "Vegetasi", color: "#43a047" },
     { key: "landcover" as const, icon: "bi-map", label: "Tutupan Lahan", color: "#1e88e5" },
     { key: "carbon" as const, icon: "bi-tree", label: "Karbon", color: "#fb8c00" },
     { key: "total" as const, icon: "bi-stopwatch", label: "Total Waktu", color: "#1e88e5" },

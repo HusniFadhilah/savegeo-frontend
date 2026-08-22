@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
-import MapView from "@/components/map/MapView";
-import BasemapSwitcher from "@/components/map/BasemapSwitcher";
-import AoiDrawingTools, { SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
+import { useEffect, useState } from "react";
+import AoiPickerModal from "@/components/map/AoiPickerModal";
 import AoiUploadTab from "@/features/carbon/components/AoiUploadTab";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useFieldStore } from "@/hooks/useFieldStore";
 import { ApiError } from "@/services/apiClient";
+import type { AoiState } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
 import type { Commodity, Field } from "../types";
 
@@ -19,11 +17,9 @@ type TabKey = "draw" | "upload" | "existing";
 
 /**
  * AOI draw/upload for a brand-new Field, or picking an already-saved one.
- * Embeds its own <MapView> + AoiDrawingTools (own FeatureGroup ref), same
- * pattern as features/carbon/components/AoiPanel.tsx, but only 2 AOI input
- * tabs (draw/upload) - Indonesia Admin/Coordinate/Company boundary tabs are
- * out of scope for this module (Fields are field-scale polygons, not
- * administrative regions).
+ * Drawing opens a wide modal map so the crop workflow sidebar stays compact.
+ * Indonesia Admin/Coordinate/Company boundary tabs are out of scope for this
+ * module (Fields are field-scale polygons, not administrative regions).
  */
 export default function FieldPanel({ commodities }: Props) {
   const aoi = useAoiStore((s) => s.aoi);
@@ -32,7 +28,7 @@ export default function FieldPanel({ commodities }: Props) {
     useFieldStore();
 
   const [activeTab, setActiveTab] = useState<TabKey>("existing");
-  const groupRef = useRef<L.FeatureGroup | null>(null);
+  const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [commodity, setCommodity] = useState("");
@@ -63,6 +59,11 @@ export default function FieldPanel({ commodities }: Props) {
     const bounds = boundsFromGeoJSON(feature);
     const area = areaKm2(feature, bounds);
     setAoi({ source: "upload", name: fileName, areaKm2: area, feature, bounds });
+  }
+
+  function handleModalAoiChange(nextAoi: AoiState | null) {
+    if (selectedField) clearSelection();
+    setAoi(nextAoi);
   }
 
   async function handleSaveField() {
@@ -172,23 +173,10 @@ export default function FieldPanel({ commodities }: Props) {
         )}
 
         {activeTab === "draw" && (
-          <div className="alert alert-info py-2 small mb-3">
-            <i className="bi bi-info-circle me-1" />
-            Gambar polygon/rectangle batas lahan langsung di peta di bawah.
-          </div>
+          <button type="button" className="btn btn-outline-success w-100 mb-3" onClick={() => setAoiModalOpen(true)}>
+            <i className="bi bi-vector-pen me-1" /> Buka Peta AOI
+          </button>
         )}
-
-        {/* Map stays mounted regardless of active tab (matches AoiPanel.tsx's
-            pattern) - only the tab switches which input form shows above it.
-            Keeping it tab-gated meant picking an existing Field (the default
-            "existing" tab) set the AOI in the store correctly but showed no
-            map anywhere to reflect it - looked like the AOI silently failed
-            to load. */}
-        <MapView id="cropFieldMap">
-          <BasemapSwitcher />
-          <AoiDrawingTools onChange={handleDrawChange} externalGroupRef={groupRef} />
-          <SyncAoiToGroup aoi={aoi?.feature ?? null} groupRef={groupRef} />
-        </MapView>
 
         {aoi && (
           <div className="alert alert-success mt-3 mb-0 py-2">
@@ -254,6 +242,16 @@ export default function FieldPanel({ commodities }: Props) {
           </div>
         )}
       </div>
+
+      <AoiPickerModal
+        open={aoiModalOpen}
+        id="cropFieldAoiModalMap"
+        title="Gambar Batas Lahan"
+        description="Pilih wilayah, koordinat, gambar polygon/rectangle, unggah file, atau gunakan batas perusahaan."
+        aoi={aoi}
+        onAoiChange={handleModalAoiChange}
+        onClose={() => setAoiModalOpen(false)}
+      />
     </div>
   );
 }

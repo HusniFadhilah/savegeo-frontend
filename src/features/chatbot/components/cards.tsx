@@ -240,7 +240,7 @@ export function BoundaryDownloadCard({
   );
 }
 
-/* ── Geo-AI Assistant result cards (spec section 14) ────────────────
+/* ── SaveGeo Assistant result cards (spec section 14) ────────────────
  * Rendered from `resultCard` LogEntry items - one per entry in a geoai-mode
  * response's `cards[]`. Every card carries its `source` for provenance
  * (spec section 10 - "never invent numbers"), shown as a small footer note.

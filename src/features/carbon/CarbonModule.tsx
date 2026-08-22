@@ -409,7 +409,7 @@ export default function CarbonModule() {
         </div>
       </section>
 
-      <div className="row g-3">
+      <div className="row g-3 align-items-start">
         <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">

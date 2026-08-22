@@ -8,10 +8,10 @@ import type { Language } from "@/i18n/translations";
 const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
   { id: "carbon", icon: "bi-tree-fill", labelKey: "sidebar.carbon" },
   { id: "lc-change", icon: "bi-arrow-left-right", labelKey: "sidebar.landChangeShort" },
-  { id: "imagery", icon: "bi-camera-fill", labelKey: "sidebar.imagery" },
-  { id: "disaster", icon: "bi-exclamation-triangle-fill", labelKey: "sidebar.disaster" },
-  { id: "crop-monitoring", icon: "bi-flower1", labelKey: "sidebar.cropMonitoring" },
-  { id: "guide", icon: "bi-book-fill", labelKey: "sidebar.guide" },
+  { id: "imagery", icon: "bi-camera", labelKey: "sidebar.imagery" },
+  { id: "disaster", icon: "bi-activity", labelKey: "sidebar.disaster" },
+  { id: "crop-monitoring", icon: "bi-flower2", labelKey: "sidebar.cropMonitoring" },
+  { id: "guide", icon: "bi-journal-text", labelKey: "sidebar.guide" },
   { id: "about", icon: "bi-info-circle-fill", labelKey: "sidebar.about" },
 ];
 

@@ -46,7 +46,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
       });
     }
     for (const [index, stats] of Object.entries(results.vegetation.indices || {})) {
-      tabs.push({ key: index, label: index, icon: "bi-flower1", tileUrl: stats.tile_url });
+      tabs.push({ key: index, label: index, icon: "bi-flower21", tileUrl: stats.tile_url });
     }
   }
 

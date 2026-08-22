@@ -2,7 +2,7 @@ import L from "leaflet";
 import { RESULT_PANE } from "@/config/mapPanes";
 
 /**
- * Real map zoom/highlight actions for the Geo-AI Assistant (spec section 3),
+ * Real map zoom/highlight actions for the SaveGeo Assistant (spec section 3),
  * on top of the actual Leaflet map instance(s) the app already creates via
  * react-leaflet's MapView (see components/map/MapView.tsx). There are two
  * separate map instances in this app - the AOI-drawing map

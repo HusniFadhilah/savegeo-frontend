@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
-import AoiDrawingTools, { SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
 import MapLegend from "@/components/map/MapLegend";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
@@ -52,12 +51,8 @@ interface Props {
 
 /**
  * Two side-by-side Leaflet maps (before = yearA, after = yearB), each its
- * own MapView instance per the app's shared map primitives. AOI is drawn
- * once on the "before" map only (drawing it twice would be redundant) - the
- * legacy module read a shared `currentAOI` global set by the Carbon module,
- * but this app has no cross-module AOI store yet, so LC-Change owns its AOI
- * independently (see module report for the recommended shared-store
- * follow-up).
+ * own MapView instance per the app's shared map primitives. AOI editing now
+ * happens in the module-level AOI modal; these maps focus on preview/results.
  */
 export default function BeforeAfterMaps({
   aoi,
@@ -75,11 +70,6 @@ export default function BeforeAfterMaps({
   const beforeTile = (yearA != null ? yearData[yearA]?.tile_url : null) ?? changeMapData?.from_tile_url ?? null;
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? null : afterRawTile;
-
-  const drawGroupRef = useRef<L.FeatureGroup | null>(null);
-  useEffect(() => {
-    if (!aoi) drawGroupRef.current?.clearLayers();
-  }, [aoi]);
 
   const beforeLegend = classLegend(yearA != null ? yearData[yearA]?.classes : undefined);
   const afterLegend = classLegend(yearB != null ? yearData[yearB]?.classes : undefined);
@@ -158,8 +148,7 @@ export default function BeforeAfterMaps({
           <div className="col-md-6">
             <MapView id="lcChangeBeforeMap">
               <BasemapSwitcher />
-              <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
-              <SyncAoiToGroup aoi={aoi} groupRef={drawGroupRef} />
+              {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
               {beforeTile && <TileLayer url={beforeTile} opacity={0.88} attribution="Google Earth Engine" pane={RESULT_PANE} />}
               <FitToAoi aoi={aoi} />
             </MapView>
@@ -208,8 +197,7 @@ export default function BeforeAfterMaps({
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
           >
-            <AoiDrawingTools onChange={onAoiChange} externalGroupRef={drawGroupRef} />
-            <SyncAoiToGroup aoi={aoi} groupRef={drawGroupRef} />
+            {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
             <FitToAoi aoi={aoi} />
           </SwipeCompareMap>
           <div className="row g-2 mt-1">

@@ -24,7 +24,7 @@ export default function ChatHeader({
             <i className="bi bi-robot" />
           </div>
           <div>
-            <div className="sgc-title">Geo-AI Assistant</div>
+            <div className="sgc-title">SaveGeo Assistant</div>
             <div id="sgc-status" className="sgc-status">
               {status}
             </div>

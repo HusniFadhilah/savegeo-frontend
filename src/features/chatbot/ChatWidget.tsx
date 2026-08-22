@@ -18,7 +18,7 @@ export default function ChatWidget() {
 
   return (
     <>
-      <ChatToggleButton onClick={chat.toggle} hasUnread={chat.hasUnread} />
+      <ChatToggleButton onClick={chat.toggle} hasUnread={chat.hasUnread} isOpen={chat.isOpen} />
       <div id="sgc-panel" className={chat.isOpen ? "sgc-open" : undefined}>
         <ChatHeader
           status={chat.status}

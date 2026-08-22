@@ -59,7 +59,7 @@ export interface ResultSource {
   generated_at?: string | null;
 }
 
-/** One reusable structured result card the Geo-AI Assistant can attach to a response. */
+/** One reusable structured result card the SaveGeo Assistant can attach to a response. */
 export type ResultCard =
   | {
       type: "metric";

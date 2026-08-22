@@ -6,6 +6,7 @@ import { useAoiStore } from "@/hooks/useAoiStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear } from "./api";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
 import { computeTransitions, DATASET_NOTES, DATASET_OPTIONS } from "./utils";
@@ -55,8 +56,7 @@ const TANGGAL_INPUT_YEAR = 2000;
  *    now shares AOI across modules via `useAoiStore` (see @/hooks/useAoiStore) -
  *    an AOI set in the Carbon module's AoiPanel (admin/coordinate/draw/upload/
  *    company tabs) shows up here too. LC-Change can still (re)draw/clear the
- *    AOI directly via `AoiDrawingTools` on the "before" map, which writes
- *    back to the same shared store.
+ *    AOI via its AOI modal, which writes back to the same shared store.
  *  - Charts: legacy used Plotly (Sankey/heatmap/bar/stacked-area), which
  *    isn't installed here (only chart.js/react-chartjs-2). The transition
  *    matrix is a color-scaled HTML table instead of a Plotly heatmap; net
@@ -112,6 +112,7 @@ export default function LcChangeModule() {
   // masked out of the classification itself).
   const [dwThresholdEnabled, setDwThresholdEnabled] = useState(false);
   const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(0.5);
+  const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
@@ -166,7 +167,7 @@ export default function LcChangeModule() {
     return computeTransitions(yearData[yearA]?.classes || {}, yearData[yearB]?.classes || {});
   }, [yearA, yearB, yearData]);
 
-  // Mirror AOI + transition summary for the Geo-AI Assistant's grounding context
+  // Mirror AOI + transition summary for the SaveGeo Assistant's grounding context
   // (windowBridge.ts buildGeoAiContext()) - this module has its own AOI, separate
   // from CarbonModule's window.currentAOI, so it needs its own bridge global.
   useEffect(() => {
@@ -391,9 +392,12 @@ export default function LcChangeModule() {
               </div>
             ) : (
               <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-exclamation-triangle" /> Gambar AOI (polygon/rectangle) di peta kiri di bawah.
+                <i className="fas fa-exclamation-triangle" /> Pilih AOI lewat modal peta.
               </div>
             )}
+            <button type="button" className="btn btn-sm btn-outline-success w-100 mt-2" onClick={() => setAoiModalOpen(true)}>
+              <i className="bi bi-bounding-box-circles" /> Pilih/Gambar AOI
+            </button>
             {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
               <div className="alert alert-warning py-2 mb-0 mt-2" style={{ fontSize: ".8rem" }}>
                 <i className="fas fa-triangle-exclamation" /> AOI besar ({aoiState.areaKm2.toFixed(0)} km²) - analisis per
@@ -803,6 +807,15 @@ export default function LcChangeModule() {
         )}
         </div>
       </div>
+      <AoiPickerModal
+        open={aoiModalOpen}
+        id="lcChangeAoiModalMap"
+        title="Pilih AOI Perubahan Lahan"
+        description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
+        aoi={aoiState}
+        onAoiChange={setAoiState}
+        onClose={() => setAoiModalOpen(false)}
+      />
     </div>
   );
 }

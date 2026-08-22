@@ -37,7 +37,7 @@ interface LeafletLikeNamespace {
 
 /** Mirrored by LcChangeModule.tsx - that module has its own AOI/results, separate
  * from CarbonModule's `window.currentAOI`/`window.analysisResults` (see
- * buildGeoAiContext() below for why the Geo-AI Assistant needs both). */
+ * buildGeoAiContext() below for why the SaveGeo Assistant needs both). */
 interface LcChangeBridgeState {
   aoi: GeoJSON.GeoJSON | null;
   dataset: string | null;
@@ -221,7 +221,7 @@ function bboxOfGeoJSON(geo: GeoJSON.GeoJSON): [number, number, number, number] |
 }
 
 /**
- * Richer grounding context for the Geo-AI Assistant (mode="geoai") - the
+ * Richer grounding context for the SaveGeo Assistant (mode="geoai") - the
  * actual AOI geometry and already-computed analysis results, not just
  * booleans (contrast with the legacy getPageState() above). Merges state
  * from both CarbonModule (`window.currentAOI`/`window.analysisResults`) and

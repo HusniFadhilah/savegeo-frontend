@@ -19,8 +19,8 @@ const RESEARCHERS = [
 
 const PARTNERS = [
   { name: "Prof. Joga Dharma Setiawan, B.Sc., M.Sc., PhD.", role: "Direktur Utama" },
-  { name: "Ilham Nugraha, S.T., M.M., IPM.", role: "Senior General Manager IS" },
-  { name: "Heru Permana, S.St.", role: "VP of Intelligent Product Innovation & VP of Critical System Innovation" },
+  { name: "Ilham Nugraha, S.T., M.M., IPM.", role: "Senior General Manager Information System" },
+  { name: "Heru Permana, S.St.", role: "Len Innovation Technology (LenIoT)" },
 ];
 
 const METHOD_STEPS = [
@@ -31,7 +31,7 @@ const METHOD_STEPS = [
       "Citra Sentinel-2 (12 band spektral)",
       "Dataset Dynamic World (Google)",
       "ESA WorldCover dan ESRI Land Cover",
-      "API SP3STAB untuk AOI (Area of Interest)",
+      "API Wilayah Indonesia untuk AOI (Area of Interest)",
     ],
   },
   {
@@ -66,6 +66,9 @@ const FEATURES = [
   { icon: "bi-graph-up-arrow", title: "Estimasi Karbon", desc: "Machine learning dengan validasi silang untuk akurasi tinggi" },
 ];
 
+const UNDIP_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png";
+const LEN_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png";
+
 /**
  * Merged "Tentang Program" + "Detail Program Penelitian" into one page (they
  * were two near-identical stacks of oversized bootstrap `card-header bg-*
@@ -80,10 +83,10 @@ export default function AboutModule() {
   const [tab, setTab] = useState<Tab>("ringkasan");
 
   return (
-    <div className="about-page container-fluid mt-4">
+    <div className="about-page container-fluid mt-2">
       <div className="about-hero">
         <div className="about-hero-icon">
-          <i className="bi bi-globe-asia-australia" />
+          <img src="/images/savegeo-logo.svg" alt="SaveGeo" className="app-brand-logo" />
         </div>
         <div className="about-hero-body">
           <span className="about-hero-eyebrow">Riset Hilirisasi Program Ajakan Industri</span>
@@ -97,7 +100,10 @@ export default function AboutModule() {
 
       <div className="about-stats">
         <div className="about-stat">
-          <i className="bi bi-building" />
+          <div className="about-stat-logo-pair" aria-hidden="true">
+            <img src={UNDIP_LOGO_URL} alt="" />
+            <img src={LEN_LOGO_URL} alt="" />
+          </div>
           <div>
             <strong>Undip × PT LEN Industri</strong>
             <span>Kolaborasi riset & industri</span>
@@ -281,7 +287,7 @@ export default function AboutModule() {
               <p>
                 Riset ini menghasilkan invensi <strong>sistem estimasi stok karbon berbasis kecerdasan buatan</strong>{" "}
                 menggunakan citra penginderaan jauh. Inovasi platform web ini melahirkan{" "}
-                <strong>pemetaan biomassa presisi</strong> dan <strong>pelaporan transparan</strong>.
+                <strong>pemetaan biomassa</strong>, <strong>analisis</strong> dan <strong>pelaporan</strong>.
               </p>
             </div>
 

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
-import AoiDrawingTools, { SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
@@ -74,7 +74,7 @@ export default function ImageryModule() {
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
   const aoi: AoiFeature | null = aoiState?.feature ?? null;
-  const drawGroupRef = useRef<L.FeatureGroup | null>(null);
+  const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const handleAoiChange = useCallback(
     (feature: AoiFeature | null) => {
@@ -236,7 +236,7 @@ export default function ImageryModule() {
       <section className="analysis-hero analysis-hero-imagery" aria-labelledby="imageryHeroTitle">
         <div className="analysis-hero-main">
           <span className="analysis-eyebrow">Citra Satelit</span>
-          <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit Mentah</h1>
+          <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit</h1>
           <p>
             Cari scene berdasarkan tanggal akuisisi, cek awan, lalu tampilkan citra true-color asli atau bandingkan dua
             scene secara berdampingan.
@@ -288,9 +288,12 @@ export default function ImageryModule() {
               </div>
             ) : (
               <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-exclamation-triangle" /> Gambar AOI (polygon/rectangle) di peta.
+                <i className="fas fa-exclamation-triangle" /> Pilih AOI lewat modal peta.
               </div>
             )}
+            <button type="button" className="btn btn-sm btn-outline-success w-100 mt-2" onClick={() => setAoiModalOpen(true)}>
+              <i className="bi bi-bounding-box-circles" /> Pilih/Gambar AOI
+            </button>
             {aoi && (
               <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-2" onClick={() => setAoiState(null)}>
                 <i className="fas fa-eraser" /> Hapus AOI
@@ -507,11 +510,10 @@ export default function ImageryModule() {
                   </span>
                 )}
               </div>
-              <div className="card-body p-0">
+              <div className="card-body p-2">
                 <MapView id="imagerySceneMap">
                   <BasemapSwitcher />
-                  <AoiDrawingTools onChange={handleAoiChange} externalGroupRef={drawGroupRef} />
-                  <SyncAoiToGroup aoi={aoi} groupRef={drawGroupRef} />
+                  {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                   {tileUrl && <TileLayer url={tileUrl} opacity={1} attribution="Google Earth Engine" pane={RESULT_PANE} />}
                   <FitToAoi aoi={aoi} />
                 </MapView>
@@ -595,6 +597,15 @@ export default function ImageryModule() {
         )}
         </div>
       </div>
+      <AoiPickerModal
+        open={aoiModalOpen}
+        id="imageryAoiModalMap"
+        title="Pilih AOI Scene Satelit"
+        description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
+        aoi={aoiState}
+        onAoiChange={setAoiState}
+        onClose={() => setAoiModalOpen(false)}
+      />
     </div>
   );
 }
