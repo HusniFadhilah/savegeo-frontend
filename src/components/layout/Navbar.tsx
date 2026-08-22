@@ -25,32 +25,17 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="navbar navbar-dark bg-dark py-2">
-      <div className="container-fluid d-flex align-items-center">
-        <div className="d-flex align-items-center gap-2 me-3">
-          <img
-            src="https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png"
-            alt="Universitas Diponegoro"
-            height={36}
-            className="bg-light rounded p-1"
-          />
-          <img
-            src="https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png"
-            alt="PT LEN Industri"
-            height={36}
-            className="bg-light rounded p-1"
-          />
-        </div>
-
-        <div className="flex-grow-1 text-center px-3">
-          <div className="navbar-brand m-0 p-0 fw-semibold text-wrap">
-            <i className="bi bi-globe-asia-australia" /> SAVEGEO – Geospatial System for Vegetation, Land Cover,
-            and Carbon Estimation
+    <nav className="navbar navbar-dark bg-dark app-navbar">
+      <div className="container-fluid d-flex align-items-center gap-3">
+        <div className="navbar-brand app-brand m-0 p-0">
+          <img src="/images/savegeo-logo.svg" alt="SaveGeo" className="app-brand-logo" />
+          <div>
+            <strong>SaveGeo</strong>
+            <span>AI Imagery Analytics Platform</span>
           </div>
-          <div className="text-white small text-wrap">{t("nav.collaboration")}</div>
         </div>
 
-        <div className="ms-3 d-flex align-items-center gap-2">
+        <div className="ms-auto d-flex align-items-center gap-2 navbar-actions">
           <button
             type="button"
             className={`badge navbar-status-btn ${statusBadgeClass}`}

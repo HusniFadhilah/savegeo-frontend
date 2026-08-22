@@ -11,6 +11,9 @@ import AboutModule from "@/components/modules/AboutModule";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useConfigStore } from "@/hooks/useConfigStore";
 
+const UNDIP_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png";
+const LEN_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png";
+
 const MODULES: Record<DashboardModule, React.ComponentType> = {
   carbon: CarbonModule,
   "lc-change": LcChangeModule,
@@ -54,16 +57,28 @@ export default function DashboardPage() {
       <Navbar />
       <div className="app-container">
         <Sidebar />
-        <main className="flex-grow-1 p-3">
-          {mountedModules.map((key) => {
-            const Component = MODULES[key];
-            return (
-              <div key={key} className={`module-container ${activeModule === key ? "active" : ""}`}>
-                <Component />
-              </div>
-            );
-          })}
-        </main>
+        <div className="content-wrapper">
+          <main className="dashboard-main p-3">
+            {mountedModules.map((key) => {
+              const Component = MODULES[key];
+              return (
+                <div key={key} className={`module-container ${activeModule === key ? "active" : ""}`}>
+                  <Component />
+                </div>
+              );
+            })}
+          </main>
+          <footer className="app-footer">
+            <div className="app-footer-logos" aria-label="Mitra SaveGeo">
+              <img src={UNDIP_LOGO_URL} alt="Universitas Diponegoro" />
+              <img src={LEN_LOGO_URL} alt="PT LEN Industri" />
+            </div>
+            <div>
+              <strong>SaveGeo</strong>
+              <span>Copyright &copy; 2025-{new Date().getFullYear()} Universitas Diponegoro & PT LEN Industri.</span>
+            </div>
+          </footer>
+        </div>
       </div>
     </>
   );

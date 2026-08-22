@@ -40,6 +40,50 @@ body {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
 }
 
+.app-navbar {
+  min-height: 56px;
+  padding: 8px 0;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-brand-logo {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px rgba(8, 57, 23, 0.22);
+}
+
+.app-brand strong,
+.app-brand span {
+  display: block;
+  line-height: 1.15;
+}
+
+.app-brand strong {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+
+.app-brand span {
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.navbar-actions {
+  min-width: 0;
+}
+
 /* Spinner animation */
 .spin {
   animation: spin 1s linear infinite;
@@ -344,8 +388,62 @@ body {
 /* ✅ CONTENT WRAPPER - FLEXBOX */
 .content-wrapper {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   background-color: #f5f7fa;
+}
+
+.dashboard-main {
+  flex: 1 0 auto;
+}
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid #dfe8e2;
+  background: #ffffff;
+  color: #52615a;
+  text-align: center;
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.app-footer-logos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-footer-logos img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border: 1px solid #e3ebe6;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+}
+
+.app-footer strong,
+.app-footer span {
+  display: block;
+}
+
+.app-footer strong {
+  color: var(--primary-dark);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.app-footer span {
+  margin-top: 2px;
+  font-size: 0.76rem;
+  line-height: 1.45;
 }
 
 /* Module containers */
@@ -875,6 +973,19 @@ body {
 
 /* ✅ RESPONSIVE - MOBILE */
 @media (max-width: 768px) {
+  .app-brand span {
+    display: none;
+  }
+
+  .navbar-actions .btn span,
+  .navbar-status-btn {
+    font-size: 0.72rem;
+  }
+
+  .navbar-actions .btn span {
+    display: none;
+  }
+
   .app-container {
     flex-direction: column;
   }
@@ -925,14 +1036,21 @@ body {
   .mobile-menu-toggle {
     display: flex !important;
   }
+
+  .app-footer {
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+  }
 }
 
 /* ✅ MOBILE TOGGLE GREEN */
 .mobile-menu-toggle {
   display: none;
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  top: 72px;
+  right: 16px;
   z-index: 1050;
   width: 56px;
   height: 56px;
