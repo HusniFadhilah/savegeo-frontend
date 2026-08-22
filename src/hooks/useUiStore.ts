@@ -19,9 +19,12 @@ interface LoadingState {
 interface UiState {
   activeModule: DashboardModule;
   sidebarCollapsed: boolean;
+  mobileSidebarOpen: boolean;
   loading: LoadingState;
   setActiveModule: (m: DashboardModule) => void;
   toggleSidebar: () => void;
+  toggleMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
   showLoading: (text?: string, subtext?: string) => void;
   setLoadingProgress: (progress: number, subtext?: string) => void;
   hideLoading: () => void;
@@ -41,6 +44,7 @@ function readInitialModule(): DashboardModule {
 export const useUiStore = create<UiState>((set) => ({
   activeModule: readInitialModule(),
   sidebarCollapsed: localStorage.getItem(STORAGE_SIDEBAR) !== "false",
+  mobileSidebarOpen: false,
   loading: { visible: false, text: "Memproses data...", subtext: "Mohon tunggu", progress: 0, minimized: false },
   setActiveModule: (m) => {
     localStorage.setItem(STORAGE_MODULE, m);
@@ -52,6 +56,8 @@ export const useUiStore = create<UiState>((set) => ({
       localStorage.setItem(STORAGE_SIDEBAR, String(next));
       return { sidebarCollapsed: next };
     }),
+  toggleMobileSidebar: () => set((s) => ({ mobileSidebarOpen: !s.mobileSidebarOpen })),
+  closeMobileSidebar: () => set({ mobileSidebarOpen: false }),
   showLoading: (text = "Memproses data...", subtext = "Mohon tunggu") =>
     set({ loading: { visible: true, text, subtext, progress: 0, minimized: false } }),
   setLoadingProgress: (progress, subtext) =>

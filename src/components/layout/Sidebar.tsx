@@ -16,10 +16,9 @@ const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
 ];
 
 export default function Sidebar() {
-  const { activeModule, setActiveModule, sidebarCollapsed, toggleSidebar } = useUiStore();
+  const { activeModule, setActiveModule, sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar } = useUiStore();
   const { language, setLanguage, t } = useI18nStore();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -34,11 +33,11 @@ export default function Sidebar() {
     // to avoid two different things both being called "Pemetaan Bencana".
     if (m === "disaster") {
       navigate("/pemetaan-bencana");
-      setMobileOpen(false);
+      closeMobileSidebar();
       return;
     }
     setActiveModule(m);
-    setMobileOpen(false);
+    closeMobileSidebar();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -75,7 +74,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className={`main-sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+      <div className={`main-sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileSidebarOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
           <span>
             <i className="bi bi-grid-3x3-gap-fill" /> <span className="header-text">{t("sidebar.modules")}</span>
@@ -137,9 +136,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <button type="button" className="mobile-menu-toggle" onClick={() => setMobileOpen((v) => !v)}>
-        <i className="bi bi-list" />
-      </button>
     </>
   );
 }

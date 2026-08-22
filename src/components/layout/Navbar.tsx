@@ -3,12 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useUiStore } from "@/hooks/useUiStore";
 import SystemStatusModal from "@/components/modals/SystemStatusModal";
 
 export default function Navbar() {
   const { state } = useConnectionStatus();
   const { isAuthenticated, user, logout } = useAuthStore();
   const t = useI18nStore((s) => s.t);
+  const { mobileSidebarOpen, toggleMobileSidebar } = useUiStore();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -42,7 +44,8 @@ export default function Navbar() {
             onClick={() => setStatusOpen(true)}
             title="View system status"
           >
-            <i className={`bi ${state === "connecting" ? "bi-arrow-repeat spin" : "bi-broadcast"}`} /> {statusLabel}
+            <i className={`bi ${state === "connecting" ? "bi-arrow-repeat spin" : "bi-broadcast"}`} />
+            <span className="navbar-status-label">{statusLabel}</span>
           </button>
 
           {isAuthenticated ? (
@@ -81,6 +84,16 @@ export default function Navbar() {
               <span>{t("auth.loginAdmin")}</span>
             </Link>
           )}
+
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={toggleMobileSidebar}
+            aria-label={mobileSidebarOpen ? "Tutup menu" : "Buka menu"}
+            aria-expanded={mobileSidebarOpen}
+          >
+            <i className={`bi ${mobileSidebarOpen ? "bi-x-lg" : "bi-list"}`} />
+          </button>
         </div>
       </div>
       <SystemStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} />

@@ -53,11 +53,13 @@ body {
 }
 
 .app-brand-logo {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   flex: none;
-  border-radius: 9px;
-  box-shadow: 0 4px 12px rgba(8, 57, 23, 0.22);
+  border-radius: 12px;
+  background: #fff;
+  padding: 3px;
+  box-shadow: 0 5px 16px rgba(8, 57, 23, 0.28);
 }
 
 .app-brand strong,
@@ -998,6 +1000,17 @@ body {
     font-size: 0.72rem;
   }
 
+  .navbar-status-btn {
+    width: 38px;
+    height: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .navbar-status-label {
+    display: none;
+  }
+
   .navbar-actions .btn span {
     display: none;
   }
@@ -1068,28 +1081,27 @@ body {
 /* ✅ MOBILE TOGGLE GREEN */
 .mobile-menu-toggle {
   display: none;
-  position: fixed;
-  top: 72px;
-  right: 16px;
-  z-index: 1050;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  position: static;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
   color: white;
-  border: none;
-  box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: none;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  transition: all 0.3s;
+  font-size: 1.22rem;
+  transition:
+    background-color 0.22s ease,
+    border-color 0.22s ease;
 }
 
 .mobile-menu-toggle:hover {
-  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-light) 100%);
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.5);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #fff;
 }
 
 /* Custom scrollbar */
