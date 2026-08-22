@@ -5,14 +5,6 @@ type StepId = "step1" | "step2" | "step3" | "step4" | "stepTips";
 type NoteTone = "info" | "warn" | "success" | "danger";
 type ParamKey = "veg" | "lc" | "carbon";
 
-const STEPS: { id: StepId; num: string; icon: string; title: string }[] = [
-  { id: "step1", num: "1", icon: "bi-geo-alt-fill", title: "Memilih Area of Interest (AOI)" },
-  { id: "step2", num: "2", icon: "bi-diagram-3-fill", title: "Memilih Jenis Analisis" },
-  { id: "step3", num: "3", icon: "bi-sliders", title: "Mengatur Parameter" },
-  { id: "step4", num: "4", icon: "bi-play-circle-fill", title: "Menjalankan & Membaca Hasil" },
-  { id: "stepTips", num: "★", icon: "bi-lightbulb-fill", title: "Tips & Best Practices" },
-];
-
 /** Restyled accordion section - numbered badge + chevron instead of
  * Bootstrap's default big blue-focus accordion button. */
 function GuideStep({
@@ -66,6 +58,128 @@ const PARAM_TABS: { key: ParamKey; label: string; icon: string }[] = [
   { key: "carbon", label: "Carbon Stock", icon: "bi-graph-up-arrow" },
 ];
 
+const DATASET_DOCS = [
+  {
+    group: "Citra Satelit",
+    name: "Sentinel-2 MSI",
+    resolution: "10-20m",
+    period: "2015-sekarang",
+    usedFor: "Indeks vegetasi, komposit optik, prediktor model karbon, crop health.",
+    notes: "Menggunakan cloud masking dan composite median agar citra tropis lebih stabil.",
+  },
+  {
+    group: "Citra Satelit",
+    name: "Sentinel-1 SAR",
+    resolution: "10m",
+    period: "2014-sekarang",
+    usedFor: "Informasi radar untuk kelembaban permukaan, banjir, dan zona produktivitas.",
+    notes: "Lebih tahan awan dibanding citra optik; dipakai sebagai sumber pendukung.",
+  },
+  {
+    group: "Land Cover",
+    name: "Dynamic World",
+    resolution: "10m",
+    period: "Near real-time",
+    usedFor: "Klasifikasi tutupan lahan dinamis dan analisis perubahan cepat.",
+    notes: "Cocok untuk pemantauan aktual; mode kelas mayoritas lebih stabil untuk ringkasan.",
+  },
+  {
+    group: "Land Cover",
+    name: "ESA WorldCover",
+    resolution: "10m",
+    period: "2020-2021",
+    usedFor: "Baseline tutupan lahan global resolusi tinggi.",
+    notes: "Baik untuk pembanding kelas permukiman, vegetasi, lahan terbuka, dan air.",
+  },
+  {
+    group: "Land Cover",
+    name: "ESRI Land Cover / Living Atlas",
+    resolution: "10m",
+    period: "Tahunan / time-series",
+    usedFor: "LULC tahunan, validasi silang, dan visualisasi perubahan.",
+    notes: "Tersedia via GEE Community Catalog atau ArcGIS Living Atlas sesuai konfigurasi.",
+  },
+  {
+    group: "Land Cover",
+    name: "MODIS, Copernicus, GLC_FCS30D, JAXA, MapBiomas, JRC TMF",
+    resolution: "25-500m",
+    period: "Bervariasi",
+    usedFor: "Pembanding multi-skala, forest/non-forest, mangrove, moist forest, dan LULC historis.",
+    notes: "Dipakai sesuai ketersediaan tahun, cakupan wilayah, dan tujuan analisis.",
+  },
+  {
+    group: "Carbon Reference",
+    name: "WCMC Carbon Density",
+    resolution: "300m",
+    period: "2010",
+    usedFor: "Baseline densitas karbon global untuk estimasi stok karbon.",
+    notes: "Dataset fallback utama pada katalog karbon.",
+  },
+  {
+    group: "Carbon Reference",
+    name: "GEDI L4B Biomass",
+    resolution: "1km",
+    period: "2019-2023",
+    usedFor: "Referensi biomassa dari lidar ruang angkasa, terutama area berhutan.",
+    notes: "Bagus untuk validasi area forest; resolusi lebih kasar daripada Sentinel-2.",
+  },
+  {
+    group: "Carbon Reference",
+    name: "ESA CCI AGB",
+    resolution: "100m",
+    period: "2010-2020",
+    usedFor: "Above-ground biomass annual map untuk kalibrasi karbon.",
+    notes: "Direkomendasikan saat butuh baseline AGB tahunan yang lebih detail.",
+  },
+  {
+    group: "Soil Carbon",
+    name: "OpenLandMap SOC & SoilGrids SOC",
+    resolution: "250m",
+    period: "2017 / multi-source",
+    usedFor: "Estimasi soil organic carbon dan statistik karbon tanah.",
+    notes: "SoilGrids dipakai untuk statistik titik; OpenLandMap tersedia untuk model GEE-deployable.",
+  },
+  {
+    group: "Crop Monitoring",
+    name: "CHIRPS, ERA5-Land, Open-Meteo Archive",
+    resolution: "Harian / agregat",
+    period: "Historis",
+    usedFor: "Curah hujan, hari kering, indikator cuaca, dan risiko kekeringan.",
+    notes: "GEE path memakai CHIRPS/ERA5-Land; Open-Meteo tersedia sebagai opsi tanpa API key.",
+  },
+];
+
+const MODEL_DOCS = [
+  {
+    name: "Linear / Ridge / Lasso Carbon Model",
+    input: "Sentinel-2 bands, indeks spektral, terrain/landcover features bila tersedia.",
+    output: "Densitas karbon, stok total, dan CO2 equivalent.",
+    deploy: "GEE Direct",
+    notes: "Model paling stabil untuk tile-map karena persamaan dapat dieksekusi langsung di Earth Engine.",
+  },
+  {
+    name: "Random Forest / Gradient Boosting / XGBoost / LightGBM",
+    input: "Feature stack raster atau sampel tabular hasil preprocessing.",
+    output: "Estimasi karbon atau klasifikasi berbasis model non-linear.",
+    deploy: "Server-side / statistik",
+    notes: "Lebih fleksibel tetapi tidak selalu bisa dirender sebagai tile GEE langsung.",
+  },
+  {
+    name: "Semi-Supervised UNet",
+    input: "Citra Sentinel-2 multi-band dan label parsial.",
+    output: "Segmentasi/ekstraksi objek geospasial untuk pipeline riset.",
+    deploy: "Training / batch processing",
+    notes: "Berjalan pada GPU server untuk kebutuhan riset; bukan semua workflow realtime memakai model ini.",
+  },
+  {
+    name: "Crop Risk Composite Score",
+    input: "Kesehatan vegetasi, moisture, cuaca, banjir, dan anomali fase pertumbuhan.",
+    output: "Skor risiko 0-100 dan label level risiko.",
+    deploy: "Backend scoring",
+    notes: "Bobot faktor dikonfigurasi di backend agar dapat disesuaikan tanpa mengubah frontend.",
+  },
+];
+
 /** Faithful port of module-guide.html; Bootstrap's JS accordion (data-bs-toggle)
  * is replaced with local React state since only Bootstrap CSS is bundled.
  * Redesigned from a long stack of oversized, alternating-color bootstrap
@@ -81,7 +195,7 @@ export default function GuideModule() {
   const [paramTab, setParamTab] = useState<ParamKey>("veg");
 
   return (
-    <div className="guide-page container mt-4">
+    <div className="guide-page container-fluid mt-4">
       <div className="guide-hero">
         <div className="guide-hero-icon">
           <i className="bi bi-book-fill" />
@@ -121,21 +235,6 @@ export default function GuideModule() {
             <span>bagian praktis</span>
           </div>
         </div>
-      </div>
-
-      <div className="guide-step-strip" aria-label="Daftar langkah panduan">
-        {STEPS.map((step) => (
-          <button
-            key={step.id}
-            type="button"
-            className={`guide-step-chip ${openId === step.id ? "active" : ""}`}
-            onClick={() => setOpenId(step.id)}
-          >
-            <span>{step.num}</span>
-            <i className={`bi ${step.icon}`} />
-            <strong>{step.title}</strong>
-          </button>
-        ))}
       </div>
 
       <div className="guide-accordion">
@@ -666,6 +765,77 @@ export default function GuideModule() {
             </ul>
           </div>
         </GuideStep>
+      </div>
+
+      <div className="guide-doc-section">
+        <div className="guide-doc-heading">
+          <span className="guide-hero-eyebrow">Referensi Teknis</span>
+          <h2>Dokumentasi Dataset & Model</h2>
+          <p>
+            Ringkasan sumber data dan model yang dipakai platform. Katalog aktif tetap mengikuti konfigurasi backend,
+            tetapi daftar ini membantu membaca asal data, resolusi, dan batasan utama setiap analisis.
+          </p>
+        </div>
+
+        <div className="guide-doc-card">
+          <h3>
+            <i className="bi bi-database-fill" /> Dataset
+          </h3>
+          <div className="guide-table-wrap">
+            <table className="guide-table guide-doc-table">
+              <thead>
+                <tr>
+                  <th>Kelompok</th>
+                  <th>Dataset</th>
+                  <th>Resolusi</th>
+                  <th>Periode</th>
+                  <th>Dipakai Untuk</th>
+                  <th>Catatan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DATASET_DOCS.map((dataset) => (
+                  <tr key={`${dataset.group}-${dataset.name}`}>
+                    <td>
+                      <span className="guide-doc-badge">{dataset.group}</span>
+                    </td>
+                    <td>
+                      <strong>{dataset.name}</strong>
+                    </td>
+                    <td>{dataset.resolution}</td>
+                    <td>{dataset.period}</td>
+                    <td>{dataset.usedFor}</td>
+                    <td>{dataset.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="guide-doc-card">
+          <h3>
+            <i className="bi bi-cpu-fill" /> Model & Inference
+          </h3>
+          <div className="guide-model-grid">
+            {MODEL_DOCS.map((model) => (
+              <div className="guide-model-card" key={model.name}>
+                <div className="guide-model-top">
+                  <i className="bi bi-diagram-2-fill" />
+                  <span>{model.deploy}</span>
+                </div>
+                <h4>{model.name}</h4>
+                <p>
+                  <strong>Input:</strong> {model.input}
+                </p>
+                <p>
+                  <strong>Output:</strong> {model.output}
+                </p>
+                <small>{model.notes}</small>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="guide-quickref">
