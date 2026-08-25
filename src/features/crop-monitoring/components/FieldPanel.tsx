@@ -63,6 +63,8 @@ export default function FieldPanel({ commodities }: Props) {
 
   function handleModalAoiChange(nextAoi: AoiState | null) {
     if (selectedField) clearSelection();
+    if (nextAoi && !name.trim()) setName(nextAoi.name);
+    setSaveError(null);
     setAoi(nextAoi);
   }
 

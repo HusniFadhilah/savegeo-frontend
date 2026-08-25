@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useThemeMode } from "@/hooks/useThemeMode";
 import { useUiStore } from "@/hooks/useUiStore";
 import SystemStatusModal from "@/components/modals/SystemStatusModal";
 
@@ -10,6 +11,7 @@ export default function Navbar() {
   const { state } = useConnectionStatus();
   const { isAuthenticated, user, logout } = useAuthStore();
   const t = useI18nStore((s) => s.t);
+  const { isDark, toggleTheme } = useThemeMode();
   const { mobileSidebarOpen, toggleMobileSidebar } = useUiStore();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +40,17 @@ export default function Navbar() {
         </div>
 
         <div className="ms-auto d-flex align-items-center gap-2 navbar-actions">
+          <button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={isDark ? "Gunakan light mode" : "Gunakan dark mode"}
+            aria-label={isDark ? "Gunakan light mode" : "Gunakan dark mode"}
+            aria-pressed={isDark}
+          >
+            <i className={`bi ${isDark ? "bi-sun-fill" : "bi-moon-stars-fill"}`} />
+          </button>
+
           <button
             type="button"
             className={`badge navbar-status-btn ${statusBadgeClass}`}

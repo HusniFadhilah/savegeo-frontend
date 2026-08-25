@@ -93,7 +93,6 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         zoom={zoom ?? INDONESIA_ZOOM}
         maxZoom={effectiveMaxZoom}
         className={className ?? "savegeo-map"}
-        preferCanvas
       >
         {defaultBasemap && (
           <TileLayer

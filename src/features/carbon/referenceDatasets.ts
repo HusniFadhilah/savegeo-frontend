@@ -32,6 +32,13 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
       "GEDI L4B gridded biomass (1km) combined with Sentinel-2 predictor stack. Enhanced spatial coverage.",
   },
   {
+    value: "GEDI_L4D",
+    label: "GEDI L4D Imputed AGBD (2023, 30m)",
+    group: "Aboveground Biomass Carbon",
+    description:
+      "NASA GEDI L4D imputed aboveground biomass density at 30m, converted to carbon with x0.47.",
+  },
+  {
     value: "SPAWN",
     label: "Spawn & Gibbs AGB Carbon (2010, 300m)",
     group: "Aboveground Biomass Carbon",

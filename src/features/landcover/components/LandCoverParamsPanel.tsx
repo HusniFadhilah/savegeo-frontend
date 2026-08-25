@@ -9,15 +9,26 @@ interface Props {
   onParamsChange: (patch: Partial<LandCoverParams>) => void;
 }
 
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
 const FALLBACK_LULC_DATASETS = [
   { key: "Dynamic_World", name: "Dynamic World", resolution: "10m" },
+  {
+    key: "GeoSave_Copernicus_DynamicWorld",
+    name: "GeoSave Copernicus Sentinel-2 Land Cover",
+    resolution: "10m",
+  },
   { key: "ESA_WorldCover", name: "ESA WorldCover", resolution: "10m" },
-  { key: "ESRI_LandCover", name: "ESRI 10m Annual LULC v3 (GEE Community Catalog)", resolution: "10m" },
-  { key: "ESRI_LULC_LivingAtlas", name: "Esri Sentinel-2 10m LULC Time Series (ArcGIS Living Atlas)", resolution: "10m" },
+  {
+    key: "ESRI_LandCover",
+    name: "ESRI 10m Annual LULC v3 (GEE Community Catalog)",
+    resolution: "10m",
+  },
+  {
+    key: "ESRI_LULC_LivingAtlas",
+    name: "Esri Sentinel-2 10m LULC Time Series (ArcGIS Living Atlas)",
+    resolution: "10m",
+  },
   { key: "MODIS_LandCover", name: "MODIS MCD12Q1 IGBP", resolution: "500m" },
   { key: "Copernicus_LandCover", name: "Copernicus Global Land Cover", resolution: "100m" },
   { key: "GLC_FCS30D", name: "GLC_FCS30D", resolution: "30m" },
@@ -25,10 +36,23 @@ const FALLBACK_LULC_DATASETS = [
   { key: "JAXA_FNF", name: "JAXA ALOS Forest/Non-Forest", resolution: "25m" },
   { key: "JAXA_FNF4", name: "JAXA PALSAR Forest/Non-Forest 4-class", resolution: "25m" },
   { key: "MapBiomas_Indonesia", name: "MapBiomas Indonesia LANDY", resolution: "30m" },
-  { key: "DEA_Mangroves", name: "Digital Earth Australia Mangroves Landsat (ArcGIS Living Atlas)", resolution: "25m" },
+  {
+    key: "GeoSave_MapBiomas_Indonesia",
+    name: "GeoSave MapBiomas Indonesia LANDY",
+    resolution: "30m",
+  },
+  {
+    key: "DEA_Mangroves",
+    name: "Digital Earth Australia Mangroves Landsat (ArcGIS Living Atlas)",
+    resolution: "25m",
+  },
   { key: "JRC_TMF", name: "JRC Tropical Moist Forest Annual Changes v1 2022", resolution: "30m" },
   { key: "FROM_GLC10", name: "Tsinghua FROM-GLC 10m Global Land Cover 2017", resolution: "10m" },
-  { key: "GLAD_GLCLUC", name: "GLAD Annual Global Land Use/Land Cover (Potapov et al. 2022)", resolution: "30m" },
+  {
+    key: "GLAD_GLCLUC",
+    name: "GLAD Annual Global Land Use/Land Cover (Potapov et al. 2022)",
+    resolution: "30m",
+  },
 ];
 
 function dateForYear(year: number, month: number, day: number) {
@@ -103,7 +127,8 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         >
           {datasetOptions.map((ds) => (
             <option key={ds.key} value={ds.key}>
-              {ds.name}{ds.resolution ? ` (${ds.resolution})` : ""}
+              {ds.name}
+              {ds.resolution ? ` (${ds.resolution})` : ""}
             </option>
           ))}
         </select>
@@ -117,9 +142,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         <select
           className="form-select"
           value={params.dwMode}
-          onChange={(e) =>
-            onParamsChange({ dwMode: e.target.value as LandCoverParams["dwMode"] })
-          }
+          onChange={(e) => onParamsChange({ dwMode: e.target.value as LandCoverParams["dwMode"] })}
         >
           <option value="mode">Mode (Paling Sering)</option>
           <option value="hillshade">Hillshade</option>
@@ -162,7 +185,9 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
 
       {dateMode === "year" && (
         <div className="mb-3">
-          <label className="form-label">Rentang Bulan <span className="text-muted">(Dynamic World)</span></label>
+          <label className="form-label">
+            Rentang Bulan <span className="text-muted">(Dynamic World)</span>
+          </label>
           <div className="d-flex gap-2">
             <select
               className="form-select"
@@ -190,7 +215,9 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
               ))}
             </select>
           </div>
-          <small className="text-muted">Dataset tahunan menggunakan tahun penuh yang dipilih.</small>
+          <small className="text-muted">
+            Dataset tahunan menggunakan tahun penuh yang dipilih.
+          </small>
         </div>
       )}
 
@@ -241,7 +268,8 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
           </div>
           <div className="alert alert-info py-2 px-2 mt-2 mb-0 small">
             <i className="bi bi-info-circle me-1" />
-            <strong>Dynamic World</strong> mendukung tanggal spesifik. Dataset tahunan menggunakan tahun dari tanggal mulai.
+            <strong>Dynamic World/GeoSave Copernicus</strong> mendukung tanggal spesifik. Dataset
+            tahunan menggunakan tahun dari tanggal mulai.
           </div>
         </div>
       )}

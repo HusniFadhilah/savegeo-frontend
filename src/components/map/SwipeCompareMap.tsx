@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { TileLayer, useMap } from "react-leaflet";
 import MapView from "@/components/map/MapView";
 import { RESULT_PANE } from "@/config/mapPanes";
@@ -10,15 +10,18 @@ const AFTER_PANE = "swipe-after-pane";
 // tile, below overlayPane (400) so AOI polygons/markers stay on top of both.
 const AFTER_PANE_Z_INDEX = 360;
 
-function AfterPaneSetup() {
+function AfterPaneSetup({ onReady }: { onReady: () => void }) {
   const map = useMap();
   useEffect(() => {
-    if (!map.getPane(AFTER_PANE)) {
-      const pane = map.createPane(AFTER_PANE);
-      pane.style.zIndex = String(AFTER_PANE_Z_INDEX);
-      pane.style.pointerEvents = "none";
-    }
-  }, [map]);
+    const pane = map.getPane(AFTER_PANE) ?? map.createPane(AFTER_PANE);
+    pane.style.zIndex = String(AFTER_PANE_Z_INDEX);
+    pane.style.pointerEvents = "none";
+    pane.style.inset = "0";
+    pane.style.width = "100%";
+    pane.style.height = "100%";
+    pane.style.overflow = "hidden";
+    onReady();
+  }, [map, onReady]);
   return null;
 }
 
@@ -27,11 +30,21 @@ function AfterPaneSetup() {
  * divider is visible - the "before" tile underneath shows through the rest.
  * This is what actually produces the swipe-reveal effect; no plugin needed.
  */
-function ClipController({ percent, orientation }: { percent: number; orientation: SwipeOrientation }) {
+function ClipController({
+  percent,
+  orientation,
+}: {
+  percent: number;
+  orientation: SwipeOrientation;
+}) {
   const map = useMap();
   useEffect(() => {
     const pane = map.getPane(AFTER_PANE);
     if (!pane) return;
+    pane.style.inset = "0";
+    pane.style.width = "100%";
+    pane.style.height = "100%";
+    pane.style.overflow = "hidden";
     pane.style.clipPath =
       orientation === "vertical" ? `inset(0 0 0 ${percent}%)` : `inset(${percent}% 0 0 0)`;
   }, [map, percent, orientation]);
@@ -106,8 +119,10 @@ export default function SwipeCompareMap({
 }: Props) {
   const [percent, setPercent] = useState(50);
   const [panLocked, setPanLocked] = useState(true);
+  const [afterPaneReady, setAfterPaneReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const markAfterPaneReady = useCallback(() => setAfterPaneReady(true), []);
 
   const updateFromClientPos = (clientX: number, clientY: number) => {
     const el = containerRef.current;
@@ -146,7 +161,7 @@ export default function SwipeCompareMap({
   return (
     <div ref={containerRef} className="swipe-compare-wrap">
       <MapView id={id} center={center} zoom={zoom} maxZoom={maxZoom}>
-        <AfterPaneSetup />
+        <AfterPaneSetup onReady={markAfterPaneReady} />
         {children}
         {beforeUrl && (
           <TileLayer
@@ -158,7 +173,7 @@ export default function SwipeCompareMap({
             maxZoom={maxZoom}
           />
         )}
-        {afterUrl && (
+        {afterPaneReady && afterUrl && (
           <TileLayer
             key={afterUrl}
             url={afterUrl}
@@ -185,7 +200,9 @@ export default function SwipeCompareMap({
         }}
       >
         <div className="swipe-handle">
-          <i className={`fas ${orientation === "vertical" ? "fa-arrows-alt-h" : "fa-arrows-alt-v"}`} />
+          <i
+            className={`fas ${orientation === "vertical" ? "fa-arrows-alt-h" : "fa-arrows-alt-v"}`}
+          />
         </div>
       </div>
 
@@ -210,7 +227,11 @@ export default function SwipeCompareMap({
           <button
             type="button"
             className={`btn btn-sm ${panLocked ? "btn-primary" : "btn-outline-secondary"}`}
-            title={panLocked ? "Posisi peta terkunci (geser divider tidak menggeser peta) - klik untuk buka kunci" : "Posisi peta bebas digeser - klik untuk kunci lagi"}
+            title={
+              panLocked
+                ? "Posisi peta terkunci (geser divider tidak menggeser peta) - klik untuk buka kunci"
+                : "Posisi peta bebas digeser - klik untuk kunci lagi"
+            }
             onClick={() => setPanLocked((v) => !v)}
           >
             <i className={`fas ${panLocked ? "fa-lock" : "fa-lock-open"}`} />

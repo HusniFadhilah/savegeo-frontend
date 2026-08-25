@@ -44,7 +44,7 @@ export function getCarbonModelInfo(modelName: string): Promise<CarbonModelInfo> 
 }
 
 export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption[]> {
-  const res = await apiClient.get<{ datasets: CarbonDatasetApiItem[]; count: number }>("/carbon/datasets");
+  const res = await apiClient.get<{ datasets: CarbonDatasetApiItem[]; count: number }>("/carbon/datasets?include_unavailable=true");
   return (res.datasets ?? []).map((ds) => {
     const resolution = ds.resolution ? `, ${ds.resolution}m` : "";
     const year = ds.year ?? (Array.isArray(ds.year_range) ? ds.year_range.join("-") : ds.year_range);
