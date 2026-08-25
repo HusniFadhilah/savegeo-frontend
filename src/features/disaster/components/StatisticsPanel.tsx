@@ -1,5 +1,12 @@
 import { Bar } from "react-chartjs-2";
-import { BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Tooltip } from "chart.js";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Tooltip,
+} from "chart.js";
 import type { DisasterAnalysisEntry, DisasterStatisticsResponse } from "../types";
 
 // Same chart.js registration pattern as lc-change/components/TimeSeriesChart.tsx
@@ -40,11 +47,15 @@ interface Props {
 export default function StatisticsPanel({ kpis, analyses }: Props) {
   const entries = Object.entries(kpis).filter(([, stats]) => stats && Object.keys(stats).length);
   if (!entries.length) {
-    return <div className="alert alert-secondary py-2 mb-3">Belum ada data statistik untuk ditampilkan sebagai grafik.</div>;
+    return (
+      <div className="alert alert-secondary py-2 mb-3">
+        Belum ada data statistik untuk ditampilkan sebagai grafik.
+      </div>
+    );
   }
 
   return (
-    <div className="row g-3">
+    <div className="row g-3 disaster-stat-grid">
       {entries.map(([modelId, stats]) => {
         const analysis = analyses.find((a) => a.model_id === modelId);
         const label = analysis?.user_label ?? modelId;
@@ -64,8 +75,8 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
 
         return (
           <div className="col-lg-6" key={modelId}>
-            <div className="card h-100">
-              <div className="card-header py-2">{label}</div>
+            <div className="card h-100 disaster-modern-card disaster-chart-card">
+              <div className="card-header py-2 disaster-soft-header">{label}</div>
               <div className="card-body">
                 <div style={{ height: Math.max(220, rows.length * 42) }}>
                   <Bar

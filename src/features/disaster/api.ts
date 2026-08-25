@@ -1,5 +1,6 @@
 import { apiClient, ApiError } from "@/services/apiClient";
-import { userAuthHeader, handleUserUnauthorized } from "@/services/userAuthService";
+import { getAuthToken } from "@/services/authService";
+import { getUserAuthToken, userAuthHeader, handleUserUnauthorized } from "@/services/userAuthService";
 import type {
   BmkgAlertsData,
   DemSlopeParams,
@@ -19,15 +20,11 @@ import type {
  * Disaster-mapping API calls. Two families live in this file:
  *
  * 1. Legacy `/disaster/*` sources/BMKG/DEM calls (sources, bmkg-alerts,
- *    dem-slope) - unchanged endpoints, but per the redesign contract doc
- *    (section B) the backend now gates all 3 behind `Depends(get_current_user)`,
- *    so they're called with the *user* bearer token here (not `auth: true`,
- *    which only ever reads the admin token - see the module doc comment on
- *    `userGet`/`userPost` below for why).
+ *    dem-slope) - unchanged endpoints, but now gated behind a disaster-viewer
+ *    token (public user or admin).
  * 2. New `/disasters/*` (plural - NOT `/disaster`, that's the legacy router
- *    above) User-facing Disaster Intelligence Dashboard routes, per contract
- *    doc section B. Every route requires a logged-in user and only ever
- *    returns published data.
+ *    above) Disaster Intelligence Dashboard routes. Every route requires a
+ *    logged-in user or admin and only ever returns published data.
  *
  * All responses are the payload directly on 200 (never a `{success,data}`
  * envelope) and non-2xx bodies are `{error}`/`{detail}`, already thrown as
@@ -35,18 +32,16 @@ import type {
  */
 
 /**
- * `apiClient`'s built-in `auth: true` option is hardcoded to attach the
- * *admin* bearer token (it imports `getAuthToken` from `services/authService.ts`
- * directly) and its 401 handler is a single global slot shared app-wide. Both
- * of those are admin-owned and out of bounds for this feature (see file
- * boundary in the module report), so User-authenticated calls never use
- * `auth: true` - they attach the user's own token via a plain `headers`
- * object instead, and handle 401s locally through
- * `services/userAuthService.ts`'s own (independent) unauthorized hook. This
- * keeps admin and user sessions from ever clobbering each other: a 401 on a
- * user request never touches the admin token/handler and vice versa.
+ * Prefer the public user token when present; otherwise fall back to admin
+ * auth (`auth: true`) so an already logged-in admin can inspect the published
+ * disaster dashboard without a duplicate user account. User 401s still clear
+ * only the user session; admin 401s use apiClient's existing admin handler.
  */
 async function userGet<T>(path: string): Promise<T> {
+  if (!getUserAuthToken() && getAuthToken()) {
+    return apiClient.get<T>(path, { auth: true });
+  }
+
   try {
     return await apiClient.get<T>(path, { headers: userAuthHeader() });
   } catch (err) {
@@ -56,6 +51,10 @@ async function userGet<T>(path: string): Promise<T> {
 }
 
 async function userPost<T>(path: string, body?: unknown): Promise<T> {
+  if (!getUserAuthToken() && getAuthToken()) {
+    return apiClient.post<T>(path, body, { auth: true });
+  }
+
   try {
     return await apiClient.post<T>(path, body, { headers: userAuthHeader() });
   } catch (err) {

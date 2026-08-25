@@ -5,7 +5,12 @@ import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { RESULT_PANE } from "@/config/mapPanes";
-import type { DisasterAoiRecord, DisasterImageryGroup, DisasterPrimaryImagery, SatelliteImageryRecord } from "../types";
+import type {
+  DisasterAoiRecord,
+  DisasterImageryGroup,
+  DisasterPrimaryImagery,
+  SatelliteImageryRecord,
+} from "../types";
 
 type ViewMode = "pre" | "post" | "split" | "swipe";
 
@@ -42,43 +47,77 @@ interface Props {
  * input), per the contract doc.
  */
 export default function SatelliteViewer({ aoi, imagery, primaryImagery }: Props) {
-  const [preId, setPreId] = useState<number | null>(primaryImagery.pre?.id ?? imagery.pre[0]?.id ?? null);
-  const [postId, setPostId] = useState<number | null>(primaryImagery.post?.id ?? imagery.post[0]?.id ?? null);
+  const [preId, setPreId] = useState<number | null>(
+    primaryImagery.pre?.id ?? imagery.pre[0]?.id ?? null,
+  );
+  const [postId, setPostId] = useState<number | null>(
+    primaryImagery.post?.id ?? imagery.post[0]?.id ?? null,
+  );
   const [view, setView] = useState<ViewMode>("swipe");
   const [swipeOrientation, setSwipeOrientation] = useState<SwipeOrientation>("vertical");
 
-  const preImg = useMemo(() => imagery.pre.find((i) => i.id === preId) ?? null, [imagery.pre, preId]);
-  const postImg = useMemo(() => imagery.post.find((i) => i.id === postId) ?? null, [imagery.post, postId]);
+  const preImg = useMemo(
+    () => imagery.pre.find((i) => i.id === preId) ?? null,
+    [imagery.pre, preId],
+  );
+  const postImg = useMemo(
+    () => imagery.post.find((i) => i.id === postId) ?? null,
+    [imagery.post, postId],
+  );
   const preTile = preImg?.preview_tile_url ?? null;
   const postTile = postImg?.preview_tile_url ?? null;
 
   if (!imagery.pre.length && !imagery.post.length) {
-    return <div className="alert alert-secondary py-2 mb-3">Belum ada citra satelit pre/post untuk event ini.</div>;
+    return (
+      <div className="alert alert-secondary py-2 mb-3">
+        Belum ada citra satelit pre/post untuk event ini.
+      </div>
+    );
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
-        <span className="fw-semibold">
+    <div className="card mb-3 disaster-modern-card disaster-satellite-card">
+      <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap disaster-soft-header">
+        <span className="fw-semibold disaster-panel-title">
           <i className="bi bi-images" /> Citra Satelit
         </span>
-        <div className="btn-group btn-group-sm ms-auto" role="group" aria-label="Tampilan citra">
-          <button type="button" className={`btn btn-outline-secondary ${view === "pre" ? "active" : ""}`} onClick={() => setView("pre")}>
+        <div
+          className="btn-group btn-group-sm ms-auto disaster-view-toggle"
+          role="group"
+          aria-label="Tampilan citra"
+        >
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "pre" ? "active" : ""}`}
+            onClick={() => setView("pre")}
+          >
             Pre
           </button>
-          <button type="button" className={`btn btn-outline-secondary ${view === "post" ? "active" : ""}`} onClick={() => setView("post")}>
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "post" ? "active" : ""}`}
+            onClick={() => setView("post")}
+          >
             Post
           </button>
-          <button type="button" className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`} onClick={() => setView("split")}>
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`}
+            onClick={() => setView("split")}
+          >
             <i className="fas fa-columns" /> Berdampingan
           </button>
-          <button type="button" className={`btn btn-outline-secondary ${view === "swipe" ? "active" : ""}`} onClick={() => setView("swipe")}>
+          <button
+            type="button"
+            className={`btn btn-outline-secondary ${view === "swipe" ? "active" : ""}`}
+            onClick={() => setView("swipe")}
+          >
             <i className="fas fa-arrows-alt-h" /> Geser
           </button>
         </div>
       </div>
       <div className="card-body">
-        <div className="row g-2 mb-2">
+        <div className="row g-2 mb-3 disaster-imagery-selectors">
           <div className="col-sm-6">
             <label className="form-label small fw-semibold mb-1">Citra Sebelum (Pre)</label>
             <select
@@ -118,9 +157,29 @@ export default function SatelliteViewer({ aoi, imagery, primaryImagery }: Props)
         {(view === "pre" || view === "post") && (
           <MapView id={`disasterSatMap-${view}`}>
             <BasemapSwitcher />
-            {view === "pre" && preTile && <TileLayer url={preTile} opacity={0.9} attribution="Google Earth Engine" pane={RESULT_PANE} />}
-            {view === "post" && postTile && <TileLayer url={postTile} opacity={0.9} attribution="Google Earth Engine" pane={RESULT_PANE} />}
-            {aoi?.geojson && <GeoJSON key={`aoi-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />}
+            {view === "pre" && preTile && (
+              <TileLayer
+                url={preTile}
+                opacity={0.9}
+                attribution="Google Earth Engine"
+                pane={RESULT_PANE}
+              />
+            )}
+            {view === "post" && postTile && (
+              <TileLayer
+                url={postTile}
+                opacity={0.9}
+                attribution="Google Earth Engine"
+                pane={RESULT_PANE}
+              />
+            )}
+            {aoi?.geojson && (
+              <GeoJSON
+                key={`aoi-${aoi.id}`}
+                data={aoi.geojson as GeoJSON.Feature}
+                style={AOI_STYLE}
+              />
+            )}
             <FitToAoi aoi={aoi} />
           </MapView>
         )}
@@ -130,20 +189,50 @@ export default function SatelliteViewer({ aoi, imagery, primaryImagery }: Props)
             <div className="col-md-6">
               <MapView id="disasterSatMapPre">
                 <BasemapSwitcher />
-                {preTile && <TileLayer url={preTile} opacity={0.9} attribution="Google Earth Engine" pane={RESULT_PANE} />}
-                {aoi?.geojson && <GeoJSON key={`aoi-pre-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />}
+                {preTile && (
+                  <TileLayer
+                    url={preTile}
+                    opacity={0.9}
+                    attribution="Google Earth Engine"
+                    pane={RESULT_PANE}
+                  />
+                )}
+                {aoi?.geojson && (
+                  <GeoJSON
+                    key={`aoi-pre-${aoi.id}`}
+                    data={aoi.geojson as GeoJSON.Feature}
+                    style={AOI_STYLE}
+                  />
+                )}
                 <FitToAoi aoi={aoi} />
               </MapView>
-              <div className="text-center small text-muted mt-1">Sebelum {preImg ? `· ${preImg.acquisition_date}` : ""}</div>
+              <div className="text-center small text-muted mt-1">
+                Sebelum {preImg ? `· ${preImg.acquisition_date}` : ""}
+              </div>
             </div>
             <div className="col-md-6">
               <MapView id="disasterSatMapPost">
                 <BasemapSwitcher />
-                {postTile && <TileLayer url={postTile} opacity={0.9} attribution="Google Earth Engine" pane={RESULT_PANE} />}
-                {aoi?.geojson && <GeoJSON key={`aoi-post-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />}
+                {postTile && (
+                  <TileLayer
+                    url={postTile}
+                    opacity={0.9}
+                    attribution="Google Earth Engine"
+                    pane={RESULT_PANE}
+                  />
+                )}
+                {aoi?.geojson && (
+                  <GeoJSON
+                    key={`aoi-post-${aoi.id}`}
+                    data={aoi.geojson as GeoJSON.Feature}
+                    style={AOI_STYLE}
+                  />
+                )}
                 <FitToAoi aoi={aoi} />
               </MapView>
-              <div className="text-center small text-muted mt-1">Sesudah {postImg ? `· ${postImg.acquisition_date}` : ""}</div>
+              <div className="text-center small text-muted mt-1">
+                Sesudah {postImg ? `· ${postImg.acquisition_date}` : ""}
+              </div>
             </div>
           </div>
         )}
@@ -158,7 +247,13 @@ export default function SatelliteViewer({ aoi, imagery, primaryImagery }: Props)
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
           >
-            {aoi?.geojson && <GeoJSON key={`aoi-swipe-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />}
+            {aoi?.geojson && (
+              <GeoJSON
+                key={`aoi-swipe-${aoi.id}`}
+                data={aoi.geojson as GeoJSON.Feature}
+                style={AOI_STYLE}
+              />
+            )}
             <FitToAoi aoi={aoi} />
           </SwipeCompareMap>
         )}

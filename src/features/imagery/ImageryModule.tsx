@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
+import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
@@ -14,8 +15,28 @@ import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
 import type { DemTileResponse, ImageryProvider, ImageryScene, SarMode } from "./types";
+import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
+const SCENE_TILE_MAX_NATIVE_ZOOM = 19;
+const SCENE_TILE_MAX_ZOOM = 23;
+const ESRI_WAYBACK_PROVIDER_KEY = "esri_wayback";
+const ESRI_WAYBACK_PROVIDER: ImageryProvider = {
+  key: ESRI_WAYBACK_PROVIDER_KEY,
+  name: "Esri World Imagery Wayback",
+  provider: "Esri / World Imagery",
+  group: "Basemap Historis",
+  gee_collection: "",
+  visualization: "rgb",
+  color_mode: "natural",
+  resolution_m: 1,
+  revisit_days: 0,
+  start_year: 2014,
+  cloud_property: null,
+  cloud_mask_techniques: null,
+  description:
+    "Arsip rilis World Imagery basemap. Tanggal adalah tanggal publikasi Wayback, bukan selalu tanggal akuisisi sensor.",
+};
 type ViewMode = "single" | "compare";
 type DemLayerMode = "none" | "dem" | "3d";
 
@@ -157,6 +178,7 @@ export default function ImageryModule() {
   const [maxCloudCover, setMaxCloudCover] = useState(60);
 
   const [scenes, setScenes] = useState<ImageryScene[]>([]);
+  const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
   const [truncated, setTruncated] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -164,8 +186,11 @@ export default function ImageryModule() {
 
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [tileUrl, setTileUrl] = useState<string | null>(null);
+  const [tileOpacity, setTileOpacity] = useState(1);
   const [tileLoading, setTileLoading] = useState(false);
   const [tileError, setTileError] = useState<string | null>(null);
+  const searchRequestRef = useRef(0);
+  const tileRequestRef = useRef(0);
 
   // "Bandingkan 2 Waktu" (user request) - swipe/compare slider between two
   // individual scenes (not composites), reusing the same SwipeCompareMap
@@ -185,23 +210,68 @@ export default function ImageryModule() {
   const [demError, setDemError] = useState<string | null>(null);
   const [demLayerMode, setDemLayerMode] = useState<DemLayerMode>("none");
 
-  const satelliteMeta = satellites[satellite];
+  const imageryProviders = useMemo<Record<string, ImageryProvider>>(
+    () => ({ ...satellites, [ESRI_WAYBACK_PROVIDER_KEY]: ESRI_WAYBACK_PROVIDER }),
+    [satellites],
+  );
+  const satelliteMeta = imageryProviders[satellite];
+  const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
 
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
   // group itself, so the array must already come in group order).
-  const GROUP_ORDER = ["Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
+  const GROUP_ORDER = ["Basemap Historis", "Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
   const satelliteOptions = useMemo(() => {
-    return Object.values(satellites)
+    return Object.values(imageryProviders)
       .sort((a, b) => {
         const gi = GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group);
         return gi !== 0 ? gi : a.name.localeCompare(b.name);
       })
       // Resolution shown right in the option label (user request) - lets you
       // compare sensors at a glance without selecting each one first.
-      .map((s) => ({ value: s.key, label: `${s.name} · ${s.resolution_m}m`, group: s.group }));
+      .map((s) => ({
+        value: s.key,
+        label: s.key === ESRI_WAYBACK_PROVIDER_KEY ? `${s.name} · sub-meter/variasi` : `${s.name} · ${s.resolution_m}m`,
+        group: s.group,
+      }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [satellites]);
+  }, [imageryProviders]);
+
+  const loadSceneTile = useCallback(
+    async (scene: ImageryScene) => {
+      const requestId = ++tileRequestRef.current;
+      setSelectedSceneId(scene.id);
+      setTileLoading(true);
+      setTileError(null);
+      setTileUrl(null);
+      try {
+        if (isEsriWayback) {
+          const waybackTile = sceneTilesById[scene.id] ?? (scene as WaybackScene).tile_url;
+          if (!waybackTile) throw new Error("Tile Esri Wayback untuk rilis ini tidak ditemukan.");
+          if (requestId !== tileRequestRef.current) return;
+          setTileUrl(waybackTile);
+          return;
+        }
+        const res = await getImagerySceneTile({
+          satellite,
+          sceneId: scene.id,
+          aoi: aoi ? { geojson: aoi } : undefined,
+          sarMode,
+          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+        });
+        if (requestId !== tileRequestRef.current) return;
+        setTileUrl(res.tile_url);
+      } catch (err) {
+        if (requestId !== tileRequestRef.current) return;
+        setTileError(err instanceof Error ? err.message : "Gagal memuat citra scene ini.");
+      } finally {
+        if (requestId === tileRequestRef.current) {
+          setTileLoading(false);
+        }
+      }
+    },
+    [aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, sarMode, satellite, sceneTilesById],
+  );
 
   const searchScenes = async () => {
     if (!aoi) {
@@ -212,59 +282,64 @@ export default function ImageryModule() {
       setSearchError("Rentang tanggal tidak valid (tanggal awal harus sebelum tanggal akhir).");
       return;
     }
+    const requestId = ++searchRequestRef.current;
+    ++tileRequestRef.current;
     setSearching(true);
     setSearchError(null);
     setSelectedSceneId(null);
     setTileUrl(null);
     setTileError(null);
+    setTileLoading(false);
+    setSceneTilesById({});
     setCompareSceneAId(null);
     setCompareSceneBId(null);
     setCompareTileA(null);
     setCompareTileB(null);
     setCompareError(null);
     try {
-      // GEE's filterDate end bound is exclusive - bump by 1 day so the
-      // end-date the user picked is actually included, matching how every
-      // other date-range control in this app (build_date_range) behaves.
-      const inclusiveEnd = new Date(endDate);
-      inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
-      const res = await listImageryScenes({
-        aoi: { geojson: aoi },
-        satellite,
-        startDate,
-        endDate: inclusiveEnd.toISOString().slice(0, 10),
-        maxCloudCover: cloudFilterEnabled ? maxCloudCover : undefined,
-      });
+      const res = isEsriWayback
+        ? {
+            scenes: await listEsriWaybackScenes(startDate, endDate),
+            truncated: false,
+          }
+        : await (async () => {
+            // GEE's filterDate end bound is exclusive - bump by 1 day so the
+            // end-date the user picked is actually included, matching how every
+            // other date-range control in this app (build_date_range) behaves.
+            const inclusiveEnd = new Date(endDate);
+            inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
+            return listImageryScenes({
+              aoi: { geojson: aoi },
+              satellite,
+              startDate,
+              endDate: inclusiveEnd.toISOString().slice(0, 10),
+              maxCloudCover: cloudFilterEnabled ? maxCloudCover : undefined,
+            });
+          })();
+      if (requestId !== searchRequestRef.current) return;
+      const scenesByNewest = [...res.scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1));
       setScenes(res.scenes);
+      if (isEsriWayback) {
+        setSceneTilesById(Object.fromEntries((res.scenes as WaybackScene[]).map((scene) => [scene.id, scene.tile_url])));
+      }
       setTruncated(res.truncated);
       setSearched(true);
+      if (scenesByNewest[0]) {
+        await loadSceneTile(scenesByNewest[0]);
+      }
     } catch (err) {
+      if (requestId !== searchRequestRef.current) return;
       setSearchError(err instanceof Error ? err.message : "Gagal memuat daftar scene.");
       setScenes([]);
     } finally {
-      setSearching(false);
+      if (requestId === searchRequestRef.current) {
+        setSearching(false);
+      }
     }
   };
 
-  const selectScene = async (scene: ImageryScene) => {
-    setSelectedSceneId(scene.id);
-    setTileLoading(true);
-    setTileError(null);
-    setTileUrl(null);
-    try {
-      const res = await getImagerySceneTile({
-        satellite,
-        sceneId: scene.id,
-        aoi: aoi ? { geojson: aoi } : undefined,
-        sarMode,
-        cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
-      });
-      setTileUrl(res.tile_url);
-    } catch (err) {
-      setTileError(err instanceof Error ? err.message : "Gagal memuat citra scene ini.");
-    } finally {
-      setTileLoading(false);
-    }
+  const selectScene = (scene: ImageryScene) => {
+    void loadSceneTile(scene);
   };
 
   const loadCompare = async () => {
@@ -281,6 +356,14 @@ export default function ImageryModule() {
     setCompareTileA(null);
     setCompareTileB(null);
     try {
+      if (isEsriWayback) {
+        const tileA = sceneTilesById[compareSceneAId];
+        const tileB = sceneTilesById[compareSceneBId];
+        if (!tileA || !tileB) throw new Error("Tile Esri Wayback untuk salah satu rilis tidak ditemukan.");
+        setCompareTileA(tileA);
+        setCompareTileB(tileB);
+        return;
+      }
       const [resA, resB] = await Promise.all([
         getImagerySceneTile({
           satellite,
@@ -332,6 +415,10 @@ export default function ImageryModule() {
   const sortedScenes = useMemo(
     () => [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1)),
     [scenes],
+  );
+  const selectedScene = useMemo(
+    () => scenes.find((s) => s.id === selectedSceneId) ?? null,
+    [scenes, selectedSceneId],
   );
 
   const mapLayerOptions = useMemo(
@@ -440,8 +527,16 @@ export default function ImageryModule() {
             {satelliteMeta && (
               <>
                 <small className="text-muted d-block mt-1">
-                  {satelliteMeta.resolution_m}m · revisit ~{satelliteMeta.revisit_days} hari · sejak {satelliteMeta.start_year}
+                  {isEsriWayback
+                    ? "Resolusi bervariasi (sering sub-meter hingga beberapa meter) · arsip rilis basemap sejak 2014"
+                    : `${satelliteMeta.resolution_m}m · revisit ~${satelliteMeta.revisit_days} hari · sejak ${satelliteMeta.start_year}`}
                 </small>
+                {isEsriWayback && (
+                  <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
+                    <i className="fas fa-circle-info" /> Tanggal Wayback adalah tanggal rilis/publikasi basemap, bukan
+                    tanggal akuisisi scene sensor tunggal. Cocok untuk inspeksi visual historis resolusi tinggi.
+                  </div>
+                )}
                 {(satelliteMeta.visualization !== "rgb" || satelliteMeta.color_mode === "false_color") && (
                   <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
                     <i className="fas fa-circle-info" />{" "}
@@ -509,7 +604,11 @@ export default function ImageryModule() {
                 max={todayIso()}
               />
             </div>
-            <small className="text-muted">Semua scene asli di rentang ini akan dicari (maks. 200 hasil).</small>
+            <small className="text-muted">
+              {isEsriWayback
+                ? "Rilis World Imagery Wayback di rentang ini akan dicari (maks. 200 hasil)."
+                : "Semua scene asli di rentang ini akan dicari (maks. 200 hasil)."}
+            </small>
           </div>
 
           {satelliteMeta?.cloud_property ? (
@@ -693,6 +792,14 @@ export default function ImageryModule() {
         {viewMode === "single" && (
           <>
             {tileError && <div className="alert alert-danger py-2 mb-3">{tileError}</div>}
+            {selectedScene?.cloud_cover_pct != null && selectedScene.cloud_cover_pct > 60 && (
+              <div className="alert alert-warning py-2 mb-3 small">
+                <i className="bi bi-cloud-haze2 me-1" />
+                Scene ini sangat berawan ({selectedScene.cloud_cover_pct}%). Tampilan abu-abu/pudar berasal dari citra
+                asli pada tanggal tersebut, bukan komposit bebas awan. Aktifkan Filter Tutupan Awan atau pilih scene
+                dengan badge hijau untuk visual yang lebih jelas.
+              </div>
+            )}
             {tileLoading && (
               <div className="alert alert-info py-2 mb-3">
                 <i className="fas fa-spinner fa-spin" /> Memuat citra scene...
@@ -709,10 +816,23 @@ export default function ImageryModule() {
                 )}
               </div>
               <div className="card-body p-2">
-                <MapView id="imagerySceneMap">
+                <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
                   <BasemapSwitcher extraOptions={mapLayerOptions} />
                   {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
-                  {tileUrl && <TileLayer url={tileUrl} opacity={1} attribution="Google Earth Engine" pane={RESULT_PANE} />}
+                  {tileUrl && (
+                    <>
+                      <TileLayer
+                        key={`${selectedSceneId ?? "scene"}:${tileUrl}`}
+                        url={tileUrl}
+                        opacity={tileOpacity}
+                        attribution={isEsriWayback ? "Esri World Imagery Wayback" : "Google Earth Engine"}
+                        maxNativeZoom={SCENE_TILE_MAX_NATIVE_ZOOM}
+                        maxZoom={SCENE_TILE_MAX_ZOOM}
+                        pane={RESULT_PANE}
+                      />
+                      <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
+                    </>
+                  )}
                   {demLayerMode !== "none" && demResult?.tile_url && (
                     <TileLayer url={demResult.tile_url} opacity={0.82} attribution={demResult.source} pane={RESULT_PANE} />
                   )}
@@ -828,6 +948,8 @@ export default function ImageryModule() {
                     afterLabel={formatAcquired(scenes.find((s) => s.id === compareSceneBId)?.acquired_at ?? "")}
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
+                    maxNativeZoom={SCENE_TILE_MAX_NATIVE_ZOOM}
+                    maxZoom={SCENE_TILE_MAX_ZOOM}
                   >
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
                     <FitToAoi aoi={aoi} />

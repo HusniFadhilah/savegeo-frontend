@@ -52,8 +52,8 @@ export default function LayerPanel({
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-header py-2">
+    <div className="card mb-3 disaster-modern-card disaster-layer-panel">
+      <div className="card-header py-2 disaster-soft-header">
         <i className="bi bi-layers-fill" /> Layer
       </div>
       <div className="card-body py-2">
@@ -76,7 +76,9 @@ export default function LayerPanel({
 
         {[...groups.entries()].map(([category, entries]) => (
           <div className="mb-2" key={category}>
-            <div className="fw-semibold small text-muted text-uppercase mb-1">{categoryLabel(category)}</div>
+            <div className="fw-semibold small text-muted text-uppercase mb-1">
+              {categoryLabel(category)}
+            </div>
             {entries.map((entry) => (
               <div className="form-check form-switch" key={entry.model_id}>
                 <input
@@ -99,7 +101,13 @@ export default function LayerPanel({
         <div>
           <div className="fw-semibold small text-muted text-uppercase mb-1">Reference</div>
           <div className="form-check form-switch">
-            <input className="form-check-input" type="checkbox" id="layerAoi" checked={showAoi} onChange={onToggleAoi} />
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="layerAoi"
+              checked={showAoi}
+              onChange={onToggleAoi}
+            />
             <label className="form-check-label small" htmlFor="layerAoi">
               Batas AOI
             </label>

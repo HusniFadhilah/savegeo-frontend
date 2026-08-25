@@ -110,6 +110,7 @@ export default function CropMonitoringModule() {
         sub_analyses: subs,
         weather_source: weatherSource as "gee" | "openmeteo",
         timeseries_index: timeseriesIndex,
+        scale: 10,
         data_sources: { sentinel1: sentinel1Enabled },
         ...(compareSeasonEnabled ? { compare_years: compareYears } : {}),
       });
@@ -261,38 +262,56 @@ export default function CropMonitoringModule() {
               <div className="card-body">
                 <div className="cm-summary-grid">
                   <div className="cm-summary-tile">
-                    <span>Kesehatan</span>
-                    <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
-                      {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
-                    </strong>
+                    <i className="bi bi-heart-pulse" />
+                    <div>
+                      <span>Kesehatan</span>
+                      <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
+                        {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
+                      </strong>
+                    </div>
                   </div>
                   <div className="cm-summary-tile">
-                    <span>NDVI</span>
-                    <strong>{sub.health?.available ? fmtNum(sub.health.ndvi_mean, 3) : "-"}</strong>
+                    <i className="bi bi-activity" />
+                    <div>
+                      <span>NDVI</span>
+                      <strong>{sub.health?.available ? fmtNum(sub.health.ndvi_mean, 3) : "-"}</strong>
+                    </div>
                   </div>
                   <div className="cm-summary-tile">
-                    <span>Perubahan</span>
-                    <strong>
-                      {sub.health?.available && sub.health.change_vs_previous_month_pct != null
-                        ? `${sub.health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(sub.health.change_vs_previous_month_pct)}`
-                        : "-"}
-                    </strong>
+                    <i className="bi bi-graph-up-arrow" />
+                    <div>
+                      <span>Perubahan</span>
+                      <strong>
+                        {sub.health?.available && sub.health.change_vs_previous_month_pct != null
+                          ? `${sub.health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(sub.health.change_vs_previous_month_pct)}`
+                          : "-"}
+                      </strong>
+                    </div>
                   </div>
                   <div className="cm-summary-tile">
-                    <span>Kelembaban</span>
-                    <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
-                      {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
-                    </strong>
+                    <i className="bi bi-droplet-half" />
+                    <div>
+                      <span>Kelembaban</span>
+                      <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
+                        {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
+                      </strong>
+                    </div>
                   </div>
                   <div className="cm-summary-tile">
-                    <span>Fase</span>
-                    <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
+                    <i className="bi bi-flower2" />
+                    <div>
+                      <span>Fase</span>
+                      <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
+                    </div>
                   </div>
                   <div className="cm-summary-tile">
-                    <span>Risiko</span>
-                    <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
-                      {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
-                    </strong>
+                    <i className="bi bi-shield-exclamation" />
+                    <div>
+                      <span>Risiko</span>
+                      <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
+                        {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
+                      </strong>
+                    </div>
                   </div>
                 </div>
                 {result.skipped.length > 0 && (

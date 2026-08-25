@@ -18,6 +18,8 @@ export interface ImageryProvider {
   /** Dropdown subgroup label (e.g. "Optik", "Radar (SAR)", "Atmosfer (Gas)", "Malam Hari (Night Lights)"). */
   group: string;
   gee_collection: string;
+  source_kind?: "gee" | "geosave_cdse_stac";
+  stac_collection?: string;
   visualization: ImageryVisualization;
   /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
   color_mode?: "natural" | "false_color";

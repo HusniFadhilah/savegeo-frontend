@@ -23,6 +23,12 @@ const PRODUCTIVITY_LEGEND: MapLegendEntry[] = [
   { color: "#c62828", label: "Rendah" },
 ];
 
+const ANOMALY_LEGEND: MapLegendEntry[] = [
+  { color: "#b71c1c", label: "Penurunan NDVI", value: "< -0.15" },
+  { color: "#ffee58", label: "Mendekati normal", value: "-0.15 - 0.15" },
+  { color: "#2e7d32", label: "Peningkatan NDVI", value: "> 0.15" },
+];
+
 /** `flood.legend[].label` comes straight from `disaster_analysis_service.py`
  * (shared with the Disaster module) in English - translated here at display
  * time rather than touching that shared backend string, which other modules
@@ -36,7 +42,13 @@ const FLOOD_LEGEND_LABEL: Record<string, string> = {
 function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
   const tabs: Tab[] = [];
   if (sub.anomaly?.available && sub.anomaly.tile_url) {
-    tabs.push({ key: "anomaly", label: "Anomali", icon: "bi-exclamation-diamond", tileUrl: sub.anomaly.tile_url, legend: [] });
+    tabs.push({
+      key: "anomaly",
+      label: "Anomali",
+      icon: "bi-exclamation-diamond",
+      tileUrl: sub.anomaly.tile_url,
+      legend: ANOMALY_LEGEND,
+    });
   }
   if (sub.flood?.available && sub.flood.tile_url) {
     tabs.push({
@@ -86,13 +98,14 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
   const center: [number, number] = bounds ? [bounds.getCenter().lat, bounds.getCenter().lng] : [-2.5, 118];
 
   return (
-    <div className="card mb-3">
+    <div className="card mb-3 cm-panel-card cm-result-map-card">
       <div className="card-header">
         <i className="bi bi-globe-americas me-1" /> Peta Hasil
+        {activeTab && <span className="cm-header-chip">{activeTab.label}</span>}
       </div>
       <div className="card-body">
         {tabs.length > 0 && (
-          <ul className="nav nav-tabs mb-3">
+          <ul className="nav nav-pills cm-map-tabs mb-3">
             {tabs.map((tab) => (
               <li className="nav-item" key={tab.key}>
                 <button
@@ -108,10 +121,10 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
           </ul>
         )}
 
-        <div style={{ position: "relative" }}>
+        <div className="cm-map-shell">
           <MapView id="cropMonitoringResultMap" center={center} zoom={fieldFeature ? 13 : 5}>
             <BasemapSwitcher />
-            {fieldFeature && <GeoJSON data={fieldFeature} style={{ color: "red", weight: 2, fillOpacity: 0.05 }} />}
+            {fieldFeature && <GeoJSON data={fieldFeature} style={{ color: "#ef4444", weight: 2, fillOpacity: 0.04 }} />}
             {activeTab && (
               <>
                 <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
@@ -120,7 +133,7 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
             )}
           </MapView>
           {activeTab && activeTab.legend.length > 0 && (
-            <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 1000, maxWidth: 220 }}>
+            <div className="cm-map-legend">
               <MapLegend title={activeTab.label} entries={activeTab.legend} />
             </div>
           )}

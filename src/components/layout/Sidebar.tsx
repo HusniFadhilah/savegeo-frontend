@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
+import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 
 const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
   { id: "carbon", icon: "bi-tree-fill", labelKey: "sidebar.carbon" },
@@ -24,7 +25,8 @@ export default function Sidebar() {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
 
-  const selectModule = (m: DashboardModule) => {
+  const selectModule = (m: DashboardModule, event?: ReactMouseEvent<HTMLAnchorElement>) => {
+    event?.preventDefault();
     // "disaster" moved out of the in-page module-tab system into its own
     // login-gated route (`/pemetaan-bencana` - the redesigned Disaster
     // Intelligence Dashboard). The old in-page module still exists (now just
@@ -32,11 +34,13 @@ export default function Sidebar() {
     // "Additional Sources" section too) but is no longer reachable from here
     // to avoid two different things both being called "Pemetaan Bencana".
     if (m === "disaster") {
-      navigate("/pemetaan-bencana");
+      setActiveModule(m);
+      navigate(getDashboardModulePath(m));
       closeMobileSidebar();
       return;
     }
     setActiveModule(m);
+    navigate(getDashboardModulePath(m));
     closeMobileSidebar();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -88,7 +92,8 @@ export default function Sidebar() {
             <li key={item.id}>
               <a
                 className={`sidebar-menu-item ${activeModule === item.id ? "active" : ""}`}
-                onClick={() => selectModule(item.id)}
+                href={getDashboardModulePath(item.id)}
+                onClick={(event) => selectModule(item.id, event)}
                 data-tooltip={t(item.labelKey)}
               >
                 <i className={`bi ${item.icon}`} />

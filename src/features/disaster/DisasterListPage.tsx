@@ -30,6 +30,25 @@ function severityBadgeClass(severity: string | null): string {
   }
 }
 
+function typeIcon(type: string | undefined): string {
+  switch (type) {
+    case "flood":
+      return "bi-water";
+    case "earthquake":
+      return "bi-activity";
+    case "landslide":
+      return "bi-triangle";
+    case "wildfire":
+      return "bi-fire";
+    default:
+      return "bi-exclamation-triangle";
+  }
+}
+
+function activeFilterCount(filters: DisasterEventListParams): number {
+  return Object.values(filters).filter((value) => value !== undefined && value !== "").length;
+}
+
 /**
  * Item D.11 of the redesign spec: published event cards + filter bar
  * (disaster_type/year/province/severity) + search. Calls GET /disasters
@@ -59,7 +78,11 @@ export default function DisasterListPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : "Terjadi kesalahan jaringan saat memuat daftar bencana.");
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Terjadi kesalahan jaringan saat memuat daftar bencana.",
+        );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -81,144 +104,205 @@ export default function DisasterListPage() {
 
   const years = Array.from({ length: Math.max(0, yearMax - yearMin + 1) }, (_, i) => yearMax - i);
 
+  const filterCount = activeFilterCount(filters);
+
   return (
-    <div className="container-fluid py-3">
-      <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <Link to="/">
-          <img src="/logo.jpg" alt="SAVEGEO" height={40} className="rounded" />
+    <div className="disaster-shell disaster-list-shell">
+      <div className="disaster-topbar">
+        <Link to="/" className="disaster-brand">
+          <img src="images/savegeo-logo.svg" alt="SAVEGEO" />
+          <span>SAVEGEO</span>
         </Link>
-        <h4 className="mb-0">Dashboard Intelijen Bencana</h4>
-        <div className="ms-auto d-flex align-items-center gap-2">
-          <span className="text-muted small">{user?.username}</span>
+        <div className="disaster-topbar-actions">
+          <span>{user?.username}</span>
           <button type="button" className="btn btn-sm btn-outline-secondary" onClick={logout}>
             <i className="bi bi-box-arrow-right" /> Logout
           </button>
         </div>
       </div>
 
-      <form className="card mb-3" onSubmit={applyFilters}>
-        <div className="card-body">
-          <div className="row g-2 align-items-end">
-            <div className="col-md-3">
-              <label className="form-label small fw-semibold mb-1">Jenis Bencana</label>
-              <select
-                className="form-select form-select-sm"
-                value={pendingFilters.disaster_type ?? ""}
-                onChange={(e) => setPendingFilters((f) => ({ ...f, disaster_type: e.target.value || undefined }))}
-              >
-                <option value="">Semua Jenis</option>
-                {EVENT_DISASTER_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-md-2">
-              <label className="form-label small fw-semibold mb-1">Tahun</label>
-              <select
-                className="form-select form-select-sm"
-                value={pendingFilters.year ?? ""}
-                onChange={(e) => setPendingFilters((f) => ({ ...f, year: e.target.value || undefined }))}
-              >
-                <option value="">Semua Tahun</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-md-2">
-              <label className="form-label small fw-semibold mb-1">Provinsi</label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="cth. Jawa Barat"
-                value={pendingFilters.province ?? ""}
-                onChange={(e) => setPendingFilters((f) => ({ ...f, province: e.target.value || undefined }))}
-              />
-            </div>
-            <div className="col-md-2">
-              <label className="form-label small fw-semibold mb-1">Tingkat Keparahan</label>
-              <select
-                className="form-select form-select-sm"
-                value={pendingFilters.severity ?? ""}
-                onChange={(e) => setPendingFilters((f) => ({ ...f, severity: e.target.value || undefined }))}
-              >
-                <option value="">Semua</option>
-                {SEVERITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-md-3">
-              <label className="form-label small fw-semibold mb-1">Cari</label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Nama / lokasi kejadian"
-                value={pendingFilters.search ?? ""}
-                onChange={(e) => setPendingFilters((f) => ({ ...f, search: e.target.value || undefined }))}
-              />
-            </div>
+      <section className="disaster-list-hero">
+        <div>
+          <span className="disaster-eyebrow">Pemetaan Bencana</span>
+          <h1>Dashboard Intelijen Bencana</h1>
+          <p>
+            Pantau kejadian terpublikasi, buka citra pre/post, dan telusuri hasil analisis spasial
+            dalam satu alur kerja yang ringkas.
+          </p>
+        </div>
+        <div className="disaster-hero-metrics">
+          <div>
+            <i className="bi bi-broadcast-pin" />
+            <span>Event Aktif</span>
+            <strong>{events.length}</strong>
           </div>
-          <div className="mt-2 d-flex gap-2">
-            <button type="submit" className="btn btn-sm btn-primary">
-              <i className="bi bi-funnel-fill" /> Terapkan Filter
-            </button>
-            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={resetFilters}>
-              Reset
-            </button>
+          <div>
+            <i className="bi bi-cpu" />
+            <span>Analisis</span>
+            <strong>
+              {events.reduce((sum, event) => sum + (event.available_analysis_count ?? 0), 0)}
+            </strong>
           </div>
+          <div>
+            <i className="bi bi-funnel" />
+            <span>Filter</span>
+            <strong>{filterCount}</strong>
+          </div>
+        </div>
+      </section>
+
+      <form className="disaster-filter-panel" onSubmit={applyFilters}>
+        <div className="disaster-filter-grid">
+          <div>
+            <label className="form-label small fw-semibold mb-1">Jenis Bencana</label>
+            <select
+              className="form-select form-select-sm"
+              value={pendingFilters.disaster_type ?? ""}
+              onChange={(e) =>
+                setPendingFilters((f) => ({ ...f, disaster_type: e.target.value || undefined }))
+              }
+            >
+              <option value="">Semua Jenis</option>
+              {EVENT_DISASTER_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="form-label small fw-semibold mb-1">Tahun</label>
+            <select
+              className="form-select form-select-sm"
+              value={pendingFilters.year ?? ""}
+              onChange={(e) =>
+                setPendingFilters((f) => ({ ...f, year: e.target.value || undefined }))
+              }
+            >
+              <option value="">Semua Tahun</option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="form-label small fw-semibold mb-1">Provinsi</label>
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="cth. Jawa Barat"
+              value={pendingFilters.province ?? ""}
+              onChange={(e) =>
+                setPendingFilters((f) => ({ ...f, province: e.target.value || undefined }))
+              }
+            />
+          </div>
+          <div>
+            <label className="form-label small fw-semibold mb-1">Tingkat Keparahan</label>
+            <select
+              className="form-select form-select-sm"
+              value={pendingFilters.severity ?? ""}
+              onChange={(e) =>
+                setPendingFilters((f) => ({ ...f, severity: e.target.value || undefined }))
+              }
+            >
+              <option value="">Semua</option>
+              {SEVERITY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="disaster-filter-search">
+            <label className="form-label small fw-semibold mb-1">Cari</label>
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Nama / lokasi kejadian"
+              value={pendingFilters.search ?? ""}
+              onChange={(e) =>
+                setPendingFilters((f) => ({ ...f, search: e.target.value || undefined }))
+              }
+            />
+          </div>
+        </div>
+        <div className="disaster-filter-actions">
+          <button type="submit" className="btn btn-sm btn-primary">
+            <i className="bi bi-funnel-fill" /> Terapkan
+          </button>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={resetFilters}>
+            Reset
+          </button>
         </div>
       </form>
 
       {loading && (
         <div className="alert alert-info py-2">
-          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+          <span
+            className="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          />
           Memuat daftar kejadian bencana...
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {!loading && !error && !events.length && (
-        <div className="alert alert-secondary py-2">Tidak ada kejadian bencana yang cocok dengan filter ini.</div>
+        <div className="alert alert-secondary py-2">
+          Tidak ada kejadian bencana yang cocok dengan filter ini.
+        </div>
       )}
 
-      <div className="row g-3">
+      <div className="disaster-event-grid">
         {events.map((event) => (
-          <div className="col-md-6 col-lg-4" key={event.id}>
-            <div className="card h-100">
-              {event.thumbnail && (
-                <img src={event.thumbnail} className="card-img-top" alt={event.name} style={{ height: 160, objectFit: "cover" }} />
+          <article className="disaster-event-card" key={event.id}>
+            <div className="disaster-event-media">
+              {event.thumbnail ? (
+                <img src={event.thumbnail} alt={event.name} />
+              ) : (
+                <div className="disaster-event-placeholder">
+                  <i className={`bi ${typeIcon(event.disaster_type)}`} />
+                </div>
               )}
-              <div className="card-body d-flex flex-column">
-                <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                  <span className="badge bg-primary">
-                    {EVENT_DISASTER_TYPE_LABELS[event.disaster_type as keyof typeof EVENT_DISASTER_TYPE_LABELS] ||
-                      event.disaster_type}
+              <span className="disaster-event-date">{event.event_date || "-"}</span>
+            </div>
+            <div className="disaster-event-body">
+              <div className="disaster-card-badges">
+                <span className="badge text-bg-primary">
+                  <i className={`bi ${typeIcon(event.disaster_type)}`} />{" "}
+                  {EVENT_DISASTER_TYPE_LABELS[
+                    event.disaster_type as keyof typeof EVENT_DISASTER_TYPE_LABELS
+                  ] || event.disaster_type}
+                </span>
+                {event.severity && (
+                  <span className={`badge ${severityBadgeClass(event.severity)}`}>
+                    {SEVERITY_LABELS[event.severity]}
                   </span>
-                  {event.severity && (
-                    <span className={`badge ${severityBadgeClass(event.severity)}`}>{SEVERITY_LABELS[event.severity]}</span>
-                  )}
-                </div>
-                <h6 className="card-title">{event.name}</h6>
-                <p className="card-text small text-muted mb-1">
-                  {[event.location_name, event.province?.join(", ")].filter(Boolean).join(" - ") || "-"}
-                </p>
-                <p className="card-text small text-muted mb-2">{event.event_date || "-"}</p>
-                {event.description && <p className="card-text small flex-grow-1">{event.description.slice(0, 140)}</p>}
-                <div className="d-flex align-items-center justify-content-between mt-auto pt-2">
-                  <span className="small text-muted">{event.available_analysis_count} analisis tersedia</span>
-                  <Link to={`/pemetaan-bencana/${event.id}`} className="btn btn-sm btn-primary">
-                    Lihat Detail
-                  </Link>
-                </div>
+                )}
+              </div>
+              <h2>{event.name}</h2>
+              <p className="disaster-event-location">
+                <i className="bi bi-geo-alt" />{" "}
+                {[event.location_name, event.province?.join(", ")].filter(Boolean).join(" - ") ||
+                  "-"}
+              </p>
+              {event.description && (
+                <p className="disaster-event-description">{event.description.slice(0, 170)}</p>
+              )}
+              <div className="disaster-card-footer">
+                <span>
+                  <i className="bi bi-bar-chart" /> {event.available_analysis_count} analisis
+                  tersedia
+                </span>
+                <Link to={`/pemetaan-bencana/${event.id}`} className="btn btn-sm btn-primary">
+                  Detail <i className="bi bi-arrow-right" />
+                </Link>
               </div>
             </div>
-          </div>
+          </article>
         ))}
       </div>
     </div>

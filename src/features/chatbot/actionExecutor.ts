@@ -1,7 +1,8 @@
 import { chatbotApi } from "./api";
 import { getAppValue } from "./windowBridge";
 import { zoomToLocation, zoomToFeature, highlightPolygon } from "./mapActions";
-import { useUiStore } from "@/hooks/useUiStore";
+import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
+import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 import type { ChatAction, QuickAction } from "./types";
 
 /**
@@ -31,6 +32,12 @@ const MODULE_FOR_KIND: Record<string, "carbon" | "lc-change"> = {
   landcover: "carbon",
   landcover_transition: "lc-change",
 };
+
+function openDashboardModule(module: DashboardModule): void {
+  useUiStore.getState().setActiveModule(module);
+  window.history.pushState(null, "", getDashboardModulePath(module));
+  window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -132,7 +139,7 @@ async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promis
     }
     case "open_analysis_result": {
       const target = action.kind ? MODULE_FOR_KIND[action.kind] : null;
-      return void (target && useUiStore.getState().setActiveModule(target));
+      return void (target && openDashboardModule(target));
     }
     default:
       return;
@@ -140,22 +147,28 @@ async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promis
 }
 
 function switchModule(moduleName: string | undefined, _ctx: ActionRunContext): Promise<void> {
-  const MAP: Record<string, string> = {
+  const MAP: Record<string, DashboardModule> = {
     carbon: "carbon",
     landcover: "carbon",
     lc_change: "lc-change",
     disaster: "disaster",
+    crop_monitoring: "crop-monitoring",
+    crop: "crop-monitoring",
+    imagery: "imagery",
     // "details" folded into "about" (merged Detail Program into Tentang Program).
     details: "about",
     about: "about",
     guide: "guide",
   };
-  const target = (moduleName && MAP[moduleName]) || moduleName || "";
+  const target = moduleName ? MAP[moduleName] : undefined;
   const switchFn = getAppValue("switchModule");
-  if (typeof switchFn === "function") {
+  if (typeof switchFn === "function" && target) {
     switchFn(target);
+  } else if (target) {
+    openDashboardModule(target);
   } else {
-    clickIfExists("menu-" + target);
+    const legacyTarget = moduleName || "";
+    clickIfExists("menu-" + legacyTarget);
   }
 
   if (moduleName === "landcover") {

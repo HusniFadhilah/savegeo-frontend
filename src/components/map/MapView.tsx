@@ -18,6 +18,7 @@ interface Props {
   onMapReady?: (map: LeafletMap) => void;
   center?: [number, number];
   zoom?: number;
+  maxZoom?: number;
   className?: string;
 }
 
@@ -70,9 +71,10 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, className }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className }: Props) {
   const { basemaps } = useBasemaps();
   const defaultBasemap = basemaps.find((b) => b.isDefault) ?? basemaps[0];
+  const effectiveMaxZoom = maxZoom ?? defaultBasemap?.maxZoom;
 
   // Tracks which basemap this map instance is showing, for ImageryAttribution
   // (satellite capture-date lookup) - defaults to whatever's actually
@@ -89,11 +91,17 @@ export default function MapView({ id, children, onMapReady, center, zoom, classN
         id={id}
         center={center ?? INDONESIA_CENTER}
         zoom={zoom ?? INDONESIA_ZOOM}
+        maxZoom={effectiveMaxZoom}
         className={className ?? "savegeo-map"}
         preferCanvas
       >
         {defaultBasemap && (
-          <TileLayer url={defaultBasemap.url} attribution={defaultBasemap.attribution} maxZoom={defaultBasemap.maxZoom} />
+          <TileLayer
+            url={defaultBasemap.url}
+            attribution={defaultBasemap.attribution}
+            maxNativeZoom={defaultBasemap.maxZoom}
+            maxZoom={Math.max(defaultBasemap.maxZoom, effectiveMaxZoom ?? defaultBasemap.maxZoom)}
+          />
         )}
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />

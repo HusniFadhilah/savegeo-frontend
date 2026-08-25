@@ -17,6 +17,7 @@ export function analyzeVegetation(aoi: AoiPayload, year: number, params: Vegetat
     start_month: params.startMonth,
     end_month: params.endMonth,
     cloud_threshold: params.cloudThreshold,
+    scale: 10,
     indices: params.indices,
     satellite: params.satellite,
     cloud_mask_technique: params.cloudMaskTechnique,

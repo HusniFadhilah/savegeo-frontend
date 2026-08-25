@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
-import { useUiStore } from "@/hooks/useUiStore";
+import { useNavigate } from "react-router-dom";
+import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
+import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 
 type StepId = "step1" | "step2" | "step3" | "step4" | "stepTips";
 type NoteTone = "info" | "warn" | "success" | "danger";
@@ -282,6 +284,7 @@ const MODEL_DOCS = [
  */
 export default function GuideModule() {
   const setActiveModule = useUiStore((s) => s.setActiveModule);
+  const navigate = useNavigate();
   const [openId, setOpenId] = useState<StepId>("step1");
   const toggle = (id: StepId) => setOpenId((cur) => (cur === id ? ("" as StepId) : id));
   const [paramTab, setParamTab] = useState<ParamKey>("veg");
@@ -302,6 +305,10 @@ export default function GuideModule() {
       .toLowerCase()
       .includes(datasetQuery),
   );
+  const openModule = (module: DashboardModule) => {
+    setActiveModule(module);
+    navigate(getDashboardModulePath(module));
+  };
 
   return (
     <div className="guide-page container-fluid mt-2">
@@ -1042,10 +1049,10 @@ export default function GuideModule() {
               <i className="bi bi-lightning-fill" /> Quick Actions
             </h4>
             <div className="guide-quickref-buttons">
-              <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setActiveModule("carbon")}>
+              <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openModule("carbon")}>
                 <i className="bi bi-play" /> Go to Analysis
               </button>
-              <button type="button" className="btn btn-sm btn-outline-success" onClick={() => setActiveModule("about")}>
+              <button type="button" className="btn btn-sm btn-outline-success" onClick={() => openModule("about")}>
                 <i className="bi bi-info-circle" /> About Program
               </button>
             </div>

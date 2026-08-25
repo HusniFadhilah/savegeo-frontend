@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useUiStore } from "@/hooks/useUiStore";
+import { useNavigate } from "react-router-dom";
+import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
+import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 
 type Tab = "ringkasan" | "tim" | "output";
 
@@ -80,7 +82,12 @@ const LEN_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_In
  */
 export default function AboutModule() {
   const setActiveModule = useUiStore((s) => s.setActiveModule);
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("ringkasan");
+  const openModule = (module: DashboardModule) => {
+    setActiveModule(module);
+    navigate(getDashboardModulePath(module));
+  };
 
   return (
     <div className="about-page container-fluid mt-2">
@@ -187,10 +194,10 @@ export default function AboutModule() {
                 <i className="bi bi-lightning-charge-fill" /> Akses cepat
               </span>
               <div className="about-cta-buttons">
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => setActiveModule("carbon")}>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => openModule("carbon")}>
                   <i className="bi bi-play-fill" /> Mulai Analisis
                 </button>
-                <button type="button" className="btn btn-outline-success btn-sm" onClick={() => setActiveModule("guide")}>
+                <button type="button" className="btn btn-outline-success btn-sm" onClick={() => openModule("guide")}>
                   <i className="bi bi-book-fill" /> Baca Panduan
                 </button>
                 <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setTab("output")}>

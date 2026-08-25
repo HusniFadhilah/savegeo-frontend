@@ -53,6 +53,21 @@ function severityBadgeClass(severity: string | null): string {
   }
 }
 
+function typeIcon(type: string): string {
+  switch (type) {
+    case "flood":
+      return "bi-water";
+    case "earthquake":
+      return "bi-activity";
+    case "landslide":
+      return "bi-triangle";
+    case "wildfire":
+      return "bi-fire";
+    default:
+      return "bi-exclamation-triangle";
+  }
+}
+
 /**
  * Item D.14/D.48 of the redesign spec: single event view. Assembled from the
  * 4 independent `GET /disasters/{id}/*` calls the contract doc documents
@@ -116,7 +131,9 @@ export default function DisasterDashboard() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setDetailError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat detail kejadian."));
+        setDetailError(
+          errorMessage(err, "Terjadi kesalahan jaringan saat memuat detail kejadian."),
+        );
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);
@@ -159,7 +176,8 @@ export default function DisasterDashboard() {
         if (!cancelled) setStatistics(res);
       })
       .catch((err) => {
-        if (!cancelled) setStatsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat statistik."));
+        if (!cancelled)
+          setStatsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat statistik."));
       })
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
@@ -179,7 +197,8 @@ export default function DisasterDashboard() {
         if (!cancelled) setHotspots(res.hotspots ?? []);
       })
       .catch((err) => {
-        if (!cancelled) setHotspotsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat hotspot."));
+        if (!cancelled)
+          setHotspotsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat hotspot."));
       })
       .finally(() => {
         if (!cancelled) setHotspotsLoading(false);
@@ -242,7 +261,10 @@ export default function DisasterDashboard() {
     setDemLoading(true);
     setDemError(null);
     try {
-      const res = await analyzeDemSlope({ aoi: { geojson: detail.aoi.geojson as AoiFeature }, scale: 90 });
+      const res = await analyzeDemSlope({
+        aoi: { geojson: detail.aoi.geojson as AoiFeature },
+        scale: 90,
+      });
       setDemResult(res);
     } catch (err) {
       setDemError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat DEM."));
@@ -255,7 +277,11 @@ export default function DisasterDashboard() {
     return (
       <div className="container-fluid py-4">
         <div className="alert alert-info py-2">
-          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+          <span
+            className="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          />
           Memuat detail kejadian bencana...
         </div>
       </div>
@@ -265,7 +291,9 @@ export default function DisasterDashboard() {
   if (detailError || !detail) {
     return (
       <div className="container-fluid py-4">
-        <div className="alert alert-danger py-2">{detailError || "Kejadian bencana tidak ditemukan."}</div>
+        <div className="alert alert-danger py-2">
+          {detailError || "Kejadian bencana tidak ditemukan."}
+        </div>
         <Link to="/pemetaan-bencana" className="btn btn-sm btn-outline-secondary">
           <i className="bi bi-arrow-left" /> Kembali ke daftar
         </Link>
@@ -277,15 +305,17 @@ export default function DisasterDashboard() {
   const analyses = layers?.analyses ?? [];
   const satellite = layers?.satellite ?? null;
   const checkedLayers = analyses.filter((a) => checkedAnalyses.has(a.model_id) && a.result);
+  const availableAnalyses = analyses.filter((entry) => entry.available).length;
+  const totalImagery = imagery.pre.length + imagery.post.length;
 
   return (
-    <div className="container-fluid py-3">
-      <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <div className="disaster-shell disaster-detail-shell">
+      <div className="disaster-topbar">
         <Link to="/pemetaan-bencana" className="btn btn-sm btn-outline-secondary">
           <i className="bi bi-arrow-left" /> Daftar Bencana
         </Link>
-        <div className="ms-auto d-flex align-items-center gap-2">
-          <span className="text-muted small">{user?.username}</span>
+        <div className="disaster-topbar-actions">
+          <span>{user?.username}</span>
           <button type="button" className="btn btn-sm btn-outline-secondary" onClick={logout}>
             <i className="bi bi-box-arrow-right" /> Logout
           </button>
@@ -293,40 +323,63 @@ export default function DisasterDashboard() {
       </div>
 
       {/* 1. Header */}
-      <div className="card mb-3">
-        <div className="card-body">
-          <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
-            <span className="badge bg-primary">
-              {EVENT_DISASTER_TYPE_LABELS[event.disaster_type as EventDisasterType] || event.disaster_type}
+      <section className="disaster-detail-hero">
+        <div className="disaster-detail-title">
+          <div className="disaster-card-badges">
+            <span className="badge text-bg-primary">
+              <i className={`bi ${typeIcon(event.disaster_type)}`} />{" "}
+              {EVENT_DISASTER_TYPE_LABELS[event.disaster_type as EventDisasterType] ||
+                event.disaster_type}
             </span>
             {event.severity && (
               <span className={`badge ${severityBadgeClass(event.severity)}`}>
                 {SEVERITY_LABELS[event.severity as EventSeverity]}
               </span>
             )}
-            <span className="text-muted small">{event.event_date || "-"}</span>
+            <span className="disaster-muted-chip">
+              <i className="bi bi-calendar3" /> {event.event_date || "-"}
+            </span>
           </div>
-          <h4 className="mb-1">{event.name}</h4>
-          <p className="text-muted mb-2">
-            {[event.location_name, event.province?.join(", "), event.district?.join(", ")].filter(Boolean).join(" - ")}
+          <h1>{event.name}</h1>
+          <p className="disaster-detail-location">
+            <i className="bi bi-geo-alt" />{" "}
+            {[event.location_name, event.province?.join(", "), event.district?.join(", ")]
+              .filter(Boolean)
+              .join(" - ")}
           </p>
-          {event.description && <p className="mb-0">{event.description}</p>}
-          {aoi?.area_ha != null && (
-            <p className="small text-muted mt-2 mb-0">
-              Luas AOI: {aoi.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
-            </p>
-          )}
+          {event.description && <p className="disaster-detail-description">{event.description}</p>}
         </div>
-      </div>
+        <div className="disaster-detail-facts">
+          <div>
+            <i className="bi bi-bounding-box-circles" />
+            <span>AOI</span>
+            <strong>
+              {aoi?.area_ha != null
+                ? `${aoi.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 1 })} ha`
+                : "-"}
+            </strong>
+          </div>
+          <div>
+            <i className="bi bi-images" />
+            <span>Citra</span>
+            <strong>{totalImagery}</strong>
+          </div>
+          <div>
+            <i className="bi bi-diagram-3" />
+            <span>Analisis</span>
+            <strong>{availableAnalyses}</strong>
+          </div>
+        </div>
+      </section>
 
       {/* 2. Satellite viewer */}
       <SatelliteViewer aoi={aoi} imagery={imagery} primaryImagery={primary_imagery} />
 
       {layersError && <div className="alert alert-warning py-2 mb-3">{layersError}</div>}
 
-      <div className="row g-3">
+      <section className="disaster-workspace">
         {/* 3+6. Layer panel (analysis selector, grouped by category, per spec section 29) */}
-        <div className="col-lg-3">
+        <aside className="disaster-side-rail">
           <LayerPanel
             satellite={satellite}
             analyses={analyses}
@@ -347,13 +400,17 @@ export default function DisasterDashboard() {
           />
           {hotspotsLoading && <div className="text-muted small mb-3">Memuat hotspot...</div>}
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
-        </div>
+        </aside>
 
         {/* 5. Map + legend */}
-        <div className="col-lg-9">
+        <div className="disaster-map-column">
           {layersLoading ? (
             <div className="alert alert-info py-2">
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              />
               Memuat layer peta...
             </div>
           ) : (
@@ -382,15 +439,23 @@ export default function DisasterDashboard() {
             </>
           )}
         </div>
-      </div>
+      </section>
 
       {/* 4. KPI tiles */}
-      <h5 className="mt-3 mb-2">
-        <i className="bi bi-bar-chart-fill" /> Statistik
-      </h5>
+      <div className="disaster-section-heading">
+        <div>
+          <span>Hasil Analisis</span>
+          <h2>Statistik Dampak</h2>
+        </div>
+        <i className="bi bi-bar-chart-fill" />
+      </div>
       {statsLoading ? (
         <div className="alert alert-info py-2">
-          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+          <span
+            className="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          />
           Memuat statistik...
         </div>
       ) : statsError ? (
@@ -401,8 +466,8 @@ export default function DisasterDashboard() {
 
           {/* 9. Cross-layer stat card - only rendered if the backend actually returned entries */}
           {statistics.cross_layer.length > 0 && (
-            <div className="card mb-3">
-              <div className="card-header py-2">
+            <div className="card mb-3 disaster-modern-card">
+              <div className="card-header py-2 disaster-soft-header">
                 <i className="bi bi-intersect" /> Statistik Lintas-Layer
               </div>
               <div className="card-body">
@@ -427,10 +492,10 @@ export default function DisasterDashboard() {
       ) : null}
 
       {/* Additional Sources - legacy BMKG/InaRISK/DEMNAS panels, collapsed */}
-      <div className="card mt-3">
+      <div className="card mt-3 disaster-modern-card">
         <button
           type="button"
-          className="card-header py-2 d-flex align-items-center justify-content-between w-100 border-0 bg-transparent text-start"
+          className="card-header py-2 d-flex align-items-center justify-content-between w-100 border-0 bg-transparent text-start disaster-soft-header"
           onClick={() => setAdditionalSourcesOpen((v) => !v)}
         >
           <span>
@@ -441,13 +506,28 @@ export default function DisasterDashboard() {
         {additionalSourcesOpen && (
           <div className="card-body">
             <div className="d-flex gap-2 flex-wrap mb-3">
-              <button type="button" className="btn btn-sm btn-outline-primary" onClick={handleLoadSources} disabled={sourcesLoading}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary"
+                onClick={handleLoadSources}
+                disabled={sourcesLoading}
+              >
                 <i className="bi bi-database-fill" /> Muat Sumber Resmi
               </button>
-              <button type="button" className="btn btn-sm btn-outline-info" onClick={handleLoadBmkg} disabled={alertsLoading}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-info"
+                onClick={handleLoadBmkg}
+                disabled={alertsLoading}
+              >
                 <i className="bi bi-cloud-rain-heavy-fill" /> Peringatan BMKG
               </button>
-              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleLoadDem} disabled={demLoading}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={handleLoadDem}
+                disabled={demLoading}
+              >
                 <i className="bi bi-triangle-fill" /> Layer Kemiringan DEM
               </button>
             </div>

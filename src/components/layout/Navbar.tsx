@@ -16,7 +16,7 @@ export default function Navbar() {
   const [statusOpen, setStatusOpen] = useState(false);
 
   const statusLabel =
-    state === "online" ? "Terhubung" : state === "offline" ? "Terputus" : "Menghubungkan...";
+    state === "online" ? " Terhubung" : state === "offline" ? " Terputus" : " Menghubungkan...";
   const statusBadgeClass =
     state === "online" ? "bg-success-subtle text-success" : state === "offline" ? "bg-danger-subtle text-danger" : "bg-light text-dark";
 

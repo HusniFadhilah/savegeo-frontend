@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import "@/styles/admin.css";
 import { AdminContext, type ToastType } from "./AdminContext";
 import type { AdminSection } from "./types";
+import { DEFAULT_ADMIN_SECTION, getAdminSectionPath, getAdminSectionSeo } from "@/routes/adminSectionRoutes";
 import { getHealth, reinitEE } from "./api";
 import DashboardOverview from "./components/DashboardOverview";
 import GeeCredentials from "./components/GeeCredentials";
@@ -49,9 +50,10 @@ const TITLES: Record<AdminSection, [string, string]> = {
   ds: ["Disaster Management", "Kelola kejadian bencana, AOI, citra satelit, dan analisis"],
 };
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
   const { user, logout } = useAuthStore();
-  const [section, setSection] = useState<AdminSection>("ov");
+  const navigate = useNavigate();
+  const [section, setSection] = useState<AdminSection>(routeSection);
   const [eeInitialized, setEeInitialized] = useState<boolean | null>(null);
   const [reiniting, setReiniting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -64,8 +66,10 @@ export default function AdminDashboard() {
   // main app's DashboardModule) mirrors the main app's Sidebar/Navbar pattern.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const selectSection = (id: AdminSection) => {
+  const selectSection = (id: AdminSection, event?: ReactMouseEvent<HTMLAnchorElement>) => {
+    event?.preventDefault();
     setSection(id);
+    navigate(getAdminSectionPath(id));
     setMobileNavOpen(false);
   };
 
@@ -84,6 +88,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     refreshHealth();
   }, [refreshHealth]);
+
+  useEffect(() => {
+    setSection(routeSection);
+  }, [routeSection]);
+
+  useEffect(() => {
+    const seo = getAdminSectionSeo(routeSection);
+    document.title = seo.title;
+
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = seo.description;
+  }, [routeSection]);
 
   const handleReinit = async () => {
     setReiniting(true);
@@ -122,7 +143,8 @@ export default function AdminDashboard() {
                     <a
                       key={item.id}
                       className={`sb-item ${section === item.id ? "active" : ""}`}
-                      onClick={() => selectSection(item.id)}
+                      href={getAdminSectionPath(item.id)}
+                      onClick={(event) => selectSection(item.id, event)}
                     >
                       <i className={`bi ${item.icon}`} />
                       <span>{item.label}</span>
@@ -169,7 +191,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="page-content">
-              {section === "ov" && <DashboardOverview onNavigate={setSection} />}
+              {section === "ov" && <DashboardOverview onNavigate={selectSection} />}
               {section === "ge" && <GeeCredentials />}
               {section === "ag" && <ArcgisStatus />}
               {section === "ml" && <ModelRegistry />}

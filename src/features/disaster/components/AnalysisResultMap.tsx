@@ -4,17 +4,31 @@ import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { RESULT_PANE } from "@/config/mapPanes";
-import type { DisasterAnalysisEntry, DisasterAoiRecord, DisasterSatelliteLayers, HotspotRecord } from "../types";
+import type {
+  DisasterAnalysisEntry,
+  DisasterAoiRecord,
+  DisasterSatelliteLayers,
+  HotspotRecord,
+} from "../types";
 
 const AOI_STYLE = { color: "#1565c0", weight: 2, fill: false };
 const HOTSPOT_STYLE = { color: "#e53935", weight: 2, fillOpacity: 0.25 };
 const HOTSPOT_HIGHLIGHT_STYLE = { color: "#ffb300", weight: 4, fillOpacity: 0.35 };
 
-function FitToFeature({ feature, signal }: { feature: GeoJSON.Feature | GeoJSON.Geometry | null; signal: number }) {
+function FitToFeature({
+  feature,
+  signal,
+}: {
+  feature: GeoJSON.Feature | GeoJSON.Geometry | null;
+  signal: number;
+}) {
   const map = useMap();
   useEffect(() => {
     if (!feature) return;
-    const geom = feature.type === "Feature" ? feature : { type: "Feature" as const, properties: {}, geometry: feature };
+    const geom =
+      feature.type === "Feature"
+        ? feature
+        : { type: "Feature" as const, properties: {}, geometry: feature };
     const bounds = L.geoJSON(geom as GeoJSON.Feature).getBounds();
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,40 +74,49 @@ export default function AnalysisResultMap({
   focusSignal,
 }: Props) {
   return (
-    <MapView id="disasterResultMap">
-      <BasemapSwitcher />
+    <div className="disaster-result-map-shell">
+      <MapView id="disasterResultMap">
+        <BasemapSwitcher />
 
-      {showSatellite && satellite?.post_tile_url && (
-        <TileLayer url={satellite.post_tile_url} opacity={0.85} attribution="Google Earth Engine" pane={RESULT_PANE} />
-      )}
-
-      {analyses
-        .filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.tile_url)
-        .map((entry) => (
+        {showSatellite && satellite?.post_tile_url && (
           <TileLayer
-            key={entry.model_id}
-            url={entry.result!.tile_url!}
-            opacity={0.82}
-            attribution={entry.user_label}
+            url={satellite.post_tile_url}
+            opacity={0.85}
+            attribution="Google Earth Engine"
             pane={RESULT_PANE}
           />
-        ))}
+        )}
 
-      {showAoi && aoi?.geojson && (
-        <GeoJSON key={`aoi-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />
-      )}
+        {analyses
+          .filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.tile_url)
+          .map((entry) => (
+            <TileLayer
+              key={entry.model_id}
+              url={entry.result!.tile_url!}
+              opacity={0.82}
+              attribution={entry.user_label}
+              pane={RESULT_PANE}
+            />
+          ))}
 
-      {showHotspots &&
-        hotspots.map((hotspot) => (
-          <GeoJSON
-            key={`hotspot-${hotspot.id}`}
-            data={hotspot.geojson as GeoJSON.Feature}
-            style={hotspot.id === highlightedHotspotId ? HOTSPOT_HIGHLIGHT_STYLE : HOTSPOT_STYLE}
-            eventHandlers={onHotspotClick ? { click: () => onHotspotClick(hotspot.id) } : undefined}
-          />
-        ))}
+        {showAoi && aoi?.geojson && (
+          <GeoJSON key={`aoi-${aoi.id}`} data={aoi.geojson as GeoJSON.Feature} style={AOI_STYLE} />
+        )}
 
-      <FitToFeature feature={focusFeature} signal={focusSignal} />
-    </MapView>
+        {showHotspots &&
+          hotspots.map((hotspot) => (
+            <GeoJSON
+              key={`hotspot-${hotspot.id}`}
+              data={hotspot.geojson as GeoJSON.Feature}
+              style={hotspot.id === highlightedHotspotId ? HOTSPOT_HIGHLIGHT_STYLE : HOTSPOT_STYLE}
+              eventHandlers={
+                onHotspotClick ? { click: () => onHotspotClick(hotspot.id) } : undefined
+              }
+            />
+          ))}
+
+        <FitToFeature feature={focusFeature} signal={focusSignal} />
+      </MapView>
+    </div>
   );
 }

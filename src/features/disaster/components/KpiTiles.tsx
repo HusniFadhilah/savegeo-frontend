@@ -20,6 +20,27 @@ function formatValue(key: string, value: number | string | null): string {
   return String(value);
 }
 
+function modelIcon(modelId: string): string {
+  if (modelId.includes("water") || modelId.includes("flood")) return "bi-water";
+  if (modelId.includes("forest")) return "bi-tree";
+  if (modelId.includes("landslide")) return "bi-triangle";
+  if (modelId.includes("earthquake")) return "bi-activity";
+  return "bi-cpu";
+}
+
+function metricIcon(key: string): string {
+  if (key.includes("loss")) return "bi-arrow-down-right-circle";
+  if (key.includes("gain")) return "bi-arrow-up-right-circle";
+  if (key.includes("change") || key.includes("difference")) return "bi-arrow-left-right";
+  if (key.startsWith("pre_")) return "bi-clock-history";
+  if (key.startsWith("post_")) return "bi-check2-circle";
+  if (key.includes("maintained")) return "bi-shield-check";
+  if (key.includes("water")) return "bi-water";
+  if (key.includes("forest")) return "bi-tree";
+  if (key.endsWith("_ha")) return "bi-bounding-box";
+  return "bi-speedometer2";
+}
+
 /**
  * Item 4 of the redesign spec (D.4): KPI tiles from `GET
  * /disasters/{id}/statistics`'s `kpis` (namespaced by model_id per the
@@ -29,27 +50,37 @@ function formatValue(key: string, value: number | string | null): string {
 export default function KpiTiles({ kpis, analyses }: Props) {
   const entries = Object.entries(kpis).filter(([, stats]) => stats && Object.keys(stats).length);
   if (!entries.length) {
-    return <div className="alert alert-secondary py-2 mb-3">Belum ada statistik hasil analisis yang dipublikasikan.</div>;
+    return (
+      <div className="alert alert-secondary py-2 mb-3">
+        Belum ada statistik hasil analisis yang dipublikasikan.
+      </div>
+    );
   }
 
   return (
-    <div className="mb-3">
+    <div className="mb-3 disaster-kpi-stack">
       {entries.map(([modelId, stats]) => {
         const label = analyses.find((a) => a.model_id === modelId)?.user_label ?? modelId;
         return (
-          <div className="mb-2" key={modelId}>
-            <div className="fw-semibold small text-muted mb-1">{label}</div>
+          <section className="disaster-kpi-group" key={modelId}>
+            <div className="disaster-kpi-group-title">
+              <i className={`bi ${modelIcon(modelId)}`} />
+              {label}
+            </div>
             <div className="row g-2">
               {Object.entries(stats).map(([key, value]) => (
                 <div className="col-6 col-md-3" key={key}>
                   <div className="metric-card">
+                    <div className="disaster-metric-icon">
+                      <i className={`bi ${metricIcon(key)}`} />
+                    </div>
                     <div className="metric-value">{formatValue(key, value)}</div>
                     <div className="metric-label">{humanizeKey(key)}</div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         );
       })}
     </div>

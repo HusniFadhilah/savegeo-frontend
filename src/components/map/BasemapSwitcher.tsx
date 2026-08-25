@@ -38,7 +38,13 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
 
     const layers: Record<string, L.TileLayer> = {};
     basemaps.forEach((b) => {
-      layers[b.id] = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom });
+      const mapMaxZoom = map.getMaxZoom();
+      const effectiveMaxZoom = Number.isFinite(mapMaxZoom) ? Math.max(b.maxZoom, mapMaxZoom) : b.maxZoom;
+      layers[b.id] = L.tileLayer(b.url, {
+        attribution: b.attribution,
+        maxNativeZoom: b.maxZoom,
+        maxZoom: effectiveMaxZoom,
+      });
     });
     layersRef.current = layers;
 

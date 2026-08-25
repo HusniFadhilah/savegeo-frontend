@@ -8,7 +8,7 @@ interface Props {
 /** Sub-analysis A: crop health (NDVI-based). */
 export default function CropHealthCard({ health }: Props) {
   return (
-    <div className="card mb-3">
+    <div className="card mb-3 cm-panel-card cm-health-card">
       <div className="card-header">
         <i className="bi bi-heart-pulse-fill me-1" /> A. Kesehatan Tanaman
       </div>
@@ -19,63 +19,60 @@ export default function CropHealthCard({ health }: Props) {
           </div>
         ) : (
           <>
-            <div className="row g-2 mb-3">
-              <div className="col-6 col-md-3">
-                <div className="text-muted small">Status</div>
-                <span className={`fw-bold ${styleFor(HEALTH_LABEL_STYLE, health.health_label).className}`}>
-                  {styleFor(HEALTH_LABEL_STYLE, health.health_label).emoji}{" "}
+            <div className="cm-health-metrics">
+              <div className="cm-mini-stat">
+                <span>Status</span>
+                <strong className={styleFor(HEALTH_LABEL_STYLE, health.health_label).className}>
+                  <span
+                    className="cm-status-dot"
+                    style={{ backgroundColor: styleFor(HEALTH_LABEL_STYLE, health.health_label).color }}
+                  />
                   {styleFor(HEALTH_LABEL_STYLE, health.health_label).label}
-                </span>
+                </strong>
               </div>
-              <div className="col-6 col-md-3">
-                <div className="text-muted small">NDVI Rata-rata</div>
-                <div className="fw-bold">{fmtNum(health.ndvi_mean, 4)}</div>
+              <div className="cm-mini-stat">
+                <span>NDVI Rata-rata</span>
+                <strong>{fmtNum(health.ndvi_mean, 4)}</strong>
               </div>
-              <div className="col-6 col-md-3">
-                <div className="text-muted small">Perubahan vs Bulan Sebelumnya</div>
-                <div className={`fw-bold ${health.change_vs_previous_month_pct != null && health.change_vs_previous_month_pct < 0 ? "text-danger" : "text-success"}`}>
+              <div className="cm-mini-stat">
+                <span>Perubahan vs Bulan Sebelumnya</span>
+                <strong className={health.change_vs_previous_month_pct != null && health.change_vs_previous_month_pct < 0 ? "text-danger" : "text-success"}>
                   {health.change_vs_previous_month_pct != null ? `${health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(health.change_vs_previous_month_pct)}` : "-"}
-                </div>
+                </strong>
               </div>
-              <div className="col-6 col-md-3">
-                <div className="text-muted small">Piksel Valid</div>
-                <div className="fw-bold">
+              <div className="cm-mini-stat">
+                <span>Piksel Valid</span>
+                <strong>
                   {fmtPct(health.valid_pixel_pct)} <small className="text-muted">({health.images_used} citra)</small>
-                </div>
+                </strong>
               </div>
             </div>
 
-            <div className="row g-2 text-center mb-3">
-              <div className="col-4">
-                <div className="p-2 rounded" style={{ background: "#e8f5e9" }}>
-                  <div className="fw-bold text-success">{fmtPct(health.healthy_pct)}</div>
-                  <div className="small text-muted">Sehat</div>
-                </div>
+            <div className="cm-health-distribution">
+              <div className="cm-health-segment cm-health-segment-good">
+                <strong>{fmtPct(health.healthy_pct)}</strong>
+                <span>Sehat</span>
               </div>
-              <div className="col-4">
-                <div className="p-2 rounded" style={{ background: "#fff8e1" }}>
-                  <div className="fw-bold text-warning">{fmtPct(health.moderate_pct)}</div>
-                  <div className="small text-muted">Sedang</div>
-                </div>
+              <div className="cm-health-segment cm-health-segment-mid">
+                <strong>{fmtPct(health.moderate_pct)}</strong>
+                <span>Sedang</span>
               </div>
-              <div className="col-4">
-                <div className="p-2 rounded" style={{ background: "#ffebee" }}>
-                  <div className="fw-bold text-danger">{fmtPct(health.stressed_pct)}</div>
-                  <div className="small text-muted">Stres</div>
-                </div>
+              <div className="cm-health-segment cm-health-segment-bad">
+                <strong>{fmtPct(health.stressed_pct)}</strong>
+                <span>Stres</span>
               </div>
             </div>
 
-            <div className="progress mb-3" style={{ height: 10 }}>
+            <div className="progress cm-health-progress mb-3">
               <div className="progress-bar bg-success" style={{ width: `${health.healthy_pct}%` }} />
               <div className="progress-bar bg-warning" style={{ width: `${health.moderate_pct}%` }} />
               <div className="progress-bar bg-danger" style={{ width: `${health.stressed_pct}%` }} />
             </div>
 
             {health.classification && (
-              <div className="table-responsive">
-                <table className="table table-striped table-hover table-sm mb-0">
-                  <thead className="table-secondary">
+              <div className="table-responsive cm-table-wrap">
+                <table className="table table-hover table-sm mb-0 cm-data-table">
+                  <thead>
                     <tr>
                       <th>Kelas</th>
                       <th>Luas (ha)</th>
@@ -89,20 +86,16 @@ export default function CropHealthCard({ health }: Props) {
                         <tr key={name}>
                           <td>
                             <span
+                              className="cm-color-swatch"
                               style={{
-                                display: "inline-block",
-                                width: 12,
-                                height: 12,
                                 backgroundColor: info.color,
-                                marginRight: 5,
-                                border: "1px solid #ccc",
                               }}
                             />
                             {name}
                           </td>
                           <td>{fmtNum(info.area, 2)}</td>
                           <td>
-                            <span className="badge bg-primary">{fmtPct(info.percentage)}</span>
+                            <span className="badge cm-soft-badge">{fmtPct(info.percentage)}</span>
                           </td>
                         </tr>
                       ))}

@@ -4,9 +4,14 @@ import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import LoginUserPage from "@/pages/LoginUserPage";
 import RegisterUserPage from "@/pages/RegisterUserPage";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import DisasterListPage from "@/features/disaster/DisasterListPage";
 import DisasterDashboard from "@/features/disaster/DisasterDashboard";
+import { DEFAULT_DASHBOARD_MODULE } from "@/routes/dashboardModuleRoutes";
+import { DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
+import type { DashboardModule } from "@/hooks/useUiStore";
+import type { AdminSection } from "@/features/admin/types";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -18,10 +23,11 @@ import DisasterDashboard from "@/features/disaster/DisasterDashboard";
  * `onSwitchTo*` props.
  */
 function DisasterUserGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useUserAuthStore();
+  const { isAuthenticated: isUserAuthenticated } = useUserAuthStore();
+  const { isAuthenticated: isAdminAuthenticated } = useAuthStore();
   const [view, setView] = useState<"login" | "register">("login");
 
-  if (!isAuthenticated) {
+  if (!isUserAuthenticated && !isAdminAuthenticated) {
     return view === "login" ? (
       <LoginUserPage onSwitchToRegister={() => setView("register")} />
     ) : (
@@ -33,10 +39,38 @@ function DisasterUserGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppRoutes() {
+  const dashboardRoutes: { path: string; module: DashboardModule }[] = [
+    { path: "/", module: DEFAULT_DASHBOARD_MODULE },
+    { path: "/carbon-estimation", module: "carbon" },
+    { path: "/land-cover-change", module: "lc-change" },
+    { path: "/lc-change", module: "lc-change" },
+    { path: "/satellite-imagery", module: "imagery" },
+    { path: "/imagery", module: "imagery" },
+    { path: "/crop-monitoring", module: "crop-monitoring" },
+    { path: "/guide", module: "guide" },
+    { path: "/about", module: "about" },
+  ];
+  const adminRoutes: { path: string; section: AdminSection }[] = [
+    { path: "/admin", section: DEFAULT_ADMIN_SECTION },
+    { path: "/admin/overview", section: "ov" },
+    { path: "/admin/gee-credentials", section: "ge" },
+    { path: "/admin/arcgis", section: "ag" },
+    { path: "/admin/ml-models", section: "ml" },
+    { path: "/admin/system-config", section: "cf" },
+    { path: "/admin/users", section: "us" },
+    { path: "/admin/satellite-providers", section: "sp" },
+    { path: "/admin/company-boundaries", section: "co" },
+    { path: "/admin/disasters", section: "ds" },
+  ];
+
   return (
     <Routes>
-      <Route path="/" element={<DashboardPage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      {dashboardRoutes.map((route) => (
+        <Route key={route.path} path={route.path} element={<DashboardPage module={route.module} />} />
+      ))}
+      {adminRoutes.map((route) => (
+        <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
+      ))}
       <Route
         path="/pemetaan-bencana"
         element={

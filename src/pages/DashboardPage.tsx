@@ -10,6 +10,7 @@ import GuideModule from "@/components/modules/GuideModule";
 import AboutModule from "@/components/modules/AboutModule";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useConfigStore } from "@/hooks/useConfigStore";
+import { DEFAULT_DASHBOARD_MODULE, getDashboardModuleSeo } from "@/routes/dashboardModuleRoutes";
 
 const UNDIP_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png";
 const LEN_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png";
@@ -39,18 +40,37 @@ const MODULES: Record<DashboardModule, React.ComponentType> = {
  * all 6 on initial load - each one's own data fetches (dataset/model
  * catalogs, etc.) only fire once the user visits it.
  */
-export default function DashboardPage() {
+export default function DashboardPage({ module = DEFAULT_DASHBOARD_MODULE }: { module?: DashboardModule }) {
   const activeModule = useUiStore((s) => s.activeModule);
+  const setActiveModule = useUiStore((s) => s.setActiveModule);
   const loadConfig = useConfigStore((s) => s.load);
-  const [mountedModules, setMountedModules] = useState<DashboardModule[]>([activeModule]);
+  const [mountedModules, setMountedModules] = useState<DashboardModule[]>([module]);
+  const visibleModule = activeModule === module ? activeModule : module;
 
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
 
   useEffect(() => {
-    setMountedModules((prev) => (prev.includes(activeModule) ? prev : [...prev, activeModule]));
-  }, [activeModule]);
+    setActiveModule(module);
+  }, [module, setActiveModule]);
+
+  useEffect(() => {
+    const seo = getDashboardModuleSeo(module);
+    document.title = seo.title;
+
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = seo.description;
+  }, [module]);
+
+  useEffect(() => {
+    setMountedModules((prev) => (prev.includes(visibleModule) ? prev : [...prev, visibleModule]));
+  }, [visibleModule]);
 
   return (
     <>
@@ -62,7 +82,7 @@ export default function DashboardPage() {
             {mountedModules.map((key) => {
               const Component = MODULES[key];
               return (
-                <div key={key} className={`module-container ${activeModule === key ? "active" : ""}`}>
+                <div key={key} className={`module-container ${visibleModule === key ? "active" : ""}`}>
                   <Component />
                 </div>
               );

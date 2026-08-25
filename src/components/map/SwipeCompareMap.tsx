@@ -75,6 +75,8 @@ interface Props {
   onOrientationChange?: (o: SwipeOrientation) => void;
   center?: [number, number];
   zoom?: number;
+  maxZoom?: number;
+  maxNativeZoom?: number;
   opacity?: number;
   /** Rendered inside the map, unclipped (e.g. AOI GeoJSON boundary). */
   children?: ReactNode;
@@ -97,6 +99,8 @@ export default function SwipeCompareMap({
   onOrientationChange,
   center,
   zoom,
+  maxZoom,
+  maxNativeZoom,
   opacity = 1,
   children,
 }: Props) {
@@ -141,12 +145,29 @@ export default function SwipeCompareMap({
 
   return (
     <div ref={containerRef} className="swipe-compare-wrap">
-      <MapView id={id} center={center} zoom={zoom}>
+      <MapView id={id} center={center} zoom={zoom} maxZoom={maxZoom}>
         <AfterPaneSetup />
         {children}
-        {beforeUrl && <TileLayer url={beforeUrl} opacity={opacity} pane={RESULT_PANE} attribution="Google Earth Engine" />}
+        {beforeUrl && (
+          <TileLayer
+            url={beforeUrl}
+            opacity={opacity}
+            pane={RESULT_PANE}
+            attribution="Google Earth Engine"
+            maxNativeZoom={maxNativeZoom}
+            maxZoom={maxZoom}
+          />
+        )}
         {afterUrl && (
-          <TileLayer key={afterUrl} url={afterUrl} opacity={opacity} pane={AFTER_PANE} attribution="Google Earth Engine" />
+          <TileLayer
+            key={afterUrl}
+            url={afterUrl}
+            opacity={opacity}
+            pane={AFTER_PANE}
+            attribution="Google Earth Engine"
+            maxNativeZoom={maxNativeZoom}
+            maxZoom={maxZoom}
+          />
         )}
         <ClipController percent={percent} orientation={orientation} />
         <PanLockController locked={panLocked} />
