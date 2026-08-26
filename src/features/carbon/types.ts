@@ -15,6 +15,9 @@ export interface CarbonReferenceDatasetOption {
   year?: number | string | null;
   yearRange?: number[] | string | null;
   compatibleModelCount?: number;
+  isConfigured?: boolean;
+  requiresConfiguration?: boolean;
+  availabilityError?: string | null;
   source?: "api" | "fallback";
 }
 

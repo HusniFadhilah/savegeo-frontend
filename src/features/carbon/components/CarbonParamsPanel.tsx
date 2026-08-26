@@ -259,9 +259,11 @@ export default function CarbonParamsPanel({
             value: d.value,
             label: d.label,
             description:
-              d.compatibleModelCount !== undefined
-                ? `${d.group} - ${d.compatibleModelCount} model compatible`
-                : d.group,
+              d.requiresConfiguration && d.isConfigured === false
+                ? `${d.group} - perlu konfigurasi`
+                : d.compatibleModelCount !== undefined
+                  ? `${d.group} - ${d.compatibleModelCount} model compatible`
+                  : d.group,
           }))}
           placeholder={t("carbon.params.referenceDatasetPlaceholder")}
           loading={datasetsLoading}
@@ -281,6 +283,12 @@ export default function CarbonParamsPanel({
             </option>
           ))}
         </select>
+        {datasetMeta?.requiresConfiguration && datasetMeta.isConfigured === false && (
+          <small className="text-warning d-block mt-1">
+            <i className="bi bi-exclamation-triangle me-1" />
+            {datasetMeta.availabilityError || "Dataset ini perlu konfigurasi server-side sebelum bisa dimuat."}
+          </small>
+        )}
         {datasetsError && (
           <small className="text-warning d-block mt-1">
             <i className="bi bi-exclamation-triangle me-1" />

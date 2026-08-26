@@ -4549,6 +4549,8 @@
 
 [data-theme="dark"] body,
 [data-theme="dark"] .main-content,
+[data-theme="dark"] .content-wrapper,
+[data-theme="dark"] .app-container,
 [data-theme="dark"] .analysis-page,
 [data-theme="dark"] .cm-page,
 [data-theme="dark"] .dashboard-page {
@@ -4582,6 +4584,58 @@
   border-bottom: 1px solid #1f2937;
 }
 
+[data-theme="dark"] .main-sidebar {
+  border-right: 1px solid #263449;
+  background: #0b1220 !important;
+  box-shadow: 10px 0 28px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .sidebar-header {
+  border-bottom: 1px solid #2b7a46;
+  background: linear-gradient(135deg, #166534 0%, #0f3d25 100%) !important;
+}
+
+[data-theme="dark"] .sidebar-menu,
+[data-theme="dark"] .sidebar-footer {
+  background: #0b1220 !important;
+}
+
+[data-theme="dark"] .sidebar-footer {
+  border-top-color: #263449;
+}
+
+[data-theme="dark"] .sidebar-language-label,
+[data-theme="dark"] .sidebar-menu-item {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .sidebar-menu-item {
+  border-left-color: transparent;
+}
+
+[data-theme="dark"] .sidebar-menu-item:hover {
+  background: #132238;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .sidebar-menu-item.active {
+  border-left-color: #6ee78e;
+  background: linear-gradient(90deg, rgba(67, 168, 95, 0.24), rgba(67, 168, 95, 0.08));
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .sidebar-menu-item i,
+[data-theme="dark"] .sidebar-language-label i {
+  color: #8ee6a8;
+}
+
+[data-theme="dark"] .language-toggle,
+[data-theme="dark"] .btn-light {
+  border-color: #334155;
+  background: #111827;
+  color: #e5e7eb;
+}
+
 [data-theme="dark"] .sidebar,
 [data-theme="dark"] .card,
 [data-theme="dark"] .modal-content,
@@ -4601,6 +4655,17 @@
   background: #111827 !important;
   color: #e5e7eb;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .sidebar {
+  border-left: 1px solid #263449;
+  border-right: 1px solid #263449;
+}
+
+[data-theme="dark"] .sidebar hr,
+[data-theme="dark"] hr {
+  border-color: #334155;
+  opacity: 1;
 }
 
 [data-theme="dark"] .card-body,
@@ -4658,6 +4723,35 @@
   color: #e5e7eb !important;
 }
 
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] .sg-ssel-input::placeholder {
+  color: #64748b;
+}
+
+[data-theme="dark"] .input-group-text,
+[data-theme="dark"] .nav-tabs,
+[data-theme="dark"] .nav-pills,
+[data-theme="dark"] .tab-content,
+[data-theme="dark"] .list-group-item {
+  border-color: #334155 !important;
+  background-color: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link,
+[data-theme="dark"] .nav-pills .nav-link {
+  border-color: #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active,
+[data-theme="dark"] .nav-pills .nav-link.active {
+  border-color: #43a85f;
+  background: #173823;
+  color: #f8fafc;
+}
+
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus,
 [data-theme="dark"] .sg-ssel-control.open {
@@ -4704,6 +4798,48 @@
   color: #e5e7eb;
 }
 
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .cs-card,
+[data-theme="dark"] .disaster-event-card,
+[data-theme="dark"] .disaster-modern-card,
+[data-theme="dark"] .guide-method-card,
+[data-theme="dark"] .guide-analysis-card,
+[data-theme="dark"] .guide-export-card,
+[data-theme="dark"] .guide-do-card,
+[data-theme="dark"] .guide-dont-card,
+[data-theme="dark"] .guide-doc-card,
+[data-theme="dark"] .guide-model-card,
+[data-theme="dark"] .guide-read-card,
+[data-theme="dark"] .about-feature-card,
+[data-theme="dark"] .about-output-card,
+[data-theme="dark"] .about-method-card {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+}
+
+[data-theme="dark"] .metric-card .metric-icon,
+[data-theme="dark"] .about-feature-card > i,
+[data-theme="dark"] .about-output-card > i,
+[data-theme="dark"] .guide-analysis-card > i,
+[data-theme="dark"] .guide-export-card > i {
+  background: #173823 !important;
+  color: #b7f7c7 !important;
+}
+
+[data-theme="dark"] .cs-card-header,
+[data-theme="dark"] .cs-card-footer {
+  border-color: #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
 [data-theme="dark"] .table-primary,
 [data-theme="dark"] .table-secondary,
 [data-theme="dark"] .cm-data-table thead th {
@@ -4730,6 +4866,12 @@
   color: #e5e7eb !important;
 }
 
+[data-theme="dark"] .map-card,
+[data-theme="dark"] .savegeo-map,
+[data-theme="dark"] .cm-map-shell {
+  border: 1px solid #334155;
+}
+
 [data-theme="dark"] .leaflet-bar a:hover,
 [data-theme="dark"] .opacity-trigger:hover,
 [data-theme="dark"] .basemap-trigger:hover {
@@ -4748,4 +4890,148 @@
 
 [data-theme="dark"] .border-dashed {
   border-color: #475569 !important;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .app-container,
+html[data-theme="dark"] .content-wrapper,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .main-content {
+  background: #0f172a !important;
+}
+
+html[data-theme="dark"] .main-sidebar,
+html[data-theme="dark"] .main-sidebar.collapsed {
+  border-right: 1px solid #2f3f56 !important;
+  background: #0b1220 !important;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .main-sidebar::-webkit-scrollbar-track {
+  background: #0b1220;
+}
+
+html[data-theme="dark"] .main-sidebar::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+html[data-theme="dark"] .sidebar-header {
+  border-bottom: 1px solid rgba(110, 231, 142, 0.32) !important;
+  background: linear-gradient(135deg, #166534 0%, #0f3d25 100%) !important;
+}
+
+html[data-theme="dark"] .sidebar-menu,
+html[data-theme="dark"] .sidebar-footer {
+  background: #0b1220 !important;
+}
+
+html[data-theme="dark"] .sidebar-footer {
+  border-top: 1px solid #2f3f56 !important;
+}
+
+html[data-theme="dark"] .sidebar-menu li {
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
+html[data-theme="dark"] .sidebar-menu-item {
+  border-left-color: transparent !important;
+  background: transparent !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .sidebar-menu-item:hover {
+  border-left-color: rgba(110, 231, 142, 0.55) !important;
+  background: #132238 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.active,
+html[data-theme="dark"] .sidebar-menu-item.active:hover {
+  border-left-color: #6ee78e !important;
+  background: linear-gradient(90deg, rgba(67, 168, 95, 0.28), rgba(67, 168, 95, 0.1)) !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .sidebar-menu-item i,
+html[data-theme="dark"] .sidebar-language-label i {
+  color: #8ee6a8 !important;
+}
+
+html[data-theme="dark"] .sidebar-language-label,
+html[data-theme="dark"] .sidebar-menu-text {
+  color: inherit;
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .list-group-item,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .cs-card,
+html[data-theme="dark"] .analysis-status-card,
+html[data-theme="dark"] .analysis-hero,
+html[data-theme="dark"] .cm-status-card,
+html[data-theme="dark"] .cm-workflow,
+html[data-theme="dark"] .cm-summary-tile,
+html[data-theme="dark"] .cm-mini-stat,
+html[data-theme="dark"] .cm-detail-card,
+html[data-theme="dark"] .disaster-event-card,
+html[data-theme="dark"] .disaster-modern-card {
+  border: 1px solid #334155 !important;
+  background-color: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .card-footer,
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-footer,
+html[data-theme="dark"] .cs-card-header,
+html[data-theme="dark"] .cs-card-footer {
+  border-color: #334155 !important;
+  background-color: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .table-light,
+html[data-theme="dark"] .table-secondary,
+html[data-theme="dark"] .table-primary {
+  --bs-table-bg: #1f2937;
+  --bs-table-color: #f8fafc;
+  --bs-table-border-color: #334155;
+}
+
+html[data-theme="dark"] .chartjs-render-monitor,
+html[data-theme="dark"] canvas {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .legend,
+html[data-theme="dark"] .cm-map-legend,
+html[data-theme="dark"] .map-legend,
+html[data-theme="dark"] .basemap-panel,
+html[data-theme="dark"] .opacity-panel {
+  border-color: #334155 !important;
+  background: rgba(17, 24, 39, 0.96) !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .legend-item,
+html[data-theme="dark"] .leaflet-control-layers label {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .input-group-text,
+html[data-theme="dark"] .sg-ssel-control,
+html[data-theme="dark"] .sg-ssel-input,
+html[data-theme="dark"] .sg-ssel-dropdown {
+  border-color: #3b4b63 !important;
 }

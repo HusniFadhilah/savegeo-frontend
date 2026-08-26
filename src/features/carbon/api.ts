@@ -22,6 +22,9 @@ interface CarbonDatasetApiItem {
   year_range?: number[] | string | null;
   description?: string | null;
   compatible_model_count?: number;
+  is_configured?: boolean;
+  requires_configuration?: boolean;
+  availability_error?: string | null;
 }
 
 /**
@@ -57,6 +60,9 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       year: ds.year,
       yearRange: ds.year_range,
       compatibleModelCount: ds.compatible_model_count,
+      isConfigured: ds.is_configured,
+      requiresConfiguration: ds.requires_configuration,
+      availabilityError: ds.availability_error,
       source: "api",
       ...(ds.name || ds.full_name ? { label: `${ds.name || ds.full_name}${yearSuffix}` } : {}),
     };
@@ -147,6 +153,7 @@ export async function analyzeCarbon({
       reference_dataset: params.referenceDataset,
       dataset_year: params.datasetYear,
       model_name: params.modelName || null,
+      reference_only: params.referenceDataset === "CHLORIS_AGB_STOCK" && !params.modelName,
       cloud_mask_technique: params.cloudMaskTechnique,
       vis_min: visMin,
       vis_max: visMax,
