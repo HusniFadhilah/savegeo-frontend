@@ -4,6 +4,7 @@ export interface BasemapDefinition {
   url: string;
   attribution: string;
   maxZoom: number;
+  maxNativeZoom?: number;
   isDefault: boolean;
   order: number;
 }

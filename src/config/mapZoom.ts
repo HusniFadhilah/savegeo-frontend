@@ -1,0 +1,2 @@
+export const HIGH_DETAIL_MAX_ZOOM = 22;
+export const RESULT_TILE_MAX_NATIVE_ZOOM = 18;

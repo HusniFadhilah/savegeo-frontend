@@ -15,6 +15,7 @@ import VegetationParamsPanel from "@/features/vegetation/components/VegetationPa
 import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
 import LandCoverResultTables from "@/features/landcover/components/LandCoverResultTables";
+import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import { analyzeVegetation, analyzeVegetationTimeSeries } from "@/features/vegetation/api";
 import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
 import { analyzeLandCover } from "@/features/landcover/api";
@@ -514,7 +515,7 @@ export default function CarbonModule() {
               type="range"
               className="form-range"
               min={5}
-              max={15}
+              max={HIGH_DETAIL_MAX_ZOOM}
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
             />

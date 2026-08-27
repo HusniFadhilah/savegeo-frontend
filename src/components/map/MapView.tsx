@@ -8,6 +8,7 @@ import ImageryAttribution from "@/components/map/ImageryAttribution";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
+import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
@@ -74,7 +75,8 @@ function ResultPaneSetup() {
 export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className }: Props) {
   const { basemaps } = useBasemaps();
   const defaultBasemap = basemaps.find((b) => b.isDefault) ?? basemaps[0];
-  const effectiveMaxZoom = maxZoom ?? defaultBasemap?.maxZoom;
+  const effectiveMaxZoom = Math.max(maxZoom ?? 0, defaultBasemap?.maxZoom ?? 0, HIGH_DETAIL_MAX_ZOOM);
+  const defaultMaxNativeZoom = defaultBasemap?.maxNativeZoom ?? defaultBasemap?.maxZoom;
 
   // Tracks which basemap this map instance is showing, for ImageryAttribution
   // (satellite capture-date lookup) - defaults to whatever's actually
@@ -98,8 +100,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
           <TileLayer
             url={defaultBasemap.url}
             attribution={defaultBasemap.attribution}
-            maxNativeZoom={defaultBasemap.maxZoom}
-            maxZoom={Math.max(defaultBasemap.maxZoom, effectiveMaxZoom ?? defaultBasemap.maxZoom)}
+            maxNativeZoom={defaultMaxNativeZoom}
+            maxZoom={effectiveMaxZoom}
           />
         )}
         <InvalidateOnResize />

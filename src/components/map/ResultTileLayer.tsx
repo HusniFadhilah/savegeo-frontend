@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { RESULT_PANE } from "@/config/mapPanes";
+import { HIGH_DETAIL_MAX_ZOOM, RESULT_TILE_MAX_NATIVE_ZOOM } from "@/config/mapZoom";
 
 interface Props {
   /** Remount (and thus re-add) whenever this changes, e.g. the active result tab key. */
@@ -29,7 +30,8 @@ export default function ResultTileLayer({ layerKey, tileUrl, opacity, attributio
       attribution: attribution ?? "© Google Earth Engine",
       className: "gee-tile-layer",
       pane: map.getPane(RESULT_PANE) ? RESULT_PANE : undefined,
-      maxZoom: 18,
+      maxNativeZoom: RESULT_TILE_MAX_NATIVE_ZOOM,
+      maxZoom: HIGH_DETAIL_MAX_ZOOM,
       opacity,
       errorTileUrl: TRANSPARENT_TILE,
     });

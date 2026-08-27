@@ -5035,3 +5035,554 @@ html[data-theme="dark"] .sg-ssel-input,
 html[data-theme="dark"] .sg-ssel-dropdown {
   border-color: #3b4b63 !important;
 }
+
+/* Dark contrast fixes ---------------------------------------------------- */
+html[data-theme="dark"] .analysis-hero,
+html[data-theme="dark"] .cm-hero {
+  --analysis-hero-bg: #0f172a;
+  --analysis-hero-overlay: linear-gradient(
+    100deg,
+    rgba(2, 6, 23, 0.96) 0%,
+    rgba(15, 23, 42, 0.92) 34%,
+    rgba(15, 23, 42, 0.76) 56%,
+    rgba(15, 23, 42, 0.48) 76%,
+    rgba(15, 23, 42, 0.26) 100%
+  );
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .analysis-hero::before {
+  opacity: 0.52;
+}
+
+html[data-theme="dark"] .analysis-hero::after {
+  background: var(--analysis-hero-overlay) !important;
+}
+
+html[data-theme="dark"] .analysis-hero:hover::before {
+  opacity: 0.58;
+}
+
+html[data-theme="dark"] .analysis-hero h1,
+html[data-theme="dark"] .analysis-hero p,
+html[data-theme="dark"] .analysis-hero .analysis-eyebrow,
+html[data-theme="dark"] .cm-hero h1,
+html[data-theme="dark"] .cm-hero p,
+html[data-theme="dark"] .cm-hero .cm-eyebrow {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.55);
+}
+
+html[data-theme="dark"] .guide-acc-item,
+html[data-theme="dark"] .guide-quickref,
+html[data-theme="dark"] .guide-acc-trigger,
+html[data-theme="dark"] .guide-acc-body,
+html[data-theme="dark"] .guide-method-card,
+html[data-theme="dark"] .guide-analysis-card,
+html[data-theme="dark"] .guide-export-card,
+html[data-theme="dark"] .guide-do-card,
+html[data-theme="dark"] .guide-dont-card,
+html[data-theme="dark"] .guide-block,
+html[data-theme="dark"] .guide-links,
+html[data-theme="dark"] .guide-run-step,
+html[data-theme="dark"] .guide-timing-grid > div,
+html[data-theme="dark"] .guide-read-card,
+html[data-theme="dark"] .guide-doc-card,
+html[data-theme="dark"] .guide-model-card,
+html[data-theme="dark"] .about-panel,
+html[data-theme="dark"] .about-stat,
+html[data-theme="dark"] .about-feature-card,
+html[data-theme="dark"] .about-output-card,
+html[data-theme="dark"] .about-method-card,
+html[data-theme="dark"] .about-cta {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+}
+
+html[data-theme="dark"] .guide-acc-trigger:hover,
+html[data-theme="dark"] .guide-acc-trigger.active {
+  background: linear-gradient(90deg, #173823, #111827) !important;
+}
+
+html[data-theme="dark"] .guide-step-chip,
+html[data-theme="dark"] .guide-param-tab,
+html[data-theme="dark"] .about-tab {
+  border-color: #334155 !important;
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .guide-step-chip:hover,
+html[data-theme="dark"] .guide-step-chip.active,
+html[data-theme="dark"] .guide-param-tab:hover,
+html[data-theme="dark"] .guide-param-tab.active,
+html[data-theme="dark"] .about-tab:hover,
+html[data-theme="dark"] .about-tab.active {
+  border-color: #43a85f !important;
+  background: #173823 !important;
+  color: #b7f7c7 !important;
+}
+
+html[data-theme="dark"] .guide-lead,
+html[data-theme="dark"] .guide-method-card ol,
+html[data-theme="dark"] .guide-analysis-card ul,
+html[data-theme="dark"] .guide-block ol,
+html[data-theme="dark"] .guide-block ul,
+html[data-theme="dark"] .guide-do-card ul,
+html[data-theme="dark"] .guide-dont-card ul,
+html[data-theme="dark"] .guide-links ul,
+html[data-theme="dark"] .guide-analysis-card p,
+html[data-theme="dark"] .guide-export-card p,
+html[data-theme="dark"] .guide-run-step p,
+html[data-theme="dark"] .guide-timing-grid span,
+html[data-theme="dark"] .guide-read-card ul,
+html[data-theme="dark"] .guide-model-card p,
+html[data-theme="dark"] .guide-model-card small,
+html[data-theme="dark"] .guide-doc-meta,
+html[data-theme="dark"] .guide-doc-table td small,
+html[data-theme="dark"] .about-stat span,
+html[data-theme="dark"] .about-feature-card p,
+html[data-theme="dark"] .about-tech-col ul,
+html[data-theme="dark"] .about-output-card p,
+html[data-theme="dark"] .about-method-card ul,
+html[data-theme="dark"] .about-section-title {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .guide-method-card h3,
+html[data-theme="dark"] .guide-analysis-card h3,
+html[data-theme="dark"] .guide-block h3,
+html[data-theme="dark"] .guide-links h3,
+html[data-theme="dark"] .guide-do-card h3,
+html[data-theme="dark"] .guide-dont-card h3,
+html[data-theme="dark"] .guide-run-step strong,
+html[data-theme="dark"] .guide-timing-grid strong,
+html[data-theme="dark"] .guide-read-card h4,
+html[data-theme="dark"] .guide-doc-card h3,
+html[data-theme="dark"] .guide-model-card h4,
+html[data-theme="dark"] .about-feature-card h3,
+html[data-theme="dark"] .about-tech-col h4,
+html[data-theme="dark"] .about-output-card h3,
+html[data-theme="dark"] .about-method-card h4,
+html[data-theme="dark"] .about-stat strong {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .guide-note-info,
+html[data-theme="dark"] .guide-note-warn,
+html[data-theme="dark"] .guide-note-success,
+html[data-theme="dark"] .guide-note-danger,
+html[data-theme="dark"] .about-note {
+  background: #172033 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .guide-table-wrap,
+html[data-theme="dark"] .about-table-wrap {
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .guide-table th,
+html[data-theme="dark"] .about-table th,
+html[data-theme="dark"] .guide-doc-table th {
+  background: #1f2937 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .guide-table td,
+html[data-theme="dark"] .about-table td,
+html[data-theme="dark"] .guide-doc-table td {
+  border-color: #334155 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .guide-doc-search,
+html[data-theme="dark"] .guide-doc-search input {
+  border-color: #334155 !important;
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .guide-doc-badge,
+html[data-theme="dark"] .about-badge,
+html[data-theme="dark"] .about-badge-primary,
+html[data-theme="dark"] .about-stat-badge,
+html[data-theme="dark"] .guide-model-top span {
+  background: #dcfce7 !important;
+  color: #14532d !important;
+}
+
+html[data-theme="dark"] .guide-analysis-card > i,
+html[data-theme="dark"] .guide-export-card > i,
+html[data-theme="dark"] .guide-read-card > i,
+html[data-theme="dark"] .guide-model-top i,
+html[data-theme="dark"] .about-feature-card > i,
+html[data-theme="dark"] .about-output-card > i,
+html[data-theme="dark"] .about-method-card > i {
+  background: #173823 !important;
+  color: #b7f7c7 !important;
+}
+
+html[data-theme="dark"] .app-footer {
+  border-top-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .app-footer-brand strong,
+html[data-theme="dark"] .app-footer-brand span,
+html[data-theme="dark"] .app-footer-copy {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .login-card {
+  border: 1px solid #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
+}
+
+html[data-theme="dark"] .login-card h1,
+html[data-theme="dark"] .login-card h2,
+html[data-theme="dark"] .login-card label {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .disaster-shell {
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-topbar,
+html[data-theme="dark"] .disaster-filter-panel,
+html[data-theme="dark"] .disaster-kpi-group,
+html[data-theme="dark"] .disaster-modern-card,
+html[data-theme="dark"] .disaster-modern-card.card {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .disaster-list-hero,
+html[data-theme="dark"] .disaster-detail-hero {
+  border-color: #334155 !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .disaster-list-hero::before,
+html[data-theme="dark"] .disaster-detail-hero::before {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(2, 6, 23, 0.96) 0%,
+      rgba(15, 23, 42, 0.9) 34%,
+      rgba(15, 23, 42, 0.72) 58%,
+      rgba(15, 23, 42, 0.46) 78%,
+      rgba(15, 23, 42, 0.28) 100%
+    ),
+    url("/images/disaster-water-risk.jpg") right center / cover no-repeat !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .disaster-eyebrow,
+html[data-theme="dark"] .disaster-list-hero h1,
+html[data-theme="dark"] .disaster-detail-hero h1,
+html[data-theme="dark"] .disaster-list-hero p,
+html[data-theme="dark"] .disaster-detail-description,
+html[data-theme="dark"] .disaster-detail-location,
+html[data-theme="dark"] .disaster-section-heading h2 {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.55);
+}
+
+html[data-theme="dark"] .disaster-hero-metrics div,
+html[data-theme="dark"] .disaster-detail-facts div {
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  background: rgba(15, 23, 42, 0.82) !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-hero-metrics span,
+html[data-theme="dark"] .disaster-detail-facts span,
+html[data-theme="dark"] .disaster-muted-chip,
+html[data-theme="dark"] .disaster-event-location,
+html[data-theme="dark"] .disaster-event-description,
+html[data-theme="dark"] .disaster-card-footer span,
+html[data-theme="dark"] .disaster-kpi-group .metric-label {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .disaster-hero-metrics strong,
+html[data-theme="dark"] .disaster-detail-facts strong,
+html[data-theme="dark"] .disaster-event-card h2,
+html[data-theme="dark"] .disaster-panel-title,
+html[data-theme="dark"] .disaster-kpi-group .metric-value {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .disaster-event-card {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-event-placeholder {
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(34, 197, 94, 0.12)),
+    #172033 !important;
+}
+
+html[data-theme="dark"] .disaster-event-placeholder i,
+html[data-theme="dark"] .disaster-section-heading span,
+html[data-theme="dark"] .disaster-kpi-group-title {
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .disaster-card-footer,
+html[data-theme="dark"] .disaster-soft-header,
+html[data-theme="dark"] .disaster-soft-header.card-header,
+html[data-theme="dark"] .disaster-modern-card .card-header {
+  border-color: #334155 !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .disaster-imagery-selectors .form-select,
+html[data-theme="dark"] .disaster-filter-panel .form-select,
+html[data-theme="dark"] .disaster-filter-panel .form-control {
+  border-color: #3b4b63 !important;
+  background-color: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-filter-panel label,
+html[data-theme="dark"] .disaster-imagery-selectors label,
+html[data-theme="dark"] .disaster-layer-panel .form-check-label {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-kpi-group .metric-card {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-metric-icon,
+html[data-theme="dark"] .disaster-kpi-group-title i,
+html[data-theme="dark"] .disaster-section-heading i {
+  background: #134e4a !important;
+  color: #99f6e4 !important;
+}
+
+html[data-theme="dark"] .legend,
+html[data-theme="dark"] .map-legend,
+html[data-theme="dark"] .cm-map-legend .legend,
+html[data-theme="dark"] .leaflet-control-layers,
+html[data-theme="dark"] .leaflet-control-layers-expanded {
+  border-color: #334155 !important;
+  background: rgba(17, 24, 39, 0.96) !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .legend *,
+html[data-theme="dark"] .map-legend *,
+html[data-theme="dark"] .leaflet-control-layers *,
+html[data-theme="dark"] .basemap-panel * {
+  color: inherit;
+}
+
+html[data-theme="dark"] .basemap-panel {
+  border-color: #334155 !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .basemap-option {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .basemap-option.active,
+html[data-theme="dark"] .basemap-option:hover {
+  background: #16452b !important;
+  color: #ecfdf5 !important;
+}
+
+html[data-theme="dark"] .basemap-option:disabled {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+  opacity: 0.72;
+}
+
+html[data-theme="dark"] .cm-hero {
+  background: #0f172a !important;
+}
+
+html[data-theme="dark"] .cm-hero::before {
+  opacity: 0.56 !important;
+}
+
+html[data-theme="dark"] .cm-hero::after {
+  background: linear-gradient(
+    100deg,
+    rgba(2, 6, 23, 0.96) 0%,
+    rgba(15, 23, 42, 0.92) 34%,
+    rgba(15, 23, 42, 0.78) 56%,
+    rgba(15, 23, 42, 0.5) 76%,
+    rgba(15, 23, 42, 0.28) 100%
+  ) !important;
+}
+
+html[data-theme="dark"] .cm-hero:hover::before {
+  opacity: 0.62 !important;
+}
+
+html[data-theme="dark"] .cm-hero h1,
+html[data-theme="dark"] .cm-hero p,
+html[data-theme="dark"] .cm-eyebrow {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.58);
+}
+
+html[data-theme="dark"] .analysis-status-card,
+html[data-theme="dark"] .cm-status-card {
+  border-color: #3b4b63 !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .analysis-status-card i,
+html[data-theme="dark"] .cm-status-card i {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+html[data-theme="dark"] .analysis-status-card span,
+html[data-theme="dark"] .cm-status-card span {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .analysis-status-card strong,
+html[data-theme="dark"] .cm-status-card strong {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .guide-quickref,
+html[data-theme="dark"] .guide-quickref-grid,
+html[data-theme="dark"] .guide-section-title,
+html[data-theme="dark"] .guide-kbd-row {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .guide-kbd-row span,
+html[data-theme="dark"] .guide-kbd-row small,
+html[data-theme="dark"] .guide-quickref p,
+html[data-theme="dark"] .guide-quickref li {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .guide-kbd-row kbd {
+  border: 1px solid #cbd5e1;
+  background: #e5e7eb !important;
+  color: #020617 !important;
+}
+
+html[data-theme="dark"] .disaster-card-badges .badge.bg-light,
+html[data-theme="dark"] .disaster-card-badges .badge.text-dark,
+html[data-theme="dark"] .badge.bg-light,
+html[data-theme="dark"] .badge.text-dark {
+  background: #e5e7eb !important;
+  color: #1e293b !important;
+}
+
+html[data-theme="dark"] .disaster-card-badges .badge.bg-warning,
+html[data-theme="dark"] .badge.bg-warning {
+  background: #facc15 !important;
+  color: #111827 !important;
+}
+
+html[data-theme="dark"] .disaster-event-date {
+  background: rgba(15, 23, 42, 0.86) !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .form-check-label,
+html[data-theme="dark"] .form-switch label,
+html[data-theme="dark"] label {
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .form-check-input {
+  border-color: #475569 !important;
+  background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] .form-check-input:checked {
+  border-color: #43a85f !important;
+  background-color: #43a85f !important;
+}
+
+html[data-theme="dark"] .form-switch .form-check-input {
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px #475569;
+}
+
+html[data-theme="dark"] .leaflet-bar a,
+html[data-theme="dark"] .leaflet-control button,
+html[data-theme="dark"] .fullscreen-control-btn,
+html[data-theme="dark"] .leaflet-draw-toolbar a,
+html[data-theme="dark"] .leaflet-control-zoom a {
+  border-color: #334155 !important;
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .leaflet-bar a:hover,
+html[data-theme="dark"] .leaflet-control button:hover,
+html[data-theme="dark"] .fullscreen-control-btn:hover,
+html[data-theme="dark"] .leaflet-draw-toolbar a:hover,
+html[data-theme="dark"] .leaflet-control-zoom a:hover {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .leaflet-bar a span,
+html[data-theme="dark"] .leaflet-control button span,
+html[data-theme="dark"] .fullscreen-control-btn span,
+html[data-theme="dark"] .fullscreen-control-btn i,
+html[data-theme="dark"] .leaflet-control i,
+html[data-theme="dark"] .leaflet-control svg,
+html[data-theme="dark"] .leaflet-draw-toolbar a::before,
+html[data-theme="dark"] .leaflet-draw-toolbar a::after {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+  stroke: #f8fafc !important;
+}
+
+html[data-theme="dark"] .leaflet-disabled,
+html[data-theme="dark"] .leaflet-disabled:hover,
+html[data-theme="dark"] .leaflet-draw-toolbar a.leaflet-disabled {
+  background-color: #0b1220 !important;
+  color: #64748b !important;
+  opacity: 0.7;
+}
+
+html[data-theme="dark"] .map-cursor-pos,
+html[data-theme="dark"] .map-zoom-scale {
+  border-color: #334155 !important;
+  background: rgba(15, 23, 42, 0.92) !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .map-zoom-scale__bar {
+  border-color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .map-zoom-scale__ratio {
+  color: #cbd5e1 !important;
+}

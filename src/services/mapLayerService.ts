@@ -38,7 +38,8 @@ export async function fetchBasemaps(): Promise<BasemapDefinition[]> {
         name: l.name,
         url: l.tile_url,
         attribution: l.attribution,
-        maxZoom: l.max_zoom || 19,
+        maxZoom: Math.max(l.max_zoom || 19, l.key === DEFAULT_BASEMAP_ID ? 22 : l.max_zoom || 19),
+        maxNativeZoom: l.key === DEFAULT_BASEMAP_ID ? Math.min(l.max_zoom || 19, 18) : l.max_zoom || 19,
         isDefault: Boolean(l.is_default),
         order: l.order ?? idx,
       }))

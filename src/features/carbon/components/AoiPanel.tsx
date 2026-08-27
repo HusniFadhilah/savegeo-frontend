@@ -22,6 +22,7 @@ import AoiCompanyTab from "./AoiCompanyTab";
 import { registerMap } from "@/features/chatbot/mapActions";
 import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapClickPicker from "@/components/map/MapClickPicker";
+import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 
 interface Props {
   aoi: AoiState | null;
@@ -145,7 +146,7 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
             [bbox[1], bbox[0]],
             [bbox[3], bbox[2]],
           ],
-          { padding: [30, 30] },
+          { padding: [30, 30], maxZoom: HIGH_DETAIL_MAX_ZOOM },
         );
       } else {
         map.flyTo([lat, lng], zoom ?? 12, { duration: 1.2 });

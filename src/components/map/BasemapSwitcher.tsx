@@ -42,7 +42,7 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
       const effectiveMaxZoom = Number.isFinite(mapMaxZoom) ? Math.max(b.maxZoom, mapMaxZoom) : b.maxZoom;
       layers[b.id] = L.tileLayer(b.url, {
         attribution: b.attribution,
-        maxNativeZoom: b.maxZoom,
+        maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
         maxZoom: effectiveMaxZoom,
       });
     });

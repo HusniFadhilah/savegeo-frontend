@@ -1548,3 +1548,175 @@
  * expose a global theme toggle either, so no @media (prefers-color-scheme)
  * overrides are defined here. Revisit if/when the app adds one.
  */
+
+/* Dark mode overrides ---------------------------------------------------- */
+html[data-theme="dark"] .admin-panel {
+  --sb-bg: #07111f;
+  --sb-border: rgba(148, 163, 184, 0.18);
+  --sb-text: #cbd5e1;
+  --sb-active-bg: rgba(67, 168, 95, 0.22);
+  --sb-active-border: #6ee78e;
+  --sb-active-text: #f8fafc;
+  --content-bg: #0f172a;
+  --card-bg: #111827;
+  --border: #334155;
+  --text: #e5e7eb;
+  --text-muted: #94a3b8;
+  --accent: #43a85f;
+  --accent-dark: #9ae6ad;
+  --accent-light: #6ee78e;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 16px 42px rgba(0, 0, 0, 0.34);
+  background: var(--content-bg);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .admin-panel .main,
+html[data-theme="dark"] .admin-panel .page-content {
+  background: var(--content-bg);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .admin-panel .sidebar {
+  background: linear-gradient(195deg, #07111f 0%, #0f3d25 100%);
+  border-right: 1px solid var(--border);
+}
+
+html[data-theme="dark"] .admin-panel .topbar,
+html[data-theme="dark"] .admin-panel .card,
+html[data-theme="dark"] .admin-panel .stat-card,
+html[data-theme="dark"] .admin-panel .cfg-provider-card,
+html[data-theme="dark"] .admin-panel .adm-ssel-menu,
+html[data-theme="dark"] .admin-panel .upload-zone {
+  border-color: var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+}
+
+html[data-theme="dark"] .admin-panel .card-header-custom,
+html[data-theme="dark"] .admin-panel .card-body-custom {
+  border-color: var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .admin-panel .topbar-title,
+html[data-theme="dark"] .admin-panel .stat-val,
+html[data-theme="dark"] .admin-panel .cfg-provider-name,
+html[data-theme="dark"] .admin-panel .form-label,
+html[data-theme="dark"] .admin-panel .cfg-key,
+html[data-theme="dark"] .admin-panel .cfg-switch strong,
+html[data-theme="dark"] .admin-panel h1,
+html[data-theme="dark"] .admin-panel h2,
+html[data-theme="dark"] .admin-panel h3,
+html[data-theme="dark"] .admin-panel h4,
+html[data-theme="dark"] .admin-panel h5,
+html[data-theme="dark"] .admin-panel h6 {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .admin-panel .topbar-sub,
+html[data-theme="dark"] .admin-panel .stat-label,
+html[data-theme="dark"] .admin-panel .cfg-provider-hint,
+html[data-theme="dark"] .admin-panel .cfg-type,
+html[data-theme="dark"] .admin-panel .tbl td,
+html[data-theme="dark"] .admin-panel .tbl-mono {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .admin-panel .tbl th {
+  border-color: var(--border);
+  background: #1f2937;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .admin-panel .tbl td {
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .admin-panel .tbl tr:hover td {
+  background: #172033;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .admin-panel .form-input,
+html[data-theme="dark"] .admin-panel textarea.form-input,
+html[data-theme="dark"] .admin-panel .form-select,
+html[data-theme="dark"] .admin-panel .cfg-val input,
+html[data-theme="dark"] .admin-panel .cfg-val textarea,
+html[data-theme="dark"] .admin-panel .cfg-secret-wrap input,
+html[data-theme="dark"] .admin-panel .adm-ssel-trigger,
+html[data-theme="dark"] .admin-panel .adm-ssel-search,
+html[data-theme="dark"] .admin-panel .sb-mobile-toggle {
+  border-color: #3b4b63;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .admin-panel .form-input::placeholder,
+html[data-theme="dark"] .admin-panel .cfg-val input::placeholder,
+html[data-theme="dark"] .admin-panel .cfg-secret-wrap input::placeholder,
+html[data-theme="dark"] .admin-panel .adm-ssel-search::placeholder {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .admin-panel .form-input:focus,
+html[data-theme="dark"] .admin-panel textarea.form-input:focus,
+html[data-theme="dark"] .admin-panel .cfg-val input:focus,
+html[data-theme="dark"] .admin-panel .cfg-val textarea:focus,
+html[data-theme="dark"] .admin-panel .cfg-secret-wrap input:focus {
+  border-color: #43a85f;
+  box-shadow: 0 0 0 3px rgba(67, 168, 95, 0.2);
+}
+
+html[data-theme="dark"] .admin-panel .btn-sm,
+html[data-theme="dark"] .admin-panel .btn-xs {
+  border-color: #475569;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .admin-panel .btn-sm:hover,
+html[data-theme="dark"] .admin-panel .btn-xs:hover {
+  border-color: #64748b;
+  background: #172033;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .admin-panel .btn-sm.primary,
+html[data-theme="dark"] .admin-panel .btn-sm.success,
+html[data-theme="dark"] .admin-panel .btn-xs.primary,
+html[data-theme="dark"] .admin-panel .btn-xs.success {
+  border-color: #43a85f;
+  background: #43a85f;
+  color: #fff;
+}
+
+html[data-theme="dark"] .admin-panel .badge-green,
+html[data-theme="dark"] .admin-panel .badge-label,
+html[data-theme="dark"] .admin-panel .ee-badge.ok {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+html[data-theme="dark"] .admin-panel .badge-amber,
+html[data-theme="dark"] .admin-panel .badge-yellow {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+html[data-theme="dark"] .admin-panel .badge-red,
+html[data-theme="dark"] .admin-panel .ee-badge.fail {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+html[data-theme="dark"] .admin-panel .cfg-secret-ok {
+  color: #22c55e;
+}
+
+html[data-theme="dark"] .admin-panel .cfg-secret-empty {
+  color: #f87171;
+}

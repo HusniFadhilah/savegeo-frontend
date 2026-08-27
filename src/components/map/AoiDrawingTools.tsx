@@ -3,6 +3,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
+import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import type { AoiFeature } from "@/types/map";
 
 interface Props {
@@ -393,7 +394,7 @@ export function setAoiOnMap(map: L.Map, group: L.FeatureGroup, feature: AoiFeatu
   const layer = L.geoJSON(feature as GeoJSON.Feature);
   layer.eachLayer((l) => group.addLayer(l));
   const bounds = group.getBounds();
-  if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+  if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: HIGH_DETAIL_MAX_ZOOM });
 }
 
 /**
