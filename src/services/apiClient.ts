@@ -89,6 +89,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       (parsed && typeof parsed === "object" && "error" in parsed
         ? String((parsed as Record<string, unknown>).error)
         : null) ||
+      (parsed && typeof parsed === "object" && "detail" in parsed
+        ? String((parsed as Record<string, unknown>).detail)
+        : null) ||
       `Request failed with status ${res.status}`;
     throw new ApiError(message, res.status, parsed);
   }

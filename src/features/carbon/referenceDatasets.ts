@@ -25,6 +25,13 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
       "NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest areas, 2019-2023.",
   },
   {
+    value: "GEDI_L4A_MONTHLY",
+    label: "GEDI L4A Monthly AGBD (2019-2023, 25m)",
+    group: "Aboveground Biomass Carbon",
+    description:
+      "NASA GEDI L4A monthly aboveground biomass density composite at 25m, converted to carbon with x0.47.",
+  },
+  {
     value: "GEDI_L4B_STACK",
     label: "GEDI L4B + Predictor Stack (2019-2023, 1km)",
     group: "Aboveground Biomass Carbon",

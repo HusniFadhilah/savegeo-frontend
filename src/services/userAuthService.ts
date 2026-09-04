@@ -91,6 +91,12 @@ export const userAuthService = {
     storeUserAuth(res);
     return res;
   },
+  forgotPassword(identifier: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>("/auth/forgot-password", { identifier });
+  },
+  resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>("/auth/reset-password", { token, password });
+  },
   logout(): void {
     clearUserAuthToken();
   },

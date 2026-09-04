@@ -26,7 +26,7 @@ interface Props {
 export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   const map = useMap();
   const { basemaps } = useBasemaps();
-  const layersRef = useRef<Record<string, L.TileLayer>>({});
+  const layersRef = useRef<Record<string, L.Layer>>({});
   // Shared with ImageryAttribution (same MapView instance) via BasemapContext,
   // instead of local state - so the satellite capture-date lookup knows when
   // this map has switched away from/back to the satellite basemap.
@@ -36,15 +36,25 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   useEffect(() => {
     if (!basemaps.length) return;
 
-    const layers: Record<string, L.TileLayer> = {};
+    const layers: Record<string, L.Layer> = {};
     basemaps.forEach((b) => {
       const mapMaxZoom = map.getMaxZoom();
       const effectiveMaxZoom = Number.isFinite(mapMaxZoom) ? Math.max(b.maxZoom, mapMaxZoom) : b.maxZoom;
-      layers[b.id] = L.tileLayer(b.url, {
+      const baseLayer = L.tileLayer(b.url, {
         attribution: b.attribution,
         maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
         maxZoom: effectiveMaxZoom,
       });
+      if (b.overlayUrl) {
+        const overlayLayer = L.tileLayer(b.overlayUrl, {
+          attribution: b.overlayAttribution,
+          maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
+          maxZoom: effectiveMaxZoom,
+        });
+        layers[b.id] = L.layerGroup([baseLayer, overlayLayer]);
+        return;
+      }
+      layers[b.id] = baseLayer;
     });
     layersRef.current = layers;
 

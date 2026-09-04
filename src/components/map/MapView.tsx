@@ -97,12 +97,22 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         className={className ?? "savegeo-map"}
       >
         {defaultBasemap && (
-          <TileLayer
-            url={defaultBasemap.url}
-            attribution={defaultBasemap.attribution}
-            maxNativeZoom={defaultMaxNativeZoom}
-            maxZoom={effectiveMaxZoom}
-          />
+          <>
+            <TileLayer
+              url={defaultBasemap.url}
+              attribution={defaultBasemap.attribution}
+              maxNativeZoom={defaultMaxNativeZoom}
+              maxZoom={effectiveMaxZoom}
+            />
+            {defaultBasemap.overlayUrl && (
+              <TileLayer
+                url={defaultBasemap.overlayUrl}
+                attribution={defaultBasemap.overlayAttribution}
+                maxNativeZoom={defaultMaxNativeZoom}
+                maxZoom={effectiveMaxZoom}
+              />
+            )}
+          </>
         )}
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />

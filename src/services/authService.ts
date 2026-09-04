@@ -47,6 +47,12 @@ export const authService = {
     storeAuth(res);
     return res;
   },
+  forgotPassword(identifier: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>("/admin/auth/forgot-password", { identifier });
+  },
+  resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>("/admin/auth/reset-password", { token, password });
+  },
   logout(): void {
     clearAuthToken();
   },

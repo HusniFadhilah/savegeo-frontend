@@ -37,6 +37,7 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
     aoi: params.aoi,
     sar_mode: params.sarMode,
     cloud_mask_technique: params.cloudMaskTechnique,
+    super_resolution: params.superResolution,
   });
 }
 

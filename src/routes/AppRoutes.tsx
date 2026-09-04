@@ -4,6 +4,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import LoginUserPage from "@/pages/LoginUserPage";
 import RegisterUserPage from "@/pages/RegisterUserPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import DisasterListPage from "@/features/disaster/DisasterListPage";
@@ -71,6 +72,7 @@ export default function AppRoutes() {
       {adminRoutes.map((route) => (
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
       ))}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/pemetaan-bencana"
         element={

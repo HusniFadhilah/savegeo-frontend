@@ -24,6 +24,29 @@ const FALLBACK_BADGES: BadgeIndex[] = VEGETATION_INDICES.map((i) => ({
   description: i.description,
 }));
 
+const INDEX_ICON: Record<string, string> = {
+  NDVI: "bi-tree-fill",
+  EVI: "bi-flower2",
+  SAVI: "bi-brightness-high-fill",
+  MSAVI: "bi-sunrise-fill",
+  NDMI: "bi-droplet-half",
+  NDWI: "bi-water",
+  MNDWI: "bi-tsunami",
+  NDBI: "bi-buildings-fill",
+  NBR: "bi-fire",
+  BSI: "bi-bricks",
+  NDRE: "bi-flower1",
+  GCI: "bi-leaf-fill",
+  ARVI: "bi-cloud-sun-fill",
+  VARI: "bi-palette-fill",
+  SIPI: "bi-virus",
+  LAI_PROXY: "bi-diagram-3-fill",
+};
+
+function indexIcon(code: string) {
+  return INDEX_ICON[code] ?? "bi-circle-fill";
+}
+
 /**
  * Ported from module-carbon.html's #vegetationParams block. Index badges are
  * fetched from GET /vegetation/catalog (16 indices as of writing) instead of
@@ -199,14 +222,18 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
         <label className="form-label">Indeks Vegetasi</label>
         <div id="indicesContainer">
           {badges.map((idx) => (
-            <span
+            <button
               key={idx.code}
+              type="button"
               className={`index-badge ${params.indices.includes(idx.code) ? "active" : ""}`}
               title={idx.description}
               onClick={() => toggleIndex(idx.code)}
             >
-              {idx.label}
-            </span>
+              <span className="index-badge-avatar" aria-hidden="true">
+                <i className={`bi ${indexIcon(idx.code)}`} />
+              </span>
+              <span className="index-badge-label">{idx.label}</span>
+            </button>
           ))}
         </div>
       </div>

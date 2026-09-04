@@ -2,6 +2,8 @@ export interface BasemapDefinition {
   id: string;
   name: string;
   url: string;
+  overlayUrl?: string;
+  overlayAttribution?: string;
   attribution: string;
   maxZoom: number;
   maxNativeZoom?: number;

@@ -6,7 +6,9 @@ interface BasemapRegistryLayer {
   key: string;
   name: string;
   tile_url: string;
+  overlay_tile_url?: string | null;
   attribution: string;
+  overlay_attribution?: string | null;
   max_zoom?: number;
   enabled: boolean;
   is_default?: boolean;
@@ -37,7 +39,9 @@ export async function fetchBasemaps(): Promise<BasemapDefinition[]> {
         id: l.key,
         name: l.name,
         url: l.tile_url,
+        overlayUrl: l.overlay_tile_url || undefined,
         attribution: l.attribution,
+        overlayAttribution: l.overlay_attribution || undefined,
         maxZoom: Math.max(l.max_zoom || 19, l.key === DEFAULT_BASEMAP_ID ? 22 : l.max_zoom || 19),
         maxNativeZoom: l.key === DEFAULT_BASEMAP_ID ? Math.min(l.max_zoom || 19, 18) : l.max_zoom || 19,
         isDefault: Boolean(l.is_default),

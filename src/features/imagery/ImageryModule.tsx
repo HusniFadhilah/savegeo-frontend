@@ -14,7 +14,7 @@ import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
-import type { DemTileResponse, ImageryProvider, ImageryScene, SarMode } from "./types";
+import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
@@ -176,6 +176,7 @@ export default function ImageryModule() {
   const [endDate, setEndDate] = useState(todayIso());
   const [cloudFilterEnabled, setCloudFilterEnabled] = useState(false);
   const [maxCloudCover, setMaxCloudCover] = useState(60);
+  const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("off");
 
   const [scenes, setScenes] = useState<ImageryScene[]>([]);
   const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
@@ -191,6 +192,7 @@ export default function ImageryModule() {
   const [tileError, setTileError] = useState<string | null>(null);
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
+  const renderOptionsKeyRef = useRef("");
 
   // "Bandingkan 2 Waktu" (user request) - swipe/compare slider between two
   // individual scenes (not composites), reusing the same SwipeCompareMap
@@ -216,6 +218,25 @@ export default function ImageryModule() {
   );
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
+  const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && satelliteMeta.source_kind !== "geosave_cdse_stac");
+  const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
+  useEffect(() => {
+    ++tileRequestRef.current;
+    setScenes([]);
+    setSceneTilesById({});
+    setTruncated(false);
+    setSearched(false);
+    setSearchError(null);
+    setSelectedSceneId(null);
+    setTileUrl(null);
+    setTileError(null);
+    setTileLoading(false);
+    setCompareSceneAId(null);
+    setCompareSceneBId(null);
+    setCompareTileA(null);
+    setCompareTileB(null);
+    setCompareError(null);
+  }, [satellite]);
 
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
@@ -258,6 +279,7 @@ export default function ImageryModule() {
           aoi: aoi ? { geojson: aoi } : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+          superResolution: activeSuperResolution,
         });
         if (requestId !== tileRequestRef.current) return;
         setTileUrl(res.tile_url);
@@ -270,7 +292,7 @@ export default function ImageryModule() {
         }
       }
     },
-    [aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, sarMode, satellite, sceneTilesById],
+    [activeSuperResolution, aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, sarMode, satellite, sceneTilesById],
   );
 
   const searchScenes = async () => {
@@ -371,6 +393,7 @@ export default function ImageryModule() {
           aoi: aoi ? { geojson: aoi } : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+          superResolution: activeSuperResolution,
         }),
         getImagerySceneTile({
           satellite,
@@ -378,6 +401,7 @@ export default function ImageryModule() {
           aoi: aoi ? { geojson: aoi } : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+          superResolution: activeSuperResolution,
         }),
       ]);
       setCompareTileA(resA.tile_url);
@@ -420,6 +444,16 @@ export default function ImageryModule() {
     () => scenes.find((s) => s.id === selectedSceneId) ?? null,
     [scenes, selectedSceneId],
   );
+  const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}`;
+  useEffect(() => {
+    if (!selectedScene) {
+      renderOptionsKeyRef.current = renderOptionsKey;
+      return;
+    }
+    if (renderOptionsKeyRef.current === renderOptionsKey) return;
+    renderOptionsKeyRef.current = renderOptionsKey;
+    void loadSceneTile(selectedScene);
+  }, [loadSceneTile, renderOptionsKey, selectedScene]);
 
   const mapLayerOptions = useMemo(
     () => [
@@ -552,6 +586,28 @@ export default function ImageryModule() {
                 )}
               </>
             )}
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
+              <i className="bi bi-stars" /> Super Resolution
+            </label>
+            <SearchableSelect
+              id="imagerySuperResolution"
+              value={activeSuperResolution}
+              onChange={(value) => setSuperResolution(value as ImagerySuperResolutionMode)}
+              disabled={!supportsSuperResolution}
+              options={[
+                { value: "off", label: "Nonaktif" },
+                { value: "bicubic_2x", label: "Bicubic 2x" },
+                { value: "bicubic_4x", label: "Bicubic 4x" },
+              ]}
+            />
+            <small className="text-muted d-block mt-1">
+              {supportsSuperResolution
+                ? "Diterapkan backend saat tile scene dimuat; meningkatkan kehalusan visual tanpa mengubah sumber data asli."
+                : "Tidak tersedia untuk provider ini karena tile tidak dirender ulang oleh backend GEE."}
+            </small>
           </div>
 
           {satelliteMeta?.visualization === "sar" && (

@@ -62,6 +62,7 @@ export interface ImagerySceneTileResponse {
   scene_id: string;
   tile_url: string;
   satellite: ImageryProvider;
+  super_resolution?: ImagerySuperResolutionResult | null;
 }
 
 export interface ListScenesParams {
@@ -73,6 +74,15 @@ export interface ListScenesParams {
 }
 
 export type SarMode = "grayscale" | "composite";
+export type ImagerySuperResolutionMode = "off" | "bicubic_2x" | "bicubic_4x";
+
+export interface ImagerySuperResolutionResult {
+  mode: Exclude<ImagerySuperResolutionMode, "off">;
+  factor: number;
+  native_resolution_m: number;
+  render_scale_m: number;
+  method: string;
+}
 
 export interface GetSceneTileParams {
   satellite: string;
@@ -82,6 +92,8 @@ export interface GetSceneTileParams {
   sarMode?: SarMode;
   /** Sentinel-2 only (L2A/L1C) - "scl" | "qa60" | "s2cloudless", opt-in per-pixel cloud mask on top of the default raw/unmasked view. Ignored (and silently remapped if unsupported, e.g. "scl" on L1C) by the backend for providers without cloud_mask_techniques. */
   cloudMaskTechnique?: string;
+  /** GEE-backed scene tiles only - optional visual super-resolution via backend bicubic resampling. */
+  superResolution?: ImagerySuperResolutionMode;
 }
 
 export interface DemTileStats {

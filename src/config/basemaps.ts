@@ -30,13 +30,25 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
     order: 2,
   },
   {
+    id: "satellite_roads",
+    name: "Satellite + roads",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    overlayUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics",
+    overlayAttribution: "Road reference &copy; Esri",
+    maxZoom: 22,
+    maxNativeZoom: 18,
+    isDefault: false,
+    order: 3,
+  },
+  {
     id: "topo",
     name: "Topographic",
     url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap",
     maxZoom: 17,
     isDefault: false,
-    order: 3,
+    order: 4,
   },
   {
     id: "terrain",
@@ -45,7 +57,7 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
     attribution: "Tiles &copy; Esri",
     maxZoom: 13,
     isDefault: false,
-    order: 4,
+    order: 5,
   },
   {
     id: "dark",
@@ -54,7 +66,7 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
     attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
     maxZoom: 19,
     isDefault: false,
-    order: 5,
+    order: 6,
   },
   {
     id: "light",
@@ -63,7 +75,7 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
     attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
     maxZoom: 19,
     isDefault: false,
-    order: 6,
+    order: 7,
   },
 ];
 

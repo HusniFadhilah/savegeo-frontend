@@ -581,6 +581,44 @@
   backdrop-filter: blur(16px);
 }
 
+.reset-password-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(46, 125, 50, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.08), rgba(27, 94, 32, 0.03));
+}
+
+.reset-password-callout i {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  background: var(--primary-color, #2e7d32);
+  color: #fff;
+}
+
+.reset-password-callout strong,
+.reset-password-callout span {
+  display: block;
+}
+
+.reset-password-callout strong {
+  color: #173823;
+  font-size: 0.92rem;
+}
+
+.reset-password-callout span {
+  margin-top: 3px;
+  color: #5f7164;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 900px) {
   .login-illust-side {
     display: none;
@@ -5805,4 +5843,126 @@ html[data-theme="dark"] .cs-mode-desc,
 html[data-theme="dark"] .cs-time-value,
 html[data-theme="dark"] .cs-card-body .text-muted {
   color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .aoi-modal-backdrop {
+  background: rgba(2, 6, 23, 0.74) !important;
+  backdrop-filter: blur(3px);
+}
+
+html[data-theme="dark"] .aoi-modal-dialog {
+  border: 1px solid #334155 !important;
+  background: #0f172a !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58) !important;
+}
+
+html[data-theme="dark"] .aoi-modal-header,
+html[data-theme="dark"] .aoi-modal-footer {
+  border-color: #26384f !important;
+  background: #111827 !important;
+}
+
+html[data-theme="dark"] .aoi-modal-eyebrow {
+  color: #86efac !important;
+}
+
+html[data-theme="dark"] .aoi-modal-header h2 {
+  color: #f8fafc !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .aoi-modal-header p,
+html[data-theme="dark"] .aoi-modal-status {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .aoi-modal-status.ready,
+html[data-theme="dark"] .aoi-modal-status.ready i {
+  color: #86efac !important;
+}
+
+html[data-theme="dark"] .aoi-modal-close {
+  border-color: #475569 !important;
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .aoi-modal-close:hover {
+  border-color: #86efac !important;
+  background: #173823 !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .aoi-modal-body {
+  background: #0b1220 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .aoi-modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+html[data-theme="dark"] .aoi-modal-body::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+html[data-theme="dark"] .aoi-modal-body::-webkit-scrollbar-thumb {
+  border: 2px solid #111827;
+  border-radius: 999px;
+  background: #64748b;
+}
+
+html[data-theme="dark"] .aoi-modal-body .tab-content {
+  border-color: #26384f !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .aoi-tabs {
+  border-bottom-color: #26384f !important;
+}
+
+html[data-theme="dark"] .aoi-tab {
+  border-color: #26384f !important;
+  background: #172033 !important;
+  color: #dbeafe !important;
+}
+
+html[data-theme="dark"] .aoi-tab i {
+  color: #a8b3c7 !important;
+}
+
+html[data-theme="dark"] .aoi-tab:hover {
+  border-color: #4ade80 !important;
+  background: #173823 !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .aoi-tab:hover i,
+html[data-theme="dark"] .aoi-tab.active i {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .aoi-tab.active {
+  border-color: #43a85f !important;
+  background: #43a85f !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 22px rgba(34, 197, 94, 0.18) !important;
+}
+
+html[data-theme="dark"] .aoi-picker-content .alert.alert-info {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  background: #0c253a !important;
+  color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary {
+  border-color: #64748b !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
+  border-color: #cbd5e1 !important;
+  background: #26384f !important;
+  color: #ffffff !important;
 }
