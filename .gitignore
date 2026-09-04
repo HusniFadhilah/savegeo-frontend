@@ -1,7 +1,6 @@
 node_modules
 dist
 dist-ssr
-docs/
 .env
 .env.local
 .env.*.local
