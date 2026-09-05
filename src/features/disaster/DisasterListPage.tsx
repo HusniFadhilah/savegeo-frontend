@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { env } from "@/config/env";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
@@ -47,6 +48,14 @@ function typeIcon(type: string | undefined): string {
 
 function activeFilterCount(filters: DisasterEventListParams): number {
   return Object.values(filters).filter((value) => value !== undefined && value !== "").length;
+}
+
+function resolveThumbnailUrl(thumbnail: string | null | undefined): string | null {
+  if (!thumbnail) return null;
+  if (/^https?:\/\//i.test(thumbnail) || thumbnail.startsWith("data:")) return thumbnail;
+  const backendBaseUrl = env.apiBaseUrl.replace(/\/api$/, "");
+  if (thumbnail.startsWith("/")) return `${backendBaseUrl}${thumbnail}`;
+  return thumbnail;
 }
 
 /**
@@ -257,53 +266,56 @@ export default function DisasterListPage() {
       )}
 
       <div className="disaster-event-grid">
-        {events.map((event) => (
-          <article className="disaster-event-card" key={event.id}>
-            <div className="disaster-event-media">
-              {event.thumbnail ? (
-                <img src={event.thumbnail} alt={event.name} />
-              ) : (
-                <div className="disaster-event-placeholder">
-                  <i className={`bi ${typeIcon(event.disaster_type)}`} />
-                </div>
-              )}
-              <span className="disaster-event-date">{event.event_date || "-"}</span>
-            </div>
-            <div className="disaster-event-body">
-              <div className="disaster-card-badges">
-                <span className="badge text-bg-primary">
-                  <i className={`bi ${typeIcon(event.disaster_type)}`} />{" "}
-                  {EVENT_DISASTER_TYPE_LABELS[
-                    event.disaster_type as keyof typeof EVENT_DISASTER_TYPE_LABELS
-                  ] || event.disaster_type}
-                </span>
-                {event.severity && (
-                  <span className={`badge ${severityBadgeClass(event.severity)}`}>
-                    {SEVERITY_LABELS[event.severity]}
-                  </span>
+        {events.map((event) => {
+          const thumbnailUrl = resolveThumbnailUrl(event.thumbnail);
+          return (
+            <article className="disaster-event-card" key={event.id}>
+              <div className="disaster-event-media">
+                {thumbnailUrl ? (
+                  <img src={thumbnailUrl} alt={event.name} />
+                ) : (
+                  <div className="disaster-event-placeholder">
+                    <i className={`bi ${typeIcon(event.disaster_type)}`} />
+                  </div>
                 )}
+                <span className="disaster-event-date">{event.event_date || "-"}</span>
               </div>
-              <h2>{event.name}</h2>
-              <p className="disaster-event-location">
-                <i className="bi bi-geo-alt" />{" "}
-                {[event.location_name, event.province?.join(", ")].filter(Boolean).join(" - ") ||
-                  "-"}
-              </p>
-              {event.description && (
-                <p className="disaster-event-description">{event.description.slice(0, 170)}</p>
-              )}
-              <div className="disaster-card-footer">
-                <span>
-                  <i className="bi bi-bar-chart" /> {event.available_analysis_count} analisis
-                  tersedia
-                </span>
-                <Link to={`/pemetaan-bencana/${event.id}`} className="btn btn-sm btn-primary">
-                  Detail <i className="bi bi-arrow-right" />
-                </Link>
+              <div className="disaster-event-body">
+                <div className="disaster-card-badges">
+                  <span className="badge text-bg-primary">
+                    <i className={`bi ${typeIcon(event.disaster_type)}`} />{" "}
+                    {EVENT_DISASTER_TYPE_LABELS[
+                      event.disaster_type as keyof typeof EVENT_DISASTER_TYPE_LABELS
+                    ] || event.disaster_type}
+                  </span>
+                  {event.severity && (
+                    <span className={`badge ${severityBadgeClass(event.severity)}`}>
+                      {SEVERITY_LABELS[event.severity]}
+                    </span>
+                  )}
+                </div>
+                <h2>{event.name}</h2>
+                <p className="disaster-event-location">
+                  <i className="bi bi-geo-alt" />{" "}
+                  {[event.location_name, event.province?.join(", ")].filter(Boolean).join(" - ") ||
+                    "-"}
+                </p>
+                {event.description && (
+                  <p className="disaster-event-description">{event.description.slice(0, 170)}</p>
+                )}
+                <div className="disaster-card-footer">
+                  <span>
+                    <i className="bi bi-bar-chart" /> {event.available_analysis_count} analisis
+                    tersedia
+                  </span>
+                  <Link to={`/pemetaan-bencana/${event.id}`} className="btn btn-sm btn-primary">
+                    Detail <i className="bi bi-arrow-right" />
+                  </Link>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </div>
   );

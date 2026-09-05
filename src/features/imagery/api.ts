@@ -58,3 +58,14 @@ export function getImageryDemTile(params: GetDemTileParams) {
     scale: params.scale,
   });
 }
+
+export function runRasterToolbox(params: { itemUrl: string; assetKey: string; aoi: unknown; operation: string; bands?: string; export?: boolean }) {
+  return apiClient.post<{ operation: string; stats: { min: number; mean: number; max: number }; histogram: number[]; bins: number[]; download_url?: string }>("/imagery/raster-toolbox", {
+    item_url: params.itemUrl, asset_key: params.assetKey, aoi: params.aoi, operation: params.operation,
+    bands: params.bands, export: params.export,
+  });
+}
+
+export function getNasaGibsLayers() {
+  return apiClient.get<{ layers: { id: string; name: string; date_mode: string }[] }>("/imagery/nasa-gibs/layers");
+}

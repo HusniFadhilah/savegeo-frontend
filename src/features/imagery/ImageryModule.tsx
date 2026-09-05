@@ -17,6 +17,14 @@ import { getImageryDemTile, getImageryProviders, getImagerySceneTile, getImagery
 import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
+import SamGeoPanel from "./SamGeoPanel";
+import ImageryToolsPanel from "./ImageryToolsPanel";
+
+const STAC_EXAMPLES = [
+  { name: "Earth Search - Sentinel-2 L2A", url: "https://earth-search.aws.element84.com/v1", collection: "sentinel-2-l2a" },
+  { name: "Planetary Computer - Sentinel-2 L2A", url: "https://planetarycomputer.microsoft.com/api/stac/v1", collection: "sentinel-2-l2a" },
+  { name: "Planetary Computer - NAIP (Amerika Serikat)", url: "https://planetarycomputer.microsoft.com/api/stac/v1", collection: "naip" },
+];
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 const SCENE_TILE_MAX_NATIVE_ZOOM = 19;
@@ -326,6 +334,11 @@ export default function ImageryModule() {
   const [tileOpacity, setTileOpacity] = useState(1);
   const [tileLoading, setTileLoading] = useState(false);
   const [tileError, setTileError] = useState<string | null>(null);
+  const [segmentation, setSegmentation] = useState<FeatureCollection | null>(null);
+  const [nasaTimeLayerUrl, setNasaTimeLayerUrl] = useState<string | null>(null);
+  const [storyMap, setStoryMap] = useState<FeatureCollection | null>(null);
+  const [mapMode, setMapMode] = useState<"flat" | "globe">("flat");
+  useEffect(() => { setSegmentation(null); }, [selectedSceneId, satellite, aoi, cogAssetKey, cogBands, cogRescale]);
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
   const renderOptionsKeyRef = useRef("");
@@ -528,7 +541,7 @@ export default function ImageryModule() {
               aoi: { geojson: aoi },
               satellite,
               startDate,
-              endDate: inclusiveEnd.toISOString().slice(0, 10),
+              endDate: isOpenHighResProvider ? endDate : inclusiveEnd.toISOString().slice(0, 10),
               maxCloudCover: cloudFilterEnabled ? maxCloudCover : undefined,
               stacCatalogUrl: satelliteMeta?.source_kind === "generic_stac" ? stacCatalogUrl.trim() : undefined,
               stacCollections: isCogProvider ? stacCollections.trim() || undefined : undefined,
@@ -810,6 +823,17 @@ export default function ImageryModule() {
 
           {satelliteMeta?.source_kind === "generic_stac" && (
             <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryStacExample">Contoh katalog</label>
+              <select id="imageryStacExample" className="form-select form-select-sm mb-2"
+                value={STAC_EXAMPLES.findIndex((item) => item.url === stacCatalogUrl && item.collection === stacCollections)}
+                onChange={(event) => {
+                  const example = STAC_EXAMPLES[Number(event.target.value)];
+                  if (example) { setStacCatalogUrl(example.url); setStacCollections(example.collection); }
+                  else { setStacCatalogUrl(""); setStacCollections(""); }
+                }}>
+                <option value={-1}>URL sendiri</option>
+                {STAC_EXAMPLES.map((example, index) => <option key={example.name} value={index}>{example.name}</option>)}
+              </select>
               <label className="form-label fw-bold" htmlFor="imageryStacCatalogUrl">
                 <i className="bi bi-diagram-3" /> STAC Catalog/API
               </label>
@@ -821,7 +845,9 @@ export default function ImageryModule() {
                 onChange={(e) => setStacCatalogUrl(e.target.value)}
                 placeholder="https://example.org/catalog.json"
               />
-              <small className="text-muted d-block mt-1">Menerima STAC Catalog statis atau STAC API dengan link search.</small>
+              {STAC_EXAMPLES.some((item) => item.url === stacCatalogUrl) && (
+                <a className="small d-block mt-1 text-break" href={stacCatalogUrl} target="_blank" rel="noreferrer">{stacCatalogUrl}</a>
+              )}
             </div>
           )}
 
@@ -912,6 +938,10 @@ export default function ImageryModule() {
               )}
             </div>
           )}
+
+          <SamGeoPanel scene={isCogProvider ? selectedScene : null} aoi={aoi}
+            assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
+            onResult={setSegmentation} />
 
           {satelliteMeta?.visualization === "sar" && (
             <div className="mb-3">
@@ -1222,6 +1252,7 @@ export default function ImageryModule() {
               </div>
               <div className="card-body p-2">
                 <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
+                  {mapMode === "globe" && <div className="imagery-globe-mode" aria-label="Globe view"><div className="imagery-globe-sphere"><span>Globe view</span></div></div>}
                   <BasemapSwitcher extraOptions={mapLayerOptions} />
                   {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                   <SceneFootprintLayer
@@ -1232,6 +1263,9 @@ export default function ImageryModule() {
                       if (scene) selectScene(scene);
                     }}
                   />
+                  {segmentation && <GeoJSON key={JSON.stringify(segmentation)} data={segmentation}
+                    style={{ color: "#e83e8c", weight: 2, fillOpacity: 0.18 }} />}
+                  {nasaTimeLayerUrl && <TileLayer key={nasaTimeLayerUrl} url={nasaTimeLayerUrl} opacity={0.55} attribution="NASA GIBS / Earthdata" pane={RESULT_PANE} />}
                   {tileUrl && (
                     <>
                       <TileLayer
@@ -1316,6 +1350,12 @@ export default function ImageryModule() {
                     )}
                   </div>
                 )}
+                {selectedScene && <ImageryToolsPanel scene={selectedScene} aoi={aoi} assetKey={cogAssetKey}
+                  onNasaLayer={setNasaTimeLayerUrl} onStory={setStoryMap} mapMode={mapMode} onMapMode={setMapMode} />}
+                {storyMap && <a className="btn btn-sm btn-outline-success mt-2" download="story-map.geojson"
+                  href={`data:application/geo+json;charset=utf-8,${encodeURIComponent(JSON.stringify(storyMap))}`}>
+                  <i className="bi bi-download" /> Download Story Map GeoJSON
+                </a>}
               </div>
             </div>
           </>

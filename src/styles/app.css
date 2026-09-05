@@ -3892,6 +3892,9 @@
   gap: 10px;
 }
 
+.imagery-globe-mode { position: absolute; inset: 0; z-index: 450; display: grid; place-items: center; pointer-events: none; background: rgba(3, 14, 28, .18); }
+.imagery-globe-sphere { width: min(42vw, 360px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #58b8d6 0 6%, #1f6a83 35%, #082942 72%); box-shadow: inset -28px -20px 45px rgba(0,0,0,.5), 0 0 0 10px rgba(255,255,255,.08), 0 0 30px rgba(70,180,210,.35); display: grid; place-items: center; color: white; font-weight: 700; }
+
 .analysis-status-card div {
   min-width: 0;
 }
