@@ -256,6 +256,7 @@ export interface SatelliteImagery {
   data_source?: string | null;
   is_primary: boolean;
   preview_tile_url?: string | null;
+  source_kind?: "gee" | "local_upload" | string;
   created_at?: string | null;
 }
 

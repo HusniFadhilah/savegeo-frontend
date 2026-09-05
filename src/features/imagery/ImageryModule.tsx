@@ -86,6 +86,19 @@ function formatElevation(value?: number | null): string {
   return `${Math.round(Number(value)).toLocaleString("id-ID")} m`;
 }
 
+function formatResolution(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "-";
+  if (value < 1) return `${Math.round(value * 100)} cm`;
+  return `${value.toLocaleString("id-ID")} m`;
+}
+
+function nativeZoomForResolution(resolutionM?: number | null, superResolution: ImagerySuperResolutionMode = "off"): number {
+  if (resolutionM == null || Number.isNaN(Number(resolutionM)) || resolutionM <= 0) return SCENE_TILE_MAX_NATIVE_ZOOM;
+  const factor = superResolution === "bicubic_4x" ? 4 : superResolution === "bicubic_2x" ? 2 : 1;
+  const renderResolutionM = Number(resolutionM) / factor;
+  return Math.max(0, Math.min(SCENE_TILE_MAX_ZOOM, Math.ceil(Math.log2(156543.03392 / renderResolutionM))));
+}
+
 function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source: string }) {
   if (!tileUrl) {
     return (
@@ -176,7 +189,7 @@ export default function ImageryModule() {
   const [endDate, setEndDate] = useState(todayIso());
   const [cloudFilterEnabled, setCloudFilterEnabled] = useState(false);
   const [maxCloudCover, setMaxCloudCover] = useState(60);
-  const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("off");
+  const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("bicubic_4x");
 
   const [scenes, setScenes] = useState<ImageryScene[]>([]);
   const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
@@ -218,8 +231,13 @@ export default function ImageryModule() {
   );
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
-  const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && satelliteMeta.source_kind !== "geosave_cdse_stac");
+  const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"));
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
+  const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}`;
+  const sceneTileMaxNativeZoom =
+    satelliteMeta?.source_kind === "oam_stac"
+      ? SCENE_TILE_MAX_ZOOM
+      : nativeZoomForResolution(satelliteMeta?.resolution_m, activeSuperResolution);
   useEffect(() => {
     ++tileRequestRef.current;
     setScenes([]);
@@ -241,7 +259,7 @@ export default function ImageryModule() {
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
   // group itself, so the array must already come in group order).
-  const GROUP_ORDER = ["Basemap Historis", "Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
+  const GROUP_ORDER = ["Basemap Historis", "Open Aerial", "Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
   const satelliteOptions = useMemo(() => {
     return Object.values(imageryProviders)
       .sort((a, b) => {
@@ -252,7 +270,7 @@ export default function ImageryModule() {
       // compare sensors at a glance without selecting each one first.
       .map((s) => ({
         value: s.key,
-        label: s.key === ESRI_WAYBACK_PROVIDER_KEY ? `${s.name} · sub-meter/variasi` : `${s.name} · ${s.resolution_m}m`,
+        label: s.key === ESRI_WAYBACK_PROVIDER_KEY ? `${s.name} · sub-meter/variasi` : `${s.name} · ${formatResolution(s.resolution_m)}`,
         group: s.group,
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -261,6 +279,7 @@ export default function ImageryModule() {
   const loadSceneTile = useCallback(
     async (scene: ImageryScene) => {
       const requestId = ++tileRequestRef.current;
+      renderOptionsKeyRef.current = renderOptionsKey;
       setSelectedSceneId(scene.id);
       setTileLoading(true);
       setTileError(null);
@@ -292,7 +311,7 @@ export default function ImageryModule() {
         }
       }
     },
-    [activeSuperResolution, aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, sarMode, satellite, sceneTilesById],
+    [activeSuperResolution, aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, renderOptionsKey, sarMode, satellite, sceneTilesById],
   );
 
   const searchScenes = async () => {
@@ -444,7 +463,6 @@ export default function ImageryModule() {
     () => scenes.find((s) => s.id === selectedSceneId) ?? null,
     [scenes, selectedSceneId],
   );
-  const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}`;
   useEffect(() => {
     if (!selectedScene) {
       renderOptionsKeyRef.current = renderOptionsKey;
@@ -810,6 +828,13 @@ export default function ImageryModule() {
                     <thead className="table-primary sticky-top">
                       <tr>
                         <th>Tanggal &amp; Jam Akuisisi (UTC)</th>
+                        {satellite === "openaerialmap" && (
+                          <>
+                            <th>Resolusi</th>
+                            <th>Platform</th>
+                            <th>Produser</th>
+                          </>
+                        )}
                         <th>Tutupan Awan</th>
                         <th />
                       </tr>
@@ -822,7 +847,17 @@ export default function ImageryModule() {
                           style={{ cursor: "pointer" }}
                           onClick={() => selectScene(scene)}
                         >
-                          <td>{formatAcquired(scene.acquired_at)}</td>
+                          <td>
+                            {formatAcquired(scene.acquired_at)}
+                            {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
+                          </td>
+                          {satellite === "openaerialmap" && (
+                            <>
+                              <td>{formatResolution(scene.resolution_m)}</td>
+                              <td>{scene.platform ?? "-"}</td>
+                              <td>{scene.producer ?? "-"}</td>
+                            </>
+                          )}
                           <td>
                             <span className={`badge ${cloudBadgeClass(scene.cloud_cover_pct)}`}>
                               {scene.cloud_cover_pct != null ? `${scene.cloud_cover_pct}%` : "-"}
@@ -881,8 +916,8 @@ export default function ImageryModule() {
                         key={`${selectedSceneId ?? "scene"}:${tileUrl}`}
                         url={tileUrl}
                         opacity={tileOpacity}
-                        attribution={isEsriWayback ? "Esri World Imagery Wayback" : "Google Earth Engine"}
-                        maxNativeZoom={SCENE_TILE_MAX_NATIVE_ZOOM}
+                        attribution={satelliteMeta?.source_kind === "oam_stac" ? "OpenAerialMap / HOT" : isEsriWayback ? "Esri World Imagery Wayback" : "Google Earth Engine"}
+                        maxNativeZoom={sceneTileMaxNativeZoom}
                         maxZoom={SCENE_TILE_MAX_ZOOM}
                         pane={RESULT_PANE}
                       />
@@ -1004,7 +1039,7 @@ export default function ImageryModule() {
                     afterLabel={formatAcquired(scenes.find((s) => s.id === compareSceneBId)?.acquired_at ?? "")}
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
-                    maxNativeZoom={SCENE_TILE_MAX_NATIVE_ZOOM}
+                    maxNativeZoom={sceneTileMaxNativeZoom}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
                   >
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}

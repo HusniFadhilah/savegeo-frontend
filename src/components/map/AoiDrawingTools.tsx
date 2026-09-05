@@ -20,6 +20,24 @@ interface Props {
 
 type Ring = GeoJSON.Position[];
 
+function featuresToAoiFeature(features: GeoJSON.Feature[]): AoiFeature | null {
+  const polygons: GeoJSON.Position[][][] = [];
+  for (const feature of features) {
+    const geometry = feature.geometry;
+    if (!geometry) continue;
+    if (geometry.type === "Polygon") {
+      polygons.push(geometry.coordinates);
+    } else if (geometry.type === "MultiPolygon") {
+      polygons.push(...geometry.coordinates);
+    }
+  }
+  if (!polygons.length) return null;
+  if (polygons.length === 1) {
+    return { type: "Feature", geometry: { type: "Polygon", coordinates: polygons[0] }, properties: {} };
+  }
+  return { type: "Feature", geometry: { type: "MultiPolygon", coordinates: polygons }, properties: {} };
+}
+
 function closeRing(ring: Ring): Ring {
   if (ring.length === 0) return ring;
   const first = ring[0];
@@ -133,8 +151,8 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
         return;
       }
       const geojson = drawnItems.toGeoJSON();
-      const feature = (geojson as GeoJSON.FeatureCollection).features[0] as unknown as AoiFeature;
-      onChange(feature ?? null);
+      const feature = featuresToAoiFeature((geojson as GeoJSON.FeatureCollection).features);
+      onChange(feature);
     };
 
     const applySmoothing = (iterations: number) => {

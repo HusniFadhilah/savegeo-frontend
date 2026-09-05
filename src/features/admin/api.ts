@@ -322,6 +322,36 @@ export const createDisasterImagery = (
   },
 ) => apiClient.post<SatelliteImagery>(`/admin/disasters/${id}/imagery`, payload, { auth: true });
 
+export const uploadDisasterImageryGeoTiff = (
+  id: number,
+  payload: {
+    file: File;
+    phase: ImageryPhase;
+    satellite: string;
+    acquisition_date: string;
+    sensor?: string;
+    resolution_m?: number;
+    cloud_coverage_pct?: number;
+    data_source?: string;
+    is_primary?: boolean;
+  },
+) => {
+  const fd = new FormData();
+  fd.append("file", payload.file);
+  fd.append("phase", payload.phase);
+  fd.append("satellite", payload.satellite);
+  fd.append("acquisition_date", payload.acquisition_date);
+  if (payload.sensor) fd.append("sensor", payload.sensor);
+  if (payload.resolution_m != null) fd.append("resolution_m", String(payload.resolution_m));
+  if (payload.cloud_coverage_pct != null) fd.append("cloud_coverage_pct", String(payload.cloud_coverage_pct));
+  if (payload.data_source) fd.append("data_source", payload.data_source);
+  fd.append("is_primary", payload.is_primary ? "true" : "false");
+  return apiClient.upload<SatelliteImagery>(`/admin/disasters/${id}/imagery/upload`, fd, {
+    auth: true,
+    timeoutMs: 30 * 60 * 1000,
+  });
+};
+
 export const setPrimaryImagery = (id: number, imageryId: number) =>
   apiClient.post<SatelliteImagery>(`/admin/disasters/${id}/imagery/${imageryId}/primary`, undefined, {
     auth: true,

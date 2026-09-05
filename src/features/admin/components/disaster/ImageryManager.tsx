@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createDisasterImagery, setPrimaryImagery } from "../../api";
+import { createDisasterImagery, setPrimaryImagery, uploadDisasterImageryGeoTiff } from "../../api";
 import type { ImageryPhase, SatelliteImagery } from "../../types";
 import { useAdmin } from "../../AdminContext";
 
@@ -24,6 +24,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
   const [resolutionM, setResolutionM] = useState("");
   const [cloudPct, setCloudPct] = useState("");
   const [dataSource, setDataSource] = useState("");
+  const [geoTiffFile, setGeoTiffFile] = useState<File | null>(null);
   const [isPrimary, setIsPrimary] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
     setResolutionM("");
     setCloudPct("");
     setDataSource("");
+    setGeoTiffFile(null);
     setIsPrimary(false);
     setFormError(null);
   };
@@ -46,20 +48,38 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
       setFormError("Tanggal akuisisi diperlukan");
       return;
     }
+    if (geoTiffFile && !/\.(tif|tiff|zip)$/i.test(geoTiffFile.name)) {
+      setFormError("File harus .tif, .tiff, atau .zip berisi GeoTIFF");
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
-      await createDisasterImagery(eventId, {
-        phase,
-        satellite,
-        acquisition_date: acquisitionDate,
-        sensor: sensor.trim() || undefined,
-        resolution_m: resolutionM ? Number(resolutionM) : undefined,
-        cloud_coverage_pct: cloudPct ? Number(cloudPct) : undefined,
-        data_source: dataSource.trim() || undefined,
-        is_primary: isPrimary,
-      });
-      notify("Citra satelit ditambahkan", "s");
+      if (geoTiffFile) {
+        await uploadDisasterImageryGeoTiff(eventId, {
+          file: geoTiffFile,
+          phase,
+          satellite,
+          acquisition_date: acquisitionDate,
+          sensor: sensor.trim() || undefined,
+          resolution_m: resolutionM ? Number(resolutionM) : undefined,
+          cloud_coverage_pct: cloudPct ? Number(cloudPct) : undefined,
+          data_source: dataSource.trim() || geoTiffFile.name,
+          is_primary: isPrimary,
+        });
+      } else {
+        await createDisasterImagery(eventId, {
+          phase,
+          satellite,
+          acquisition_date: acquisitionDate,
+          sensor: sensor.trim() || undefined,
+          resolution_m: resolutionM ? Number(resolutionM) : undefined,
+          cloud_coverage_pct: cloudPct ? Number(cloudPct) : undefined,
+          data_source: dataSource.trim() || undefined,
+          is_primary: isPrimary,
+        });
+      }
+      notify(geoTiffFile ? "GeoTIFF/ZIP tersimpan dan didaftarkan" : "Citra satelit ditambahkan", "s");
       setFormOpen(false);
       resetForm();
       onChanged();
@@ -157,7 +177,22 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
                 onChange={(e) => setDataSource(e.target.value)}
               />
             </div>
+            <div className="form-field">
+              <label className="form-label">Upload GeoTIFF / ZIP</label>
+              <input
+                className="form-input"
+                type="file"
+                accept=".tif,.tiff,.zip"
+                onChange={(e) => setGeoTiffFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
           </div>
+          {geoTiffFile && (
+            <div className="alert alert-info py-1 px-2 small">
+              <i className="bi bi-file-earmark-richtext me-1" />
+              {geoTiffFile.name} akan dikonversi ke COG dan path-nya disimpan di database.
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
             <input type="checkbox" id="im-primary" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} />
             <label htmlFor="im-primary" style={{ fontSize: 11, color: "var(--text-muted)" }}>
@@ -210,6 +245,9 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
                   <td>
                     {img.satellite}
                     {img.is_primary && <span className="stat-badge badge-blue" style={{ marginLeft: 6 }}>Utama</span>}
+                    {img.source_kind === "local_upload" && (
+                      <span className="stat-badge badge-green" style={{ marginLeft: 6 }}>GeoTIFF</span>
+                    )}
                   </td>
                   <td>{img.acquisition_date}</td>
                   <td>{img.sensor || "—"}</td>

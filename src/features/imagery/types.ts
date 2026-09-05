@@ -18,7 +18,7 @@ export interface ImageryProvider {
   /** Dropdown subgroup label (e.g. "Optik", "Radar (SAR)", "Atmosfer (Gas)", "Malam Hari (Night Lights)"). */
   group: string;
   gee_collection: string;
-  source_kind?: "gee" | "geosave_cdse_stac";
+  source_kind?: "gee" | "geosave_cdse_stac" | "oam_stac";
   stac_collection?: string;
   visualization: ImageryVisualization;
   /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
@@ -48,6 +48,11 @@ export interface ImageryScene {
   acquired_at: string;
   /** null for sensors with no scene-level cloud property (SAR, gas products) - not "no data". */
   cloud_cover_pct: number | null;
+  /** Optional STAC/OpenAerialMap ground sample distance in metres. */
+  resolution_m?: number | null;
+  platform?: string | null;
+  producer?: string | null;
+  title?: string | null;
 }
 
 export interface ImagerySceneListResponse {

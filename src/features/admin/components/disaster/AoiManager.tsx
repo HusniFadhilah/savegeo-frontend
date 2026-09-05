@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Map as LeafletMap, FeatureGroup } from "leaflet";
 import MapView from "@/components/map/MapView";
 import AoiDrawingTools, { setAoiOnMap } from "@/components/map/AoiDrawingTools";
@@ -7,23 +7,43 @@ import { createDisasterAoi } from "../../api";
 import type { DisasterAoi } from "../../types";
 import { useAdmin } from "../../AdminContext";
 
-/** Best-effort Feature/Polygon/MultiPolygon/FeatureCollection -> single Feature
- * conversion for an uploaded GeoJSON file. Only takes the first feature of a
- * FeatureCollection - matches this manager's "one AOI shape at a time" model
- * (same constraint AoiDrawingTools already enforces for hand-drawn shapes). */
+const ALLOWED_AOI_EXTENSIONS = [".geojson", ".json", ".kml", ".gpx", ".zip"];
+const MAX_AOI_FILE_BYTES = 50 * 1024 * 1024;
+
+function getExtension(filename: string): string {
+  const idx = filename.lastIndexOf(".");
+  return idx >= 0 ? filename.slice(idx).toLowerCase() : "";
+}
+
 function toAoiFeature(parsed: unknown): AoiFeature | null {
   if (!parsed || typeof parsed !== "object") return null;
-  const obj = parsed as { type?: string; features?: unknown[]; geometry?: unknown };
-  if (obj.type === "FeatureCollection" && Array.isArray(obj.features) && obj.features.length) {
-    return toAoiFeature(obj.features[0]);
+  const gj = parsed as GeoJSON.GeoJSON;
+  const geometries: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = [];
+
+  const collect = (geometry: GeoJSON.Geometry | null | undefined) => {
+    if (!geometry) return;
+    if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") geometries.push(geometry);
+    if (geometry.type === "GeometryCollection") geometry.geometries.forEach(collect);
+  };
+
+  if (gj.type === "FeatureCollection") {
+    gj.features.forEach((feature) => collect(feature.geometry));
+  } else if (gj.type === "Feature") {
+    collect(gj.geometry);
+  } else {
+    collect(gj as GeoJSON.Geometry);
   }
-  if (obj.type === "Feature" && obj.geometry) {
-    return parsed as AoiFeature;
+
+  const coordinates: GeoJSON.Position[][][] = [];
+  for (const geometry of geometries) {
+    if (geometry.type === "Polygon") coordinates.push(geometry.coordinates);
+    else coordinates.push(...geometry.coordinates);
   }
-  if (obj.type === "Polygon" || obj.type === "MultiPolygon") {
-    return { type: "Feature", geometry: parsed as GeoJSON.Polygon | GeoJSON.MultiPolygon, properties: {} };
+  if (!coordinates.length) return null;
+  if (coordinates.length === 1) {
+    return { type: "Feature", geometry: { type: "Polygon", coordinates: coordinates[0] }, properties: {} };
   }
-  return null;
+  return { type: "Feature", geometry: { type: "MultiPolygon", coordinates }, properties: {} };
 }
 
 interface Props {
@@ -45,7 +65,7 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [feature, setFeature] = useState<AoiFeature | null>(null);
-  const [source, setSource] = useState<"draw" | "upload_geojson">("draw");
+  const [source, setSource] = useState<"draw" | "upload_geojson" | "upload_shp" | "upload_kml">("draw");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,28 +74,49 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
     setSource("draw");
   };
 
-  const handleFile = async (f: File | null) => {
+  const handleFile = useCallback(async (f: File | null) => {
     if (!f) return;
+    const ext = getExtension(f.name);
+    if (!ALLOWED_AOI_EXTENSIONS.includes(ext)) {
+      setError(`Format AOI tidak didukung. Gunakan ${ALLOWED_AOI_EXTENSIONS.join(", ")}`);
+      return;
+    }
+    if (f.size > MAX_AOI_FILE_BYTES) {
+      setError("File AOI terlalu besar (maks 50 MB)");
+      return;
+    }
     try {
-      const text = await f.text();
-      const parsed = JSON.parse(text);
+      let parsed: unknown;
+      if (ext === ".geojson" || ext === ".json") {
+        const text = await f.text();
+        parsed = JSON.parse(text);
+      } else if (ext === ".kml" || ext === ".gpx") {
+        const text = await f.text();
+        const dom = new DOMParser().parseFromString(text, "text/xml");
+        const togeojson = await import("@tmcw/togeojson");
+        parsed = ext === ".kml" ? togeojson.kml(dom) : togeojson.gpx(dom);
+      } else {
+        const shpModule = await import("shpjs");
+        const result = await shpModule.default(await f.arrayBuffer());
+        parsed = Array.isArray(result) ? result[0] : result;
+      }
       const feat = toAoiFeature(parsed);
       if (!feat) {
-        setError("File GeoJSON tidak valid (harus Feature/Polygon/MultiPolygon)");
+        setError("File AOI tidak memiliki Polygon/MultiPolygon yang valid");
         return;
       }
       setError(null);
       setFeature(feat);
-      setSource("upload_geojson");
+      setSource(ext === ".zip" ? "upload_shp" : ext === ".kml" || ext === ".gpx" ? "upload_kml" : "upload_geojson");
       if (mapRef.current && groupRef.current) {
         setAoiOnMap(mapRef.current, groupRef.current, feat);
       }
-    } catch {
-      setError("Gagal membaca file GeoJSON");
+    } catch (err) {
+      setError(`Gagal membaca file AOI: ${err instanceof Error ? err.message : "format tidak valid"}`);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  };
+  }, []);
 
   const handleSave = async () => {
     if (!feature) {
@@ -108,12 +149,12 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
       <div className="card-body-custom">
         <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button type="button" className="btn-sm" onClick={() => fileInputRef.current?.click()}>
-            <i className="bi bi-upload" /> Unggah GeoJSON
+            <i className="bi bi-upload" /> Unggah AOI
           </button>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".geojson,.json"
+            accept={ALLOWED_AOI_EXTENSIONS.join(",")}
             style={{ display: "none" }}
             onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
@@ -121,7 +162,7 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
             <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan AOI"}
           </button>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Gunakan alat gambar di peta (kiri atas) atau unggah file .geojson/.json
+            Gambar di peta, atau unggah .geojson/.json/.kml/.gpx/.zip shapefile
           </span>
         </div>
         {error && <div className="alert alert-danger py-1 px-2 small">{error}</div>}
