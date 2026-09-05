@@ -67,7 +67,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     if (showReference && results.carbon.carbon_reference?.tile_url) {
       tabs.push({
         key: "carbon_reference",
-        label: "Reference Carbon",
+        label: "Peta Referensi Asli",
         icon: "bi-database",
         tileUrl: results.carbon.carbon_reference.tile_url,
       });

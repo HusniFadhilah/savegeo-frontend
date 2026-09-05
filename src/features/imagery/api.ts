@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { env } from "@/config/env";
 import type {
   DemTileResponse,
   GetDemTileParams,
@@ -26,6 +27,8 @@ export function listImageryScenes(params: ListScenesParams) {
     start_date: params.startDate,
     end_date: params.endDate,
     max_cloud_cover: params.maxCloudCover,
+    stac_catalog_url: params.stacCatalogUrl,
+    stac_collections: params.stacCollections,
   });
 }
 
@@ -38,7 +41,14 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
     sar_mode: params.sarMode,
     cloud_mask_technique: params.cloudMaskTechnique,
     super_resolution: params.superResolution,
+    cog_asset_key: params.cogAssetKey,
+    cog_bands: params.cogBands,
+    cog_rescale: params.cogRescale,
   });
+}
+
+export function getImageryStacSourceUrl(sceneId: string, assetKey: string) {
+  return `${env.apiBaseUrl}/imagery/stac-source?item_url=${encodeURIComponent(sceneId)}&asset_key=${encodeURIComponent(assetKey)}`;
 }
 
 /** POST /imagery/dem-tile - DEMNAS terrain tile for the imagery browser, with SRTM fallback clearly flagged. */

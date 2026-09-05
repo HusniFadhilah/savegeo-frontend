@@ -1,8 +1,16 @@
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { MapLegendEntry } from "@/types/map";
+import type { Geometry } from "geojson";
 
 /** How a scene-tile is rendered - see imagery_provider_registry.py for the full rationale. */
 export type ImageryVisualization = "rgb" | "sar" | "single_band";
+export type ImagerySourceKind =
+  | "gee"
+  | "geosave_cdse_stac"
+  | "oam_stac"
+  | "maxar_open_data_stac"
+  | "planet_open_data_stac"
+  | "generic_stac";
 
 /**
  * One entry from GET /imagery/providers - deliberately its OWN type, not
@@ -18,7 +26,7 @@ export interface ImageryProvider {
   /** Dropdown subgroup label (e.g. "Optik", "Radar (SAR)", "Atmosfer (Gas)", "Malam Hari (Night Lights)"). */
   group: string;
   gee_collection: string;
-  source_kind?: "gee" | "geosave_cdse_stac" | "oam_stac";
+  source_kind?: ImagerySourceKind;
   stac_collection?: string;
   visualization: ImageryVisualization;
   /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
@@ -40,6 +48,15 @@ export interface ImageryProviderCatalogResponse {
   default: string;
 }
 
+export interface ImageryStacAssetOption {
+  key: string;
+  title?: string | null;
+  href: string;
+  type?: string | null;
+  roles?: string[];
+  resolution_m?: number | null;
+}
+
 /** One real satellite scene as returned by POST /imagery/scenes - no compositing, exact acquisition timestamp (with time-of-day). */
 export interface ImageryScene {
   /** GEE `system:index` - stable id for fetching this exact scene's tile. */
@@ -48,11 +65,18 @@ export interface ImageryScene {
   acquired_at: string;
   /** null for sensors with no scene-level cloud property (SAR, gas products) - not "no data". */
   cloud_cover_pct: number | null;
+  /** STAC bbox as [west, south, east, north], available for OpenAerialMap. */
+  bbox?: [number, number, number, number] | null;
+  /** Optional STAC geometry footprint for exact scene outline. */
+  footprint?: Geometry | null;
   /** Optional STAC/OpenAerialMap ground sample distance in metres. */
   resolution_m?: number | null;
   platform?: string | null;
   producer?: string | null;
   title?: string | null;
+  assets?: ImageryStacAssetOption[];
+  default_asset_key?: string | null;
+  download_url?: string | null;
 }
 
 export interface ImagerySceneListResponse {
@@ -76,6 +100,8 @@ export interface ListScenesParams {
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   maxCloudCover?: number;
+  stacCatalogUrl?: string;
+  stacCollections?: string;
 }
 
 export type SarMode = "grayscale" | "composite";
@@ -99,6 +125,12 @@ export interface GetSceneTileParams {
   cloudMaskTechnique?: string;
   /** GEE-backed scene tiles only - optional visual super-resolution via backend bicubic resampling. */
   superResolution?: ImagerySuperResolutionMode;
+  /** STAC/COG-backed scene tiles only - asset key to render. */
+  cogAssetKey?: string;
+  /** STAC/COG-backed scene tiles only - one-based band indexes, e.g. "1,2,3". */
+  cogBands?: string;
+  /** STAC/COG-backed scene tiles only - rio-tiler rescale, e.g. "0,3000" or "0,3000|0,3000|0,3000". */
+  cogRescale?: string;
 }
 
 export interface DemTileStats {

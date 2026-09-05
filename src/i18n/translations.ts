@@ -224,7 +224,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.params.fullTiles": "Full Tiles",
     "carbon.params.clippedDesc": "Clipped: dipotong presisi sesuai batas AOI (lebih lambat).",
     "carbon.params.fullTilesDesc": "Full Tiles: seluruh tile tanpa dipotong (lebih cepat).",
-    "carbon.params.showReference": "Tampilkan Dataset Referensi di Peta",
+    "carbon.params.showReference": "Tampilkan Peta Referensi Asli",
     "carbon.params.months.1": "Januari",
     "carbon.params.months.2": "Februari",
     "carbon.params.months.3": "Maret",
@@ -359,7 +359,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.noTileHint":
       "Statistik tersedia, namun peta tile tidak tersedia untuk layer ini (mis. model inferensi server-side / non-GEE).",
     "carbon.resultsMap.carbonStock": "Carbon Stock",
-    "carbon.resultsMap.referenceCarbon": "Reference Carbon",
+    "carbon.resultsMap.referenceCarbon": "Peta Referensi Asli",
   },
   en: {
     "nav.collaboration": "Diponegoro University – PT LEN Industri Collaboration",
@@ -573,7 +573,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.params.fullTiles": "Full Tiles",
     "carbon.params.clippedDesc": "Clipped: precisely cut to the AOI boundary (slower).",
     "carbon.params.fullTilesDesc": "Full Tiles: whole tiles without cutting (faster).",
-    "carbon.params.showReference": "Show Reference Dataset on Map",
+    "carbon.params.showReference": "Show Original Reference Map",
     "carbon.params.months.1": "January",
     "carbon.params.months.2": "February",
     "carbon.params.months.3": "March",
@@ -708,7 +708,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.noTileHint":
       "Statistics are available, but no tile map is available for this layer (e.g. a server-side/non-GEE inference model).",
     "carbon.resultsMap.carbonStock": "Carbon Stock",
-    "carbon.resultsMap.referenceCarbon": "Reference Carbon",
+    "carbon.resultsMap.referenceCarbon": "Original Reference Map",
   },
 };
 

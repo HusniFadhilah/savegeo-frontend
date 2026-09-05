@@ -16,6 +16,7 @@ import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
 import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
+import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 const SCENE_TILE_MAX_NATIVE_ZOOM = 19;
@@ -40,6 +41,12 @@ const ESRI_WAYBACK_PROVIDER: ImageryProvider = {
 type ViewMode = "single" | "compare";
 type DemLayerMode = "none" | "dem" | "3d";
 
+type SceneFootprintProperties = {
+  sceneId: string;
+  selected: boolean;
+  hovered: boolean;
+};
+
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   const map = useMap();
   useEffect(() => {
@@ -48,6 +55,78 @@ function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
   }, [aoi, map]);
   return null;
+}
+
+function FitToSceneOrAoi({
+  aoi,
+  focusKey,
+  maxZoom,
+  scene,
+}: {
+  aoi: AoiFeature | null;
+  focusKey: string;
+  maxZoom: number;
+  scene: ImageryScene | null;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (scene?.bbox && scene.bbox.length === 4) {
+      const [west, south, east, north] = scene.bbox;
+      const bounds = L.latLngBounds([south, west], [north, east]);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom });
+        return;
+      }
+    }
+    if (!aoi) return;
+    const bounds = L.geoJSON(aoi as GeoJSON.Feature).getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [36, 36], maxZoom });
+  }, [aoi, focusKey, map, maxZoom, scene]);
+  return null;
+}
+
+function bboxToPolygon(bbox?: [number, number, number, number] | null): Polygon | null {
+  if (!bbox || bbox.length !== 4) return null;
+  const [west, south, east, north] = bbox;
+  return {
+    type: "Polygon",
+    coordinates: [
+      [
+        [west, south],
+        [east, south],
+        [east, north],
+        [west, north],
+        [west, south],
+      ],
+    ],
+  };
+}
+
+function sceneGeometry(scene: ImageryScene): Geometry | null {
+  return scene.footprint ?? bboxToPolygon(scene.bbox);
+}
+
+function sceneFootprintFeatureCollection(
+  scenes: ImageryScene[],
+  selectedSceneId: string | null,
+  hoverSceneId: string | null,
+): FeatureCollection<Geometry, SceneFootprintProperties> {
+  const features = scenes
+    .map((scene): Feature<Geometry, SceneFootprintProperties> | null => {
+      const geometry = sceneGeometry(scene);
+      if (!geometry) return null;
+      return {
+        type: "Feature",
+        geometry,
+        properties: {
+          sceneId: scene.id,
+          selected: selectedSceneId === scene.id,
+          hovered: hoverSceneId === scene.id,
+        },
+      };
+    })
+    .filter((feature): feature is Feature<Geometry, SceneFootprintProperties> => Boolean(feature));
+  return { type: "FeatureCollection", features };
 }
 
 function todayIso(): string {
@@ -97,6 +176,42 @@ function nativeZoomForResolution(resolutionM?: number | null, superResolution: I
   const factor = superResolution === "bicubic_4x" ? 4 : superResolution === "bicubic_2x" ? 2 : 1;
   const renderResolutionM = Number(resolutionM) / factor;
   return Math.max(0, Math.min(SCENE_TILE_MAX_ZOOM, Math.ceil(Math.log2(156543.03392 / renderResolutionM))));
+}
+
+function SceneFootprintLayer({
+  data,
+  onHover,
+  onSelect,
+}: {
+  data: FeatureCollection<Geometry, SceneFootprintProperties>;
+  onHover: (sceneId: string | null) => void;
+  onSelect: (sceneId: string) => void;
+}) {
+  if (data.features.length === 0) return null;
+  return (
+    <GeoJSON
+      key={JSON.stringify(data.features.map((feature) => [feature.properties.sceneId, feature.properties.selected, feature.properties.hovered]))}
+      data={data}
+      style={(feature) => {
+        const props = feature?.properties as SceneFootprintProperties | undefined;
+        return {
+          color: props?.selected ? "#ffc107" : props?.hovered ? "#20c997" : "#0dcaf0",
+          weight: props?.selected || props?.hovered ? 3 : 1.6,
+          fillOpacity: props?.selected ? 0.14 : props?.hovered ? 0.1 : 0.035,
+          dashArray: props?.selected ? undefined : "4 4",
+        };
+      }}
+      onEachFeature={(feature, layer) => {
+        const props = feature.properties as SceneFootprintProperties | undefined;
+        if (!props) return;
+        layer.on({
+          click: () => onSelect(props.sceneId),
+          mouseover: () => onHover(props.sceneId),
+          mouseout: () => onHover(null),
+        });
+      }}
+    />
+  );
 }
 
 function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source: string }) {
@@ -190,6 +305,11 @@ export default function ImageryModule() {
   const [cloudFilterEnabled, setCloudFilterEnabled] = useState(false);
   const [maxCloudCover, setMaxCloudCover] = useState(60);
   const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("bicubic_4x");
+  const [stacCatalogUrl, setStacCatalogUrl] = useState("");
+  const [stacCollections, setStacCollections] = useState("");
+  const [cogAssetKey, setCogAssetKey] = useState("visual");
+  const [cogBands, setCogBands] = useState("");
+  const [cogRescale, setCogRescale] = useState("");
 
   const [scenes, setScenes] = useState<ImageryScene[]>([]);
   const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
@@ -199,6 +319,9 @@ export default function ImageryModule() {
   const [searched, setSearched] = useState(false);
 
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [hoverSceneId, setHoverSceneId] = useState<string | null>(null);
+  const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
   const [tileUrl, setTileUrl] = useState<string | null>(null);
   const [tileOpacity, setTileOpacity] = useState(1);
   const [tileLoading, setTileLoading] = useState(false);
@@ -231,13 +354,22 @@ export default function ImageryModule() {
   );
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
+  const isCogProvider = Boolean(
+    satelliteMeta?.source_kind &&
+      ["maxar_open_data_stac", "planet_open_data_stac", "generic_stac"].includes(satelliteMeta.source_kind),
+  );
+  const isOpenHighResProvider = Boolean(
+    satelliteMeta?.source_kind &&
+      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "generic_stac"].includes(satelliteMeta.source_kind),
+  );
   const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"));
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
-  const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}`;
+  const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}:${cogAssetKey}:${cogBands}:${cogRescale}`;
   const sceneTileMaxNativeZoom =
-    satelliteMeta?.source_kind === "oam_stac"
+    isOpenHighResProvider
       ? SCENE_TILE_MAX_ZOOM
       : nativeZoomForResolution(satelliteMeta?.resolution_m, activeSuperResolution);
+  const sceneFocusMaxZoom = isOpenHighResProvider ? 21 : Math.min(sceneTileMaxNativeZoom, 17);
   useEffect(() => {
     ++tileRequestRef.current;
     setScenes([]);
@@ -246,6 +378,9 @@ export default function ImageryModule() {
     setSearched(false);
     setSearchError(null);
     setSelectedSceneId(null);
+    setHoverSceneId(null);
+    setFocusSceneId(null);
+    setFocusNonce((value) => value + 1);
     setTileUrl(null);
     setTileError(null);
     setTileLoading(false);
@@ -254,12 +389,27 @@ export default function ImageryModule() {
     setCompareTileA(null);
     setCompareTileB(null);
     setCompareError(null);
+    setCogAssetKey("visual");
+    setCogBands("");
+    setCogRescale("");
   }, [satellite]);
 
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
   // group itself, so the array must already come in group order).
-  const GROUP_ORDER = ["Basemap Historis", "Open Aerial", "Sentinel-2", "Landsat", "Sentinel-3", "ASTER", "Sentinel-1", "Sentinel-5P", "VIIRS"];
+  const GROUP_ORDER = [
+    "Basemap Historis",
+    "Open Aerial",
+    "Open Disaster",
+    "Custom STAC",
+    "Sentinel-2",
+    "Landsat",
+    "Sentinel-3",
+    "ASTER",
+    "Sentinel-1",
+    "Sentinel-5P",
+    "VIIRS",
+  ];
   const satelliteOptions = useMemo(() => {
     return Object.values(imageryProviders)
       .sort((a, b) => {
@@ -277,10 +427,15 @@ export default function ImageryModule() {
   }, [imageryProviders]);
 
   const loadSceneTile = useCallback(
-    async (scene: ImageryScene) => {
+    async (scene: ImageryScene, assetKeyOverride?: string) => {
       const requestId = ++tileRequestRef.current;
       renderOptionsKeyRef.current = renderOptionsKey;
+      const effectiveCogAssetKey = assetKeyOverride
+        ? assetKeyOverride
+        : cogAssetKey || scene.default_asset_key || "visual";
       setSelectedSceneId(scene.id);
+      setFocusSceneId(scene.id);
+      setFocusNonce((value) => value + 1);
       setTileLoading(true);
       setTileError(null);
       setTileUrl(null);
@@ -299,6 +454,9 @@ export default function ImageryModule() {
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: activeSuperResolution,
+          cogAssetKey: isCogProvider ? effectiveCogAssetKey : undefined,
+          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
+          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
         });
         if (requestId !== tileRequestRef.current) return;
         setTileUrl(res.tile_url);
@@ -311,7 +469,21 @@ export default function ImageryModule() {
         }
       }
     },
-    [activeSuperResolution, aoi, cloudFilterEnabled, cloudMaskTechnique, isEsriWayback, renderOptionsKey, sarMode, satellite, sceneTilesById],
+    [
+      activeSuperResolution,
+      aoi,
+      cloudFilterEnabled,
+      cloudMaskTechnique,
+      cogAssetKey,
+      cogBands,
+      cogRescale,
+      isCogProvider,
+      isEsriWayback,
+      renderOptionsKey,
+      sarMode,
+      satellite,
+      sceneTilesById,
+    ],
   );
 
   const searchScenes = async () => {
@@ -327,8 +499,11 @@ export default function ImageryModule() {
     ++tileRequestRef.current;
     setSearching(true);
     setSearchError(null);
-    setSelectedSceneId(null);
-    setTileUrl(null);
+      setSelectedSceneId(null);
+      setHoverSceneId(null);
+      setFocusSceneId(null);
+      setFocusNonce((value) => value + 1);
+      setTileUrl(null);
     setTileError(null);
     setTileLoading(false);
     setSceneTilesById({});
@@ -355,6 +530,8 @@ export default function ImageryModule() {
               startDate,
               endDate: inclusiveEnd.toISOString().slice(0, 10),
               maxCloudCover: cloudFilterEnabled ? maxCloudCover : undefined,
+              stacCatalogUrl: satelliteMeta?.source_kind === "generic_stac" ? stacCatalogUrl.trim() : undefined,
+              stacCollections: isCogProvider ? stacCollections.trim() || undefined : undefined,
             });
           })();
       if (requestId !== searchRequestRef.current) return;
@@ -366,7 +543,9 @@ export default function ImageryModule() {
       setTruncated(res.truncated);
       setSearched(true);
       if (scenesByNewest[0]) {
-        await loadSceneTile(scenesByNewest[0]);
+        const defaultAssetKey = scenesByNewest[0].default_asset_key || "visual";
+        setCogAssetKey(defaultAssetKey);
+        await loadSceneTile(scenesByNewest[0], defaultAssetKey);
       }
     } catch (err) {
       if (requestId !== searchRequestRef.current) return;
@@ -380,7 +559,9 @@ export default function ImageryModule() {
   };
 
   const selectScene = (scene: ImageryScene) => {
-    void loadSceneTile(scene);
+    const nextAssetKey = scene.default_asset_key || cogAssetKey || "visual";
+    if (isCogProvider) setCogAssetKey(nextAssetKey);
+    void loadSceneTile(scene, nextAssetKey);
   };
 
   const loadCompare = async () => {
@@ -413,6 +594,9 @@ export default function ImageryModule() {
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: activeSuperResolution,
+          cogAssetKey: isCogProvider ? cogAssetKey || undefined : undefined,
+          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
+          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
         }),
         getImagerySceneTile({
           satellite,
@@ -421,6 +605,9 @@ export default function ImageryModule() {
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: activeSuperResolution,
+          cogAssetKey: isCogProvider ? cogAssetKey || undefined : undefined,
+          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
+          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
         }),
       ]);
       setCompareTileA(resA.tile_url);
@@ -463,6 +650,20 @@ export default function ImageryModule() {
     () => scenes.find((s) => s.id === selectedSceneId) ?? null,
     [scenes, selectedSceneId],
   );
+  const focusScene = useMemo(
+    () => scenes.find((s) => s.id === focusSceneId) ?? selectedScene,
+    [focusSceneId, scenes, selectedScene],
+  );
+  const selectedSceneAssets = selectedScene?.assets ?? [];
+  const activeCogAsset = selectedSceneAssets.find((asset) => asset.key === cogAssetKey) ?? selectedSceneAssets[0] ?? null;
+  const footprintData = useMemo(
+    () => sceneFootprintFeatureCollection(sortedScenes, selectedSceneId, hoverSceneId),
+    [hoverSceneId, selectedSceneId, sortedScenes],
+  );
+  const zoomToScene = (scene: ImageryScene) => {
+    setFocusSceneId(scene.id);
+    setFocusNonce((value) => value + 1);
+  };
   useEffect(() => {
     if (!selectedScene) {
       renderOptionsKeyRef.current = renderOptionsKey;
@@ -606,6 +807,39 @@ export default function ImageryModule() {
             )}
           </div>
 
+          {satelliteMeta?.source_kind === "generic_stac" && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryStacCatalogUrl">
+                <i className="bi bi-diagram-3" /> STAC Catalog/API
+              </label>
+              <input
+                id="imageryStacCatalogUrl"
+                type="url"
+                className="form-control form-control-sm"
+                value={stacCatalogUrl}
+                onChange={(e) => setStacCatalogUrl(e.target.value)}
+                placeholder="https://example.org/catalog.json"
+              />
+              <small className="text-muted d-block mt-1">Menerima STAC Catalog statis atau STAC API dengan link search.</small>
+            </div>
+          )}
+
+          {isCogProvider && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryStacCollections">
+                <i className="bi bi-collection" /> Koleksi STAC
+              </label>
+              <input
+                id="imageryStacCollections"
+                type="text"
+                className="form-control form-control-sm"
+                value={stacCollections}
+                onChange={(e) => setStacCollections(e.target.value)}
+                placeholder="opsional, pisahkan koma"
+              />
+            </div>
+          )}
+
           <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
               <i className="bi bi-stars" /> Super Resolution
@@ -627,6 +861,51 @@ export default function ImageryModule() {
                 : "Tidak tersedia untuk provider ini karena tile tidak dirender ulang oleh backend GEE."}
             </small>
           </div>
+
+          {isCogProvider && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryCogAsset">
+                <i className="bi bi-sliders" /> COG Render Settings
+              </label>
+              <SearchableSelect
+                id="imageryCogAsset"
+                value={cogAssetKey}
+                onChange={setCogAssetKey}
+                disabled={selectedSceneAssets.length === 0}
+                options={
+                  selectedSceneAssets.length > 0
+                    ? selectedSceneAssets.map((asset) => ({
+                        value: asset.key,
+                        label: `${asset.title || asset.key}${asset.resolution_m ? ` - ${formatResolution(asset.resolution_m)}` : ""}`,
+                      }))
+                    : [{ value: cogAssetKey, label: cogAssetKey || "visual" }]
+                }
+              />
+              <div className="row g-2 mt-1">
+                <div className="col-5">
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={cogBands}
+                    onChange={(e) => setCogBands(e.target.value)}
+                    placeholder="Band 1,2,3"
+                  />
+                </div>
+                <div className="col-7">
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={cogRescale}
+                    onChange={(e) => setCogRescale(e.target.value)}
+                    placeholder="Rescale 0,3000"
+                  />
+                </div>
+              </div>
+              <small className="text-muted d-block mt-1">
+                {activeCogAsset ? `Asset aktif: ${activeCogAsset.key}` : "Pilih scene untuk melihat asset COG yang tersedia."}
+              </small>
+            </div>
+          )}
 
           {satelliteMeta?.visualization === "sar" && (
             <div className="mb-3">
@@ -828,7 +1107,7 @@ export default function ImageryModule() {
                     <thead className="table-primary sticky-top">
                       <tr>
                         <th>Tanggal &amp; Jam Akuisisi (UTC)</th>
-                        {satellite === "openaerialmap" && (
+                        {isOpenHighResProvider && (
                           <>
                             <th>Resolusi</th>
                             <th>Platform</th>
@@ -843,15 +1122,17 @@ export default function ImageryModule() {
                       {sortedScenes.map((scene) => (
                         <tr
                           key={scene.id}
-                          className={selectedSceneId === scene.id ? "table-warning" : ""}
+                          className={selectedSceneId === scene.id ? "table-warning" : hoverSceneId === scene.id ? "table-info" : ""}
                           style={{ cursor: "pointer" }}
+                          onMouseEnter={() => setHoverSceneId(scene.id)}
+                          onMouseLeave={() => setHoverSceneId(null)}
                           onClick={() => selectScene(scene)}
                         >
                           <td>
                             {formatAcquired(scene.acquired_at)}
                             {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
-                          {satellite === "openaerialmap" && (
+                          {isOpenHighResProvider && (
                             <>
                               <td>{formatResolution(scene.resolution_m)}</td>
                               <td>{scene.platform ?? "-"}</td>
@@ -864,11 +1145,38 @@ export default function ImageryModule() {
                             </span>
                           </td>
                           <td className="text-end">
-                            {selectedSceneId === scene.id ? (
-                              <i className="bi bi-eye-fill text-warning" />
-                            ) : (
-                              <i className="bi bi-eye text-muted" />
-                            )}
+                            <div className="btn-group btn-group-sm" role="group" aria-label="Aksi scene">
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary"
+                                title="Zoom ke footprint scene"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  zoomToScene(scene);
+                                }}
+                              >
+                                <i className="bi bi-zoom-in" />
+                              </button>
+                              {scene.download_url && (
+                                <a
+                                  className="btn btn-outline-secondary"
+                                  href={scene.download_url}
+                                  title="Download source scene"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <i className="bi bi-download" />
+                                </a>
+                              )}
+                              <span className="btn btn-outline-secondary disabled" aria-hidden="true">
+                                {selectedSceneId === scene.id ? (
+                                  <i className="bi bi-eye-fill text-warning" />
+                                ) : (
+                                  <i className="bi bi-eye text-muted" />
+                                )}
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -910,13 +1218,33 @@ export default function ImageryModule() {
                 <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
                   <BasemapSwitcher extraOptions={mapLayerOptions} />
                   {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
+                  <SceneFootprintLayer
+                    data={footprintData}
+                    onHover={setHoverSceneId}
+                    onSelect={(sceneId) => {
+                      const scene = scenes.find((item) => item.id === sceneId);
+                      if (scene) selectScene(scene);
+                    }}
+                  />
                   {tileUrl && (
                     <>
                       <TileLayer
                         key={`${selectedSceneId ?? "scene"}:${tileUrl}`}
                         url={tileUrl}
                         opacity={tileOpacity}
-                        attribution={satelliteMeta?.source_kind === "oam_stac" ? "OpenAerialMap / HOT" : isEsriWayback ? "Esri World Imagery Wayback" : "Google Earth Engine"}
+                        attribution={
+                          satelliteMeta?.source_kind === "oam_stac"
+                            ? "OpenAerialMap / HOT"
+                            : satelliteMeta?.source_kind === "maxar_open_data_stac"
+                              ? "Vantor/Maxar Open Data"
+                              : satelliteMeta?.source_kind === "planet_open_data_stac"
+                                ? "Planet Open Data"
+                                : satelliteMeta?.source_kind === "generic_stac"
+                                  ? "STAC/COG source"
+                                  : isEsriWayback
+                                    ? "Esri World Imagery Wayback"
+                                    : "Google Earth Engine"
+                        }
                         maxNativeZoom={sceneTileMaxNativeZoom}
                         maxZoom={SCENE_TILE_MAX_ZOOM}
                         pane={RESULT_PANE}
@@ -938,7 +1266,12 @@ export default function ImageryModule() {
                       pane={RESULT_PANE}
                     />
                   )}
-                  <FitToAoi aoi={aoi} />
+                  <FitToSceneOrAoi
+                    aoi={aoi}
+                    focusKey={`${focusSceneId ?? "aoi"}:${focusNonce}`}
+                    scene={focusScene}
+                    maxZoom={sceneFocusMaxZoom}
+                  />
                 </MapView>
                 {demLoading && (
                   <div className="alert alert-info py-2 mt-2 mb-0 small">
@@ -1043,7 +1376,12 @@ export default function ImageryModule() {
                     maxZoom={SCENE_TILE_MAX_ZOOM}
                   >
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
-                    <FitToAoi aoi={aoi} />
+                    <FitToSceneOrAoi
+                      aoi={aoi}
+                      focusKey={compareSceneAId ?? "compare-aoi"}
+                      scene={scenes.find((s) => s.id === compareSceneAId) ?? null}
+                      maxZoom={sceneFocusMaxZoom}
+                    />
                   </SwipeCompareMap>
                 </div>
               </div>

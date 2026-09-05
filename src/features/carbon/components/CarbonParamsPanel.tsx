@@ -584,8 +584,11 @@ export default function CarbonParamsPanel({
           onChange={(e) => onParamsChange({ showReference: e.target.checked })}
         />
         <label className="form-check-label" htmlFor="showReference">
-          {t("carbon.params.showReference")}
+          <i className="bi bi-database me-1" /> {t("carbon.params.showReference")}
         </label>
+        <small className="text-muted d-block ms-4">
+          Peta referensi asli ditampilkan sebagai layer pembanding, terpisah dari prediksi model.
+        </small>
       </div>
     </div>
   );
