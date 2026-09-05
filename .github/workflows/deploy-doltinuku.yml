@@ -90,6 +90,6 @@ jobs:
           set -euo pipefail
           printf '%s\n' "$DOLTINUKU_PASSWORD" | sshpass -e ssh -p "${DOLTINUKU_SSH_PORT:-22}" \
             "$DOLTINUKU_USERNAME@$DOLTINUKU_SERVER" \
-            "sudo -S -p '' apache2ctl configtest && sudo -S -p '' systemctl reload apache2"
+            "sudo -S -p '' sh -c 'apache2ctl configtest && systemctl reload apache2'"
           curl --fail --silent --show-error --max-time 30 "https://$SAVEGEO_DOMAIN/" >/dev/null
           curl --fail --silent --show-error --max-time 30 "https://$BEGEO_DOMAIN/api/health" >/dev/null
