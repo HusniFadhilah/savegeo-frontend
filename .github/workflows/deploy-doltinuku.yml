@@ -1,0 +1,95 @@
+name: Frontend Doltinuku Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: savegeo-frontend-doltinuku
+  cancel-in-progress: false
+
+env:
+  FRONTEND_REMOTE_DIR: /home/doltinuku/savegeo/frontend
+  SAVEGEO_DOMAIN: savegeo.husnifd.my.id
+  BEGEO_DOMAIN: begeo.husnifd.my.id
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install, lint, test, audit, and build
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_APP_ENV: production
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm audit --audit-level=high
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: savegeo-frontend-dist
+          path: dist/
+          if-no-files-found: error
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan working tree for secrets
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" \
+            zricethezav/gitleaks:latest detect --source /repo --no-git --redact --exit-code 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [validate, gitleaks]
+    permissions:
+      contents: read
+    env:
+      DOLTINUKU_SERVER: ${{ secrets.SFTP_DOLTINUKU_SERVER }}
+      DOLTINUKU_USERNAME: ${{ secrets.SFTP_DOLTINUKU_USERNAME }}
+      DOLTINUKU_PASSWORD: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
+      DOLTINUKU_SSH_PORT: ${{ secrets.SFTP_DOLTINUKU_PORT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: savegeo-frontend-dist
+          path: dist/
+      - name: Install deployment tools
+        run: sudo apt-get update && sudo apt-get install -y lftp sshpass netcat-openbsd
+      - name: Verify Doltinuku SSH is reachable
+        run: nc -z -w 15 "$DOLTINUKU_SERVER" "${DOLTINUKU_SSH_PORT:-22}"
+      - name: Upload frontend build
+        run: |
+          lftp -u "$DOLTINUKU_USERNAME,$DOLTINUKU_PASSWORD" \
+            "sftp://$DOLTINUKU_SERVER:${DOLTINUKU_SSH_PORT:-22}" <<EOF
+          set sftp:auto-confirm yes
+          set net:max-retries 3
+          set net:timeout 30
+          mirror --reverse --verbose --overwrite --no-perms --delete \
+            --exclude-glob '.git/**' ./dist/ "$FRONTEND_REMOTE_DIR/dist/"
+          bye
+          EOF
+      - name: Reload web server and verify domains
+        env:
+          SSHPASS: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$DOLTINUKU_PASSWORD" | sshpass -e ssh -p "${DOLTINUKU_SSH_PORT:-22}" \
+            "$DOLTINUKU_USERNAME@$DOLTINUKU_SERVER" \
+            "sudo -S -p '' apache2ctl configtest && sudo -S -p '' systemctl reload apache2"
+          curl --fail --silent --show-error --max-time 30 "https://$SAVEGEO_DOMAIN/" >/dev/null
+          curl --fail --silent --show-error --max-time 30 "https://$BEGEO_DOMAIN/api/health" >/dev/null
