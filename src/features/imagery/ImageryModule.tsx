@@ -13,7 +13,7 @@ import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
+import { getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
 import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
@@ -656,6 +656,7 @@ export default function ImageryModule() {
   );
   const selectedSceneAssets = selectedScene?.assets ?? [];
   const activeCogAsset = selectedSceneAssets.find((asset) => asset.key === cogAssetKey) ?? selectedSceneAssets[0] ?? null;
+  const activeCogDownloadUrl = selectedScene && activeCogAsset ? getImageryStacSourceUrl(selectedScene.id, activeCogAsset.key) : null;
   const footprintData = useMemo(
     () => sceneFootprintFeatureCollection(sortedScenes, selectedSceneId, hoverSceneId),
     [hoverSceneId, selectedSceneId, sortedScenes],
@@ -904,6 +905,11 @@ export default function ImageryModule() {
               <small className="text-muted d-block mt-1">
                 {activeCogAsset ? `Asset aktif: ${activeCogAsset.key}` : "Pilih scene untuk melihat asset COG yang tersedia."}
               </small>
+              {activeCogDownloadUrl && (
+                <a className="btn btn-sm btn-outline-success w-100 mt-2" href={activeCogDownloadUrl} target="_blank" rel="noreferrer">
+                  <i className="bi bi-download" /> Download Asset Aktif
+                </a>
+              )}
             </div>
           )}
 
