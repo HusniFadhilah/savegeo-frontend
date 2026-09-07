@@ -139,16 +139,18 @@ export default function LandingPage() {
             <div className="landing-hero-copy">
               <div className="landing-kicker"><span /> EARTH OBSERVATION, MADE ACTIONABLE</div>
               <h1>Melihat lebih jauh.<br /><em>Memutuskan lebih tepat.</em></h1>
-              <p>SaveGeo mengubah citra satelit dan data geospasial menjadi insight yang membantu Anda memahami wilayah, memantau perubahan, dan mengambil keputusan berbasis bukti.</p>
+              <p>SaveGeo menggunakan teknologi berbasis AI untuk mengubah citra satelit dan data geospasial menjadi insight yang membantu Anda memahami wilayah, memantau perubahan, dan mengambil keputusan berbasis bukti.</p>
               <div className="landing-hero-actions">
                 <Link to="/login" className="landing-primary-button">Mulai Analisis <i className="bi bi-arrow-up-right" /></Link>
                 <a href="#fitur" className="landing-secondary-button"><i className="bi bi-play-circle" /> Jelajahi Fitur</a>
               </div>
             </div>
-            <div className="landing-hero-panel" aria-label="Ringkasan kemampuan SaveGeo">
-              <div className="landing-panel-top"><span className="status-dot" /> PLATFORM AKTIF <span>2026</span></div>
-              <div className="landing-panel-map"><div className="map-crosshair" /><div className="map-aoi map-aoi-one" /><div className="map-aoi map-aoi-two" /><div className="map-scanline" /></div>
-              <div className="landing-panel-footer"><div><small>ANALYTICS LAYERS</small><strong>Multi-source imagery</strong></div><i className="bi bi-layers" /></div>
+            <div className="landing-hero-panel-float">
+              <div className="landing-hero-panel" aria-label="Ringkasan kemampuan SaveGeo">
+                <div className="landing-panel-top"><span className="status-dot" /> PLATFORM AKTIF <span>2026</span></div>
+                <div className="landing-panel-map"><div className="map-crosshair" /><div className="map-aoi map-aoi-one" /><div className="map-aoi map-aoi-two" /><div className="map-scanline" /></div>
+                <div className="landing-panel-footer"><div><small>ANALYTICS LAYERS</small><strong>Multi-source imagery</strong></div><i className="bi bi-layers" /></div>
+              </div>
             </div>
           </div>
           <a className="landing-scroll-button" href="#fitur" aria-label="Jelajahi fitur SaveGeo">
@@ -173,7 +175,7 @@ export default function LandingPage() {
 
         <section id="solusi" className="landing-section landing-usecase-section"><div className="landing-shell"><div className="landing-section-heading"><div><div className="landing-kicker green"><span /> DIBUAT UNTUK KONTEKS NYATA</div><h2>Data yang dekat dengan<br /><em>keputusan Anda.</em></h2></div><p>SaveGeo dirancang untuk menjembatani data pengamatan bumi dengan kebutuhan operasional, riset, dan kebijakan.</p></div><div className="landing-usecase-grid">{USE_CASES.map(([icon, title, description]) => <div className="landing-usecase-card" key={title}><i className={`bi ${icon}`} /><h3>{title}</h3><p>{description}</p><span>Explore solution <i className="bi bi-arrow-up-right" /></span></div>)}</div></div></section>
 
-        <section ref={ctaRef} id="tentang" className={`landing-cta-section ${ctaVisible ? "is-visible" : ""}`}><div className="landing-shell landing-cta-inner"><div className="landing-cta-orbit orbit-one" /><div className="landing-cta-orbit orbit-two" /><div className="landing-kicker"><span /> SAVEGEO PLATFORM</div><h2>Mulai membaca wilayah<br /><em>dengan perspektif baru.</em></h2><p>Masuk ke ruang kerja analitik SaveGeo dan ubah data permukaan bumi menjadi langkah yang lebih terarah.</p><Link to="/login" className="landing-primary-button">Masuk ke SaveGeo <i className="bi bi-arrow-up-right" /></Link></div></section>
+        <section ref={ctaRef} id="tentang" className={`landing-cta-section ${ctaVisible ? "is-visible" : ""}`}><div className="landing-shell landing-cta-inner"><div className="landing-cta-orbit orbit-one" /><div className="landing-cta-orbit orbit-two" /><div className="landing-kicker"><span /> SAVEGEO PLATFORM</div><h2>Mulai memantau wilayah<br /><em>dengan perspektif baru.</em></h2><p>Masuk ke ruang kerja analitik SaveGeo dan ubah data permukaan bumi menjadi langkah yang lebih terarah.</p><Link to="/login" className="landing-primary-button">Masuk ke SaveGeo <i className="bi bi-arrow-up-right" /></Link></div></section>
       </main>
 
       <footer className="landing-footer">
