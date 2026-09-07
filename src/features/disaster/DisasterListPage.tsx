@@ -53,9 +53,12 @@ function activeFilterCount(filters: DisasterEventListParams): number {
 function resolveThumbnailUrl(thumbnail: string | null | undefined): string | null {
   if (!thumbnail) return null;
   if (/^https?:\/\//i.test(thumbnail) || thumbnail.startsWith("data:")) return thumbnail;
-  const backendBaseUrl = env.apiBaseUrl.replace(/\/api$/, "");
-  if (thumbnail.startsWith("/")) return `${backendBaseUrl}${thumbnail}`;
-  return thumbnail;
+  const backendBaseUrl = env.apiBaseUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+  if (thumbnail.startsWith("/")) {
+    const normalizedPath = `/${thumbnail.replace(/^\/+/, "")}`;
+    return `${backendBaseUrl}${normalizedPath}` || normalizedPath;
+  }
+  return thumbnail.replace(/([^:]\/)\/{2,}/g, "$1");
 }
 
 /**
