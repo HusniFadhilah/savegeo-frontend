@@ -2,6 +2,8 @@
 
 Frontend SAVEGEO berbasis React 18, TypeScript, Vite, React Router, Zustand, TanStack Query, Leaflet, dan Chart.js.
 
+Runbook deployment dan operasi tersedia di [OPERATIONS.md](OPERATIONS.md).
+
 ## Prasyarat
 
 - Node.js 20 LTS
