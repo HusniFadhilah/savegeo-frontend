@@ -1,123 +1,131 @@
-# SAVEGEO Frontend (React + Vite)
+# SAVEGEO Frontend
 
-Clean React 18 / TypeScript / Vite rebuild of the SAVEGEO geospatial platform
-frontend, replacing the temporary Next.js migration at `../../frontend-nextjs2`
-and the original static app at `../../frontend`. This is now the primary
-frontend for the SAVEGEO/GEOMOKA platform.
+Frontend SAVEGEO berbasis React 18, TypeScript, Vite, React Router, Zustand, TanStack Query, Leaflet, dan Chart.js.
 
-## Install & run
+## Prasyarat
 
-```bash
-npm install
-npm run dev      # dev server on http://localhost:5501
-npm run build    # type-check + production build to dist/
-npm run preview  # preview the production build
-npm run lint      # eslint
-npm run test      # vitest
+- Node.js 20 LTS
+- npm 10 atau lebih baru
+- Git
+- Backend SAVEGEO berjalan atau URL backend yang dapat diakses
+
+Pada Windows PowerShell, gunakan `npm.cmd` bila execution policy memblokir `npm`.
+
+## Instalasi Lokal
+
+```powershell
+cd savegeo/frontend
+npm ci
 ```
 
-On Windows PowerShell, if `npm` is blocked by execution policy, use `npm.cmd`.
+Buat `.env.local`:
 
-The app expects a backend (legacy Flask `backend/` or new FastAPI
-`savegeo/backend/`, same API contract) reachable at `VITE_API_BASE_URL`.
-Without a backend running, the dashboard still loads: basemaps fall back to
-the static Satellite/Roads pair, the connection status badge shows
-"Backend Offline", and API-dependent panels show their own error/empty states
-instead of crashing.
-
-## Environment variables
-
-Copy `.env.example` to `.env.local` and adjust:
-
-| Var | Purpose | Default |
-|---|---|---|
-| `VITE_API_BASE_URL` | Backend API base URL (**must include** the `/api` suffix) | `http://localhost:8086/api` |
-| `VITE_APP_NAME` | Display name | `SAVEGEO` |
-| `VITE_APP_ENV` | Environment label | `development` |
-
-Only `VITE_`-prefixed, non-secret values belong here — Vite inlines them into
-the client bundle at build time. Never put API keys, service-role keys, or
-JWT secrets in this app; those live in the backend only.
-
-## Folder structure
-
-```
-src/
-  main.tsx, App.tsx           entry point, providers (React Query, Router)
-  routes/AppRoutes.tsx        "/" -> DashboardPage, "/admin" -> AdminPage
-  pages/                      DashboardPage, AdminPage, LoginPage
-  components/layout/          Navbar, Sidebar, LoadingOverlay, ConnectionStatus, LiveConfigPanel
-  components/map/             MapView, BasemapSwitcher, AoiDrawingTools, LayerOpacityControl, MapLegend
-  components/modules/         static content modules (About, Details, Guide)
-  components/modals/          SystemStatusModal
-  features/carbon/            carbon analysis (dataset/model/AOI/results/report)
-  features/vegetation/        vegetation index catalog + comparison (used inside CarbonModule)
-  features/landcover/         land cover classes/chart/tiles (used inside CarbonModule)
-  features/lc-change/         land cover change (transition matrix, before/after maps)
-  features/disaster/          disaster mapping (BMKG, DEM/slope, event map)
-  features/chatbot/           SaveGeo chatbot widget
-  features/admin/             admin dashboard (GEE creds, ArcGIS, AI config, models, companies)
-  services/                   apiClient, authService, mapLayerService, analysisService
-  config/                     env.ts, basemaps.ts
-  types/                      api.ts, map.ts
-  hooks/                      zustand stores (auth, ui, config, i18n) + utility hooks
-  i18n/                       chrome-level ID/EN translation dictionary
-  styles/                     legacy-base.css (ported from public/style.css) + app.css (new components)
+```dotenv
+VITE_API_BASE_URL=http://localhost:8086/api
+VITE_APP_NAME=SAVEGEO
+VITE_APP_ENV=development
 ```
 
-## Modules
+Nilai `VITE_` bersifat publik karena di-inline ke bundle browser. Jangan masukkan API key, password, JWT secret, private key, atau service-role key ke frontend.
 
-Dashboard (`/`): Navbar, Sidebar, Connection status, Live Config panel
-(admin-only), and one active module at a time — Carbon Stock Analysis
-(includes Vegetation Index and Land Cover analysis types, matching the
-legacy app's single combined module), Land Cover Change, Disaster Mapping,
-Guide, About, Program Details. The SaveGeo chatbot widget is mounted globally.
+## Menjalankan Frontend
 
-Admin (`/admin`): login gate, then dashboard overview, GEE credential
-management, ArcGIS status, AI provider config (with secret masking), model
-registry (upload/list/activate/set-default/delete), company boundary CRUD +
-OSM/GFW import, config editor, admin password change.
+Pastikan backend berjalan di port `8086`, lalu:
 
-## Map / basemap contract
+```powershell
+npm run dev
+```
 
-- Default basemap is **Satellite** (Esri World Imagery) everywhere, never
-  Roads. See `src/config/basemaps.ts` (`FALLBACK_BASEMAPS`) and
-  `src/services/mapLayerService.ts` (`fetchBasemaps`, forces a Satellite
-  default even if the backend registry doesn't flag one).
-- `GET /api/basemaps` is the live registry; on failure/empty response the
-  frontend falls back to the static Satellite/Roads pair — the default is
-  never silently demoted to Roads.
-- Roads/OpenStreetMap remains available as a switcher option.
+Buka `http://localhost:5501`.
 
-## Backend endpoints used (contract preserved from the legacy app)
+Perintah lain:
 
-Health: `GET /health`. Regions: `GET /regions/provinces|cities|districts|
-villages|islands|indonesia/geometry|geometry`. Basemaps/layers:
-`GET /basemaps`, `GET /map-layers`. Config: `GET /admin/config/public`,
-`PUT /admin/config` (auth). Auth: `POST /admin/auth/login`. Admin domains
-(GEE credentials, ArcGIS, AI config, models, companies, chat) — see each
-feature's local `api.ts` for the exact paths it calls; none of them were
-renamed from the legacy contract.
+```powershell
+npm run build
+npm run preview
+npm run lint
+npm test
+```
 
-## Security notes
+## Production Build
 
-- No secrets in this repo or bundle — only `VITE_`-prefixed non-secret env
-  vars. `.env`/`.env.local` are gitignored.
-- Admin bearer token is stored in `sessionStorage` (not `localStorage`) via
-  `src/services/authService.ts` — cleared on tab close and on any `401`
-  response (`apiClient`'s unauthorized handler triggers logout).
-- `dangerouslySetInnerHTML` is avoided project-wide. The one narrow,
-  documented exception is chat content that must render backend-controlled
-  HTML, which goes through `DOMPurify.sanitize()` first — see
-  `src/features/chatbot/`.
-- File uploads (AOI GeoJSON/KML/GPX/Shapefile, GEE credential JSON, model
-  files, company boundary GeoJSON) are validated client-side for extension
-  and size before being sent — this is a UX/defense-in-depth layer, the
-  backend is still the authority on rejecting bad input.
-- `apiClient` centralizes error handling, request timeouts, and auth header
-  attachment — feature code shouldn't hand-roll `fetch()`.
+Production menggunakan same-origin reverse proxy:
 
-## Known gaps / follow-ups
+```dotenv
+VITE_API_BASE_URL=/api
+VITE_APP_ENV=production
+```
 
-See `MIGRATION.md` in this folder for the detailed, up-to-date list of what's
-fully ported vs. still a placeholder.
+Validasi dan build:
+
+```powershell
+npm ci
+npm run lint
+npm test
+npm audit --audit-level=high
+npm run build
+```
+
+Hasil build berada di `dist/`.
+
+## Modul Aplikasi
+
+- Dashboard dan status koneksi
+- Pemetaan karbon, vegetasi, dan tutupan lahan
+- Perubahan tutupan lahan
+- Pemetaan bencana dan event imagery
+- Chatbot geospasial
+- Administrasi credential, model, konfigurasi, dan company boundary
+
+## Konfigurasi API
+
+API dipanggil melalui `src/services/apiClient.ts` dan prefix `VITE_API_BASE_URL`.
+
+Production:
+
+- Frontend: `https://savegeo.husnifd.my.id`
+- API same-origin: `https://savegeo.husnifd.my.id/api`
+- Backend domain: `https://begeo.husnifd.my.id`
+
+Reverse proxy harus meneruskan `/api/` dan `/disaster-thumbnails/` ke backend FastAPI.
+
+## Testing dan Security
+
+```powershell
+npm run lint
+npm test
+npm audit --audit-level=high
+npm run build
+```
+
+GitHub Actions menjalankan Gitleaks sebelum deployment. Token admin berada di `sessionStorage`; request API terpusat; dan konten HTML chat disanitasi sebelum ditampilkan.
+
+## Deployment
+
+- `.github/workflows/deploy-production.yml`: server production.
+- `.github/workflows/deploy-doltinuku.yml`: server Doltinuku.
+- `.github/workflows/ci.yml`: validasi Pull Request.
+- `.github/workflows/code-review.yml`: Alibaba OpenCodeReview.
+
+Deployment menjalankan lint, test, npm audit, build, Gitleaks, upload `dist/`, reload web server, dan health check domain. Secret deployment disimpan di GitHub Actions Secrets.
+
+## Struktur Utama
+
+```text
+src/config/       Environment dan konfigurasi basemap
+src/services/     API client dan service bersama
+src/features/     Modul carbon, vegetation, landcover, disaster, admin, chatbot
+src/components/   Komponen layout dan map
+src/hooks/        Hook dan store aplikasi
+src/styles/       Style global
+public/           Asset statis
+dist/             Output production build
+```
+
+## Troubleshooting
+
+- `localhost:8086` di production: build dengan `VITE_API_BASE_URL=/api`.
+- CORS: pastikan frontend memakai `/api` dan reverse proxy aktif.
+- Thumbnail `404`: pastikan proxy `/disaster-thumbnails/` aktif.
+- Halaman kosong: periksa console browser, hasil build, dan `/api/health`.
+- Login gagal: pastikan backend aktif, migration selesai, dan akun admin tersedia.
