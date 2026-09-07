@@ -166,7 +166,7 @@ export const CAT_COLORS: Record<string, string> = {
 // from this module keep working unchanged.
 export { INDUSTRY_LABEL, INDUSTRY_OPTIONS, COMPANY_SOURCE_LABEL as SOURCE_LABEL } from "@/types/api";
 
-export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co" | "ds" | "sp";
+export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co" | "ds" | "sp" | "ri";
 
 /** GET /admin/satellite-providers row - merged registry defaults + DB
  * override, plus admin-only bookkeeping fields not exposed on the public

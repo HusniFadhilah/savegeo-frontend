@@ -62,6 +62,7 @@ export default function AppRoutes() {
     { path: "/admin/satellite-providers", section: "sp" },
     { path: "/admin/company-boundaries", section: "co" },
     { path: "/admin/disasters", section: "ds" },
+    { path: "/admin/research-information", section: "ri" },
   ];
 
   return (

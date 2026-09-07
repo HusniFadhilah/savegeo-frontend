@@ -15,6 +15,9 @@ import AdminUsers from "./components/AdminUsers";
 import CompanyBoundaries from "./components/CompanyBoundaries";
 import SatelliteProviders from "./components/SatelliteProviders";
 import DisasterManagement from "./components/disaster/DisasterManagement";
+import { lazy, Suspense } from "react";
+
+const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
 
 const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; label: string }[] }[] = [
   { section: "Utama", items: [{ id: "ov", icon: "bi-grid-1x2-fill", label: "Overview" }] },
@@ -36,6 +39,10 @@ const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; 
       { id: "ds", icon: "bi-exclamation-triangle-fill", label: "Disaster Management" },
     ],
   },
+  {
+    section: "Internal",
+    items: [{ id: "ri", icon: "bi-lock-fill", label: "Informasi Riset" }],
+  },
 ];
 
 const TITLES: Record<AdminSection, [string, string]> = {
@@ -48,6 +55,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   sp: ["Satellite Providers", "Kelola sumber citra satelit (Sentinel-2/Landsat) + resolusi/koleksi GEE"],
   co: ["Batas Perusahaan", "Kelola batas wilayah konsesi dan perusahaan industri"],
   ds: ["Disaster Management", "Kelola kejadian bencana, AOI, citra satelit, dan analisis"],
+  ri: ["Informasi Riset", "Detail riset internal yang dibatasi untuk administrator"],
 };
 
 export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
@@ -200,6 +208,11 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "sp" && <SatelliteProviders />}
               {section === "co" && <CompanyBoundaries />}
               {section === "ds" && <DisasterManagement />}
+              {section === "ri" && (
+                <Suspense fallback={<div className="adm-loading">Memuat informasi riset...</div>}>
+                  <ResearchInformation />
+                </Suspense>
+              )}
             </div>
           </div>
         </div>

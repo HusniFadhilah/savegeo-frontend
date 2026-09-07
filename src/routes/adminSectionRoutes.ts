@@ -12,6 +12,7 @@ export const ADMIN_SECTION_PATHS: Record<AdminSection, string> = {
   co: "/admin/company-boundaries",
   ds: "/admin/disasters",
   sp: "/admin/satellite-providers",
+  ri: "/admin/research-information",
 };
 
 export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; description: string }> = {
@@ -50,6 +51,10 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   sp: {
     title: "Satellite Providers Admin | SaveGeo",
     description: "Kelola provider citra satelit, koleksi GEE, resolusi, band, dan status layer SaveGeo.",
+  },
+  ri: {
+    title: "Informasi Riset Admin | SaveGeo",
+    description: "Informasi internal riset SaveGeo yang hanya tersedia untuk administrator.",
   },
 };
 
