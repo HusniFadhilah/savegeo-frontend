@@ -1,6 +1,8 @@
 name: Build and deploy SAVEGEO frontend
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
