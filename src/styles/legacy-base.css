@@ -415,6 +415,18 @@ body {
   flex: 1 0 auto;
 }
 
+/* Carbon starts with a compact empty state, so its footer otherwise follows
+   the content instead of filling the available viewport like the longer
+   modules do. Keep this correction scoped to the carbon route. */
+.content-wrapper-carbon {
+  min-height: calc(100vh - 56px);
+}
+
+.content-wrapper-carbon > .dashboard-main {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .app-footer {
   display: flex;
   align-items: center;

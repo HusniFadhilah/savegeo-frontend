@@ -29,7 +29,7 @@ export function listImageryScenes(params: ListScenesParams) {
     max_cloud_cover: params.maxCloudCover,
     stac_catalog_url: params.stacCatalogUrl,
     stac_collections: params.stacCollections,
-  });
+  }, { auth: "app" });
 }
 
 /** POST /imagery/scene-tile - tile for exactly one scene (no compositing), visualized per its sensor type (RGB/SAR/gas colormap). */
@@ -44,7 +44,7 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
     cog_asset_key: params.cogAssetKey,
     cog_bands: params.cogBands,
     cog_rescale: params.cogRescale,
-  });
+  }, { auth: "app" });
 }
 
 export function getImageryStacSourceUrl(sceneId: string, assetKey: string) {
@@ -63,7 +63,7 @@ export function runRasterToolbox(params: { itemUrl: string; assetKey: string; ao
   return apiClient.post<{ operation: string; stats: { min: number; mean: number; max: number }; histogram: number[]; bins: number[]; download_url?: string }>("/imagery/raster-toolbox", {
     item_url: params.itemUrl, asset_key: params.assetKey, aoi: params.aoi, operation: params.operation,
     bands: params.bands, export: params.export,
-  });
+  }, { auth: "app" });
 }
 
 export function getNasaGibsLayers() {

@@ -60,3 +60,12 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
 setUserUnauthorizedHandler(() => {
   useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });
 });
+
+if (typeof window !== "undefined") {
+  window.addEventListener("savegeo:app-auth-expired", (event) => {
+    const kind = (event as CustomEvent<{ kind?: string }>).detail?.kind;
+    if (kind === "user") {
+      useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });
+    }
+  });
+}

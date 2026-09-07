@@ -118,7 +118,7 @@ export default function ResetPasswordPage() {
               {loading ? "Menyimpan..." : "Simpan Password Baru"}
             </button>
             <div className="text-center mt-3 small">
-              <Link to="/pemetaan-bencana">Kembali ke login</Link>
+              <Link to="/login">Kembali ke login</Link>
             </div>
           </form>
         </div>

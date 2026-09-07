@@ -38,14 +38,14 @@ export async function runAnalysisJob<T>(
   const job = await apiClient.post<CreateJobResponse>(
     "/analysis-jobs",
     { type, payload },
-    { timeoutMs: JOB_REQUEST_TIMEOUT_MS },
+    { timeoutMs: JOB_REQUEST_TIMEOUT_MS, auth: "app" },
   );
 
   while (Date.now() - started < options.timeoutMs) {
     await wait(pollIntervalMs);
     const status = await apiClient.get<JobStatusResponse<T>>(
       job.status_url,
-      { timeoutMs: JOB_REQUEST_TIMEOUT_MS },
+      { timeoutMs: JOB_REQUEST_TIMEOUT_MS, auth: "app" },
     );
     if (status.status === "succeeded" && status.result !== undefined) return status.result;
     if (status.status === "failed") {

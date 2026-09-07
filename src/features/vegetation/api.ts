@@ -64,7 +64,7 @@ export function analyzeVegetationTimeSeries(args: VegetationTimeSeriesArgs) {
     scale: args.scale,
     satellite: args.satellite,
     cloud_mask_technique: args.cloudMaskTechnique,
-  });
+  }, { auth: "app" });
 }
 
 export interface VegetationCatalogIndex {

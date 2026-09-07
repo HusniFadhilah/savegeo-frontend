@@ -1,18 +1,15 @@
-import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
+import LandingPage from "@/pages/LandingPage";
+import AppLoginPage from "@/pages/AppLoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
-import LoginUserPage from "@/pages/LoginUserPage";
-import RegisterUserPage from "@/pages/RegisterUserPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import { useAuthStore } from "@/hooks/useAuthStore";
-import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import DisasterListPage from "@/features/disaster/DisasterListPage";
 import DisasterDashboard from "@/features/disaster/DisasterDashboard";
-import { DEFAULT_DASHBOARD_MODULE } from "@/routes/dashboardModuleRoutes";
 import { DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
 import type { DashboardModule } from "@/hooks/useUiStore";
 import type { AdminSection } from "@/features/admin/types";
+import ProtectedAppRoute from "@/components/auth/ProtectedAppRoute";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -23,25 +20,8 @@ import type { AdminSection } from "@/features/admin/types";
  * navigation - see `LoginUserPage.tsx`/`RegisterUserPage.tsx`'s
  * `onSwitchTo*` props.
  */
-function DisasterUserGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated: isUserAuthenticated } = useUserAuthStore();
-  const { isAuthenticated: isAdminAuthenticated } = useAuthStore();
-  const [view, setView] = useState<"login" | "register">("login");
-
-  if (!isUserAuthenticated && !isAdminAuthenticated) {
-    return view === "login" ? (
-      <LoginUserPage onSwitchToRegister={() => setView("register")} />
-    ) : (
-      <RegisterUserPage onSwitchToLogin={() => setView("login")} />
-    );
-  }
-
-  return <>{children}</>;
-}
-
 export default function AppRoutes() {
   const dashboardRoutes: { path: string; module: DashboardModule }[] = [
-    { path: "/", module: DEFAULT_DASHBOARD_MODULE },
     { path: "/carbon-estimation", module: "carbon" },
     { path: "/land-cover-change", module: "lc-change" },
     { path: "/lc-change", module: "lc-change" },
@@ -67,8 +47,18 @@ export default function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<AppLoginPage />} />
+      <Route
+        path="/dashboard"
+        element={<ProtectedAppRoute><DashboardPage /></ProtectedAppRoute>}
+      />
       {dashboardRoutes.map((route) => (
-        <Route key={route.path} path={route.path} element={<DashboardPage module={route.module} />} />
+        <Route
+          key={route.path}
+          path={route.path}
+          element={<ProtectedAppRoute><DashboardPage module={route.module} /></ProtectedAppRoute>}
+        />
       ))}
       {adminRoutes.map((route) => (
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
@@ -76,21 +66,13 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/pemetaan-bencana"
-        element={
-          <DisasterUserGate>
-            <DisasterListPage />
-          </DisasterUserGate>
-        }
+        element={<ProtectedAppRoute><DisasterListPage /></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/:eventId"
-        element={
-          <DisasterUserGate>
-            <DisasterDashboard />
-          </DisasterUserGate>
-        }
+        element={<ProtectedAppRoute><DisasterDashboard /></ProtectedAppRoute>}
       />
-      <Route path="*" element={<DashboardPage />} />
+      <Route path="*" element={<LandingPage />} />
     </Routes>
   );
 }

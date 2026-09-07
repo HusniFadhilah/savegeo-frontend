@@ -77,7 +77,7 @@ export default function DashboardPage({ module = DEFAULT_DASHBOARD_MODULE }: { m
       <Navbar />
       <div className="app-container">
         <Sidebar />
-        <div className="content-wrapper">
+        <div className={`content-wrapper ${module === "carbon" ? "content-wrapper-carbon" : ""}`}>
           <main className="dashboard-main p-3">
             {mountedModules.map((key) => {
               const Component = MODULES[key];

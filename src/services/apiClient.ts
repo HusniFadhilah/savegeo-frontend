@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { getAuthToken, clearAuthToken } from "@/services/authService";
+import { appAuthHeader, handleAppUnauthorized } from "@/services/appSession";
 
 export class ApiError extends Error {
   status: number;
@@ -15,7 +16,8 @@ export class ApiError extends Error {
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
-  auth?: boolean;
+  /** `true` remains admin auth for backwards compatibility. */
+  auth?: boolean | "app" | "admin";
   timeoutMs?: number;
   isFormData?: boolean;
 }
@@ -47,7 +49,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (!isFormData && body !== undefined) {
     finalHeaders["Content-Type"] = "application/json";
   }
-  if (auth) {
+  if (auth === "app") {
+    Object.assign(finalHeaders, appAuthHeader());
+  } else if (auth === true || auth === "admin") {
     const token = getAuthToken();
     if (token) {
       finalHeaders["Authorization"] = `Bearer ${token}`;
@@ -72,8 +76,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   clearTimeout(timeout);
 
   if (res.status === 401 && auth) {
-    clearAuthToken();
-    onUnauthorized?.();
+    if (auth === "app") {
+      handleAppUnauthorized();
+    } else {
+      clearAuthToken();
+      onUnauthorized?.();
+    }
   }
 
   const contentType = res.headers.get("content-type") || "";

@@ -32,7 +32,7 @@ export default function AboutModule() {
         </div>
       </div>
 
-      <div className="about-stats">
+      <div className="about-stats mb-3">
         <div className="about-stat">
           <i className="bi bi-tree-fill" />
           <div><strong>Analisis vegetasi</strong><span>Eksplorasi kondisi area kajian</span></div>

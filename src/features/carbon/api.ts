@@ -199,7 +199,7 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
       vis_max: args.visMax,
       vis_palette: args.visPalette.length ? args.visPalette : undefined,
     },
-    { timeoutMs: CARBON_DELTA_TIMEOUT_MS },
+    { timeoutMs: CARBON_DELTA_TIMEOUT_MS, auth: "app" },
   );
 }
 
@@ -250,5 +250,5 @@ export function exportGeoTiff(args: ExportGeoTiffArgs) {
     cloud_threshold: args.cloudThreshold,
     model_name: args.modelName ?? null,
     filename: args.filename,
-  });
+  }, { auth: "app" });
 }

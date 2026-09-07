@@ -148,7 +148,7 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
                 </div>
               </div>
               {error && <div className="alert alert-danger py-2 px-2 small">{error}</div>}
-              <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
+              <button type="submit" className="btn btn-primary w-100 mt-2" disabled={isLoading}>
                 {isLoading ? "Memproses..." : "Login"}
               </button>
               <div className="d-flex justify-content-center gap-2 mt-3 small">
@@ -158,9 +158,9 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
                 {onSwitchToRegister && (
                   <>
                     <span className="text-muted">·</span>
-                    <button type="button" className="btn btn-link p-0 align-baseline" onClick={onSwitchToRegister}>
+                    {/* <button type="button" className="btn btn-link p-0 align-baseline" onClick={onSwitchToRegister}>
                       Daftar
-                    </button>
+                    </button> */}
                   </>
                 )}
               </div>

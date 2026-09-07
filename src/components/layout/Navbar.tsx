@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useThemeMode } from "@/hooks/useThemeMode";
@@ -10,6 +11,7 @@ import SystemStatusModal from "@/components/modals/SystemStatusModal";
 export default function Navbar() {
   const { state } = useConnectionStatus();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated: isUserAuthenticated, user: appUser, logout: logoutUser } = useUserAuthStore();
   const t = useI18nStore((s) => s.t);
   const { isDark, toggleTheme } = useThemeMode();
   const { mobileSidebarOpen, toggleMobileSidebar } = useUiStore();
@@ -22,22 +24,26 @@ export default function Navbar() {
   const statusBadgeClass =
     state === "online" ? "bg-success-subtle text-success" : state === "offline" ? "bg-danger-subtle text-danger" : "bg-light text-dark";
 
+  const activeIsAdmin = isAuthenticated && !isUserAuthenticated;
+  const activeUser = activeIsAdmin ? user : appUser;
+
   const handleLogout = () => {
-    logout();
+    if (isAuthenticated) logout();
+    if (isUserAuthenticated) logoutUser();
     setMenuOpen(false);
-    navigate("/admin");
+    navigate("/");
   };
 
   return (
     <nav className="navbar navbar-dark bg-dark app-navbar">
       <div className="container-fluid d-flex align-items-center gap-3">
-        <div className="navbar-brand app-brand m-0 p-0">
+        <Link to="/" className="navbar-brand app-brand m-0 p-0" aria-label="SaveGeo beranda">
           <img src="/images/savegeo-logo.svg" alt="SaveGeo" className="app-brand-logo" />
           <div>
             <strong>SaveGeo</strong>
             <span>AI Imagery Analytics Platform</span>
           </div>
-        </div>
+        </Link>
 
         <div className="ms-auto d-flex align-items-center gap-2 navbar-actions">
           <button
@@ -61,7 +67,7 @@ export default function Navbar() {
             <span className="navbar-status-label">{statusLabel}</span>
           </button>
 
-          {isAuthenticated ? (
+          {isAuthenticated || isUserAuthenticated ? (
             <div className="dropdown">
               <button
                 type="button"
@@ -69,20 +75,27 @@ export default function Navbar() {
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 <i className="bi bi-person-circle" />
-                <span>{user?.username}</span>
+                <span>{activeUser?.username}</span>
               </button>
               {menuOpen && (
                 <ul className="dropdown-menu dropdown-menu-end shadow show" onMouseLeave={() => setMenuOpen(false)}>
                   <li>
                     <h6 className="dropdown-header d-flex align-items-center gap-2 mb-0">
-                      <i className="bi bi-person-circle" /> {user?.username}
+                      <i className="bi bi-person-circle" /> {activeUser?.username}
                     </h6>
                   </li>
                   <li>
-                    <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
-                      <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
+                    <Link className="dropdown-item" to={activeIsAdmin ? "/admin" : "/dashboard"} onClick={() => setMenuOpen(false)}>
+                      <i className="bi bi-speedometer2 me-2" /> Dashboard
                     </Link>
                   </li>
+                  {isAuthenticated && !activeIsAdmin && (
+                    <li>
+                      <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
+                        <i className="bi bi-shield-lock me-2" /> Dashboard Admin
+                      </Link>
+                    </li>
+                  )}
                   <li>
                     <button type="button" className="dropdown-item text-danger" onClick={handleLogout}>
                       <i className="bi bi-box-arrow-right me-2" /> {t("auth.logout")}
