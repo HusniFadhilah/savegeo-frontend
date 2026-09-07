@@ -172,7 +172,7 @@ export default function CropMonitoringModule() {
             </div>
           </div>
           <div className="cm-status-card">
-            <i className="bi bi-flower21" />
+            <i className="bi bi-flower2" />
             <div>
               <span>Komoditas</span>
               <strong>{activeCommodity?.label ?? selectedField?.commodity ?? "-"}</strong>

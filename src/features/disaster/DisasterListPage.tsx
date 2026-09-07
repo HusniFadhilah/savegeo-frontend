@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { env } from "@/config/env";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
+import SearchableSelect from "@/features/admin/components/SearchableSelect";
 import { fetchDisasterEvents } from "./api";
 import {
   EVENT_DISASTER_TYPE_LABELS,
@@ -15,6 +16,7 @@ import {
 } from "./types";
 
 const EMPTY_FILTERS: DisasterEventListParams = {};
+const PAGE_SIZE_OPTIONS = [10, 15, 20, 30, 50];
 
 function severityBadgeClass(severity: string | null): string {
   switch (severity) {
@@ -76,6 +78,9 @@ export default function DisasterListPage() {
   const [filters, setFilters] = useState<DisasterEventListParams>(EMPTY_FILTERS);
   const [pendingFilters, setPendingFilters] = useState<DisasterEventListParams>(EMPTY_FILTERS);
   const [events, setEvents] = useState<DisasterEventListItem[]>([]);
+  const [provinceSourceEvents, setProvinceSourceEvents] = useState<DisasterEventListItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +109,24 @@ export default function DisasterListPage() {
     };
   }, [filters]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchDisasterEvents()
+      .then((res) => {
+        if (!cancelled) setProvinceSourceEvents(res.events ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProvinceSourceEvents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setPage(0);
+  }, [filters, pageSize]);
+
   const applyFilters = (e: FormEvent) => {
     e.preventDefault();
     setFilters(pendingFilters);
@@ -116,7 +139,28 @@ export default function DisasterListPage() {
 
   const years = Array.from({ length: Math.max(0, yearMax - yearMin + 1) }, (_, i) => yearMax - i);
 
+  const provinceOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    provinceSourceEvents.forEach((event) => {
+      event.province?.forEach((province) => {
+        const normalized = province.trim();
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+      });
+    });
+    return [...counts.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, "id"))
+      .map(([province, count]) => ({
+        value: province,
+        label: `${province} - ${count} event`,
+      }));
+  }, [provinceSourceEvents]);
+
   const filterCount = activeFilterCount(filters);
+  const pageCount = Math.max(1, Math.ceil(events.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = events.length === 0 ? 0 : currentPage * pageSize + 1;
+  const pageEnd = Math.min(events.length, (currentPage + 1) * pageSize);
+  const visibleEvents = events.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
 
   return (
     <div className="disaster-shell disaster-list-shell">
@@ -201,13 +245,16 @@ export default function DisasterListPage() {
           </div>
           <div>
             <label className="form-label small fw-semibold mb-1">Provinsi</label>
-            <input
-              type="text"
-              className="form-control form-control-sm"
-              placeholder="cth. Jawa Barat"
+            <SearchableSelect
               value={pendingFilters.province ?? ""}
-              onChange={(e) =>
-                setPendingFilters((f) => ({ ...f, province: e.target.value || undefined }))
+              options={provinceOptions}
+              placeholder="Cari provinsi"
+              emptyHint="Belum ada event pada provinsi"
+              allowCustomValue={false}
+              variant="plain"
+              className="disaster-province-select form-select-sm"
+              onChange={(value) =>
+                setPendingFilters((f) => ({ ...f, province: value || undefined }))
               }
             />
           </div>
@@ -268,8 +315,52 @@ export default function DisasterListPage() {
         </div>
       )}
 
+      {!loading && !error && events.length > 0 && (
+        <div className="disaster-pagination-bar">
+          <div className="disaster-pagination-size">
+            <span>Tampil</span>
+            <select
+              className="form-select form-select-sm"
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            <span>per halaman</span>
+          </div>
+          <div className="disaster-pagination-info">
+            <span>
+              {pageStart}-{pageEnd} dari {events.length} event
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              disabled={currentPage <= 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <i className="bi bi-chevron-left" />
+            </button>
+            <span>
+              {currentPage + 1} / {pageCount}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              disabled={currentPage >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              <i className="bi bi-chevron-right" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="disaster-event-grid">
-        {events.map((event) => {
+        {visibleEvents.map((event) => {
           const thumbnailUrl = resolveThumbnailUrl(event.thumbnail);
           return (
             <article className="disaster-event-card" key={event.id}>

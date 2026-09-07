@@ -107,7 +107,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
   return (
     <div id="vegetationParams">
       <h6 className="mb-3">
-        <i className="bi bi-flower21 me-1" /> Parameter Citra
+        <i className="bi bi-flower2 me-1" /> Parameter Citra
       </h6>
 
       <div className="mb-3">

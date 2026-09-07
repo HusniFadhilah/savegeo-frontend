@@ -13,7 +13,7 @@ export default function GrowthStagePanel({ growthStage, commodity }: Props) {
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-flower21 me-1" /> D. Fase Pertumbuhan
+        <i className="bi bi-flower2 me-1" /> D. Fase Pertumbuhan
       </div>
       <div className="card-body">
         {!growthStage.available ? (

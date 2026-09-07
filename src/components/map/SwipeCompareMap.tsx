@@ -33,21 +33,23 @@ function AfterPaneSetup({ onReady }: { onReady: () => void }) {
 function ClipController({
   percent,
   orientation,
+  paneReady,
 }: {
   percent: number;
   orientation: SwipeOrientation;
+  paneReady: boolean;
 }) {
   const map = useMap();
   useEffect(() => {
     const pane = map.getPane(AFTER_PANE);
-    if (!pane) return;
+    if (!pane || !paneReady) return;
     pane.style.inset = "0";
     pane.style.width = "100%";
     pane.style.height = "100%";
     pane.style.overflow = "hidden";
     pane.style.clipPath =
       orientation === "vertical" ? `inset(0 0 0 ${percent}%)` : `inset(${percent}% 0 0 0)`;
-  }, [map, percent, orientation]);
+  }, [map, paneReady, percent, orientation]);
   return null;
 }
 
@@ -90,6 +92,9 @@ interface Props {
   zoom?: number;
   maxZoom?: number;
   maxNativeZoom?: number;
+  beforeMaxNativeZoom?: number;
+  afterMaxNativeZoom?: number;
+  initialPercent?: number;
   opacity?: number;
   /** Rendered inside the map, unclipped (e.g. AOI GeoJSON boundary). */
   children?: ReactNode;
@@ -114,10 +119,13 @@ export default function SwipeCompareMap({
   zoom,
   maxZoom,
   maxNativeZoom,
+  beforeMaxNativeZoom,
+  afterMaxNativeZoom,
+  initialPercent = 50,
   opacity = 1,
   children,
 }: Props) {
-  const [percent, setPercent] = useState(50);
+  const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
   const [afterPaneReady, setAfterPaneReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -165,11 +173,12 @@ export default function SwipeCompareMap({
         {children}
         {beforeUrl && (
           <TileLayer
+            key={beforeUrl}
             url={beforeUrl}
             opacity={opacity}
             pane={RESULT_PANE}
             attribution="Google Earth Engine"
-            maxNativeZoom={maxNativeZoom}
+            maxNativeZoom={beforeMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
           />
         )}
@@ -180,11 +189,11 @@ export default function SwipeCompareMap({
             opacity={opacity}
             pane={AFTER_PANE}
             attribution="Google Earth Engine"
-            maxNativeZoom={maxNativeZoom}
+            maxNativeZoom={afterMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
           />
         )}
-        <ClipController percent={percent} orientation={orientation} />
+        <ClipController percent={percent} orientation={orientation} paneReady={afterPaneReady} />
         <PanLockController locked={panLocked} />
       </MapView>
 

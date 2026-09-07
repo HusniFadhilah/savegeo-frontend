@@ -608,7 +608,15 @@ export default function CarbonModule() {
         )}
 
         {deltaResult && aoi && (
-          <CarbonTimeSeriesPanel result={deltaResult} zoom={zoom} center={aoi.bounds ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng] : [-2.5, 118]} />
+          <CarbonTimeSeriesPanel
+            result={deltaResult}
+            zoom={zoom}
+            center={aoi.bounds ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng] : [-2.5, 118]}
+            visMin={visMin}
+            visMax={visMax}
+            visPalette={visPalette}
+            legendBins={carbonLegendBins}
+          />
         )}
 
         {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}

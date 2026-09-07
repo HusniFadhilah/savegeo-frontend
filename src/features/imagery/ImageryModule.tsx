@@ -5,6 +5,7 @@ import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
+import MapModeControl from "@/components/map/MapModeControl";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
@@ -729,7 +730,7 @@ export default function ImageryModule() {
             </div>
           </div>
           <div className="analysis-status-card">
-            <i className="bi bi-satellite" />
+            <i className="bi bi-globe2" />
             <div>
               <span>Satelit</span>
               <strong>{satelliteMeta?.name ?? satellite}</strong>
@@ -1254,6 +1255,7 @@ export default function ImageryModule() {
                 <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
                   {mapMode === "globe" && <div className="imagery-globe-mode" aria-label="Globe view"><div className="imagery-globe-sphere"><span>Globe view</span></div></div>}
                   <BasemapSwitcher extraOptions={mapLayerOptions} />
+                  <MapModeControl mode={mapMode} onChange={setMapMode} />
                   {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                   <SceneFootprintLayer
                     data={footprintData}

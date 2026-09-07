@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
-import MapLegend from "@/components/map/MapLegend";
 import type { AoiFeature } from "@/types/map";
 import {
   analyzeDemSlope,
@@ -28,7 +27,6 @@ import {
 } from "./types";
 import SatelliteViewer from "./components/SatelliteViewer";
 import LayerPanel from "./components/LayerPanel";
-import AnalysisResultMap from "./components/AnalysisResultMap";
 import KpiTiles from "./components/KpiTiles";
 import StatisticsPanel from "./components/StatisticsPanel";
 import HotspotPanel from "./components/HotspotPanel";
@@ -304,7 +302,6 @@ export default function DisasterDashboard() {
   const { event, aoi, imagery, primary_imagery } = detail;
   const analyses = layers?.analyses ?? [];
   const satellite = layers?.satellite ?? null;
-  const checkedLayers = analyses.filter((a) => checkedAnalyses.has(a.model_id) && a.result);
   const availableAnalyses = analyses.filter((entry) => entry.available).length;
   const totalImagery = imagery.pre.length + imagery.post.length;
 
@@ -372,13 +369,10 @@ export default function DisasterDashboard() {
         </div>
       </section>
 
-      {/* 2. Satellite viewer */}
-      <SatelliteViewer aoi={aoi} imagery={imagery} primaryImagery={primary_imagery} />
-
       {layersError && <div className="alert alert-warning py-2 mb-3">{layersError}</div>}
 
       <section className="disaster-workspace">
-        {/* 3+6. Layer panel (analysis selector, grouped by category, per spec section 29) */}
+        {/* Layer panel and the single satellite viewer share this row. */}
         <aside className="disaster-side-rail">
           <LayerPanel
             satellite={satellite}
@@ -402,42 +396,24 @@ export default function DisasterDashboard() {
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
         </aside>
 
-        {/* 5. Map + legend */}
+        {/* The old duplicate analysis map is intentionally removed. */}
         <div className="disaster-map-column">
-          {layersLoading ? (
-            <div className="alert alert-info py-2">
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              />
-              Memuat layer peta...
-            </div>
-          ) : (
-            <>
-              <AnalysisResultMap
-                aoi={aoi}
-                showAoi={showAoi}
-                satellite={satellite}
-                showSatellite={showSatellite}
-                analyses={analyses}
-                checkedAnalyses={checkedAnalyses}
-                hotspots={hotspots}
-                showHotspots={showHotspots}
-                highlightedHotspotId={highlightedHotspotId}
-                onHotspotClick={handleHotspotHighlight}
-                focusFeature={focusFeature}
-                focusSignal={focusSignal}
-              />
-              <div className="row g-2 mt-1">
-                {checkedLayers.map((entry) => (
-                  <div className="col-md-4" key={entry.model_id}>
-                    <MapLegend title={entry.user_label} entries={entry.result?.legend ?? []} />
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+          <SatelliteViewer
+            aoi={aoi}
+            imagery={imagery}
+            primaryImagery={primary_imagery}
+            satellite={satellite}
+            showSatellite={showSatellite}
+            analyses={analyses}
+            checkedAnalyses={checkedAnalyses}
+            showAoi={showAoi}
+            hotspots={hotspots}
+            showHotspots={showHotspots}
+            highlightedHotspotId={highlightedHotspotId}
+            onHotspotClick={handleHotspotHighlight}
+            focusFeature={focusFeature}
+            focusSignal={focusSignal}
+          />
         </div>
       </section>
 

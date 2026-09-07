@@ -30,6 +30,8 @@ interface SearchableSelectProps {
   allowCustomValue?: boolean;
   emptyHint?: string;
   id?: string;
+  variant?: "model" | "plain";
+  className?: string;
 }
 
 function formatCtx(n: number): string {
@@ -49,6 +51,8 @@ export default function SearchableSelect({
   allowCustomValue = true,
   emptyHint = "Tidak ditemukan",
   id,
+  variant = "model",
+  className = "",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -123,9 +127,11 @@ export default function SearchableSelect({
   };
 
   let lastGroup: string | undefined;
+  const inputValue = variant === "plain" && !open && selected ? selected.label : open ? query : "";
+  const inputPlaceholder = loading ? "Memuat..." : selected ? selected.label : placeholder;
 
   return (
-    <div className="adm-ssel" ref={rootRef}>
+    <div className={`adm-ssel adm-ssel-${variant} ${className}`.trim()} ref={rootRef}>
       <div className={`adm-ssel-control ${open ? "open" : ""} ${disabled ? "disabled" : ""}`}>
         <input
           id={id}
@@ -133,8 +139,8 @@ export default function SearchableSelect({
           className="adm-ssel-input"
           type="text"
           disabled={disabled || loading}
-          placeholder={loading ? "Memuat daftar model..." : selected ? selected.label : placeholder}
-          value={open ? query : ""}
+          placeholder={inputPlaceholder}
+          value={inputValue}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -190,19 +196,21 @@ export default function SearchableSelect({
                   }}
                 >
                   <div className="adm-ssel-opt-name">{opt.label}</div>
-                  <div className="adm-ssel-opt-meta">
-                    <code className="adm-ssel-opt-id">{opt.value}</code>
-                    {typeof opt.contextLength === "number" && (
-                      <span className="or-ctx">{formatCtx(opt.contextLength)}</span>
-                    )}
-                    {opt.isFree ? (
-                      <span className="or-badge-free">GRATIS</span>
-                    ) : opt.inputPerM !== undefined ? (
-                      <span className="or-badge-paid">
-                        ${opt.inputPerM}/${opt.outputPerM}/1M
-                      </span>
-                    ) : null}
-                  </div>
+                  {variant === "model" && (
+                    <div className="adm-ssel-opt-meta">
+                      <code className="adm-ssel-opt-id">{opt.value}</code>
+                      {typeof opt.contextLength === "number" && (
+                        <span className="or-ctx">{formatCtx(opt.contextLength)}</span>
+                      )}
+                      {opt.isFree ? (
+                        <span className="or-badge-free">GRATIS</span>
+                      ) : opt.inputPerM !== undefined ? (
+                        <span className="or-badge-paid">
+                          ${opt.inputPerM}/${opt.outputPerM}/1M
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               </div>
             );
