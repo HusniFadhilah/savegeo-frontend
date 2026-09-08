@@ -127,7 +127,7 @@ export default function LandingPage() {
             <a href="#tentang">Tentang</a>
           </nav>
           <div className="landing-nav-actions">
-            <Link to="/dashboard" className="landing-nav-cta">Buka Platform <i className="bi bi-arrow-up-right" /></Link>
+            <Link to="/carbon-estimation" className="landing-nav-cta">Buka Platform <i className="bi bi-arrow-up-right" /></Link>
           </div>
         </div>
       </header>

@@ -944,6 +944,11 @@ export default function LcChangeModule() {
                       changeMapData={changeMapData}
                       changeMapLoading={changeMapLoading}
                       changeMapError={changeMapError}
+                      startMonth={startMonth}
+                      endMonth={endMonth}
+                      startDate={dateMode === "date" && yearA != null ? tanggalToIso(yearA, tanggalStart) : undefined}
+                      endDate={dateMode === "date" && yearB != null ? tanggalToIso(yearB, tanggalEnd) : undefined}
+                      dwProbabilityThreshold={isDynamicWorldCompatible && dwThresholdEnabled ? dwProbabilityThreshold : undefined}
                     />
                   )}
                   {tab === "hotspot" && (
@@ -1005,6 +1010,8 @@ export default function LcChangeModule() {
               changeMapData={null}
               changeMapLoading={false}
               changeMapError={null}
+              startMonth={startMonth}
+              endMonth={endMonth}
             />
           )}
         </div>

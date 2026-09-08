@@ -100,6 +100,21 @@ export interface LcChangeMapResponse {
   stable_percentage: number;
 }
 
+export interface LcIdentifyResponse {
+  dataset: LcDataset;
+  dataset_name: string;
+  year: number;
+  effective_year?: number;
+  latitude: number;
+  longitude: number;
+  class_value: number | null;
+  class_name: string | null;
+  color: string | null;
+  area_ha: number | null;
+  percentage: number | null;
+  total_area_ha: number | null;
+}
+
 /**
  * Overlay mode for the "after" map panel. The legacy module had one shared
  * map with 4 modes (changed/destination/before/after); this port uses two

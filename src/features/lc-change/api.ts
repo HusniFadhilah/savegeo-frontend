@@ -4,6 +4,7 @@ import type {
   LcAnalyzeResponse,
   LcChangeMapParams,
   LcChangeMapResponse,
+  LcIdentifyResponse,
   LcHotspotParams,
   LcHotspotResponse,
 } from "./types";
@@ -25,6 +26,21 @@ export function analyzeLandCoverYear(params: LcAnalyzeParams) {
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */
 export function analyzeLandCoverChangeMap(params: LcChangeMapParams) {
   return apiClient.post<LcChangeMapResponse>("/analyze/landcover-change-map", params, { auth: "app" });
+}
+
+export function identifyLandCoverPoint(params: {
+  aoi: { geojson: GeoJSON.Feature | GeoJSON.FeatureCollection | GeoJSON.Geometry };
+  dataset: string;
+  year: number;
+  latitude: number;
+  longitude: number;
+  start_month: number;
+  end_month: number;
+  start_date?: string;
+  end_date?: string;
+  dw_probability_threshold?: number;
+}) {
+  return apiClient.post<LcIdentifyResponse>("/analyze/landcover-identify", params, { auth: "app" });
 }
 
 /** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */

@@ -374,7 +374,7 @@ export default function ImageryModule() {
   );
   const isOpenHighResProvider = Boolean(
     satelliteMeta?.source_kind &&
-      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "generic_stac"].includes(satelliteMeta.source_kind),
+      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "generic_stac", "big_ctsrt"].includes(satelliteMeta.source_kind),
   );
   const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"));
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
@@ -413,6 +413,7 @@ export default function ImageryModule() {
   // group itself, so the array must already come in group order).
   const GROUP_ORDER = [
     "Basemap Historis",
+    "BIG / CTSRT",
     "Open Aerial",
     "Open Disaster",
     "Custom STAC",
@@ -816,6 +817,12 @@ export default function ImageryModule() {
                           ? `Citra lampu malam (${satelliteMeta.unit ?? "satu-band"}) - bukan foto siang hari.`
                           : `Peta konsentrasi gas (${satelliteMeta.unit ?? "satu-band"}) - bukan foto RGB.`}
                     {satelliteMeta.description ? <span className="d-block mt-1">{satelliteMeta.description}</span> : null}
+                  </div>
+                )}
+                {satelliteMeta.source_kind === "big_ctsrt" && (
+                  <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
+                    <i className="fas fa-circle-info" /> Mosaic CTSRT resmi BIG tersedia per wilayah/tahun. Hasil
+                    pencarian akan memilih mosaic yang mencakup AOI, lalu merender citra dari ImageServer BIG.
                   </div>
                 )}
               </>
@@ -1281,8 +1288,10 @@ export default function ImageryModule() {
                               ? "Vantor/Maxar Open Data"
                               : satelliteMeta?.source_kind === "planet_open_data_stac"
                                 ? "Planet Open Data"
-                                : satelliteMeta?.source_kind === "generic_stac"
+                            : satelliteMeta?.source_kind === "generic_stac"
                                   ? "STAC/COG source"
+                                  : satelliteMeta?.source_kind === "big_ctsrt"
+                                    ? "BIG / CTSRT"
                                   : isEsriWayback
                                     ? "Esri World Imagery Wayback"
                                     : "Google Earth Engine"

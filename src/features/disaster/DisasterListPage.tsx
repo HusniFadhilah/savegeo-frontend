@@ -165,7 +165,7 @@ export default function DisasterListPage() {
   return (
     <div className="disaster-shell disaster-list-shell">
       <div className="disaster-topbar">
-        <Link to="/" className="disaster-brand">
+        <Link to="/carbon-estimation" className="disaster-brand">
           <img src="images/savegeo-logo.svg" alt="SAVEGEO" />
           <span>SAVEGEO</span>
         </Link>

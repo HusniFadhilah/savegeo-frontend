@@ -2103,6 +2103,55 @@
 }
 
 /* Swipe/compare slider (SwipeCompareMap) */
+.lc-map-inspector {
+  padding: 10px 12px;
+  border: 1px solid #b8dcca;
+  border-radius: 8px;
+  background: #f3fbf6;
+  color: #174d2a;
+}
+
+.lc-map-inspector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+  font-size: 0.82rem;
+}
+
+.lc-map-inspector-heading span {
+  color: #5f7668;
+  font-size: 0.74rem;
+}
+
+.lc-map-inspector-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 58px;
+  padding: 7px 9px;
+  border: 1px solid rgba(46, 125, 50, 0.14);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.lc-map-inspector-year {
+  color: #3d7651;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.lc-map-inspector-result strong {
+  color: #172d20;
+  font-size: 0.83rem;
+}
+
+.lc-map-inspector-result small {
+  color: #64756b;
+  font-size: 0.72rem;
+}
+
 .swipe-compare-wrap {
   position: relative;
 }
@@ -2110,27 +2159,50 @@
 .swipe-divider {
   position: absolute;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  box-shadow: none;
   user-select: none;
+  touch-action: none;
+}
+
+.swipe-divider::before {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .swipe-divider-vertical {
   top: 0;
   bottom: 0;
-  width: 3px;
-  margin-left: -1.5px;
+  width: 28px;
+  margin-left: -14px;
   cursor: ew-resize;
-  touch-action: none;
+}
+
+.swipe-divider-vertical::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
 }
 
 .swipe-divider-horizontal {
   left: 0;
   right: 0;
-  height: 3px;
-  margin-top: -1.5px;
+  height: 28px;
+  margin-top: -14px;
   cursor: ns-resize;
-  touch-action: none;
+}
+
+.swipe-divider-horizontal::before {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 3px;
+  transform: translateY(-50%);
 }
 
 .swipe-handle {
@@ -2147,7 +2219,7 @@
   align-items: center;
   justify-content: center;
   color: #333;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .swipe-label {

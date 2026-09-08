@@ -301,8 +301,12 @@ export default function ResultsMapPanel({
               onOrientationChange={setCompareOrientation}
               center={center}
               zoom={zoom}
+              opacity={opacity}
+              bounds={aoi.bounds ?? undefined}
+              clipGeometry={aoi.feature}
             >
               <BasemapSwitcher />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
               <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
             </SwipeCompareMap>
             <div className="row g-2 mt-1">

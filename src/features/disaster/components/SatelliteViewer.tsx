@@ -474,6 +474,8 @@ export default function SatelliteViewer({
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
             initialPercent={35}
+            bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}
+            clipGeometry={aoi?.geojson as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
           >
             <LayerOpacityControl
               opacity={imageryOpacity}

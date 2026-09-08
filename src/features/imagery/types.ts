@@ -10,7 +10,8 @@ export type ImagerySourceKind =
   | "oam_stac"
   | "maxar_open_data_stac"
   | "planet_open_data_stac"
-  | "generic_stac";
+  | "generic_stac"
+  | "big_ctsrt";
 
 /**
  * One entry from GET /imagery/providers - deliberately its OWN type, not
