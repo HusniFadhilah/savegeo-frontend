@@ -19,15 +19,15 @@ import type {
 
 /** POST /analyze/landcover - one request per year, single dataset in the array. */
 export function analyzeLandCoverYear(params: LcAnalyzeParams) {
-  return apiClient.post<LcAnalyzeResponse>("/analyze/landcover", params);
+  return apiClient.post<LcAnalyzeResponse>("/analyze/landcover", params, { auth: "app" });
 }
 
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */
 export function analyzeLandCoverChangeMap(params: LcChangeMapParams) {
-  return apiClient.post<LcChangeMapResponse>("/analyze/landcover-change-map", params);
+  return apiClient.post<LcChangeMapResponse>("/analyze/landcover-change-map", params, { auth: "app" });
 }
 
 /** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */
 export function analyzeLandCoverHotspots(params: LcHotspotParams) {
-  return apiClient.post<LcHotspotResponse>("/analyze/landcover-hotspots", params);
+  return apiClient.post<LcHotspotResponse>("/analyze/landcover-hotspots", params, { auth: "app" });
 }

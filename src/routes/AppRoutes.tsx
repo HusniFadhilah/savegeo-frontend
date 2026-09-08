@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import AppLoginPage from "@/pages/AppLoginPage";
+import RegisterUserPage from "@/pages/RegisterUserPage";
 import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -10,6 +11,7 @@ import { DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
 import type { DashboardModule } from "@/hooks/useUiStore";
 import type { AdminSection } from "@/features/admin/types";
 import ProtectedAppRoute from "@/components/auth/ProtectedAppRoute";
+import DashboardEntryRoute from "@/routes/DashboardEntryRoute";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -49,9 +51,10 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AppLoginPage />} />
+      <Route path="/register" element={<RegisterUserPage />} />
       <Route
         path="/dashboard"
-        element={<ProtectedAppRoute><DashboardPage /></ProtectedAppRoute>}
+        element={<DashboardEntryRoute />}
       />
       {dashboardRoutes.map((route) => (
         <Route

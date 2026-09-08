@@ -204,8 +204,19 @@ export default function SwipeCompareMap({
         className={`swipe-divider swipe-divider-${orientation}`}
         style={orientation === "vertical" ? { left: `${percent}%` } : { top: `${percent}%` }}
         onPointerDown={(e) => {
+          e.preventDefault();
           draggingRef.current = true;
-          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          if (draggingRef.current) updateFromClientPos(e.clientX, e.clientY);
+        }}
+        onPointerUp={(e) => {
+          draggingRef.current = false;
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
         }}
       >
         <div className="swipe-handle">

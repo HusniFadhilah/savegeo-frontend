@@ -85,7 +85,7 @@ export default function Navbar() {
                     </h6>
                   </li>
                   <li>
-                    <Link className="dropdown-item" to={activeIsAdmin ? "/admin" : "/dashboard"} onClick={() => setMenuOpen(false)}>
+                    <Link className="dropdown-item" to="/dashboard" onClick={() => setMenuOpen(false)}>
                       <i className="bi bi-speedometer2 me-2" /> Dashboard
                     </Link>
                   </li>

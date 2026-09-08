@@ -159,7 +159,7 @@ export default function LandingPage() {
         </section>
 
         <section className="landing-trust" aria-label="Mitra SaveGeo">
-          <div className="landing-shell landing-trust-inner"><span>DIKEMBANGKAN UNTUK ANALISIS BUMI YANG LEBIH BAIK</span><div className="landing-trust-logos"><strong>SaveGeo</strong><b>Universitas Diponegoro</b><b>PT LEN Industri</b></div></div>
+          <div className="landing-shell landing-trust-inner"><span>DIKEMBANGKAN UNTUK ANALISIS BUMI YANG LEBIH BAIK</span><div className="landing-trust-logos"><strong>SaveGeo</strong><b>Universitas Diponegoro</b><b>PT LEN Industri (Persero)</b></div></div>
         </section>
 
         <section id="fitur" className="landing-section landing-features-section">

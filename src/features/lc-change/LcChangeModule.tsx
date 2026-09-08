@@ -111,9 +111,12 @@ export default function LcChangeModule() {
   );
   const [dataset, setDataset] = useState<LcDataset>("Dynamic_World");
   const [years, setYears] = useState<number[]>([maxYear - 1, maxYear]);
+  // A two-year comparison should default to the complete annual Dynamic
+  // World composite. A one-month window is opt-in and can legitimately have
+  // no scenes for an AOI/year pair.
   const [startMonth, setStartMonth] = useState(1);
-  const [endMonth, setEndMonth] = useState(1);
-  const [dateMode, setDateMode] = useState<DateMode>("month");
+  const [endMonth, setEndMonth] = useState(12);
+  const [dateMode, setDateMode] = useState<DateMode>("year");
   const [tanggalStart, setTanggalStart] = useState(DEFAULT_TANGGAL_START);
   const [tanggalEnd, setTanggalEnd] = useState(DEFAULT_TANGGAL_END);
   // Dynamic World per-pixel confidence threshold (audit #8) - undefined = no
@@ -331,6 +334,7 @@ export default function LcChangeModule() {
     setChangeMapCache({});
     setChangeMapError(null);
     const collected: Record<number, LcYearResult> = {};
+    const failedYears: Array<{ year: number; message: string }> = [];
 
     showLoading("Menganalisis tutupan lahan…", `0 dari ${uniqueYears.length} tahun diproses`);
     for (let i = 0; i < uniqueYears.length; i++) {
@@ -352,9 +356,15 @@ export default function LcChangeModule() {
         const bucket = res[dataset];
         if (bucket?.classes) {
           collected[year] = bucket;
+        } else {
+          failedYears.push({ year, message: "Backend tidak mengembalikan kelas land cover." });
         }
       } catch (err) {
         console.error(`LC-change: gagal memuat tahun ${year}`, err);
+        failedYears.push({
+          year,
+          message: err instanceof ApiError ? err.message : "Kesalahan saat memproses Dynamic World.",
+        });
       }
     }
     hideLoading();
@@ -364,8 +374,17 @@ export default function LcChangeModule() {
       .map(Number)
       .sort((a, b) => a - b);
     if (successYears.length < 2) {
-      setRunError("Data tidak cukup (minimal 2 tahun berhasil). Coba ubah parameter.");
+      const detail = failedYears.map(({ year, message }) => `${year}: ${message}`).join(" | ");
+      setRunError(
+        detail
+          ? `Minimal 2 tahun harus berhasil. ${detail}`
+          : "Data tidak cukup (minimal 2 tahun berhasil). Coba ubah parameter.",
+      );
       return;
+    }
+    if (failedYears.length) {
+      const detail = failedYears.map(({ year, message }) => `${year}: ${message}`).join(" | ");
+      setRunError(`Sebagian tahun berhasil, tetapi ${detail}`);
     }
     setYearData(collected);
     setActiveYears(successYears);

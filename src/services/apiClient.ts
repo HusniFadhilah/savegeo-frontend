@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 import { getAuthToken, clearAuthToken } from "@/services/authService";
-import { appAuthHeader, handleAppUnauthorized } from "@/services/appSession";
+import { handleAppUnauthorized, getAppAuthToken } from "@/services/appSession";
 
 export class ApiError extends Error {
   status: number;
@@ -50,7 +50,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     finalHeaders["Content-Type"] = "application/json";
   }
   if (auth === "app") {
-    Object.assign(finalHeaders, appAuthHeader());
+    const appToken = getAppAuthToken();
+    if (!appToken) {
+      // Do not send a guaranteed-401 request when a stale HMR page or an
+      // expired browser session reaches a protected workspace route.
+      handleAppUnauthorized();
+      clearTimeout(timeout);
+      throw new ApiError("Sesi login tidak ditemukan. Silakan login kembali.", 401);
+    }
+    Object.assign(finalHeaders, { Authorization: `Bearer ${appToken}` });
   } else if (auth === true || auth === "admin") {
     const token = getAuthToken();
     if (token) {

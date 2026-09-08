@@ -56,7 +56,7 @@ export function getImageryDemTile(params: GetDemTileParams) {
   return apiClient.post<DemTileResponse>("/imagery/dem-tile", {
     aoi: params.aoi,
     scale: params.scale,
-  });
+  }, { auth: "app" });
 }
 
 export function runRasterToolbox(params: { itemUrl: string; assetKey: string; aoi: unknown; operation: string; bands?: string; export?: boolean }) {

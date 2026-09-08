@@ -64,7 +64,7 @@ setUserUnauthorizedHandler(() => {
 if (typeof window !== "undefined") {
   window.addEventListener("savegeo:app-auth-expired", (event) => {
     const kind = (event as CustomEvent<{ kind?: string }>).detail?.kind;
-    if (kind === "user") {
+    if (kind === "user" || kind == null) {
       useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });
     }
   });

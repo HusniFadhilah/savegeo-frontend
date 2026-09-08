@@ -27,6 +27,11 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
 
   const setYearAt = (index: number, value: number) => {
     const next = [...years];
+    const previous = next[index];
+    const duplicateIndex = next.findIndex((year, i) => i !== index && year === value);
+    // Choosing a year already used by another row should swap the two rows,
+    // not collapse the selection from two years to one.
+    if (duplicateIndex >= 0) next[duplicateIndex] = previous;
     next[index] = value;
     onChange([...new Set(next)].sort((a, b) => a - b));
   };

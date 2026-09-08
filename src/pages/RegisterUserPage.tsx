@@ -1,21 +1,14 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 
-interface Props {
-  /** See `LoginUserPage.tsx`'s matching prop doc - local view toggle, not a route. */
-  onSwitchToLogin?: () => void;
-}
-
 /**
- * Visual twin of `pages/LoginPage.tsx` (admin), registration variant for the
- * new public `users` table. `POST /auth/register` per the redesign contract
- * doc requires `password` min 8 chars (backend returns 400 otherwise) -
- * mirrored here as a client-side hint only, the backend remains the source
- * of truth for validation.
+ * Registration page for the public SaveGeo users table. This page has its own
+ * URL so the login and registration flows remain shareable and bookmarkable.
  */
-export default function RegisterUserPage({ onSwitchToLogin }: Props) {
+export default function RegisterUserPage() {
   const { register, isLoading, error } = useUserAuthStore();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +22,7 @@ export default function RegisterUserPage({ onSwitchToLogin }: Props) {
       setLocalError("Password minimal 8 karakter.");
       return;
     }
-    await register(username, email, password);
+    if (await register(username, email, password)) navigate("/dashboard", { replace: true });
   };
 
   return (
@@ -37,7 +30,7 @@ export default function RegisterUserPage({ onSwitchToLogin }: Props) {
       <div className="login-illust-side">
         <div className="login-illust-content">
           <h2>SAVEGEO</h2>
-          <p>Dashboard Intelijen Bencana &mdash; pemantauan dampak bencana berbasis citra satelit.</p>
+          <p>Platform analitik geospasial untuk memahami wilayah, memantau perubahan, dan mendukung keputusan berbasis data.</p>
         </div>
       </div>
 
@@ -47,8 +40,8 @@ export default function RegisterUserPage({ onSwitchToLogin }: Props) {
             <Link to="/">
               <img src="/logo.jpg" alt="SAVEGEO" height={56} className="mb-2 rounded" />
             </Link>
-            <h5 className="mb-0">Daftar Akun</h5>
-            <small className="text-muted">Buat akun untuk mengakses dashboard intelijen bencana</small>
+            <h5 className="mb-0">Daftar Akun SaveGeo</h5>
+            <small className="text-muted">Buat akun untuk mengakses seluruh fitur analitik SaveGeo</small>
           </div>
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
@@ -101,14 +94,12 @@ export default function RegisterUserPage({ onSwitchToLogin }: Props) {
             <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
               {isLoading ? "Memproses..." : "Daftar"}
             </button>
-            {onSwitchToLogin && (
-              <div className="text-center mt-3 small">
-                Sudah punya akun?{" "}
-                <button type="button" className="btn btn-link p-0 align-baseline" onClick={onSwitchToLogin}>
-                  Login
-                </button>
-              </div>
-            )}
+            <div className="text-center mt-3 small">
+              Sudah punya akun?{" "}
+              <Link to="/login" className="btn btn-link p-0 align-baseline">
+                Login
+              </Link>
+            </div>
           </form>
         </div>
       </div>
