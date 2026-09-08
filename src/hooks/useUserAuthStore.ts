@@ -32,8 +32,9 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
   login: async (username, password) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await userAuthService.login(username, password);
-      set({ user: res.user, isAuthenticated: true, isLoading: false });
+      await userAuthService.login(username, password);
+      const user = await userAuthService.me();
+      set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
       set({ error: err instanceof ApiError ? err.message : "Login gagal", isLoading: false });
@@ -43,8 +44,9 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
   register: async (username, email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await userAuthService.register(username, email, password);
-      set({ user: res.user, isAuthenticated: true, isLoading: false });
+      await userAuthService.register(username, email, password);
+      const user = await userAuthService.me();
+      set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
       set({ error: err instanceof ApiError ? err.message : "Registrasi gagal", isLoading: false });

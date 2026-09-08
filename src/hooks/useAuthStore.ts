@@ -21,8 +21,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (username, password) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await authService.login(username, password);
-      set({ user: res.user, isAuthenticated: true, isLoading: false });
+      await authService.login(username, password);
+      // Verify the HttpOnly cookie before redirecting. This catches a
+      // wrong API host/CORS origin immediately instead of showing /admin and
+      // then silently falling back to the admin login screen.
+      const user = await authService.me();
+      set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Login gagal", isLoading: false });
