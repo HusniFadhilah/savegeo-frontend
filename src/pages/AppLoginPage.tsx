@@ -35,8 +35,8 @@ function UnifiedAccessForm() {
     if (await adminLogin(credentials.username, credentials.password)) return;
     if (await userLogin(credentials.username, credentials.password)) return;
     setFormError(
-      useAuthStore.getState().error ||
         useUserAuthStore.getState().error ||
+        useAuthStore.getState().error ||
         "Username atau password tidak sesuai.",
     );
   }
