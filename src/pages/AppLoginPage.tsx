@@ -99,7 +99,7 @@ function UnifiedAccessForm() {
           <button className="app-login-submit" type="submit" disabled={isLoading}>{isLoading ? "Memproses..." : "Login"}</button>
           <div className="app-login-form-links">
             <button className="app-login-text-button" type="button" onClick={() => setForgotMode(true)}>Lupa password?</button>
-            <Link className="app-login-text-button" to="/register">Daftar</Link>
+            {/* <Link className="app-login-text-button" to="/register">Daftar</Link> */}
           </div>
         </form>
       )}

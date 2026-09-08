@@ -39,10 +39,10 @@ const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; 
       { id: "ds", icon: "bi-exclamation-triangle-fill", label: "Disaster Management" },
     ],
   },
-  {
-    section: "Internal",
-    items: [{ id: "ri", icon: "bi-lock-fill", label: "Informasi Riset" }],
-  },
+  // {
+  //   section: "Internal",
+  //   items: [{ id: "ri", icon: "bi-lock-fill", label: "Informasi Riset" }],
+  // },
 ];
 
 const TITLES: Record<AdminSection, [string, string]> = {
@@ -137,7 +137,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
           {mobileNavOpen && <div className="sb-backdrop" onClick={() => setMobileNavOpen(false)} />}
 
           <div className={`sidebar ${mobileNavOpen ? "mobile-open" : ""}`}>
-            <Link to="/" className="sb-logo" style={{ textDecoration: "none" }}>
+            <Link to="/carbon-estimation" className="sb-logo" style={{ textDecoration: "none" }}>
               <img src="/logo.jpg" alt="SAVEGEO" className="sb-logo-img" />
               <div className="sb-logo-text">
                 SAVEGEO <small>Admin Panel v1.0</small>
@@ -208,11 +208,11 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "sp" && <SatelliteProviders />}
               {section === "co" && <CompanyBoundaries />}
               {section === "ds" && <DisasterManagement />}
-              {section === "ri" && (
+              {/* {section === "ri" && (
                 <Suspense fallback={<div className="adm-loading">Memuat informasi riset...</div>}>
                   <ResearchInformation />
                 </Suspense>
-              )}
+              )} */}
             </div>
           </div>
         </div>
