@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { AdminUser } from "@/types/api";
-import { authService, getStoredUser } from "@/services/authService";
+import { authService } from "@/services/authService";
 import { setUnauthorizedHandler } from "@/services/apiClient";
 
 interface AuthState {
@@ -10,12 +10,13 @@ interface AuthState {
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
+  initialize: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: getStoredUser(),
-  isAuthenticated: authService.isAuthenticated(),
-  isLoading: false,
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
   error: null,
   login: async (username, password) => {
     set({ isLoading: true, error: null });
@@ -29,10 +30,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
   logout: () => {
-    authService.logout();
+    void authService.logout();
     set({ user: null, isAuthenticated: false });
   },
+  initialize: async () => {
+    try {
+      const user = await authService.me();
+      set({ user, isAuthenticated: true });
+    } catch {
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));
+
+void useAuthStore.getState().initialize();
 
 setUnauthorizedHandler(() => {
   useAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });

@@ -23,7 +23,7 @@ export interface AdminUser {
 }
 
 export interface LoginResponse {
-  token: string;
+  token?: string;
   user: AdminUser;
   expires_at?: string;
 }

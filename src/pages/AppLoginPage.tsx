@@ -99,12 +99,18 @@ export default function AppLoginPage() {
   const navigate = useNavigate();
   const userAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const adminAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userLoading = useUserAuthStore((state) => state.isLoading);
+  const adminLoading = useAuthStore((state) => state.isLoading);
   const from = (location.state as { from?: string } | null)?.from;
   const destination = from && from !== "/login" ? from : "/dashboard";
 
   useEffect(() => {
     if (userAuthenticated || adminAuthenticated) navigate(destination, { replace: true });
   }, [adminAuthenticated, destination, navigate, userAuthenticated]);
+
+  if (userLoading || adminLoading) {
+    return <div className="d-flex min-vh-100 align-items-center justify-content-center">Memverifikasi sesi...</div>;
+  }
 
   return (
     <div className="app-login-page">

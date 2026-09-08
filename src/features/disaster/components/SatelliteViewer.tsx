@@ -7,8 +7,6 @@ import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { env } from "@/config/env";
-import { getAuthToken } from "@/services/authService";
-import { getUserAuthToken } from "@/services/userAuthService";
 import type {
   DisasterAoiRecord,
   DisasterAnalysisEntry,
@@ -79,10 +77,7 @@ function viewerTileUrl(img: SatelliteImageryRecord | null): string | null {
   const absolute = url.startsWith("/")
     ? `${env.apiBaseUrl.replace(/\/api\/?$/, "")}${url}`
     : url;
-  if (img?.source_kind !== "local_upload") return absolute;
-  const token = getUserAuthToken() ?? getAuthToken();
-  if (!token) return absolute;
-  return `${absolute}${absolute.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`;
+  return absolute;
 }
 
 function viewerUrl(url: string | null): string | null {
@@ -347,6 +342,7 @@ export default function SatelliteViewer({
                 url={preTile}
                 opacity={imageryOpacity}
                 attribution="Google Earth Engine"
+                crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                 pane={RESULT_PANE}
                 maxNativeZoom={preNativeZoom}
                 maxZoom={DISASTER_SCENE_MAX_ZOOM}
@@ -357,6 +353,7 @@ export default function SatelliteViewer({
                 url={postTile}
                 opacity={imageryOpacity}
                 attribution="Google Earth Engine"
+                crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                 pane={RESULT_PANE}
                 maxNativeZoom={postNativeZoom}
                 maxZoom={DISASTER_SCENE_MAX_ZOOM}
@@ -394,6 +391,7 @@ export default function SatelliteViewer({
                     url={preTile}
                     opacity={imageryOpacity}
                     attribution="Google Earth Engine"
+                    crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                     pane={RESULT_PANE}
                     maxNativeZoom={preNativeZoom}
                     maxZoom={DISASTER_SCENE_MAX_ZOOM}
@@ -431,6 +429,7 @@ export default function SatelliteViewer({
                     url={postTile}
                     opacity={imageryOpacity}
                     attribution="Google Earth Engine"
+                    crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                     pane={RESULT_PANE}
                     maxNativeZoom={postNativeZoom}
                     maxZoom={DISASTER_SCENE_MAX_ZOOM}
@@ -467,6 +466,8 @@ export default function SatelliteViewer({
             beforeLabel={`Sebelum${preImg ? ` · ${preImg.acquisition_date}` : ""}`}
             afterLabel={`Sesudah${postImg ? ` · ${postImg.acquisition_date}` : ""}`}
             orientation={swipeOrientation}
+            beforeCrossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
+            afterCrossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
             onOrientationChange={setSwipeOrientation}
             opacity={imageryOpacity}
             maxZoom={DISASTER_SCENE_MAX_ZOOM}

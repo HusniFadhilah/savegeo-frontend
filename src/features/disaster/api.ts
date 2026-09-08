@@ -1,6 +1,5 @@
 import { apiClient, ApiError } from "@/services/apiClient";
-import { getAuthToken } from "@/services/authService";
-import { getUserAuthToken, userAuthHeader, handleUserUnauthorized } from "@/services/userAuthService";
+import { handleAppUnauthorized } from "@/services/appSession";
 import type {
   BmkgAlertsData,
   DemSlopeParams,
@@ -38,27 +37,19 @@ import type {
  * only the user session; admin 401s use apiClient's existing admin handler.
  */
 async function userGet<T>(path: string): Promise<T> {
-  if (!getUserAuthToken() && getAuthToken()) {
-    return apiClient.get<T>(path, { auth: true });
-  }
-
   try {
-    return await apiClient.get<T>(path, { headers: userAuthHeader() });
+    return await apiClient.get<T>(path, { auth: "app" });
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) handleUserUnauthorized();
+    if (err instanceof ApiError && err.status === 401) handleAppUnauthorized();
     throw err;
   }
 }
 
 async function userPost<T>(path: string, body?: unknown): Promise<T> {
-  if (!getUserAuthToken() && getAuthToken()) {
-    return apiClient.post<T>(path, body, { auth: true });
-  }
-
   try {
-    return await apiClient.post<T>(path, body, { headers: userAuthHeader() });
+    return await apiClient.post<T>(path, body, { auth: "app" });
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) handleUserUnauthorized();
+    if (err instanceof ApiError && err.status === 401) handleAppUnauthorized();
     throw err;
   }
 }

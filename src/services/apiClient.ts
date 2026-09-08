@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
-import { getAuthToken, clearAuthToken } from "@/services/authService";
-import { handleAppUnauthorized, getAppAuthToken } from "@/services/appSession";
+import { clearAuthToken } from "@/services/authService";
+import { handleAppUnauthorized } from "@/services/appSession";
 
 export class ApiError extends Error {
   status: number;
@@ -17,7 +17,7 @@ export class ApiError extends Error {
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** `true` remains admin auth for backwards compatibility. */
-  auth?: boolean | "app" | "admin";
+  auth?: boolean | "app" | "admin" | "user";
   timeoutMs?: number;
   isFormData?: boolean;
 }
@@ -49,28 +49,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (!isFormData && body !== undefined) {
     finalHeaders["Content-Type"] = "application/json";
   }
-  if (auth === "app") {
-    const appToken = getAppAuthToken();
-    if (!appToken) {
-      // Do not send a guaranteed-401 request when a stale HMR page or an
-      // expired browser session reaches a protected workspace route.
-      handleAppUnauthorized();
-      clearTimeout(timeout);
-      throw new ApiError("Sesi login tidak ditemukan. Silakan login kembali.", 401);
-    }
-    Object.assign(finalHeaders, { Authorization: `Bearer ${appToken}` });
-  } else if (auth === true || auth === "admin") {
-    const token = getAuthToken();
-    if (token) {
-      finalHeaders["Authorization"] = `Bearer ${token}`;
-    }
-  }
-
   let res: Response;
   try {
     res = await fetch(`${env.apiBaseUrl}${path}`, {
       ...rest,
       headers: finalHeaders,
+      credentials: "include",
       body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
       signal: controller.signal,
     });
@@ -86,7 +70,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (res.status === 401 && auth) {
     if (auth === "app") {
       handleAppUnauthorized();
-    } else {
+    } else if (auth === true || auth === "admin") {
       clearAuthToken();
       onUnauthorized?.();
     }

@@ -6,6 +6,12 @@ import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 export default function DashboardEntryRoute() {
   const isAdminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
+  const isAdminLoading = useAuthStore((state) => state.isLoading);
+  const isUserLoading = useUserAuthStore((state) => state.isLoading);
+
+  if (isAdminLoading || isUserLoading) {
+    return <div className="d-flex min-vh-100 align-items-center justify-content-center">Memverifikasi sesi...</div>;
+  }
 
   if (!isAdminAuthenticated && !isUserAuthenticated) {
     return <Navigate to="/login" replace />;

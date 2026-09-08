@@ -3,15 +3,11 @@ import { apiClient } from "@/services/apiClient";
 /**
  * Mirrors `services/authService.ts` exactly, but for the new public-facing
  * `users` table (Disaster Intelligence Dashboard) instead of `admin_users`.
- * Kept as a fully separate module (own sessionStorage keys, own token) per
- * the redesign contract doc - admin and user are different login systems
- * that must never share or clobber each other's session.
- *
- * sessionStorage (not localStorage): token dies with the tab, same rationale
- * as authService.ts.
+ * The browser session is held by the backend in an HttpOnly cookie. This
+ * module deliberately keeps no bearer token in Web Storage.
  */
-const TOKEN_KEY = "savegeo_user_token";
-const USER_KEY = "savegeo_user_user";
+const LEGACY_TOKEN_KEY = "savegeo_user_token";
+const LEGACY_USER_KEY = "savegeo_user_user";
 
 export interface AppUser {
   id: number;
@@ -23,43 +19,29 @@ export interface AppUser {
 }
 
 export interface UserLoginResponse {
-  token: string;
+  token?: string;
   user: AppUser;
 }
 
-export function getUserAuthToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
+function clearLegacyStorage(): void {
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_USER_KEY);
+  sessionStorage.removeItem(LEGACY_TOKEN_KEY);
+  sessionStorage.removeItem(LEGACY_USER_KEY);
 }
 
-export function getStoredAppUser(): AppUser | null {
-  const raw = sessionStorage.getItem(USER_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AppUser;
-  } catch {
-    return null;
-  }
-}
+clearLegacyStorage();
+
+export function getUserAuthToken(): string | null { return null; }
+
+export function getStoredAppUser(): AppUser | null { return null; }
 
 export function clearUserAuthToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(USER_KEY);
+  clearLegacyStorage();
 }
 
-function storeUserAuth(res: UserLoginResponse): void {
-  sessionStorage.setItem(TOKEN_KEY, res.token);
-  sessionStorage.setItem(USER_KEY, JSON.stringify(res.user));
-}
-
-/** `{ Authorization: "Bearer <token>" }` (or `{}` if logged out) - pass this
- * as `headers` on every `/auth/me` and `/disasters/*` call instead of
- * `apiClient`'s `auth: true`, which is hardcoded to the *admin* token. See
- * `features/disaster/api.ts`'s `userGet`/`userPost` doc comment for the full
- * rationale (keeps admin/user sessions from clobbering each other without
- * touching `apiClient.ts`, which is out of this feature's file boundary). */
 export function userAuthHeader(): Record<string, string> {
-  const token = getUserAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 }
 
 let onUserUnauthorized: (() => void) | null = null;
@@ -82,14 +64,13 @@ export function handleUserUnauthorized(): void {
 
 export const userAuthService = {
   async login(username: string, password: string): Promise<UserLoginResponse> {
-    const res = await apiClient.post<UserLoginResponse>("/auth/login", { username, password });
-    storeUserAuth(res);
-    return res;
+    return apiClient.post<UserLoginResponse>("/auth/login", { username, password });
   },
   async register(username: string, email: string, password: string): Promise<UserLoginResponse> {
-    const res = await apiClient.post<UserLoginResponse>("/auth/register", { username, email, password });
-    storeUserAuth(res);
-    return res;
+    return apiClient.post<UserLoginResponse>("/auth/register", { username, email, password });
+  },
+  me(): Promise<AppUser> {
+    return apiClient.get<AppUser>("/auth/me", { auth: "user" });
   },
   forgotPassword(identifier: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>("/auth/forgot-password", { identifier });
@@ -97,10 +78,11 @@ export const userAuthService = {
   resetPassword(token: string, password: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>("/auth/reset-password", { token, password });
   },
-  logout(): void {
+  async logout(): Promise<void> {
+    await apiClient.post("/auth/logout").catch(() => undefined);
     clearUserAuthToken();
   },
   isAuthenticated(): boolean {
-    return Boolean(getUserAuthToken());
+    return false;
   },
 };

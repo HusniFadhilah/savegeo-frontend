@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { ApiError } from "@/services/apiClient";
 import {
-  getStoredAppUser,
   setUserUnauthorizedHandler,
   userAuthService,
   type AppUser,
@@ -15,6 +14,7 @@ interface UserAuthState {
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  initialize: () => Promise<void>;
 }
 
 /**
@@ -25,9 +25,9 @@ interface UserAuthState {
  * the full rationale.
  */
 export const useUserAuthStore = create<UserAuthState>((set) => ({
-  user: getStoredAppUser(),
-  isAuthenticated: userAuthService.isAuthenticated(),
-  isLoading: false,
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
   error: null,
   login: async (username, password) => {
     set({ isLoading: true, error: null });
@@ -52,10 +52,22 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
     }
   },
   logout: () => {
-    userAuthService.logout();
+    void userAuthService.logout();
     set({ user: null, isAuthenticated: false });
   },
+  initialize: async () => {
+    try {
+      const user = await userAuthService.me();
+      set({ user, isAuthenticated: true });
+    } catch {
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));
+
+void useUserAuthStore.getState().initialize();
 
 setUserUnauthorizedHandler(() => {
   useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });

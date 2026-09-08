@@ -94,6 +94,8 @@ interface Props {
   maxNativeZoom?: number;
   beforeMaxNativeZoom?: number;
   afterMaxNativeZoom?: number;
+  beforeCrossOrigin?: "anonymous" | "use-credentials";
+  afterCrossOrigin?: "anonymous" | "use-credentials";
   initialPercent?: number;
   opacity?: number;
   /** Rendered inside the map, unclipped (e.g. AOI GeoJSON boundary). */
@@ -121,6 +123,8 @@ export default function SwipeCompareMap({
   maxNativeZoom,
   beforeMaxNativeZoom,
   afterMaxNativeZoom,
+  beforeCrossOrigin,
+  afterCrossOrigin,
   initialPercent = 50,
   opacity = 1,
   children,
@@ -178,6 +182,7 @@ export default function SwipeCompareMap({
             opacity={opacity}
             pane={RESULT_PANE}
             attribution="Google Earth Engine"
+            crossOrigin={beforeCrossOrigin}
             maxNativeZoom={beforeMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
           />
@@ -189,6 +194,7 @@ export default function SwipeCompareMap({
             opacity={opacity}
             pane={AFTER_PANE}
             attribution="Google Earth Engine"
+            crossOrigin={afterCrossOrigin}
             maxNativeZoom={afterMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
           />
