@@ -24,7 +24,7 @@ export default function Navbar() {
   const statusBadgeClass =
     state === "online" ? "bg-success-subtle text-success" : state === "offline" ? "bg-danger-subtle text-danger" : "bg-light text-dark";
 
-  const activeIsAdmin = isAuthenticated && !isUserAuthenticated;
+  const activeIsAdmin = isAuthenticated;
   const activeUser = activeIsAdmin ? user : appUser;
 
   const handleLogout = () => {

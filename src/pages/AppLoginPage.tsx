@@ -10,8 +10,10 @@ import { ApiError } from "@/services/apiClient";
 function UnifiedAccessForm() {
   const userLogin = useUserAuthStore((state) => state.login);
   const userLoading = useUserAuthStore((state) => state.isLoading);
+  const userError = useUserAuthStore((state) => state.error);
   const adminLogin = useAuthStore((state) => state.login);
   const adminLoading = useAuthStore((state) => state.isLoading);
+  const adminError = useAuthStore((state) => state.error);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +31,11 @@ function UnifiedAccessForm() {
     const credentials = { username: username.trim(), password };
     if (await userLogin(credentials.username, credentials.password)) return;
     if (await adminLogin(credentials.username, credentials.password)) return;
-    setFormError("Username atau password tidak sesuai.");
+    setFormError(
+      useAuthStore.getState().error ||
+        useUserAuthStore.getState().error ||
+        "Username atau password tidak sesuai.",
+    );
   }
 
   async function submitForgot(event: FormEvent) {
@@ -82,7 +88,11 @@ function UnifiedAccessForm() {
             <input id="unified-password" className="app-login-input" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
             <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} /></button>
           </div>
-          {formError && <div className="app-login-error">{formError}</div>}
+          {(formError || adminError || userError) && (
+            <div className="app-login-error" role="alert" aria-live="polite">
+              {formError || adminError || userError}
+            </div>
+          )}
           <button className="app-login-submit" type="submit" disabled={isLoading}>{isLoading ? "Memproses..." : "Login"}</button>
           <div className="app-login-form-links">
             <button className="app-login-text-button" type="button" onClick={() => setForgotMode(true)}>Lupa password?</button>

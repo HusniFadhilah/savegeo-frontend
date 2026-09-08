@@ -17,6 +17,8 @@ export default function DashboardEntryRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  const destination = isAdminAuthenticated && !isUserAuthenticated ? "/admin" : "/carbon-estimation";
+  // An admin may also have a public user cookie from an earlier session. The
+  // explicit admin session must win for the shared Dashboard entry point.
+  const destination = isAdminAuthenticated ? "/admin" : "/carbon-estimation";
   return <Navigate to={destination} replace />;
 }
