@@ -17,6 +17,19 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { id: null, username: "", email: "", password: "", roleId: "", isActive: true };
 
+function formatAdminDate(value?: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function AdminUsers() {
   const { notify } = useAdmin();
   const [me, setMe] = useState<AdminUserRow | null>(null);
@@ -246,8 +259,8 @@ export default function AdminUsers() {
                     <td>
                       <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? "Aktif" : "Nonaktif"}</span>
                     </td>
-                    <td>{u.created_at || "-"}</td>
-                    <td>{u.last_login || "-"}</td>
+                    <td>{formatAdminDate(u.created_at)}</td>
+                    <td>{formatAdminDate(u.last_login)}</td>
                     <td>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button type="button" className="btn-xs" title="Edit" aria-label="Edit" onClick={() => openEdit(u)}>

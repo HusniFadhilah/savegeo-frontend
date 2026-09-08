@@ -10,3 +10,4 @@ docs/
 .vscode/*
 !.vscode/extensions.json
 coverage
+MIGRATION.md

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
+import LoginIllustration from "@/components/auth/LoginIllustration";
 
 /**
  * Registration page for the public SaveGeo users table. This page has its own
@@ -29,6 +30,14 @@ export default function RegisterUserPage() {
     <div className="login-page">
       <div className="login-illust-side">
         <div className="login-illust-content">
+          <LoginIllustration
+            ariaLabel="Visual bumi realistis untuk analitik geospasial SaveGeo"
+            cards={[
+              { kicker: "Vegetasi", note: "area terpantau" },
+              { kicker: "Karbon", note: "stok terukur" },
+              { kicker: "Tutupan lahan", note: "perubahan terdeteksi" },
+            ]}
+          />
           <h2>SAVEGEO</h2>
           <p>Platform analitik geospasial untuk memahami wilayah, memantau perubahan, dan mendukung keputusan berbasis data.</p>
         </div>
