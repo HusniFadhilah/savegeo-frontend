@@ -29,8 +29,11 @@ function UnifiedAccessForm() {
     event.preventDefault();
     setFormError(null);
     const credentials = { username: username.trim(), password };
-    if (await userLogin(credentials.username, credentials.password)) return;
+    // Try the privileged account first. A username may legally exist in both
+    // auth tables, and resolving it as a public user would send an admin to
+    // the public workspace instead of the admin dashboard.
     if (await adminLogin(credentials.username, credentials.password)) return;
+    if (await userLogin(credentials.username, credentials.password)) return;
     setFormError(
       useAuthStore.getState().error ||
         useUserAuthStore.getState().error ||
@@ -112,7 +115,11 @@ export default function AppLoginPage() {
   const userLoading = useUserAuthStore((state) => state.isLoading);
   const adminLoading = useAuthStore((state) => state.isLoading);
   const from = (location.state as { from?: string } | null)?.from;
-  const destination = from && from !== "/login" ? from : "/dashboard";
+  const destination = adminAuthenticated
+    ? "/admin"
+    : from && from !== "/login"
+      ? from
+      : "/dashboard";
 
   useEffect(() => {
     if (userAuthenticated || adminAuthenticated) navigate(destination, { replace: true });
