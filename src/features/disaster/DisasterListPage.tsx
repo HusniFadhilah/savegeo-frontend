@@ -6,6 +6,7 @@ import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/features/admin/components/SearchableSelect";
 import { fetchDisasterEvents } from "./api";
+import KalimantanFire2026Panel from "./components/KalimantanFire2026Panel";
 import {
   EVENT_DISASTER_TYPE_LABELS,
   EVENT_DISASTER_TYPE_OPTIONS,
@@ -137,6 +138,12 @@ export default function DisasterListPage() {
     setFilters(EMPTY_FILTERS);
   };
 
+  const applyKalimantan2026Filter = () => {
+    const nextFilters: DisasterEventListParams = { disaster_type: "forest_fire", year: 2026 };
+    setPendingFilters(nextFilters);
+    setFilters(nextFilters);
+  };
+
   const years = Array.from({ length: Math.max(0, yearMax - yearMin + 1) }, (_, i) => yearMax - i);
 
   const provinceOptions = useMemo(() => {
@@ -206,6 +213,8 @@ export default function DisasterListPage() {
           </div>
         </div>
       </section>
+
+      <KalimantanFire2026Panel onApplyFilter={applyKalimantan2026Filter} />
 
       <form className="disaster-filter-panel" onSubmit={applyFilters}>
         <div className="disaster-filter-grid">

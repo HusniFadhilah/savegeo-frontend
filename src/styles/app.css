@@ -1322,6 +1322,340 @@
   padding: 14px;
 }
 
+.disaster-kalimantan-brief {
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 10px;
+  background: #f8fffd;
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.08);
+}
+
+.disaster-kalimantan-brief-header,
+.disaster-kalimantan-brief-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.disaster-kalimantan-brief-header {
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.disaster-kalimantan-brief-header h2 {
+  margin: 0;
+  color: #134e4a;
+  font-size: 1.18rem;
+  font-weight: 850;
+}
+
+.disaster-kalimantan-brief-header p {
+  max-width: 760px;
+  margin: 5px 0 0;
+  color: #47615f;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.disaster-kalimantan-brief-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(310px, 0.9fr);
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.disaster-kalimantan-map-wrap .savegeo-map {
+  height: 330px;
+  border: 1px solid #cfe5df;
+  border-radius: 8px;
+}
+
+.disaster-kalimantan-facts {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.disaster-kalimantan-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.disaster-kalimantan-stat-grid > div {
+  padding: 12px;
+  border: 1px solid #d8ebe6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.disaster-kalimantan-stat-grid span,
+.disaster-kalimantan-stat-grid small,
+.disaster-kalimantan-province-list span,
+.disaster-kalimantan-province-list small {
+  display: block;
+  color: #64748b;
+  font-size: 0.73rem;
+  line-height: 1.4;
+}
+
+.disaster-kalimantan-stat-grid strong {
+  display: block;
+  margin: 6px 0 3px;
+  color: #134e4a;
+  font-size: 1.2rem;
+  font-weight: 850;
+}
+
+.disaster-kalimantan-province-list {
+  display: grid;
+  gap: 8px;
+}
+
+.disaster-kalimantan-province-list > div {
+  padding: 9px 11px;
+  border-left: 3px solid #0f766e;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.disaster-kalimantan-province-list > div:nth-child(2) {
+  border-left-color: #d97706;
+}
+
+.disaster-kalimantan-province-list > div:nth-child(3) {
+  border-left-color: #dc2626;
+}
+
+.disaster-kalimantan-province-list > div:nth-child(4) {
+  border-left-color: #2563eb;
+}
+
+.disaster-kalimantan-province-list > div:nth-child(5) {
+  border-left-color: #7c3aed;
+}
+
+.disaster-kalimantan-province-list strong {
+  color: #1e293b;
+  font-size: 0.84rem;
+}
+
+.disaster-kalimantan-brief-footer {
+  align-items: flex-start;
+  border-top: 1px solid rgba(15, 118, 110, 0.12);
+  color: #526b68;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.disaster-kalimantan-brief-footer > div:first-child {
+  max-width: 560px;
+}
+
+.disaster-kalimantan-brief-footer i {
+  margin-right: 5px;
+  color: #0f766e;
+}
+
+.disaster-kalimantan-sources {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px 12px;
+}
+
+.disaster-kalimantan-sources a {
+  color: #0f766e;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.disaster-kalimantan-sources a:hover {
+  text-decoration: underline;
+}
+
+.disaster-kalimantan-controls {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #d8ebe6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.disaster-kalimantan-region-controls {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #cfe5df;
+  border-radius: 8px;
+  background: rgba(240, 253, 250, 0.72);
+}
+
+.disaster-kalimantan-region-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.disaster-kalimantan-region-grid label {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.disaster-kalimantan-region-grid select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 3px;
+  padding: 5px 6px;
+  border: 1px solid #dbe4ee;
+  border-radius: 5px;
+  color: #334155;
+  background: #fff;
+  font-size: 0.72rem;
+}
+
+.disaster-kalimantan-controls-title,
+.disaster-kalimantan-live-result-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.disaster-kalimantan-controls-title span {
+  color: #134e4a;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.disaster-kalimantan-controls-title small,
+.disaster-kalimantan-live-result-heading span {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.disaster-kalimantan-date-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 10px 0;
+}
+
+.disaster-kalimantan-date-grid label {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.disaster-kalimantan-date-grid input {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 4px 5px;
+  border: 1px solid #dbe4ee;
+  border-radius: 5px;
+  color: #334155;
+  font-size: 0.7rem;
+}
+
+.disaster-kalimantan-layer-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  margin-top: 9px;
+  color: #475569;
+  font-size: 0.72rem;
+}
+
+.disaster-kalimantan-layer-switches label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.disaster-kalimantan-live-result {
+  padding: 10px;
+  border: 1px solid #d8ebe6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.disaster-kalimantan-live-result-heading {
+  color: #134e4a;
+  font-size: 0.84rem;
+}
+
+.disaster-kalimantan-live-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.disaster-kalimantan-live-kpis div {
+  padding: 7px;
+  border-radius: 6px;
+  background: #f0fdf4;
+}
+
+.disaster-kalimantan-live-kpis span,
+.disaster-kalimantan-live-kpis strong {
+  display: block;
+}
+
+.disaster-kalimantan-live-kpis span {
+  color: #64748b;
+  font-size: 0.66rem;
+}
+
+.disaster-kalimantan-live-kpis strong {
+  margin-top: 2px;
+  color: #166534;
+  font-size: 0.88rem;
+}
+
+.disaster-kalimantan-severity-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  margin-top: 10px;
+  color: #475569;
+  font-size: 0.7rem;
+}
+
+.disaster-kalimantan-severity-list > span {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: #64748b;
+  font-weight: 750;
+}
+
+.disaster-kalimantan-severity-list > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.disaster-kalimantan-severity-list em {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.disaster-kalimantan-severity-list strong {
+  margin-left: auto;
+  color: #334155;
+}
+
+.severity-low { background: #facc15; }
+.severity-moderate { background: #f97316; }
+.severity-high { background: #dc2626; }
+.severity-very-high { background: #7f1d1d; }
+
 .disaster-filter-grid {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) 120px minmax(150px, 1fr) minmax(150px, 1fr) minmax(
@@ -1838,6 +2172,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .disaster-kalimantan-brief-grid {
+    grid-template-columns: 1fr;
+  }
+
   .disaster-filter-search {
     grid-column: 1 / -1;
   }
@@ -1868,6 +2206,21 @@
   .disaster-detail-hero {
     grid-template-columns: 1fr;
     padding: 18px;
+  }
+
+  .disaster-kalimantan-brief-header,
+  .disaster-kalimantan-brief-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .disaster-kalimantan-sources {
+    justify-content: flex-start;
+  }
+
+  .disaster-kalimantan-date-grid,
+  .disaster-kalimantan-live-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .disaster-hero-metrics,

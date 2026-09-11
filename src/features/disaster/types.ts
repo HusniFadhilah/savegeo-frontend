@@ -10,7 +10,7 @@ import type { AoiFeature, MapLegendEntry } from "@/types/map";
 
 /** Payload accepted by every /disaster/* endpoint that takes an AOI. */
 export type AoiPayload =
-  | { geojson: AoiFeature }
+  | { geojson: AoiFeature | GeoJSON.FeatureCollection }
   | { west: number; south: number; east: number; north: number };
 
 export interface DisasterSourceItem {
@@ -53,6 +53,64 @@ export interface DemSlopeResult {
   source: string;
   stats?: DemSlopeStats;
   legend?: MapLegendEntry[];
+}
+
+export interface DisasterFireHotspotData {
+  source: string;
+  features: GeoJSON.Feature[];
+  count: number;
+  note: string;
+}
+
+export interface DisasterFireSamResult extends GeoJSON.FeatureCollection {
+  metadata?: {
+    model?: string;
+    object_count?: number;
+    automatic_object_count?: number;
+    seed_count?: number;
+    selection_method?: string;
+  };
+}
+
+export interface DisasterFireSamJob {
+  job_id: string;
+  status: "running" | "complete" | "failed";
+  message?: string;
+  method?: string;
+  scene_id?: string;
+  scene_acquired_at?: string | null;
+  scene_cloud_cover_pct?: number | null;
+  seed_source?: string;
+  seed_count?: number;
+  result?: DisasterFireSamResult;
+}
+
+export interface DisasterEventMapResponse {
+  success: boolean;
+  event_type: string;
+  title: string;
+  source: string;
+  tile_url: string | null;
+  before_tile_url?: string | null;
+  after_tile_url?: string | null;
+  area_ha: number;
+  scale: number;
+  before_period: { start: string; end: string };
+  after_period: { start: string; end: string };
+  legend: MapLegendEntry[];
+  method_note: string;
+  dnbr_threshold?: number;
+  before_scene_count?: number;
+  after_scene_count?: number;
+  severity_area_ha?: {
+    low_ha: number;
+    moderate_ha: number;
+    high_ha: number;
+    very_high_ha: number;
+  };
+  mean_dnbr_affected?: number | null;
+  max_dnbr_affected?: number | null;
+  hotspots?: DisasterFireHotspotData;
 }
 
 /**
