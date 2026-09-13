@@ -284,7 +284,7 @@ export default function BeforeAfterMaps({
             beforeUrl={beforeTile}
             afterUrl={swipeAfterTile}
             beforeLabel={`Tutupan lahan ${yearA ?? "-"}`}
-            afterLabel={`Tutupan lahan ${yearB ?? "-"}`}
+            afterLabel={mode === "changed" ? "Area berubah" : mode === "destination" ? "Kelas tujuan" : `Tutupan lahan ${yearB ?? "-"}`}
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
             opacity={opacity}
@@ -293,7 +293,7 @@ export default function BeforeAfterMaps({
           >
             <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
             <MapClickInspector onClick={handleMapClick} />
-            {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
+            {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
             <FitToAoi aoi={aoi} />
           </SwipeCompareMap>
           <div className="row g-2 mt-1">

@@ -39,8 +39,7 @@ function FitToAoi({
     if (!aoi?.geojson) return;
     const bounds = L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds();
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aoi?.id]);
+  }, [aoi?.geojson, map, maxZoom]);
   return null;
 }
 
@@ -459,7 +458,6 @@ export default function SatelliteViewer({
 
         {view === "swipe" && (
           <SwipeCompareMap
-            key={`${preTile ?? "none"}|${postTile ?? "none"}`}
             id="disasterSatSwipeMap"
             beforeUrl={preTile}
             afterUrl={postTile}

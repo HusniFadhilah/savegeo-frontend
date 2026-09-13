@@ -10,4 +10,5 @@ docs/
 .vscode/*
 !.vscode/extensions.json
 coverage
+test-results/
 MIGRATION.md
