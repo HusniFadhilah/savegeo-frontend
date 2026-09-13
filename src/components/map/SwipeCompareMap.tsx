@@ -5,6 +5,7 @@ import type {
   TileLayer as LeafletTileLayer,
   Map as LeafletMap,
 } from "leaflet";
+import RasterResolutionNotice from "./RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 
 export type SwipeOrientation = "vertical" | "horizontal";
@@ -295,6 +296,8 @@ interface Props {
   zoom?: number;
   maxZoom?: number;
   maxNativeZoom?: number;
+  beforeResolutionM?: number;
+  afterResolutionM?: number;
   beforeMaxNativeZoom?: number;
   afterMaxNativeZoom?: number;
   beforeCrossOrigin?: "anonymous" | "use-credentials";
@@ -330,6 +333,8 @@ export default function SwipeCompareMap({
   zoom,
   maxZoom,
   maxNativeZoom,
+  beforeResolutionM,
+  afterResolutionM,
   beforeMaxNativeZoom,
   afterMaxNativeZoom,
   beforeCrossOrigin,
@@ -345,8 +350,8 @@ export default function SwipeCompareMap({
   const [afterPaneReady, setAfterPaneReady] = useState(false);
   const [retry, setRetry] = useState(0);
   const sourceKey = useMemo(
-    () => JSON.stringify([beforeUrl, afterUrl, bounds, clipGeometry, retry]),
-    [beforeUrl, afterUrl, bounds, clipGeometry, retry],
+    () => JSON.stringify([beforeUrl, afterUrl, bounds, clipGeometry, retry, beforeMaxNativeZoom, afterMaxNativeZoom, maxNativeZoom, maxZoom]),
+    [beforeUrl, afterUrl, bounds, clipGeometry, retry, beforeMaxNativeZoom, afterMaxNativeZoom, maxNativeZoom, maxZoom],
   );
   const [beforeStatus, setBeforeStatus] = useState<{ key: string; status: TileStatus }>();
   const [afterStatus, setAfterStatus] = useState<{ key: string; status: TileStatus }>();
@@ -487,6 +492,10 @@ export default function SwipeCompareMap({
           clipGeometry={clipGeometry}
         />
         <PanLockController locked={panLocked} />
+        {(beforeResolutionM || afterResolutionM) && <RasterResolutionNotice layers={[
+          { label: beforeLabel, resolutionM: beforeResolutionM, nativeZoom: beforeMaxNativeZoom ?? maxNativeZoom, tileUrl: beforeUrl },
+          { label: afterLabel, resolutionM: afterResolutionM, nativeZoom: afterMaxNativeZoom ?? maxNativeZoom, tileUrl: afterUrl },
+        ]} />}
       </MapView>
 
       <div

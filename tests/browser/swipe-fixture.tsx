@@ -14,8 +14,9 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../../src/styles/legacy-base.css";
 import "../../src/styles/app.css";
 
-const tile = (name: string) => `${location.origin}/test-tiles/${name}/{z}/{x}/{y}.png`;
-const outer = [[-30, -20], [30, -20], [30, 20], [-30, 20], [-30, -20]];
+const live = new URLSearchParams(location.search).has("live");
+const tile = (name: string) => `${location.origin}/${live ? "test-results/live-resolution" : "test-tiles"}/${name}/{z}/{x}/{y}.png`;
+const outer = live ? [[115.19,-8.68],[115.25,-8.68],[115.25,-8.62],[115.19,-8.62],[115.19,-8.68]] : [[-30, -20], [30, -20], [30, 20], [-30, 20], [-30, -20]];
 const hole = [[-4, -4], [-4, 4], [4, 4], [4, -4], [-4, -4]];
 const feature = (shift = 0, holes = false) => ({ type: "Feature", properties: {}, geometry: {
   type: "Polygon", coordinates: [outer, ...(holes ? [hole] : [])].map(r => r.map(([x,y]) => [x + shift, y])),
@@ -57,9 +58,10 @@ function Fixture() {
     : module === "carbon-estimation" ? <ResultsMapPanel aoi={{feature: aoi, bounds: L.geoJSON(aoi).getBounds()} as any} zoom={3}
       results={{carbon: {carbon_estimated: {tile_url: before}, carbon_reference: {tile_url: after}}} as any}
       visMin={0} visMax={100} visPalette={["#000", "#fff"]} legendBins={2} showReference mapKey="test" />
-    : <SwipeCompareMap id="testSwipe" beforeUrl={before} afterUrl={after} center={[0,0]} zoom={3}
+    : <SwipeCompareMap id="testSwipe" beforeUrl={before} afterUrl={after} center={live ? [-8.65,115.22] : [0,0]} zoom={module === "resolution" ? 14 : 3}
       bounds={clip ? L.geoJSON(aoi).getBounds() : undefined} clipGeometry={clip ? aoi : null} opacity={opacity}
-      orientation={orientation} onOrientationChange={setOrientation} beforeMaxNativeZoom={3} afterMaxNativeZoom={2}>
+      orientation={orientation} onOrientationChange={setOrientation} beforeResolutionM={module === "resolution" ? 10 : undefined} afterResolutionM={module === "resolution" ? (live ? 10 : 20) : undefined}
+      beforeMaxNativeZoom={module === "resolution" ? 14 : 3} afterMaxNativeZoom={module === "resolution" ? (live ? 14 : 13) : 2}>
       <ExposeMap />
     </SwipeCompareMap>}
   </div>;

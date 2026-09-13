@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, useMap } from "react-leaflet";
+import { nativeZoomForResolution } from "@/config/mapZoom";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
@@ -18,6 +19,7 @@ interface ResultTab {
   label: string;
   icon: string;
   tileUrl?: string;
+  resolutionM?: number;
 }
 
 function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
@@ -51,17 +53,18 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
         label: sat ? `RGB (${sat.name})` : "RGB",
         icon: "bi-image",
         tileUrl: results.vegetation.rgb_tile_url,
+        resolutionM: sat?.resolution_m,
       });
     }
     for (const [index, stats] of Object.entries(results.vegetation.indices || {})) {
-      tabs.push({ key: index, label: index, icon: "bi-flower21", tileUrl: stats.tile_url });
+      tabs.push({ key: index, label: index, icon: "bi-flower21", tileUrl: stats.tile_url, resolutionM: stats.native_scale_m ?? results.vegetation.satellite?.resolution_m });
     }
   }
 
   if (results.landcover) {
     for (const [key, val] of Object.entries(results.landcover)) {
       if (!isLandCoverDatasetEntry(key, val)) continue;
-      tabs.push({ key, label: key.replace(/_/g, " "), icon: "bi-map", tileUrl: val.tile_url });
+      tabs.push({ key, label: key.replace(/_/g, " "), icon: "bi-map", tileUrl: val.tile_url, resolutionM: Number.parseFloat(String(val.resolution)) || undefined });
     }
   }
 
@@ -71,6 +74,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
       label: "Carbon Stock",
       icon: "bi-tree",
       tileUrl: results.carbon.carbon_estimated?.tile_url,
+      resolutionM: results.carbon.model_info?.scale,
     });
     if (showReference && results.carbon.carbon_reference?.tile_url) {
       tabs.push({
@@ -78,6 +82,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
         label: "Peta Referensi Asli",
         icon: "bi-database",
         tileUrl: results.carbon.carbon_reference.tile_url,
+        resolutionM: results.carbon.carbon_reference.resolution,
       });
     }
   }
@@ -304,6 +309,10 @@ export default function ResultsMapPanel({
               afterUrl={compareTab.tileUrl ?? null}
               beforeLabel={activeTab?.label ?? "Layer A"}
               afterLabel={compareTab.label}
+              beforeResolutionM={activeTab?.resolutionM}
+              afterResolutionM={compareTab.resolutionM}
+              beforeMaxNativeZoom={nativeZoomForResolution(activeTab?.resolutionM)}
+              afterMaxNativeZoom={nativeZoomForResolution(compareTab.resolutionM)}
               orientation={compareOrientation}
               onOrientationChange={setCompareOrientation}
               center={center}
@@ -344,7 +353,7 @@ export default function ResultsMapPanel({
               <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
               {activeTab?.tileUrl && (
                 <>
-                  <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} />
+                  <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} resolutionM={activeTab.resolutionM} opacity={opacity} />
                   <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
                 </>
               )}

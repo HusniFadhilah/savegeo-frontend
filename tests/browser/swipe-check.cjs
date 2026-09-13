@@ -76,7 +76,7 @@ function pixels(png) {
         if (url.includes('/base/') || !url.startsWith(base)) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#eee"/></svg>'});
         return route.continue();
       });
-      for (const module of (process.env.SWIPE_MODULES || 'shared,disaster,land-cover-change,carbon-estimation,imagery').split(',')) {
+      for (const module of (process.env.SWIPE_MODULES || 'shared,disaster,land-cover-change,carbon-estimation,imagery,resolution').split(',')) {
         const page = await context.newPage(); const errors = [];
         let apiRequests = 0, expectedTileError = false;
         page.on('request', r => { if(['fetch','xhr'].includes(r.resourceType())) apiRequests++; });
@@ -98,6 +98,18 @@ function pixels(png) {
         await slider.waitFor();
         await page.waitForFunction(() => document.querySelector('.swipe-divider')?.getAttribute('aria-disabled') === 'false');
         await page.waitForTimeout(400);
+        if(module === 'resolution') {
+          await page.evaluate(() => window.testMap.setZoom(17, {animate:false}));
+          await page.waitForFunction(() => document.querySelector('.swipe-divider')?.getAttribute('aria-disabled')==='false');
+          await page.waitForTimeout(400);
+          assert.equal(await page.locator('[data-native-resolution="10"]').getAttribute('data-native-zoom'),'14');
+          assert.equal(await page.locator('[data-native-resolution="20"]').getAttribute('data-native-zoom'),'13');
+          assert((await page.locator('.raster-resolution-notice').innerText()).includes('tanpa detail tambahan'));
+          for(const [name,zoom] of [['before',14],['after',13]]) {
+            const urls=await page.locator(`.leaflet-swipe-${name}-pane img`).evaluateAll(nodes=>nodes.map(n=>n.src));
+            assert(urls.length>0 && urls.every(url=>url.includes(`/${name}/${zoom}/`)), 'Source tile zoom must remain native');
+          }
+        }
         assert.equal(await page.locator('.swipe-compare-wrap .leaflet-container').count(),1);
         const map = page.locator('.swipe-compare-wrap .leaflet-container');
         for (const orientation of ['vertical','horizontal']) {

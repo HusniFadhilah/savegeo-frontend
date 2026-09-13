@@ -1,4 +1,5 @@
 export interface VegetationIndexStats {
+  native_scale_m?: number;
   min?: number;
   mean?: number;
   max?: number;

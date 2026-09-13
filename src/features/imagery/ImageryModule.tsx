@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { nativeZoomForResolution } from "@/config/mapZoom";
+import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
@@ -180,11 +182,9 @@ function formatResolution(value?: number | null): string {
   return `${value.toLocaleString("id-ID")} m`;
 }
 
-function nativeZoomForResolution(resolutionM?: number | null, superResolution: ImagerySuperResolutionMode = "off"): number {
-  if (resolutionM == null || Number.isNaN(Number(resolutionM)) || resolutionM <= 0) return SCENE_TILE_MAX_NATIVE_ZOOM;
-  const factor = superResolution === "bicubic_4x" ? 4 : superResolution === "bicubic_2x" ? 2 : 1;
-  const renderResolutionM = Number(resolutionM) / factor;
-  return Math.max(0, Math.min(SCENE_TILE_MAX_ZOOM, Math.ceil(Math.log2(156543.03392 / renderResolutionM))));
+
+function sceneResolution(scene: ImageryScene | undefined, assetKey: string, fallback?: number) {
+  return scene?.assets?.find(asset => asset.key === assetKey)?.resolution_m ?? scene?.resolution_m ?? fallback;
 }
 
 function SceneFootprintLayer({
@@ -248,9 +248,8 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
  * utk tanggal beserta jam tertentu, tanpa harus land cover?" - every other
  * module (Vegetation/Carbon/LC-Change) always composites over a date range
  * and only ever exposes month- or (Dynamic World only) day-level granularity;
- * none of them expose a single scene's real overpass time or show it
- * unmodified (no cloud masking - the point here is to look at the scene
- * as-is, clouds included, and judge it yourself).
+ * Scene tiles retain the original spatial resolution. Cloud masking is
+ * enabled by default and can be disabled to inspect the original clouds.
  */
 export default function ImageryModule() {
   const aoiState = useAoiStore((s) => s.aoi);
@@ -311,9 +310,9 @@ export default function ImageryModule() {
 
   const [startDate, setStartDate] = useState(daysAgoIso(30));
   const [endDate, setEndDate] = useState(todayIso());
-  const [cloudFilterEnabled, setCloudFilterEnabled] = useState(false);
+  const [cloudFilterEnabled, setCloudFilterEnabled] = useState(true);
   const [maxCloudCover, setMaxCloudCover] = useState(60);
-  const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("bicubic_4x");
+  const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("off");
   const [stacCatalogUrl, setStacCatalogUrl] = useState("");
   const [stacCollections, setStacCollections] = useState("");
   const [cogAssetKey, setCogAssetKey] = useState("visual");
@@ -382,9 +381,9 @@ export default function ImageryModule() {
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
   const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}:${cogAssetKey}:${cogBands}:${cogRescale}`;
   const sceneTileMaxNativeZoom =
-    isOpenHighResProvider
-      ? SCENE_TILE_MAX_ZOOM
-      : nativeZoomForResolution(satelliteMeta?.resolution_m, activeSuperResolution);
+    isEsriWayback
+      ? SCENE_TILE_MAX_NATIVE_ZOOM
+      : nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === selectedSceneId), cogAssetKey, satelliteMeta?.resolution_m));
   const sceneFocusMaxZoom = isOpenHighResProvider ? 21 : Math.min(sceneTileMaxNativeZoom, 17);
   useEffect(() => {
     invalidateCompare();
@@ -889,7 +888,7 @@ export default function ImageryModule() {
 
           <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
-              <i className="bi bi-stars" /> Super Resolution
+              <i className="bi bi-stars" /> Interpolasi tampilan
             </label>
             <SearchableSelect
               id="imagerySuperResolution"
@@ -898,13 +897,12 @@ export default function ImageryModule() {
               disabled={!supportsSuperResolution}
               options={[
                 { value: "off", label: "Nonaktif" },
-                { value: "bicubic_2x", label: "Bicubic 2x" },
-                { value: "bicubic_4x", label: "Bicubic 4x" },
+                { value: "bicubic_2x", label: "Bicubic (visual saja)" },
               ]}
             />
             <small className="text-muted d-block mt-1">
               {supportsSuperResolution
-                ? "Diterapkan backend saat tile scene dimuat; meningkatkan kehalusan visual tanpa mengubah sumber data asli."
+                ? "Interpolasi tidak menambah detail sumber. Zoom di atas resolusi asli hanya memperbesar piksel."
                 : "Tidak tersedia untuk provider ini karena tile tidak dirender ulang oleh backend GEE."}
             </small>
           </div>
@@ -1290,7 +1288,7 @@ export default function ImageryModule() {
                   {tileUrl && (
                     <>
                       <TileLayer
-                        key={`${selectedSceneId ?? "scene"}:${tileUrl}`}
+                        key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
                         url={tileUrl}
                         opacity={tileOpacity}
                         attribution={
@@ -1312,6 +1310,7 @@ export default function ImageryModule() {
                         maxZoom={SCENE_TILE_MAX_ZOOM}
                         pane={RESULT_PANE}
                       />
+                      <RasterResolutionNotice layers={[{label: satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
                       <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
                     </>
                   )}
@@ -1442,8 +1441,10 @@ export default function ImageryModule() {
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
                     maxNativeZoom={sceneTileMaxNativeZoom}
-                    beforeMaxNativeZoom={nativeZoomForResolution(scenes.find(s => s.id === compareSceneAId)?.resolution_m ?? satelliteMeta?.resolution_m, activeSuperResolution)}
-                    afterMaxNativeZoom={nativeZoomForResolution(scenes.find(s => s.id === compareSceneBId)?.resolution_m ?? satelliteMeta?.resolution_m, activeSuperResolution)}
+                    beforeResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m)}
+                    afterResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m)}
+                    beforeMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m))}
+                    afterMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m))}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
                     bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
                     clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
