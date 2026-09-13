@@ -1,8 +1,9 @@
+import RasterResolutionNotice from "./RasterResolutionNotice";
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { RESULT_PANE } from "@/config/mapPanes";
-import { HIGH_DETAIL_MAX_ZOOM, RESULT_TILE_MAX_NATIVE_ZOOM } from "@/config/mapZoom";
+import { HIGH_DETAIL_MAX_ZOOM, nativeZoomForResolution } from "@/config/mapZoom";
 
 interface Props {
   /** Remount (and thus re-add) whenever this changes, e.g. the active result tab key. */
@@ -10,6 +11,7 @@ interface Props {
   tileUrl: string;
   opacity: number;
   attribution?: string;
+  resolutionM?: number;
 }
 
 const TRANSPARENT_TILE =
@@ -21,7 +23,7 @@ const TRANSPARENT_TILE =
  * because the tile URL changes per result tab and we want a clean
  * add/remove per `layerKey` rather than react-leaflet's URL-diffing.
  */
-export default function ResultTileLayer({ layerKey, tileUrl, opacity, attribution }: Props) {
+export default function ResultTileLayer({ layerKey, tileUrl, opacity, attribution, resolutionM }: Props) {
   const map = useMap();
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function ResultTileLayer({ layerKey, tileUrl, opacity, attributio
       attribution: attribution ?? "© Google Earth Engine",
       className: "gee-tile-layer",
       pane: map.getPane(RESULT_PANE) ? RESULT_PANE : undefined,
-      maxNativeZoom: RESULT_TILE_MAX_NATIVE_ZOOM,
+      maxNativeZoom: nativeZoomForResolution(resolutionM),
       maxZoom: HIGH_DETAIL_MAX_ZOOM,
       opacity,
       errorTileUrl: TRANSPARENT_TILE,
@@ -40,7 +42,7 @@ export default function ResultTileLayer({ layerKey, tileUrl, opacity, attributio
       map.removeLayer(layer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, layerKey, tileUrl]);
+  }, [map, layerKey, tileUrl, resolutionM]);
 
   useEffect(() => {
     map.eachLayer((layer) => {
@@ -50,5 +52,5 @@ export default function ResultTileLayer({ layerKey, tileUrl, opacity, attributio
     });
   }, [map, opacity]);
 
-  return null;
+  return resolutionM ? <RasterResolutionNotice layers={[{label: layerKey, resolutionM, tileUrl}]} /> : null;
 }

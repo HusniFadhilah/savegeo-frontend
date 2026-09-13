@@ -6,6 +6,7 @@ export interface LandCoverClassInfo {
 }
 
 export interface LandCoverDatasetResult {
+  resolution?: string | number;
   dataset_name?: string;
   year?: number | string;
   classes: Record<string, LandCoverClassInfo>;

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { nativeZoomForResolution } from "@/config/mapZoom";
+import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
@@ -87,12 +89,7 @@ function viewerUrl(url: string | null): string | null {
 }
 
 function nativeZoomForImagery(img: SatelliteImageryRecord | null): number {
-  const resolution = Number(img?.resolution_m);
-  if (!Number.isFinite(resolution) || resolution <= 0) return 19;
-  return Math.max(
-    0,
-    Math.min(DISASTER_SCENE_MAX_ZOOM, Math.ceil(Math.log2(156543.03392 / resolution))),
-  );
+  return nativeZoomForResolution(img?.resolution_m);
 }
 
 function ViewerLayerPane() {
@@ -370,7 +367,8 @@ export default function SatelliteViewer({
               highlightedHotspotId={highlightedHotspotId}
               onHotspotClick={onHotspotClick}
             />
-            <FitToAoi aoi={aoi} />
+            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
+                <FitToAoi aoi={aoi} />
             <FitToFeature feature={focusFeature} signal={focusSignal} />
           </MapView>
         )}
@@ -408,6 +406,7 @@ export default function SatelliteViewer({
                   highlightedHotspotId={highlightedHotspotId}
                   onHotspotClick={onHotspotClick}
                 />
+                <RasterResolutionNotice layers={[{label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
                 <FitToFeature feature={focusFeature} signal={focusSignal} />
               </MapView>
@@ -446,6 +445,7 @@ export default function SatelliteViewer({
                   highlightedHotspotId={highlightedHotspotId}
                   onHotspotClick={onHotspotClick}
                 />
+                <RasterResolutionNotice layers={[{label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
                 <FitToFeature feature={focusFeature} signal={focusSignal} />
               </MapView>
@@ -469,6 +469,8 @@ export default function SatelliteViewer({
             onOrientationChange={setSwipeOrientation}
             opacity={imageryOpacity}
             maxZoom={DISASTER_SCENE_MAX_ZOOM}
+            beforeResolutionM={preImg?.resolution_m ?? undefined}
+            afterResolutionM={postImg?.resolution_m ?? undefined}
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
             initialPercent={35}

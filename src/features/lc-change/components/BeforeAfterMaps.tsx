@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GeoJSON, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import { nativeZoomForResolution, HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
@@ -90,6 +91,9 @@ export default function BeforeAfterMaps({
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? afterRawTile : afterRawTile;
   const swipeAfterTile = mode === "changed" ? changeMapData?.changed_tile_url ?? afterTile : afterTile;
+
+  const beforeNativeZoom = nativeZoomForResolution(Number.parseFloat(String(yearA != null ? yearData[yearA]?.resolution ?? changeMapData?.resolution : changeMapData?.resolution)));
+  const afterNativeZoom = nativeZoomForResolution(Number.parseFloat(String(yearB != null ? yearData[yearB]?.resolution ?? changeMapData?.resolution : changeMapData?.resolution)));
 
   const beforeLegend = classLegend(yearA != null ? yearData[yearA]?.classes : undefined);
   const afterLegend = classLegend(yearB != null ? yearData[yearB]?.classes : undefined);
@@ -238,7 +242,8 @@ export default function BeforeAfterMaps({
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
               <MapClickInspector onClick={handleMapClick} />
               {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
-              {beforeTile && <TileLayer url={beforeTile} opacity={opacity} attribution="Google Earth Engine" pane={RESULT_PANE} />}
+              {beforeTile && <TileLayer url={beforeTile}
+                  maxNativeZoom={beforeNativeZoom} maxZoom={HIGH_DETAIL_MAX_ZOOM} opacity={opacity} attribution="Google Earth Engine" pane={RESULT_PANE} />}
               <FitToAoi aoi={aoi} />
             </MapView>
             <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
@@ -253,6 +258,7 @@ export default function BeforeAfterMaps({
                 <TileLayer
                   key={`${mode}-${afterTile}`}
                   url={afterTile}
+                  maxNativeZoom={afterNativeZoom} maxZoom={HIGH_DETAIL_MAX_ZOOM}
                   opacity={opacity * (mode === "destination" ? 0.9 : 0.88)}
                   attribution="Google Earth Engine"
                   pane={RESULT_PANE}
@@ -262,6 +268,7 @@ export default function BeforeAfterMaps({
                 <TileLayer
                   key={`changed-${changeMapData.changed_tile_url}`}
                   url={changeMapData.changed_tile_url}
+                  maxNativeZoom={afterNativeZoom} maxZoom={HIGH_DETAIL_MAX_ZOOM}
                   opacity={opacity * 0.78}
                   attribution="Google Earth Engine"
                   pane={RESULT_PANE}
@@ -285,6 +292,8 @@ export default function BeforeAfterMaps({
             afterUrl={swipeAfterTile}
             beforeLabel={`Tutupan lahan ${yearA ?? "-"}`}
             afterLabel={mode === "changed" ? "Area berubah" : mode === "destination" ? "Kelas tujuan" : `Tutupan lahan ${yearB ?? "-"}`}
+            beforeMaxNativeZoom={beforeNativeZoom}
+            afterMaxNativeZoom={afterNativeZoom}
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
             opacity={opacity}
