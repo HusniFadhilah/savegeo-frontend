@@ -85,6 +85,42 @@ export interface DisasterFireSamJob {
   result?: DisasterFireSamResult;
 }
 
+export type FireSourceId = "firms_noaa20" | "firms_noaa21" | "firms_snpp" | "firms_modis" | "bmkg" | "cdse" | "mcd64a1" | "vnp64a1" | "inarisk";
+
+export interface FireSourceResult {
+  id: FireSourceId;
+  status: "ok" | "needs_key" | "no_data" | "unavailable" | "error";
+  label?: string;
+  message: string;
+  kind?: "footprints" | "burned_area" | "hazard";
+  features?: GeoJSON.Feature[];
+  truncated?: boolean;
+  tile_url?: string | null;
+  area_ha?: number;
+  resolution_m?: number;
+  source?: string;
+  wms_url?: string;
+  wms_layers?: string;
+}
+
+export interface FireMultiSourceResponse {
+  sources: FireSourceResult[];
+  hotspots: GeoJSON.FeatureCollection;
+  raw_count: number;
+  merged_count: number;
+  generated_at: string;
+  period: { start: string; end: string };
+  note: string;
+}
+
+export interface FireMultiSourceLayerState {
+  result: FireMultiSourceResponse | null;
+  visibleSources: FireSourceId[];
+  showMerged: boolean;
+  imported: GeoJSON.FeatureCollection | null;
+  showImport: boolean;
+}
+
 export interface DisasterEventMapResponse {
   success: boolean;
   event_type: string;

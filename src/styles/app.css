@@ -6588,3 +6588,28 @@ html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
   background: #26384f !important;
   color: #ffffff !important;
 }
+
+.fire-source-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 10px;
+  border: 1px solid var(--bs-border-color, #cbd5e1);
+  border-radius: 8px;
+}
+.fire-source-picker legend { float: none; width: auto; margin-bottom: 4px; }
+.fire-source-picker label, .fire-source-status-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+}
+.fire-source-picker input, .fire-source-status-list input { margin-top: 3px; flex-shrink: 0; }
+.fire-source-status-list { display: grid; gap: 10px; }
+.fire-source-status-list > div { border-bottom: 1px solid var(--bs-border-color, #cbd5e1); padding-bottom: 8px; }
+.fire-source-status-list small { display: block; margin-left: 21px; }
+.fire-admin-counts { display: grid; gap: 4px; max-height: 240px; overflow-y: auto; margin-top: 8px; }
+.fire-admin-counts > div { display: flex; justify-content: space-between; gap: 12px; }
+@media (max-width: 576px) {
+  .fire-source-picker { grid-template-columns: minmax(0, 1fr); }
+}

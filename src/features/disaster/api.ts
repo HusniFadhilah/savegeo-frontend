@@ -8,6 +8,8 @@ import type {
   DisasterAnalysesResponse,
   DisasterEventDetailResponse,
   DisasterFireSamJob,
+  FireMultiSourceResponse,
+  FireSourceId,
   DisasterEventMapResponse,
   DisasterEventListParams,
   DisasterEventListResponse,
@@ -95,6 +97,18 @@ export function startFireSamSegmentation(params: {
 
 export function fetchFireSamSegmentationJob(jobId: string) {
   return userGet<DisasterFireSamJob>(`/disaster/fire-sam/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export function loadFireMultiSource(params: { aoi: AoiPayload; start_date: string; end_date: string; sources: FireSourceId[] }) {
+  return userPost<FireMultiSourceResponse>("/disaster/fire-multi-source", params);
+}
+
+export function fetchFireBigBoundaries(province: string, city?: string) {
+  return userPost<GeoJSON.FeatureCollection>("/disaster/fire-big-boundaries", { province, city });
+}
+
+export function importFireObservations(content: string, format: "csv" | "geojson") {
+  return userPost<GeoJSON.FeatureCollection>("/disaster/fire-import", { content, format, source: "SIPONGI / impor pengguna" });
 }
 
 // --- new /disasters/* (Disaster Intelligence Dashboard) --------------------
