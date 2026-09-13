@@ -354,6 +354,8 @@ export default function ImageryModule() {
   const [compareOrientation, setCompareOrientation] = useState<SwipeOrientation>("vertical");
   const [compareTileA, setCompareTileA] = useState<string | null>(null);
   const [compareTileB, setCompareTileB] = useState<string | null>(null);
+  const compareRequestRef = useRef(0);
+  const invalidateCompare = useCallback(() => { ++compareRequestRef.current; }, []);
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
 
@@ -384,6 +386,14 @@ export default function ImageryModule() {
       ? SCENE_TILE_MAX_ZOOM
       : nativeZoomForResolution(satelliteMeta?.resolution_m, activeSuperResolution);
   const sceneFocusMaxZoom = isOpenHighResProvider ? 21 : Math.min(sceneTileMaxNativeZoom, 17);
+  useEffect(() => {
+    invalidateCompare();
+    setCompareTileA(null);
+    setCompareTileB(null);
+    setCompareLoading(false);
+    setCompareError(null);
+    return invalidateCompare;
+  }, [aoi, satellite, renderOptionsKey, compareSceneAId, compareSceneBId, invalidateCompare]);
   useEffect(() => {
     ++tileRequestRef.current;
     setScenes([]);
@@ -588,6 +598,7 @@ export default function ImageryModule() {
       setCompareError("Scene A dan Scene B harus berbeda.");
       return;
     }
+    const requestId = ++compareRequestRef.current;
     setCompareLoading(true);
     setCompareError(null);
     setCompareTileA(null);
@@ -625,12 +636,13 @@ export default function ImageryModule() {
           cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
         }),
       ]);
+      if (requestId !== compareRequestRef.current) return;
       setCompareTileA(resA.tile_url);
       setCompareTileB(resB.tile_url);
     } catch (err) {
-      setCompareError(err instanceof Error ? err.message : "Gagal memuat salah satu citra scene.");
+      if (requestId === compareRequestRef.current) setCompareError(err instanceof Error ? err.message : "Gagal memuat salah satu citra scene.");
     } finally {
-      setCompareLoading(false);
+      if (requestId === compareRequestRef.current) setCompareLoading(false);
     }
   };
 
@@ -1430,9 +1442,13 @@ export default function ImageryModule() {
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
                     maxNativeZoom={sceneTileMaxNativeZoom}
+                    beforeMaxNativeZoom={nativeZoomForResolution(scenes.find(s => s.id === compareSceneAId)?.resolution_m ?? satelliteMeta?.resolution_m, activeSuperResolution)}
+                    afterMaxNativeZoom={nativeZoomForResolution(scenes.find(s => s.id === compareSceneBId)?.resolution_m ?? satelliteMeta?.resolution_m, activeSuperResolution)}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
+                    bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
+                    clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
                   >
-                    {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
+                    {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <FitToSceneOrAoi
                       aoi={aoi}
                       focusKey={compareSceneAId ?? "compare-aoi"}

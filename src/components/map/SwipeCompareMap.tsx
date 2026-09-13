@@ -1,15 +1,53 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { TileLayer, useMap } from "react-leaflet";
-import type { LatLngBoundsExpression } from "leaflet";
+import type {
+  LatLngBoundsExpression,
+  TileLayer as LeafletTileLayer,
+  Map as LeafletMap,
+} from "leaflet";
 import MapView from "@/components/map/MapView";
 
 export type SwipeOrientation = "vertical" | "horizontal";
 
-const BEFORE_PANE = "swipe-before-pane";
-const AFTER_PANE = "swipe-after-pane";
+const BEFORE_PANE = "swipe-before";
+const AFTER_PANE = "swipe-after";
 // Above RESULT_PANE (350) so the "after" tile draws on top of the "before"
 // tile, below overlayPane (400) so AOI polygons/markers stay on top of both.
 const AFTER_PANE_Z_INDEX = 360;
+
+type TileStatus = "loading" | "ready" | "error";
+
+// Subscribe before TileLayer mounts, including cached tiles. Keep the layer
+// mounted while the divider moves; only source/AOI changes replace it.
+function CompareTile({
+  onStatus,
+  ...props
+}: React.ComponentProps<typeof TileLayer> & {
+  onStatus: (status: TileStatus) => void;
+}) {
+  const layer = useRef<LeafletTileLayer>(null);
+  const failed = useRef(false);
+  const handlers = useMemo(
+    () => ({
+      loading: () => {
+        failed.current = false;
+        onStatus("loading");
+      },
+      tileerror: () => {
+        failed.current = true;
+        onStatus("error");
+      },
+      load: () => onStatus(failed.current ? "error" : "ready"),
+    }),
+    [onStatus],
+  );
+  useEffect(() => {
+    if (layer.current && !layer.current.isLoading()) {
+      onStatus(failed.current ? "error" : "ready");
+    }
+  }, [onStatus]);
+  return <TileLayer {...props} ref={layer} eventHandlers={handlers} />;
+}
 
 function SwipePaneSetup({ onReady }: { onReady: () => void }) {
   const map = useMap();
@@ -21,17 +59,19 @@ function SwipePaneSetup({ onReady }: { onReady: () => void }) {
     beforePane.style.position = "absolute";
     beforePane.style.left = "0";
     beforePane.style.top = "0";
-    beforePane.style.width = "100%";
-    beforePane.style.height = "100%";
-    beforePane.style.overflow = "hidden";
+    beforePane.style.width = `${map.getSize().x}px`;
+    beforePane.style.height = `${map.getSize().y}px`;
+    beforePane.style.clipPath = 'path("M 0 0 Z")';
+    beforePane.style.overflow = "visible";
     pane.style.zIndex = String(AFTER_PANE_Z_INDEX);
     pane.style.pointerEvents = "none";
     pane.style.position = "absolute";
     pane.style.left = "0";
     pane.style.top = "0";
-    pane.style.width = "100%";
-    pane.style.height = "100%";
-    pane.style.overflow = "hidden";
+    pane.style.width = `${map.getSize().x}px`;
+    pane.style.height = `${map.getSize().y}px`;
+    pane.style.clipPath = 'path("M 0 0 Z")';
+    pane.style.overflow = "visible";
     onReady();
   }, [map, onReady]);
   return null;
@@ -39,7 +79,11 @@ function SwipePaneSetup({ onReady }: { onReady: () => void }) {
 
 type ClipPoint = { x: number; y: number };
 
-function clipPolygon(points: ClipPoint[], inside: (point: ClipPoint) => boolean, intersect: (a: ClipPoint, b: ClipPoint) => ClipPoint) {
+function clipPolygon(
+  points: ClipPoint[],
+  inside: (point: ClipPoint) => boolean,
+  intersect: (a: ClipPoint, b: ClipPoint) => ClipPoint,
+) {
   if (!points.length) return [];
   const output: ClipPoint[] = [];
   let previous = points[points.length - 1];
@@ -54,25 +98,71 @@ function clipPolygon(points: ClipPoint[], inside: (point: ClipPoint) => boolean,
   return output;
 }
 
-function clipRingToMap(points: ClipPoint[], width: number, height: number, orientation: SwipeOrientation, percent: number, side: "before" | "after") {
+function clipRingToMap(
+  points: ClipPoint[],
+  width: number,
+  height: number,
+  orientation: SwipeOrientation,
+  percent: number,
+  side: "before" | "after",
+) {
   const divider = orientation === "vertical" ? (width * percent) / 100 : (height * percent) / 100;
-  const edges: Array<{ inside: (point: ClipPoint) => boolean; intersect: (a: ClipPoint, b: ClipPoint) => ClipPoint }> = [
-    { inside: (p) => p.x >= 0, intersect: (a, b) => ({ x: 0, y: a.y + ((b.y - a.y) * (0 - a.x)) / (b.x - a.x) }) },
-    { inside: (p) => p.x <= width, intersect: (a, b) => ({ x: width, y: a.y + ((b.y - a.y) * (width - a.x)) / (b.x - a.x) }) },
-    { inside: (p) => p.y >= 0, intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (0 - a.y)) / (b.y - a.y), y: 0 }) },
-    { inside: (p) => p.y <= height, intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (height - a.y)) / (b.y - a.y), y: height }) },
+  const edges: Array<{
+    inside: (point: ClipPoint) => boolean;
+    intersect: (a: ClipPoint, b: ClipPoint) => ClipPoint;
+  }> = [
+    {
+      inside: (p) => p.x >= 0,
+      intersect: (a, b) => ({ x: 0, y: a.y + ((b.y - a.y) * (0 - a.x)) / (b.x - a.x) }),
+    },
+    {
+      inside: (p) => p.x <= width,
+      intersect: (a, b) => ({ x: width, y: a.y + ((b.y - a.y) * (width - a.x)) / (b.x - a.x) }),
+    },
+    {
+      inside: (p) => p.y >= 0,
+      intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (0 - a.y)) / (b.y - a.y), y: 0 }),
+    },
+    {
+      inside: (p) => p.y <= height,
+      intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (height - a.y)) / (b.y - a.y), y: height }),
+    },
   ];
   if (orientation === "vertical") {
     edges.push(
       side === "before"
-        ? { inside: (p) => p.x <= divider, intersect: (a, b) => ({ x: divider, y: a.y + ((b.y - a.y) * (divider - a.x)) / (b.x - a.x) }) }
-        : { inside: (p) => p.x >= divider, intersect: (a, b) => ({ x: divider, y: a.y + ((b.y - a.y) * (divider - a.x)) / (b.x - a.x) }) },
+        ? {
+            inside: (p) => p.x <= divider,
+            intersect: (a, b) => ({
+              x: divider,
+              y: a.y + ((b.y - a.y) * (divider - a.x)) / (b.x - a.x),
+            }),
+          }
+        : {
+            inside: (p) => p.x >= divider,
+            intersect: (a, b) => ({
+              x: divider,
+              y: a.y + ((b.y - a.y) * (divider - a.x)) / (b.x - a.x),
+            }),
+          },
     );
   } else {
     edges.push(
       side === "before"
-        ? { inside: (p) => p.y <= divider, intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (divider - a.y)) / (b.y - a.y), y: divider }) }
-        : { inside: (p) => p.y >= divider, intersect: (a, b) => ({ x: a.x + ((b.x - a.x) * (divider - a.y)) / (b.y - a.y), y: divider }) },
+        ? {
+            inside: (p) => p.y <= divider,
+            intersect: (a, b) => ({
+              x: a.x + ((b.x - a.x) * (divider - a.y)) / (b.y - a.y),
+              y: divider,
+            }),
+          }
+        : {
+            inside: (p) => p.y >= divider,
+            intersect: (a, b) => ({
+              x: a.x + ((b.x - a.x) * (divider - a.y)) / (b.y - a.y),
+              y: divider,
+            }),
+          },
     );
   }
   return edges.reduce((result, edge) => clipPolygon(result, edge.inside, edge.intersect), points);
@@ -87,18 +177,27 @@ function aoiPath(
   percent: number,
   side: "before" | "after",
 ) {
-  const polygons = geometry.geometry.type === "Polygon" ? [geometry.geometry.coordinates] : geometry.geometry.coordinates;
-  const paths = polygons.flatMap((polygon) => {
-    const ring = polygon[0]?.map(([lng, lat]) => {
-      const point = map.latLngToLayerPoint([lat, lng]);
-      return { x: point.x, y: point.y };
-    });
-    if (!ring || ring.length < 3) return [];
-    const clipped = clipRingToMap(ring, width, height, orientation, percent, side);
-    if (clipped.length < 3) return [];
-    return [`M ${clipped.map((point) => `${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" L ")} Z`];
-  });
-  return paths.length ? `path("${paths.join(" ")}")` : "none";
+  const polygons =
+    geometry.geometry.type === "Polygon"
+      ? [geometry.geometry.coordinates]
+      : geometry.geometry.coordinates;
+  const origin = map.containerPointToLayerPoint([0, 0]);
+  const paths = polygons.flatMap((polygon) =>
+    polygon.flatMap((coordinates) => {
+      const ring = coordinates.map(([lng, lat]) => {
+        const point = map.latLngToContainerPoint([lat, lng]);
+        return { x: point.x, y: point.y };
+      });
+      if (!ring || ring.length < 3) return [];
+      const clipped = clipRingToMap(ring, width, height, orientation, percent, side);
+      if (clipped.length < 3) return [];
+      return [
+        `M ${clipped.map((point) => `${(point.x + origin.x).toFixed(1)} ${(point.y + origin.y).toFixed(1)}`).join(" L ")} Z`,
+      ];
+    }),
+  );
+  // Empty intersection must hide imagery; `none` would expose the entire scene.
+  return paths.length ? `path(evenodd, "${paths.join(" ")}")` : 'path("M 0 0 Z")';
 }
 
 /**
@@ -128,16 +227,23 @@ function ClipController({
     pane.style.position = "absolute";
     pane.style.left = "0";
     pane.style.top = "0";
-    pane.style.width = "100%";
-    pane.style.height = "100%";
-    pane.style.overflow = "hidden";
+    // Leaflet's mapPane is translated and has no viewport dimensions. Keep
+    // tiles in its coordinate system; clipping alone supplies the viewport.
+    pane.style.overflow = "visible";
     const updateClip = () => {
       const size = map.getSize();
+      pane.style.width = `${size.x}px`;
+      pane.style.height = `${size.y}px`;
+      const origin = map.containerPointToLayerPoint([0, 0]);
+      const cutX = orientation === "vertical" ? (size.x * percent) / 100 : 0;
+      const cutY = orientation === "horizontal" ? (size.y * percent) / 100 : 0;
+      const left = origin.x + (side === "after" ? cutX : 0);
+      const top = origin.y + (side === "after" ? cutY : 0);
+      const right = origin.x + (side === "before" && orientation === "vertical" ? cutX : size.x);
+      const bottom = origin.y + (side === "before" && orientation === "horizontal" ? cutY : size.y);
       const clip = clipGeometry
         ? aoiPath(clipGeometry, map, size.x, size.y, orientation, percent, side)
-        : side === "after"
-          ? orientation === "vertical" ? `inset(0 0 0 ${percent}%)` : `inset(${percent}% 0 0 0)`
-          : "none";
+        : `polygon(${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px)`;
       pane.style.clipPath = clip;
       pane.style.setProperty("-webkit-clip-path", clip);
     };
@@ -237,9 +343,39 @@ export default function SwipeCompareMap({
   const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
   const [afterPaneReady, setAfterPaneReady] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const sourceKey = useMemo(
+    () => JSON.stringify([beforeUrl, afterUrl, bounds, clipGeometry, retry]),
+    [beforeUrl, afterUrl, bounds, clipGeometry, retry],
+  );
+  const [beforeStatus, setBeforeStatus] = useState<{ key: string; status: TileStatus }>();
+  const [afterStatus, setAfterStatus] = useState<{ key: string; status: TileStatus }>();
+  const reportBefore = useCallback(
+    (status: TileStatus) => setBeforeStatus({ key: sourceKey, status }),
+    [sourceKey],
+  );
+  const reportAfter = useCallback(
+    (status: TileStatus) => setAfterStatus({ key: sourceKey, status }),
+    [sourceKey],
+  );
+  const ready =
+    (!beforeUrl || (beforeStatus?.key === sourceKey && beforeStatus.status === "ready")) &&
+    (!afterUrl || (afterStatus?.key === sourceKey && afterStatus.status === "ready"));
+  const hasError =
+    (beforeUrl && beforeStatus?.key === sourceKey && beforeStatus.status === "error") ||
+    (afterUrl && afterStatus?.key === sourceKey && afterStatus.status === "error");
+  const enabled = ready && !!beforeUrl && !!afterUrl;
+  const mapRef = useRef<LeafletMap | null>(null);
+  const restorePanRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const frameRef = useRef<number>();
   const markAfterPaneReady = useCallback(() => setAfterPaneReady(true), []);
+  const finishDrag = useCallback(() => {
+    draggingRef.current = false;
+    if (restorePanRef.current) mapRef.current?.dragging.enable();
+    restorePanRef.current = false;
+  }, []);
 
   const updateFromClientPos = (clientX: number, clientY: number) => {
     const el = containerRef.current;
@@ -249,48 +385,67 @@ export default function SwipeCompareMap({
       orientation === "vertical"
         ? ((clientX - rect.left) / rect.width) * 100
         : ((clientY - rect.top) / rect.height) * 100;
-    setPercent(Math.min(100, Math.max(0, pct)));
+    if (frameRef.current !== undefined) cancelAnimationFrame(frameRef.current);
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = undefined;
+      setPercent(Math.min(100, Math.max(0, pct)));
+    });
   };
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
       updateFromClientPos(e.clientX, e.clientY);
     };
-    const onUp = () => {
-      draggingRef.current = false;
-    };
+    const onUp = finishDrag;
     const onMouseMove = (e: MouseEvent) => {
       if (!draggingRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
       updateFromClientPos(e.clientX, e.clientY);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("blur", onUp);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("blur", onUp);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onUp);
+      finishDrag();
+      if (frameRef.current !== undefined) cancelAnimationFrame(frameRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orientation]);
+  }, [orientation, finishDrag]);
 
-  // Re-center the divider when the orientation flips, so it doesn't stay
-  // pinned at an edge-looking spot from the other axis.
   useEffect(() => {
-    setPercent(50);
-  }, [orientation]);
+    finishDrag();
+  }, [sourceKey, orientation, enabled, finishDrag]);
 
   return (
     <div ref={containerRef} className="swipe-compare-wrap">
-      <MapView id={id} center={center} zoom={zoom} maxZoom={maxZoom}>
+      <MapView
+        id={id}
+        center={center}
+        zoom={zoom}
+        maxZoom={maxZoom}
+        onMapReady={(map) => {
+          mapRef.current = map;
+        }}
+      >
         <SwipePaneSetup onReady={markAfterPaneReady} />
         {children}
-        {beforeUrl && (
-          <TileLayer
-            key={beforeUrl}
+        {afterPaneReady && beforeUrl && (
+          <CompareTile
+            key={`before-${sourceKey}`}
+            onStatus={reportBefore}
             url={beforeUrl}
             opacity={opacity}
             pane={BEFORE_PANE}
@@ -302,8 +457,9 @@ export default function SwipeCompareMap({
           />
         )}
         {afterPaneReady && afterUrl && (
-          <TileLayer
-            key={afterUrl}
+          <CompareTile
+            key={`after-${sourceKey}`}
+            onStatus={reportAfter}
             url={afterUrl}
             opacity={opacity}
             pane={AFTER_PANE}
@@ -315,7 +471,7 @@ export default function SwipeCompareMap({
           />
         )}
         <ClipController
-          percent={percent}
+          percent={!afterUrl ? 100 : !beforeUrl ? 0 : percent}
           orientation={orientation}
           paneReady={afterPaneReady}
           paneName={BEFORE_PANE}
@@ -323,7 +479,7 @@ export default function SwipeCompareMap({
           clipGeometry={clipGeometry}
         />
         <ClipController
-          percent={percent}
+          percent={!afterUrl ? 100 : !beforeUrl ? 0 : percent}
           orientation={orientation}
           paneReady={afterPaneReady}
           paneName={AFTER_PANE}
@@ -333,15 +489,80 @@ export default function SwipeCompareMap({
         <PanLockController locked={panLocked} />
       </MapView>
 
-      <div className="swipe-label swipe-label-before">{beforeLabel}</div>
-      <div className="swipe-label swipe-label-after">{afterLabel}</div>
+      <div
+        className="swipe-label swipe-label-before"
+        style={orientation === "horizontal" ? { top: 52, bottom: "auto", left: "auto", right: 8, maxWidth: "calc(100% - 80px)" } : { bottom: 28 }}
+      >
+        {beforeLabel}
+      </div>
+      <div className="swipe-label swipe-label-after" style={{ bottom: 28 }}>{afterLabel}</div>
+      {!enabled && (
+        <div
+          role="status"
+          style={{
+            position: "absolute",
+            bottom: 36,
+            left: 8,
+            zIndex: 1000,
+            background: "white",
+            padding: "4px 8px",
+            pointerEvents: "none",
+          }}
+        >
+          {hasError ? (
+            <>
+              Sebagian tile gagal dimuat.{" "}
+              <button
+                type="button"
+                style={{ pointerEvents: "auto" }}
+                onClick={() => setRetry((value) => value + 1)}
+              >
+                Coba lagi
+              </button>
+            </>
+          ) : !beforeUrl || !afterUrl ? (
+            "Perbandingan memerlukan dua layer. Layer yang tersedia tetap ditampilkan."
+          ) : (
+            "Memuat kedua citra…"
+          )}
+        </div>
+      )}
 
       <div
         className={`swipe-divider swipe-divider-${orientation}`}
+        role="slider"
+        tabIndex={enabled ? 0 : -1}
+        aria-label={`${beforeLabel} / ${afterLabel}`}
+        aria-orientation={orientation === "vertical" ? "horizontal" : "vertical"}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+        aria-disabled={!enabled}
+        onKeyDown={(e) => {
+          if (!enabled) return;
+          const direction = ["ArrowRight", "ArrowDown"].includes(e.key)
+            ? 1
+            : ["ArrowLeft", "ArrowUp"].includes(e.key)
+              ? -1
+              : 0;
+          if (!direction && e.key !== "Home" && e.key !== "End") return;
+          e.preventDefault();
+          e.stopPropagation();
+          setPercent((value) =>
+            e.key === "Home"
+              ? 0
+              : e.key === "End"
+                ? 100
+                : Math.max(0, Math.min(100, value + direction * (e.shiftKey ? 10 : 1))),
+          );
+        }}
         style={orientation === "vertical" ? { left: `${percent}%` } : { top: `${percent}%` }}
         onPointerDown={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!enabled) return;
+          restorePanRef.current = mapRef.current?.dragging.enabled() ?? false;
+          mapRef.current?.dragging.disable();
           draggingRef.current = true;
           updateFromClientPos(e.clientX, e.clientY);
           e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -349,6 +570,9 @@ export default function SwipeCompareMap({
         onMouseDown={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!enabled || draggingRef.current) return;
+          restorePanRef.current = mapRef.current?.dragging.enabled() ?? false;
+          mapRef.current?.dragging.disable();
           draggingRef.current = true;
           updateFromClientPos(e.clientX, e.clientY);
         }}
@@ -358,12 +582,14 @@ export default function SwipeCompareMap({
         }}
         onPointerUp={(e) => {
           e.stopPropagation();
-          draggingRef.current = false;
-          e.currentTarget.releasePointerCapture?.(e.pointerId);
+          finishDrag();
+          if (e.currentTarget.hasPointerCapture?.(e.pointerId))
+            e.currentTarget.releasePointerCapture(e.pointerId);
         }}
         onPointerCancel={() => {
-          draggingRef.current = false;
+          finishDrag();
         }}
+        onLostPointerCapture={finishDrag}
       >
         <div className="swipe-handle">
           <i
@@ -372,24 +598,28 @@ export default function SwipeCompareMap({
         </div>
       </div>
 
-      {onOrientationChange && (
+      {
         <div className="swipe-orientation-toggle" role="group" aria-label="Arah slider">
-          <button
-            type="button"
-            className={`btn btn-sm ${orientation === "vertical" ? "btn-primary" : "btn-outline-secondary"}`}
-            title="Slider vertikal (kiri/kanan)"
-            onClick={() => onOrientationChange("vertical")}
-          >
-            <i className="fas fa-grip-lines-vertical" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${orientation === "horizontal" ? "btn-primary" : "btn-outline-secondary"}`}
-            title="Slider horizontal (atas/bawah)"
-            onClick={() => onOrientationChange("horizontal")}
-          >
-            <i className="fas fa-grip-lines" />
-          </button>
+          {onOrientationChange && (
+            <>
+              <button
+                type="button"
+                className={`btn btn-sm ${orientation === "vertical" ? "btn-primary" : "btn-outline-secondary"}`}
+                title="Slider vertikal (kiri/kanan)"
+                onClick={() => onOrientationChange("vertical")}
+              >
+                <i className="fas fa-grip-lines-vertical" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${orientation === "horizontal" ? "btn-primary" : "btn-outline-secondary"}`}
+                title="Slider horizontal (atas/bawah)"
+                onClick={() => onOrientationChange("horizontal")}
+              >
+                <i className="fas fa-grip-lines" />
+              </button>
+            </>
+          )}
           <button
             type="button"
             className={`btn btn-sm ${panLocked ? "btn-primary" : "btn-outline-secondary"}`}
@@ -403,7 +633,7 @@ export default function SwipeCompareMap({
             <i className={`fas ${panLocked ? "fa-lock" : "fa-lock-open"}`} />
           </button>
         </div>
-      )}
+      }
     </div>
   );
 }

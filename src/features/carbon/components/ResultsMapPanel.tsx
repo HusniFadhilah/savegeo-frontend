@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GeoJSON } from "react-leaflet";
+import { GeoJSON, useMap } from "react-leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
@@ -18,6 +18,14 @@ interface ResultTab {
   label: string;
   icon: string;
   tileUrl?: string;
+}
+
+function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (aoi.bounds?.isValid()) map.fitBounds(aoi.bounds, { maxZoom: zoom, animate: false });
+  }, [aoi.bounds, map, zoom]);
+  return null;
 }
 
 interface Props {
@@ -226,13 +234,12 @@ export default function ResultsMapPanel({
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
 
-  const compareTabs = tabs.filter((t) => t.key !== activeKey);
+  const compareTabs = useMemo(() => tabs.filter((t) => t.key !== activeKey), [tabs, activeKey]);
   useEffect(() => {
     if (!compareOn) return;
     if (compareKey && compareTabs.some((t) => t.key === compareKey)) return;
     setCompareKey(compareTabs[0]?.key ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compareOn, activeKey]);
+  }, [compareOn, compareKey, compareTabs]);
   const compareTab = compareTabs.find((t) => t.key === compareKey) ?? null;
   const compareLegend = buildLegend(compareKey, results, visMin, visMax, visPalette, legendBins);
 
@@ -307,7 +314,8 @@ export default function ResultsMapPanel({
             >
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
-              <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
+              <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
+              <CompareAoiView aoi={aoi} zoom={zoom} />
             </SwipeCompareMap>
             <div className="row g-2 mt-1">
               {legend.entries.length > 0 && (
