@@ -10,7 +10,7 @@ import type { AoiFeature, MapLegendEntry } from "@/types/map";
 
 /** Payload accepted by every /disaster/* endpoint that takes an AOI. */
 export type AoiPayload =
-  | { geojson: AoiFeature }
+  | { geojson: AoiFeature | GeoJSON.FeatureCollection }
   | { west: number; south: number; east: number; north: number };
 
 export interface DisasterSourceItem {
@@ -53,6 +53,100 @@ export interface DemSlopeResult {
   source: string;
   stats?: DemSlopeStats;
   legend?: MapLegendEntry[];
+}
+
+export interface DisasterFireHotspotData {
+  source: string;
+  features: GeoJSON.Feature[];
+  count: number;
+  note: string;
+}
+
+export interface DisasterFireSamResult extends GeoJSON.FeatureCollection {
+  metadata?: {
+    model?: string;
+    object_count?: number;
+    automatic_object_count?: number;
+    seed_count?: number;
+    selection_method?: string;
+  };
+}
+
+export interface DisasterFireSamJob {
+  job_id: string;
+  status: "running" | "complete" | "failed";
+  message?: string;
+  method?: string;
+  scene_id?: string;
+  scene_acquired_at?: string | null;
+  scene_cloud_cover_pct?: number | null;
+  seed_source?: string;
+  seed_count?: number;
+  result?: DisasterFireSamResult;
+}
+
+export type FireSourceId = "firms_noaa20" | "firms_noaa21" | "firms_snpp" | "firms_modis" | "bmkg" | "cdse" | "mcd64a1" | "vnp64a1" | "inarisk";
+
+export interface FireSourceResult {
+  id: FireSourceId;
+  status: "ok" | "needs_key" | "no_data" | "unavailable" | "error";
+  label?: string;
+  message: string;
+  kind?: "footprints" | "burned_area" | "hazard";
+  features?: GeoJSON.Feature[];
+  truncated?: boolean;
+  tile_url?: string | null;
+  area_ha?: number;
+  resolution_m?: number;
+  source?: string;
+  wms_url?: string;
+  wms_layers?: string;
+}
+
+export interface FireMultiSourceResponse {
+  sources: FireSourceResult[];
+  hotspots: GeoJSON.FeatureCollection;
+  raw_count: number;
+  merged_count: number;
+  generated_at: string;
+  period: { start: string; end: string };
+  note: string;
+}
+
+export interface FireMultiSourceLayerState {
+  result: FireMultiSourceResponse | null;
+  visibleSources: FireSourceId[];
+  showMerged: boolean;
+  imported: GeoJSON.FeatureCollection | null;
+  showImport: boolean;
+}
+
+export interface DisasterEventMapResponse {
+  success: boolean;
+  event_type: string;
+  title: string;
+  source: string;
+  tile_url: string | null;
+  before_tile_url?: string | null;
+  after_tile_url?: string | null;
+  area_ha: number;
+  scale: number;
+  before_period: { start: string; end: string };
+  after_period: { start: string; end: string };
+  legend: MapLegendEntry[];
+  method_note: string;
+  dnbr_threshold?: number;
+  before_scene_count?: number;
+  after_scene_count?: number;
+  severity_area_ha?: {
+    low_ha: number;
+    moderate_ha: number;
+    high_ha: number;
+    very_high_ha: number;
+  };
+  mean_dnbr_affected?: number | null;
+  max_dnbr_affected?: number | null;
+  hotspots?: DisasterFireHotspotData;
 }
 
 /**
@@ -234,6 +328,10 @@ export interface DisasterAnalysisEntry {
   model_id: string;
   user_label: string;
   category: string;
+  result_semantics?: string | null;
+  damage_model?: boolean;
+  validation_status?: string | null;
+  limitations?: string[];
   available: boolean;
   run: AnalysisRunRecord | null;
   result: AnalysisResultRecord | null;

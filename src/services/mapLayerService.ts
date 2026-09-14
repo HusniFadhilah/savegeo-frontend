@@ -7,6 +7,9 @@ interface BasemapRegistryLayer {
   name: string;
   tile_url: string;
   overlay_tile_url?: string | null;
+  labels_tile_url?: string | null;
+  labels_attribution?: string | null;
+  wmts?: BasemapDefinition["wmts"];
   attribution: string;
   overlay_attribution?: string | null;
   max_zoom?: number;
@@ -40,6 +43,9 @@ export async function fetchBasemaps(): Promise<BasemapDefinition[]> {
         name: l.name,
         url: l.tile_url,
         overlayUrl: l.overlay_tile_url || undefined,
+        labelsUrl: l.labels_tile_url || undefined,
+        labelsAttribution: l.labels_attribution || undefined,
+        wmts: l.wmts,
         attribution: l.attribution,
         overlayAttribution: l.overlay_attribution || undefined,
         maxZoom: Math.max(l.max_zoom || 19, l.key === DEFAULT_BASEMAP_ID ? 22 : l.max_zoom || 19),

@@ -40,12 +40,11 @@ function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
  *
  * The full Disaster Intelligence Dashboard redesign now lives at the
  * dedicated `/pemetaan-bencana` route (`DisasterListPage.tsx` /
- * `DisasterDashboard.tsx`), which supersedes this module's original
- * before/after "Deteksi Area Terdampak" flow entirely - per the contract
- * doc, that flow (`analyzeDisasterEvent` / `POST /disaster/event-map`) is
- * being removed from the backend, so it and its dedicated UI
- * (`EventSummary`, `DisasterEventMap`, `DisasterControlsPanel`) are removed
- * here too. What's left is the 3 still-standalone sub-features (official
+ * `DisasterDashboard.tsx`), which is now the home for the complete
+ * per-event workflow. The 2026 Kalimantan fire panel uses the restored
+ * `analyzeDisasterEvent` / `POST /disaster/event-map` flow for on-demand
+ * dNBR, imagery, area, and hotspot analysis. What's left here is the 3
+ * still-standalone sub-features (official
  * source status, BMKG alerts, DEM/slope) against a locally-drawn AOI, now
  * calling the same `/disaster/*` endpoints as user-authenticated requests
  * (see `api.ts` - the backend now gates them behind `get_current_user`).

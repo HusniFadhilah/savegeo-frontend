@@ -1,9 +1,11 @@
 import { defineConfig } from "vitest/config";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  plugins: [react()],
+  define: { CESIUM_BASE_URL: JSON.stringify("/cesium/") },
+  plugins: [react(), viteStaticCopy({ targets: ["Workers", "ThirdParty", "Assets", "Widgets"].map(dir => ({ src: `node_modules/cesium/Build/Cesium/${dir}`, dest: "cesium" })) })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

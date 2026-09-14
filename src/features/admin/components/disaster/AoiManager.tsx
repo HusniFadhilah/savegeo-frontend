@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { Map as LeafletMap, FeatureGroup } from "leaflet";
 import MapView from "@/components/map/MapView";
+import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools, { setAoiOnMap } from "@/components/map/AoiDrawingTools";
 import type { AoiFeature } from "@/types/map";
 import { createDisasterAoi } from "../../api";
@@ -174,6 +175,7 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
               mapRef.current = m;
             }}
           >
+            <BasemapSwitcher />
             <AoiDrawingTools onChange={handleDrawChange} externalGroupRef={groupRef} />
           </MapView>
         </div>

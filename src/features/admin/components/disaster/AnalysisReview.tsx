@@ -1,6 +1,7 @@
 import SegmentationComparison from "@/features/disaster/components/SegmentationComparison";
 import { useEffect, useMemo, useState } from "react";
 import MapView from "@/components/map/MapView";
+import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
 import MapLegend from "@/components/map/MapLegend";
 import { getDisasterQc, publishAnalysis, runAnalysis, unpublishAnalysis } from "../../api";
@@ -136,6 +137,7 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
           <>
             <div style={{ marginBottom: 10 }}>
               {selected.result.comparison ? <SegmentationComparison key={selected.run.id} result={selected.result.comparison} /> : <MapView id={`disaster-review-map-${eventId}`}>
+                <BasemapSwitcher />
                 {selected.result.tile_url && (
                   <ResultTileLayer
                     layerKey={`review-${selected.run.id}`}

@@ -1,11 +1,16 @@
 import { apiClient, ApiError } from "@/services/apiClient";
 import { handleAppUnauthorized } from "@/services/appSession";
+import type { AoiPayload } from "./types";
 import type {
   BmkgAlertsData,
   DemSlopeParams,
   DemSlopeResult,
   DisasterAnalysesResponse,
   DisasterEventDetailResponse,
+  DisasterFireSamJob,
+  FireMultiSourceResponse,
+  FireSourceId,
+  DisasterEventMapResponse,
   DisasterEventListParams,
   DisasterEventListResponse,
   DisasterFeaturesResponse,
@@ -18,9 +23,8 @@ import type {
 /**
  * Disaster-mapping API calls. Two families live in this file:
  *
- * 1. Legacy `/disaster/*` sources/BMKG/DEM calls (sources, bmkg-alerts,
- *    dem-slope) - unchanged endpoints, but now gated behind a disaster-viewer
- *    token (public user or admin).
+ * 1. Legacy `/disaster/*` sources/BMKG/DEM/on-demand event-map calls - gated
+ *    behind a disaster-viewer token (public user or admin).
  * 2. New `/disasters/*` (plural - NOT `/disaster`, that's the legacy router
  *    above) Disaster Intelligence Dashboard routes. Every route requires a
  *    logged-in user or admin and only ever returns published data.
@@ -66,6 +70,45 @@ export function fetchBmkgAlerts(limit = 20) {
 
 export function analyzeDemSlope(params: DemSlopeParams) {
   return userPost<DemSlopeResult>("/disaster/dem-slope", params);
+}
+
+export function analyzeDisasterEvent(params: {
+  aoi: AoiPayload;
+  event_type: "fire" | "flood" | "landslide";
+  before_start: string;
+  before_end: string;
+  after_start: string;
+  after_end: string;
+  dnbr_threshold?: number;
+  scale?: number;
+}) {
+  return userPost<DisasterEventMapResponse>("/disaster/event-map", params);
+}
+
+export function startFireSamSegmentation(params: {
+  aoi: AoiPayload;
+  start_date: string;
+  end_date: string;
+  max_cloud_cover?: number;
+  seed_radius_px?: number;
+}) {
+  return userPost<DisasterFireSamJob>("/disaster/fire-sam/jobs", params);
+}
+
+export function fetchFireSamSegmentationJob(jobId: string) {
+  return userGet<DisasterFireSamJob>(`/disaster/fire-sam/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export function loadFireMultiSource(params: { aoi: AoiPayload; start_date: string; end_date: string; sources: FireSourceId[] }) {
+  return userPost<FireMultiSourceResponse>("/disaster/fire-multi-source", params);
+}
+
+export function fetchFireBigBoundaries(province: string, city?: string) {
+  return userPost<GeoJSON.FeatureCollection>("/disaster/fire-big-boundaries", { province, city });
+}
+
+export function importFireObservations(content: string, format: "csv" | "geojson") {
+  return userPost<GeoJSON.FeatureCollection>("/disaster/fire-import", { content, format, source: "SIPONGI / impor pengguna" });
 }
 
 // --- new /disasters/* (Disaster Intelligence Dashboard) --------------------

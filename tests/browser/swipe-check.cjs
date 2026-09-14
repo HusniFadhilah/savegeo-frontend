@@ -215,7 +215,7 @@ function pixels(png) {
           await page.getByText('Opacity 40%',{exact:true}).click();
           assert.equal(await page.locator('.leaflet-swipe-after-pane .leaflet-layer').evaluate(el => el.style.opacity),'0.4');
           await page.getByText('Missing layer',{exact:true}).click();
-          assert.equal(await slider.getAttribute('aria-disabled'),'true');
+          assert.equal(await slider.getAttribute('aria-disabled'),'false');
           await page.waitForFunction(() => [...document.querySelectorAll('.leaflet-swipe-before-pane img')].some(img => img.classList.contains('leaflet-tile-loaded')));
           await page.waitForTimeout(350);
           const missing = pixels(await map.screenshot()); assert(missing.red>1000 && missing.blue<missing.red*.1, JSON.stringify({red:missing.red,blue:missing.blue}));

@@ -10,6 +10,12 @@ import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 
+import GlobeView, { type GlobeLayer } from "./GlobeView";
+import { GlobeLayerBridge, LeafletUserLocation } from "./GlobeLayerBridge";
+import UserLocationControl from "./UserLocationControl";
+import { useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
+import "./globe3d/globe.css";
+
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
 
@@ -74,6 +80,9 @@ function ResultPaneSetup() {
  */
 export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className }: Props) {
   const { basemaps } = useBasemaps();
+  const query = useGlobeQuery();
+  const globe = query.get("view") === "3d" || query.get("view") === "globe";
+  const [globeLayers, setGlobeLayers] = useState<GlobeLayer[]>([]);
   const defaultBasemap = basemaps.find((b) => b.isDefault) ?? basemaps[0];
   const effectiveMaxZoom = Math.max(maxZoom ?? 0, defaultBasemap?.maxZoom ?? 0, HIGH_DETAIL_MAX_ZOOM);
   const defaultMaxNativeZoom = defaultBasemap?.maxNativeZoom ?? defaultBasemap?.maxZoom;
@@ -88,7 +97,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
   }, [defaultBasemap, activeBasemapId]);
 
   return (
-    <BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId }}>
+    <div className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId }}>
       <MapContainer
         id={id}
         center={center ?? INDONESIA_CENTER}
@@ -103,6 +112,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
               attribution={defaultBasemap.attribution}
               maxNativeZoom={defaultMaxNativeZoom}
               maxZoom={effectiveMaxZoom}
+              className="savegeo-basemap-layer"
             />
             {defaultBasemap.overlayUrl && (
               <TileLayer
@@ -110,10 +120,13 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
                 attribution={defaultBasemap.overlayAttribution}
                 maxNativeZoom={defaultMaxNativeZoom}
                 maxZoom={effectiveMaxZoom}
+                className="savegeo-basemap-layer"
               />
             )}
           </>
         )}
+        <GlobeLayerBridge enabled={globe} onLayers={setGlobeLayers} />
+        <LeafletUserLocation active={!globe} />
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
@@ -122,6 +135,9 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <ImageryAttribution />
         {children}
       </MapContainer>
-    </BasemapContext.Provider>
+    </BasemapContext.Provider></div>
+    {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} layers={globeLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
+      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
+    </div>
   );
 }

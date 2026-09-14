@@ -83,6 +83,21 @@ export function fetchRegionGeometry(endpoint: string, code: string): Promise<Geo
   );
 }
 
+/**
+ * Load all child administrative boundaries for one parent. The backend keeps
+ * this request cached and falls back to fetching each child only when the
+ * upstream API does not expose a bulk geometry response.
+ */
+export function fetchRegionChildrenGeometries(
+  parentCode: string,
+  childEndpoint: "city" | "district" | "village",
+  parentEndpoint?: "province" | "city" | "district",
+): Promise<GeoJSON.FeatureCollection> {
+  const params = new URLSearchParams({ parent_code: parentCode, child_endpoint: childEndpoint });
+  if (parentEndpoint) params.set("parent_endpoint", parentEndpoint);
+  return apiClient.get<GeoJSON.FeatureCollection>(`/regions/children-geometries?${params.toString()}`);
+}
+
 /** One Nominatim search result from GET /utils/geocode/search - a free-text
  * place lookup (city/province/district/village/street/address, like Google
  * Maps' search box), restricted to Indonesia. `geojson` is the real

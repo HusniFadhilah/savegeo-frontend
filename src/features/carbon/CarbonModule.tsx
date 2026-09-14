@@ -37,6 +37,7 @@ import type {
 } from "@/features/carbon/types";
 import type { VegetationParams, VegetationTimeSeriesResponse } from "@/features/vegetation/types";
 import type { LandCoverParams } from "@/features/landcover/types";
+import { parseCarbonQuery, serializeCarbonQuery } from "./lib/carbonQueryState";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
@@ -69,11 +70,12 @@ export default function CarbonModule() {
   const visPalette = getArray("carbon.vis_palette");
   const carbonLegendBins = getInt("carbon.legend_bins", 6);
 
-  const [year, setYear] = useState(yearMax);
+  const initialQuery = useMemo(() => typeof window !== "undefined" ? parseCarbonQuery(window.location.search) : { mode: "carbon" as const }, []);
+  const [year, setYear] = useState(initialQuery.year ?? yearMax);
   const [zoom, setZoom] = useState(10);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
-  const [analysisType, setAnalysisType] = useState<AnalysisType>("carbon");
+  const [analysisType, setAnalysisType] = useState<AnalysisType>(initialQuery.mode === "landcover_change" ? "landcover" : initialQuery.mode);
 
   const [carbonPartial, setCarbonPartial] = useState<CarbonPartial>({
     startMonth: 1,
@@ -86,6 +88,10 @@ export default function CarbonModule() {
     showReference: true,
     cloudMaskTechnique: "scl",
   });
+  useEffect(() => {
+    const q = serializeCarbonQuery({ mode: (analysisType === "combined" ? "carbon" : analysisType), year, monthFrom: carbonPartial.startMonth, monthTo: carbonPartial.endMonth, cloudThreshold: carbonPartial.cloudThreshold, clipMode: carbonPartial.clipMode, showReference: carbonPartial.showReference, view: initialQuery.view, orientation: initialQuery.orientation, opacity: initialQuery.opacity });
+    if (typeof window !== "undefined" && window.location.pathname === "/carbon-estimation") window.history.replaceState(null, "", `/carbon-estimation?${q.toString()}`);
+  }, [analysisType, year, carbonPartial.startMonth, carbonPartial.endMonth, carbonPartial.cloudThreshold, carbonPartial.clipMode, carbonPartial.showReference, initialQuery.view, initialQuery.orientation, initialQuery.opacity]);
   const [selectedModel, setSelectedModel] = useState<CarbonModelListItem | null>(null);
 
   // P0 "time-series & timelapse" - carbon-only, mutually exclusive with the
@@ -661,3 +667,4 @@ export default function CarbonModule() {
     </div>
   );
 }
+

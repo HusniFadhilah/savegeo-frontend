@@ -7,6 +7,8 @@ import type {
 } from "leaflet";
 import RasterResolutionNotice from "./RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
+import BasemapSwitcher from "@/components/map/BasemapSwitcher";
+import "@/styles/disaster-swipe.css";
 
 export type SwipeOrientation = "vertical" | "horizontal";
 
@@ -350,8 +352,29 @@ export default function SwipeCompareMap({
   const [afterPaneReady, setAfterPaneReady] = useState(false);
   const [retry, setRetry] = useState(0);
   const sourceKey = useMemo(
-    () => JSON.stringify([beforeUrl, afterUrl, bounds, clipGeometry, retry, beforeMaxNativeZoom, afterMaxNativeZoom, maxNativeZoom, maxZoom]),
-    [beforeUrl, afterUrl, bounds, clipGeometry, retry, beforeMaxNativeZoom, afterMaxNativeZoom, maxNativeZoom, maxZoom],
+    () =>
+      JSON.stringify([
+        beforeUrl,
+        afterUrl,
+        bounds,
+        clipGeometry,
+        retry,
+        beforeMaxNativeZoom,
+        afterMaxNativeZoom,
+        maxNativeZoom,
+        maxZoom,
+      ]),
+    [
+      beforeUrl,
+      afterUrl,
+      bounds,
+      clipGeometry,
+      retry,
+      beforeMaxNativeZoom,
+      afterMaxNativeZoom,
+      maxNativeZoom,
+      maxZoom,
+    ],
   );
   const [beforeStatus, setBeforeStatus] = useState<{ key: string; status: TileStatus }>();
   const [afterStatus, setAfterStatus] = useState<{ key: string; status: TileStatus }>();
@@ -369,7 +392,9 @@ export default function SwipeCompareMap({
   const hasError =
     (beforeUrl && beforeStatus?.key === sourceKey && beforeStatus.status === "error") ||
     (afterUrl && afterStatus?.key === sourceKey && afterStatus.status === "error");
-  const enabled = ready && !!beforeUrl && !!afterUrl;
+  // A missing tile should not disable the whole comparison. Leaflet can still
+  // render the other tiles, and the user can retry only the affected source.
+  const enabled = !!beforeUrl && !!afterUrl && (ready || !!hasError);
   const mapRef = useRef<LeafletMap | null>(null);
   const restorePanRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -445,6 +470,7 @@ export default function SwipeCompareMap({
           mapRef.current = map;
         }}
       >
+        <BasemapSwitcher />
         <SwipePaneSetup onReady={markAfterPaneReady} />
         {children}
         {afterPaneReady && beforeUrl && (
@@ -492,38 +518,50 @@ export default function SwipeCompareMap({
           clipGeometry={clipGeometry}
         />
         <PanLockController locked={panLocked} />
-        {(beforeResolutionM || afterResolutionM) && <RasterResolutionNotice layers={[
-          { label: beforeLabel, resolutionM: beforeResolutionM, nativeZoom: beforeMaxNativeZoom ?? maxNativeZoom, tileUrl: beforeUrl },
-          { label: afterLabel, resolutionM: afterResolutionM, nativeZoom: afterMaxNativeZoom ?? maxNativeZoom, tileUrl: afterUrl },
-        ]} />}
+        {(beforeResolutionM || afterResolutionM) && (
+          <RasterResolutionNotice
+            layers={[
+              {
+                label: beforeLabel,
+                resolutionM: beforeResolutionM,
+                nativeZoom: beforeMaxNativeZoom ?? maxNativeZoom,
+                tileUrl: beforeUrl,
+              },
+              {
+                label: afterLabel,
+                resolutionM: afterResolutionM,
+                nativeZoom: afterMaxNativeZoom ?? maxNativeZoom,
+                tileUrl: afterUrl,
+              },
+            ]}
+          />
+        )}
       </MapView>
 
       <div
-        className="swipe-label swipe-label-before"
-        style={orientation === "horizontal" ? { top: 52, bottom: "auto", left: "auto", right: 8, maxWidth: "calc(100% - 80px)" } : { bottom: 28 }}
+        className={`swipe-label swipe-label-before swipe-label-${orientation}`}
+        style={
+          orientation === "horizontal"
+            ? { top: 52, bottom: "auto", left: "auto", right: 8, maxWidth: "calc(100% - 80px)" }
+            : undefined
+        }
       >
         {beforeLabel}
       </div>
-      <div className="swipe-label swipe-label-after" style={{ bottom: 28 }}>{afterLabel}</div>
+      <div
+        className={`swipe-label swipe-label-after swipe-label-${orientation}`}
+        style={orientation === "horizontal" ? { top: 8, bottom: "auto" } : undefined}
+      >
+        {afterLabel}
+      </div>
       {!enabled && (
-        <div
-          role="status"
-          style={{
-            position: "absolute",
-            bottom: 36,
-            left: 8,
-            zIndex: 1000,
-            background: "white",
-            padding: "4px 8px",
-            pointerEvents: "none",
-          }}
-        >
+        <div className="swipe-status" aria-live="polite">
           {hasError ? (
             <>
               Sebagian tile gagal dimuat.{" "}
               <button
                 type="button"
-                style={{ pointerEvents: "auto" }}
+                className="swipe-retry"
                 onClick={() => setRetry((value) => value + 1)}
               >
                 Coba lagi
