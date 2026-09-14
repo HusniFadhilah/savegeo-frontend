@@ -49,7 +49,8 @@ function modelScore(model: CarbonModelListItem): number | undefined {
   return (
     model.metrics?.cv_metrics?.r2_mean ??
     model.metrics?.r2_mean ??
-    model.metadata_json?.cv_metrics?.r2_mean
+    model.metadata_json?.cv_metrics?.r2_mean ??
+    (model.metadata_json?.spatial_cv_metrics as { r2_mean?: number } | undefined)?.r2_mean
   );
 }
 
@@ -67,6 +68,20 @@ function formatDateTime(iso: string | undefined, locale: string): string {
   if (!iso) return "N/A";
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "N/A" : d.toLocaleString(locale);
+}
+
+function compareModels(a: CarbonModelListItem, b: CarbonModelListItem): number {
+  const geeRank = Number(Boolean(b.metadata_json?.gee_deployable)) - Number(Boolean(a.metadata_json?.gee_deployable));
+  if (geeRank) return geeRank;
+  const preliminaryRank = Number(Boolean(a.metadata_json?.preliminary)) - Number(Boolean(b.metadata_json?.preliminary));
+  if (preliminaryRank) return preliminaryRank;
+  const scoreA = modelScore(a) ?? Number.NEGATIVE_INFINITY;
+  const scoreB = modelScore(b) ?? Number.NEGATIVE_INFINITY;
+  if (scoreA !== scoreB) return scoreB - scoreA;
+  const dateA = Date.parse(modelDate(a) ?? "") || 0;
+  const dateB = Date.parse(modelDate(b) ?? "") || 0;
+  if (dateA !== dateB) return dateB - dateA;
+  return a.name.localeCompare(b.name);
 }
 
 type CompatibilityTone = "green" | "gray" | "orange";
@@ -189,9 +204,9 @@ export default function CarbonParamsPanel({
     listCarbonModels(params.referenceDataset)
       .then((list) => {
         if (cancelled) return;
-        setModels(list);
-        const firstGee = list.find((m) => m.metadata_json?.gee_deployable && !m.metadata_json?.preliminary);
-        const first = firstGee || list.find((m) => !m.metadata_json?.preliminary) || list[0] || null;
+        const orderedModels = [...list].sort(compareModels);
+        setModels(orderedModels);
+        const first = orderedModels[0] || null;
         if (first) {
           onModelSelect(first);
           onParamsChange({ modelName: first.name });
