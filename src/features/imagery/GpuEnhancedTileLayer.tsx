@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { loadSuperResolutionModel } from "./lib/modelLoader";
+import type { GpuEnhancer } from "./lib/gpuShaderModel";
 import type { ShaderQuality } from "./lib/gpuShaderModel";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 
 const cache = new Map<string, HTMLCanvasElement>();
 const MAX_CACHE = 48;
+const sharedCanvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
 const keyFor = (url: string, coords: L.Coords, model: string, quality: string) => `${url}|${coords.z}/${coords.x}/${coords.y}|${model}|${quality}`;
 
 function template(url: string, coords: L.Coords) {
@@ -33,6 +35,8 @@ export default function GpuEnhancedTileLayer({ url, opacity = 1, pane, maxNative
     const clear = () => cache.clear();
     window.addEventListener("savegeo:gpu-cache-clear", clear);
     const modelPromise = loadSuperResolutionModel();
+    let sharedEnhancer: GpuEnhancer | null = null;
+    let processing = Promise.resolve();
     const Layer = L.GridLayer.extend({
       createTile(coords: L.Coords, done: L.DoneCallback) {
         const tile = document.createElement("canvas"); tile.width = 256; tile.height = 256; tile.setAttribute("aria-hidden", "true");
@@ -40,14 +44,16 @@ export default function GpuEnhancedTileLayer({ url, opacity = 1, pane, maxNative
         if (cached) { tile.width = cached.width; tile.height = cached.height; tile.getContext("2d")?.drawImage(cached, 0, 0); done(undefined, tile); return tile; }
         const image = new Image(); image.crossOrigin = "anonymous";
         onStatus?.("processing");
-        image.onload = async () => {
-          if (disposed) return;
-          const module = await modelPromise;
-          if (disposed) return;
-          const enhancer = module.create(tile);
-          if (!enhancer || !enhancer.enhance(image, tile, quality)) { onStatus?.("fallback_original"); done(new Error("GPU enhancement unavailable"), tile); return; }
-          cache.set(key, tile); while (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value as string);
-          onStatus?.("active"); done(undefined, tile);
+        image.onload = () => {
+          processing = processing.then(async () => {
+            if (disposed) return;
+            const module = await modelPromise;
+            if (disposed) return;
+            sharedEnhancer ??= module.create(sharedCanvas ?? tile);
+            if (!sharedEnhancer || !sharedEnhancer.enhance(image, tile, quality)) { onStatus?.("fallback_original"); done(new Error("GPU enhancement unavailable"), tile); return; }
+            cache.set(key, tile); while (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value as string);
+            onStatus?.("active"); done(undefined, tile);
+          }).catch(() => { onStatus?.("error"); done(new Error("GPU enhancement failed"), tile); });
         };
         image.onerror = () => { onStatus?.("error"); done(new Error("Imagery tile failed"), tile); };
         image.src = template(url, coords); return tile;
@@ -56,7 +62,7 @@ export default function GpuEnhancedTileLayer({ url, opacity = 1, pane, maxNative
     const LayerConstructor = Layer as unknown as new (options?: L.GridLayerOptions) => L.GridLayer;
     const layer = new LayerConstructor({ tileSize: 256, opacity, pane, maxNativeZoom, maxZoom, zIndex: 402 });
     layer.addTo(map);
-    return () => { disposed = true; window.removeEventListener("savegeo:gpu-cache-clear", clear); map.removeLayer(layer); };
+    return () => { disposed = true; sharedEnhancer?.dispose(); window.removeEventListener("savegeo:gpu-cache-clear", clear); map.removeLayer(layer); };
   }, [map, maxNativeZoom, maxZoom, model, onStatus, opacity, pane, quality, url]);
   return null;
 }

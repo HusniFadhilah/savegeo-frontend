@@ -38,8 +38,11 @@ export function createGpuEnhancer(canvas: HTMLCanvasElement): GpuEnhancer | null
     gl.useProgram(program); const position = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     return { enhance(source, target, quality) {
       target.width = source.naturalWidth || source.width; target.height = source.naturalHeight || source.height;
+      if (canvas !== target) { canvas.width = target.width; canvas.height = target.height; }
       gl.bindTexture(gl.TEXTURE_2D, texture); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-      gl.viewport(0, 0, target.width, target.height); gl.useProgram(program); gl.uniform1i(gl.getUniformLocation(program, "u_image"), 0); gl.uniform2f(gl.getUniformLocation(program, "u_texel"), 1 / target.width, 1 / target.height); gl.uniform1f(gl.getUniformLocation(program, "u_strength"), quality === "high" ? 0.9 : quality === "medium" ? 0.55 : 0.25); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); return true;
+      gl.viewport(0, 0, target.width, target.height); gl.useProgram(program); gl.uniform1i(gl.getUniformLocation(program, "u_image"), 0); gl.uniform2f(gl.getUniformLocation(program, "u_texel"), 1 / target.width, 1 / target.height); gl.uniform1f(gl.getUniformLocation(program, "u_strength"), quality === "high" ? 0.9 : quality === "medium" ? 0.55 : 0.25); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (target !== canvas) target.getContext("2d")?.drawImage(canvas, 0, 0, target.width, target.height);
+      return true;
     }, dispose() { gl.deleteTexture(texture); gl.deleteBuffer(buffer); gl.deleteProgram(program); gl.getExtension("WEBGL_lose_context")?.loseContext(); } };
   } catch { return null; }
 }
