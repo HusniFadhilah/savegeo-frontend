@@ -328,6 +328,10 @@ export interface DisasterAnalysisEntry {
   model_id: string;
   user_label: string;
   category: string;
+  result_semantics?: string | null;
+  damage_model?: boolean;
+  validation_status?: string | null;
+  limitations?: string[];
   available: boolean;
   run: AnalysisRunRecord | null;
   result: AnalysisResultRecord | null;

@@ -78,6 +78,21 @@ curl.exe -k https://savegeo.husnifd.my.id/api/health
 curl.exe -k https://begeo.husnifd.my.id/api/health
 ```
 
+Authenticated production smoke test (run only with a dedicated non-admin test
+account; never commit credentials):
+
+```powershell
+$env:SAVEGEO_PRODUCTION_URL = "https://savegeo.husnifd.my.id"
+$env:SAVEGEO_TEST_USERNAME = "<test-account>"
+$env:SAVEGEO_TEST_PASSWORD = "<password>"
+node tests/browser/production-auth-check.cjs
+```
+
+The check verifies the login cookie, `/dashboard` redirect, the protected
+disaster page, and that API failures are visible instead of rendering fake
+analysis. If no dedicated account exists, the check must remain `not_run`; do
+not register or reuse a personal production account to force a green result.
+
 ## Troubleshooting
 
 - Bundle contains `localhost`: rebuild with `VITE_API_BASE_URL=/api`.

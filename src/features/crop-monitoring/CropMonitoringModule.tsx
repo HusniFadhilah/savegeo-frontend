@@ -6,6 +6,7 @@ import { ApiError } from "@/services/apiClient";
 import { getCropMonitoringCommodities, getWeatherProviders, runCropMonitoring } from "./api";
 import { DEFAULT_SUB_ANALYSES, type Commodity, type CropMonitoringPeriodInput, type CropMonitoringPeriodMode, type CropMonitoringResult, type FloodResult, type SubAnalysisKey, type TimeseriesResult, type WeatherProvider } from "./types";
 import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE, RISK_LEVEL_STYLE, WATER_STRESS_STYLE } from "./utils";
+import { parseQuery, updateUrlFromState } from "./lib/cropMonitoringQueryState";
 
 import FieldPanel from "./components/FieldPanel";
 import CropInfoPanel from "./components/CropInfoPanel";
@@ -34,6 +35,7 @@ const CURRENT_YEAR = new Date().getFullYear();
  * layered on top.
  */
 export default function CropMonitoringModule() {
+  const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const aoi = useAoiStore((s) => s.aoi);
   const selectedField = useFieldStore((s) => s.selectedField);
   const showLoading = useUiStore((s) => s.showLoading);
@@ -58,8 +60,8 @@ export default function CropMonitoringModule() {
 
   // Monitoring period
   const [periodMode, setPeriodMode] = useState<CropMonitoringPeriodMode>("current_season");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [customStart, setCustomStart] = useState(query.startDate ?? "");
+  const [customEnd, setCustomEnd] = useState(query.endDate ?? "");
   const [compareSeasonEnabled, setCompareSeasonEnabled] = useState(false);
   const [compareYears, setCompareYears] = useState<number[]>([CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2]);
 
@@ -71,7 +73,11 @@ export default function CropMonitoringModule() {
 
   // Timeseries index (sub-analysis B), kept here so its value survives a
   // scoped re-run from VegetationTimeSeriesChart's own index selector.
-  const [timeseriesIndex, setTimeseriesIndex] = useState("NDVI");
+  const [timeseriesIndex, setTimeseriesIndex] = useState((query.index ?? "ndvi").toUpperCase());
+
+  useEffect(() => {
+    updateUrlFromState({ ...query, analysis: query.analysis ?? "health", index: timeseriesIndex.toLowerCase(), startDate: customStart || query.startDate, endDate: customEnd || query.endDate });
+  }, [timeseriesIndex, customStart, customEnd]);
 
   // Run state
   const [running, setRunning] = useState(false);

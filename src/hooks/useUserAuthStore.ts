@@ -5,6 +5,15 @@ import {
   userAuthService,
   type AppUser,
 } from "@/services/userAuthService";
+import { useI18nStore } from "@/hooks/useI18nStore";
+
+function friendlyAuthError(err: unknown, fallbackKey: string): string {
+  const raw = err instanceof ApiError ? err.message.toLowerCase() : "";
+  const t = useI18nStore.getState().t;
+  if (raw.includes("bearer") || raw.includes("unauthorized") || raw.includes("401")) return t("errors.authRequired");
+  if (raw.includes("network") || raw.includes("fetch")) return t("errors.serverUnavailable");
+  return t(fallbackKey);
+}
 
 interface UserAuthState {
   user: AppUser | null;
@@ -37,7 +46,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
       set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
-      set({ error: err instanceof ApiError ? err.message : "Login gagal", isLoading: false });
+      set({ error: friendlyAuthError(err, "auth.loginFailed"), isLoading: false });
       return false;
     }
   },
@@ -49,7 +58,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
       set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
-      set({ error: err instanceof ApiError ? err.message : "Registrasi gagal", isLoading: false });
+      set({ error: friendlyAuthError(err, "auth.registerFailed"), isLoading: false });
       return false;
     }
   },
@@ -72,14 +81,14 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
 void useUserAuthStore.getState().initialize();
 
 setUserUnauthorizedHandler(() => {
-  useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });
+  useUserAuthStore.setState({ user: null, isAuthenticated: false, error: useI18nStore.getState().t("errors.sessionExpired") });
 });
 
 if (typeof window !== "undefined") {
   window.addEventListener("savegeo:app-auth-expired", (event) => {
     const kind = (event as CustomEvent<{ kind?: string }>).detail?.kind;
     if (kind === "user" || kind == null) {
-      useUserAuthStore.setState({ user: null, isAuthenticated: false, error: "Sesi berakhir, silakan login kembali" });
+      useUserAuthStore.setState({ user: null, isAuthenticated: false, error: useI18nStore.getState().t("errors.sessionExpired") });
     }
   });
 }

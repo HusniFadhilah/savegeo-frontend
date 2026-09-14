@@ -8,6 +8,8 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapModeControl from "@/components/map/MapModeControl";
+import { useGlobeQuery, writeGlobeQuery } from "@/components/map/globe3d/query";
+import GlobeView, { type GlobeLayer } from "@/components/map/GlobeView";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
@@ -22,6 +24,7 @@ import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
 import ImageryToolsPanel from "./ImageryToolsPanel";
+import { parseQuery, updateUrlFromState } from "./lib/imageryQueryState";
 
 const STAC_EXAMPLES = [
   { name: "Earth Search - Sentinel-2 L2A", url: "https://earth-search.aws.element84.com/v1", collection: "sentinel-2-l2a" },
@@ -252,6 +255,7 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
  * enabled by default and can be disabled to inspect the original clouds.
  */
 export default function ImageryModule() {
+  const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
   const aoi: AoiFeature | null = aoiState?.feature ?? null;
@@ -270,7 +274,7 @@ export default function ImageryModule() {
   );
 
   const [satellites, setSatellites] = useState<Record<string, ImageryProvider>>({});
-  const [satellite, setSatellite] = useState("sentinel2");
+  const [satellite, setSatellite] = useState(query.satellite ?? query.provider ?? "sentinel2");
   useEffect(() => {
     let cancelled = false;
     getImageryProviders()
@@ -308,10 +312,10 @@ export default function ImageryModule() {
     };
   }, []);
 
-  const [startDate, setStartDate] = useState(daysAgoIso(30));
-  const [endDate, setEndDate] = useState(todayIso());
+  const [startDate, setStartDate] = useState(query.startDate ?? daysAgoIso(30));
+  const [endDate, setEndDate] = useState(query.endDate ?? todayIso());
   const [cloudFilterEnabled, setCloudFilterEnabled] = useState(true);
-  const [maxCloudCover, setMaxCloudCover] = useState(60);
+  const [maxCloudCover, setMaxCloudCover] = useState(query.cloudThreshold ?? 60);
   const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("off");
   const [stacCatalogUrl, setStacCatalogUrl] = useState("");
   const [stacCollections, setStacCollections] = useState("");
@@ -331,13 +335,36 @@ export default function ImageryModule() {
   const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
   const [tileUrl, setTileUrl] = useState<string | null>(null);
-  const [tileOpacity, setTileOpacity] = useState(1);
+  const [tileOpacity, setTileOpacity] = useState(query.opacity ?? 1);
+
+  const globeQuery = useGlobeQuery();
+  const mapMode: "flat" | "globe" = ["3d", "globe"].includes(globeQuery.get("view") ?? "") ? "globe" : "flat";
+  const setMapMode = (mode: "flat" | "globe") => writeGlobeQuery({ view: mode === "globe" ? "globe" : "single" }, true);
+  const [globeBasemapId, setGlobeBasemapId] = useState(query.basemap ?? "satellite");
+  const [globeCamera] = useState({
+    lat: query.globeLat ?? -2.5,
+    lng: query.globeLng ?? 118,
+    zoom: query.globeZoom ?? 3.5,
+    bearing: query.globeHeading ?? 0,
+    pitch: query.globePitch ?? 0,
+  });
+  useEffect(() => {
+    updateUrlFromState({
+      ...query,
+      satellite,
+      startDate,
+      endDate,
+      cloudThreshold: maxCloudCover,
+      opacity: tileOpacity,
+      view: mapMode === "globe" ? "globe" : ["3d", "globe"].includes(query.view ?? "") ? "single" : query.view,
+      basemap: globeBasemapId,
+    });
+  }, [globeBasemapId, globeCamera, mapMode, maxCloudCover, endDate, query, satellite, startDate, tileOpacity]);
   const [tileLoading, setTileLoading] = useState(false);
   const [tileError, setTileError] = useState<string | null>(null);
   const [segmentation, setSegmentation] = useState<FeatureCollection | null>(null);
   const [nasaTimeLayerUrl, setNasaTimeLayerUrl] = useState<string | null>(null);
   const [storyMap, setStoryMap] = useState<FeatureCollection | null>(null);
-  const [mapMode, setMapMode] = useState<"flat" | "globe">("flat");
   useEffect(() => { setSegmentation(null); }, [selectedSceneId, satellite, aoi, cogAssetKey, cogBands, cogRescale]);
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
@@ -721,6 +748,15 @@ export default function ImageryModule() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [demLayerMode, demLoading, demResult, aoi],
   );
+
+  const globeLayers = useMemo<GlobeLayer[]>(() => {
+    const result: GlobeLayer[] = [];
+    if (tileUrl) result.push({ id: "scene-result", type: "raster", url: tileUrl, opacity: tileOpacity, maxZoom: SCENE_TILE_MAX_ZOOM, maxNativeZoom: sceneTileMaxNativeZoom, attribution: "Scene imagery" });
+    if (nasaTimeLayerUrl) result.push({ id: "nasa-time", type: "raster", url: nasaTimeLayerUrl, opacity: 0.55, attribution: "NASA GIBS / Earthdata" });
+    if (demLayerMode !== "none" && demResult?.tile_url) result.push({ id: "dem-result", type: "raster", url: demResult.tile_url, opacity: 0.82, attribution: demResult.source });
+    if (segmentation) result.push({ id: "segmentation-result", type: "geojson", data: segmentation, color: "#e83e8c", fillColor: "#e83e8c", opacity: 0.18 });
+    return result;
+  }, [demLayerMode, demResult, nasaTimeLayerUrl, sceneTileMaxNativeZoom, segmentation, tileOpacity, tileUrl]);
 
   return (
     <div className="analysis-page analysis-page-imagery">
@@ -1269,72 +1305,84 @@ export default function ImageryModule() {
                 )}
               </div>
               <div className="card-body p-2">
-                <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
-                  {mapMode === "globe" && <div className="imagery-globe-mode" aria-label="Globe view"><div className="imagery-globe-sphere"><span>Globe view</span></div></div>}
-                  <BasemapSwitcher extraOptions={mapLayerOptions} />
-                  <MapModeControl mode={mapMode} onChange={setMapMode} />
-                  {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
-                  <SceneFootprintLayer
-                    data={footprintData}
-                    onHover={setHoverSceneId}
-                    onSelect={(sceneId) => {
-                      const scene = scenes.find((item) => item.id === sceneId);
-                      if (scene) selectScene(scene);
-                    }}
+                {mapMode === "globe" ? (
+                  <GlobeView
+                    id="imageryGlobe"
+                    basemapId={globeBasemapId}
+                    center={[globeCamera.lat, globeCamera.lng]}
+                    zoom={globeCamera.zoom}
+                    aoi={aoi as GeoJSON.Feature | null}
+                    layers={globeLayers}
+                    onBasemapChange={setGlobeBasemapId}
+                    onViewChange={setMapMode}
                   />
-                  {segmentation && <GeoJSON key={JSON.stringify(segmentation)} data={segmentation}
-                    style={{ color: "#e83e8c", weight: 2, fillOpacity: 0.18 }} />}
-                  {nasaTimeLayerUrl && <TileLayer key={nasaTimeLayerUrl} url={nasaTimeLayerUrl} opacity={0.55} attribution="NASA GIBS / Earthdata" pane={RESULT_PANE} />}
-                  {tileUrl && (
-                    <>
-                      <TileLayer
-                        key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
-                        url={tileUrl}
-                        opacity={tileOpacity}
-                        attribution={
-                          satelliteMeta?.source_kind === "oam_stac"
-                            ? "OpenAerialMap / HOT"
-                            : satelliteMeta?.source_kind === "maxar_open_data_stac"
-                              ? "Vantor/Maxar Open Data"
-                              : satelliteMeta?.source_kind === "planet_open_data_stac"
-                                ? "Planet Open Data"
-                            : satelliteMeta?.source_kind === "generic_stac"
-                                  ? "STAC/COG source"
-                                  : satelliteMeta?.source_kind === "big_ctsrt"
-                                    ? "BIG / CTSRT"
-                                  : isEsriWayback
-                                    ? "Esri World Imagery Wayback"
-                                    : "Google Earth Engine"
-                        }
-                        maxNativeZoom={sceneTileMaxNativeZoom}
-                        maxZoom={SCENE_TILE_MAX_ZOOM}
+                ) : (
+                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
+                    <BasemapSwitcher extraOptions={mapLayerOptions} />
+                    <MapModeControl mode={mapMode} onChange={setMapMode} />
+                    {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
+                    <SceneFootprintLayer
+                      data={footprintData}
+                      onHover={setHoverSceneId}
+                      onSelect={(sceneId) => {
+                        const scene = scenes.find((item) => item.id === sceneId);
+                        if (scene) selectScene(scene);
+                      }}
+                    />
+                    {segmentation && <GeoJSON key={JSON.stringify(segmentation)} data={segmentation}
+                      style={{ color: "#e83e8c", weight: 2, fillOpacity: 0.18 }} />}
+                    {nasaTimeLayerUrl && <TileLayer key={nasaTimeLayerUrl} url={nasaTimeLayerUrl} opacity={0.55} attribution="NASA GIBS / Earthdata" pane={RESULT_PANE} />}
+                    {tileUrl && (
+                      <>
+                        <TileLayer
+                          key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
+                          url={tileUrl}
+                          opacity={tileOpacity}
+                          attribution={
+                            satelliteMeta?.source_kind === "oam_stac"
+                              ? "OpenAerialMap / HOT"
+                              : satelliteMeta?.source_kind === "maxar_open_data_stac"
+                                ? "Vantor/Maxar Open Data"
+                                : satelliteMeta?.source_kind === "planet_open_data_stac"
+                                  ? "Planet Open Data"
+                                  : satelliteMeta?.source_kind === "generic_stac"
+                                    ? "STAC/COG source"
+                                    : satelliteMeta?.source_kind === "big_ctsrt"
+                                      ? "BIG / CTSRT"
+                                      : isEsriWayback
+                                        ? "Esri World Imagery Wayback"
+                                        : "Google Earth Engine"
+                          }
+                          maxNativeZoom={sceneTileMaxNativeZoom}
+                          maxZoom={SCENE_TILE_MAX_ZOOM}
+                          pane={RESULT_PANE}
+                        />
+                        <RasterResolutionNotice layers={[{label: satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
+                        <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
+                      </>
+                    )}
+                    {demLayerMode !== "none" && demResult?.tile_url && (
+                      <TileLayer url={demResult.tile_url} opacity={0.82} attribution={demResult.source} pane={RESULT_PANE} />
+                    )}
+                    {demLayerMode !== "none" && demResult?.wms_url && demResult.wms_layers && (
+                      <WMSTileLayer
+                        url={demResult.wms_url}
+                        layers={demResult.wms_layers}
+                        format="image/png"
+                        transparent
+                        opacity={0.82}
+                        attribution={demResult.source}
                         pane={RESULT_PANE}
                       />
-                      <RasterResolutionNotice layers={[{label: satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
-                      <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
-                    </>
-                  )}
-                  {demLayerMode !== "none" && demResult?.tile_url && (
-                    <TileLayer url={demResult.tile_url} opacity={0.82} attribution={demResult.source} pane={RESULT_PANE} />
-                  )}
-                  {demLayerMode !== "none" && demResult?.wms_url && demResult.wms_layers && (
-                    <WMSTileLayer
-                      url={demResult.wms_url}
-                      layers={demResult.wms_layers}
-                      format="image/png"
-                      transparent
-                      opacity={0.82}
-                      attribution={demResult.source}
-                      pane={RESULT_PANE}
+                    )}
+                    <FitToSceneOrAoi
+                      aoi={aoi}
+                      focusKey={`${focusSceneId ?? "aoi"}:${focusNonce}`}
+                      scene={focusScene}
+                      maxZoom={sceneFocusMaxZoom}
                     />
-                  )}
-                  <FitToSceneOrAoi
-                    aoi={aoi}
-                    focusKey={`${focusSceneId ?? "aoi"}:${focusNonce}`}
-                    scene={focusScene}
-                    maxZoom={sceneFocusMaxZoom}
-                  />
-                </MapView>
+                  </MapView>
+                )}
                 {demLoading && (
                   <div className="alert alert-info py-2 mt-2 mb-0 small">
                     <i className="fas fa-spinner fa-spin" /> Memuat DEMNAS/3D dari menu layer...

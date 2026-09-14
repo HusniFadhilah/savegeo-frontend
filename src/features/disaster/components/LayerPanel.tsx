@@ -93,6 +93,7 @@ export default function LayerPanel({
                   {entry.user_label}
                   {!entry.available && <span className="text-muted ms-1">(Not Available)</span>}
                 </label>
+                {entry.damage_model === false && <div className="text-muted ms-4 small">Proksi tutupan lahan; bukan kelas kerusakan</div>}
               </div>
             ))}
           </div>

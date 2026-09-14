@@ -1,3 +1,5 @@
+import { useI18nStore, formatNumber } from "@/hooks/useI18nStore";
+
 interface Props {
   page: number; // 0-indexed
   pageCount: number;
@@ -27,12 +29,13 @@ export default function TablePagination({
   onSearchChange,
   onPrev,
   onNext,
-  searchPlaceholder = "Cari...",
+  searchPlaceholder,
   showSearch = true,
 }: Props) {
+  const { language, t } = useI18nStore();
   const start = recordsFiltered === 0 ? 0 : page * pageSize + 1;
   const end = Math.min(recordsFiltered, (page + 1) * pageSize);
-  const filteredNote = recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal} entri)` : "";
+  const filteredNote = recordsFiltered !== recordsTotal ? ` (${t("table.filteredFrom", { count: formatNumber(recordsTotal, language) })})` : "";
 
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
@@ -40,7 +43,8 @@ export default function TablePagination({
         <input
           className="form-input"
           style={{ maxWidth: 220, fontSize: 12 }}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder || t("common.search")}
+          aria-label={t("common.search")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />

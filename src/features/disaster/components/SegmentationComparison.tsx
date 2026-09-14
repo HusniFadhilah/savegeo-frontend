@@ -2,12 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
+import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { nativeZoomForResolution } from "@/config/mapZoom";
 import { RESULT_PANE } from "@/config/mapPanes";
 
 export interface SegmentationResult {
   model_id: string; model_version: string; method: string;
+  result_semantics?: "land_cover" | "change_indicator" | "water_extent" | string;
+  damage_model?: boolean;
+  validation_status?: string;
+  limitations?: string[];
   review_reasons?: string[];
   aoi: GeoJSON.Polygon | GeoJSON.MultiPolygon; resolution_m: number; crs: string;
   pre_tile_url: string; post_tile_url: string; change_tile_url: string;
@@ -61,6 +66,7 @@ export default function SegmentationComparison({result}: {result: SegmentationRe
   if (!result.pre_tile_url || !result.post_tile_url || !result.classes.length)
     return <div role="alert" className="alert alert-warning">Hasil pre/post atau kelas belum tersedia. Jalankan analisis lengkap.</div>;
   const single = (phase: "pre" | "post" | "change") => <MapView id={`segmentation-${phase}`}>
+    <BasemapSwitcher />
     <TileLayer key={result[`${phase}_tile_url`]} url={result[`${phase}_tile_url`]} bounds={bounds}
       pane={RESULT_PANE} opacity={opacity} maxNativeZoom={nativeZoom} maxZoom={22}
       eventHandlers={{tileerror: () => setTileError(true)}} />
@@ -68,6 +74,10 @@ export default function SegmentationComparison({result}: {result: SegmentationRe
   </MapView>;
   return <section className="card p-3 mb-3 segmentation-comparison" aria-label="Perbandingan segmentasi">
     <strong>Segmentasi pre/post · {result.model_id} v{result.model_version}</strong>
+    {result.damage_model === false && <div className="alert alert-info mt-2 mb-2" role="status">
+      <strong>Proksi tutupan lahan.</strong> Model ini tidak dilatih untuk kelas kerusakan bencana. Perubahan pre/post hanya menunjukkan perubahan kelas Dynamic World dan tidak boleh diberi label sebagai area terbakar, longsor, tsunami, atau kerusakan bangunan.
+      {result.limitations?.length ? <ul className="mb-0 mt-1">{result.limitations.map(item => <li key={item}>{item}</li>)}</ul> : null}
+    </div>}
     <p className="small text-muted">{result.method}</p>
     {result.review_reasons?.map(reason => <div key={reason} className="alert alert-warning" role="status">{reason}</div>)}
     <div className="small mb-2">{result.pre.date} ({result.pre.scene_count} scene) → {result.post.date} ({result.post.scene_count} scene) · {result.resolution_m} m · {result.crs}</div>

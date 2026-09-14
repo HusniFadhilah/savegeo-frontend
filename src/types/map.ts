@@ -1,7 +1,16 @@
+import type { WebMapTileServiceImageryProvider } from "cesium";
+
+export type BasemapWmtsOptions = Omit<
+  ConstructorParameters<typeof WebMapTileServiceImageryProvider>[0],
+  "url" | "credit" | "maximumLevel" | "tilingScheme"
+>;
+
 export interface BasemapDefinition {
   id: string;
   name: string;
   url: string;
+  labelsUrl?: string;
+  labelsAttribution?: string;
   overlayUrl?: string;
   overlayAttribution?: string;
   attribution: string;
@@ -9,6 +18,8 @@ export interface BasemapDefinition {
   maxNativeZoom?: number;
   isDefault: boolean;
   order: number;
+  enabled?: boolean;
+  wmts?: BasemapWmtsOptions;
 }
 
 export type AoiGeometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;

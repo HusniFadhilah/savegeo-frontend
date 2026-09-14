@@ -18,6 +18,7 @@ import TimeSeriesChart from "./components/TimeSeriesChart";
 import SummaryPanel from "./components/SummaryPanel";
 import BeforeAfterMaps from "./components/BeforeAfterMaps";
 import HotspotPanel from "./components/HotspotPanel";
+import { parseQuery, updateUrlFromState } from "./lib/lcChangeQueryState";
 
 type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
 
@@ -78,6 +79,7 @@ const TANGGAL_INPUT_YEAR = 2000;
  *    single year's raw classification).
  */
 export default function LcChangeModule() {
+  const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const { getInt } = useConfigStore();
   const { showLoading, setLoadingProgress, hideLoading } = useUiStore();
 
@@ -109,13 +111,13 @@ export default function LcChangeModule() {
     },
     [setAoiState],
   );
-  const [dataset, setDataset] = useState<LcDataset>("Dynamic_World");
-  const [years, setYears] = useState<number[]>([maxYear - 1, maxYear]);
+  const [dataset, setDataset] = useState<LcDataset>((query.dataset as LcDataset) || "Dynamic_World");
+  const [years, setYears] = useState<number[]>([query.yearFrom ?? maxYear - 1, query.yearTo ?? maxYear]);
   // A two-year comparison should default to the complete annual Dynamic
   // World composite. A one-month window is opt-in and can legitimately have
   // no scenes for an AOI/year pair.
-  const [startMonth, setStartMonth] = useState(1);
-  const [endMonth, setEndMonth] = useState(12);
+  const [startMonth, setStartMonth] = useState(query.monthFrom ?? 1);
+  const [endMonth, setEndMonth] = useState(query.monthTo ?? 12);
   const [dateMode, setDateMode] = useState<DateMode>("year");
   const [tanggalStart, setTanggalStart] = useState(DEFAULT_TANGGAL_START);
   const [tanggalEnd, setTanggalEnd] = useState(DEFAULT_TANGGAL_END);
@@ -124,7 +126,7 @@ export default function LcChangeModule() {
   // diagnostic default; this only controls whether low-confidence pixels get
   // masked out of the classification itself).
   const [dwThresholdEnabled, setDwThresholdEnabled] = useState(false);
-  const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(0.5);
+  const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(query.dwProbabilityThreshold ?? 0.5);
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const [running, setRunning] = useState(false);
@@ -134,11 +136,15 @@ export default function LcChangeModule() {
   const [periodFromYear, setPeriodFromYear] = useState<number | null>(null);
   const [periodToYear, setPeriodToYear] = useState<number | null>(null);
 
-  const [mode, setMode] = useState<ChangeMapMode>("normal");
+  const [mode, setMode] = useState<ChangeMapMode>((query.changeMode as ChangeMapMode) || "normal");
   const [changeMapCache, setChangeMapCache] = useState<Record<string, LcChangeMapResponse>>({});
   const [changeMapLoading, setChangeMapLoading] = useState(false);
   const [changeMapError, setChangeMapError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("matrix");
+
+  useEffect(() => {
+    updateUrlFromState({ ...query, dataset, yearFrom: years[0], yearTo: years[1], monthFrom: startMonth, monthTo: endMonth, dwProbabilityThreshold, changeMode: mode });
+  }, [dataset, years, startMonth, endMonth, dwProbabilityThreshold, mode]);
 
   // Dataset options fetched from GET /landcover/datasets (same catalog the
   // Landcover feature calls) instead of the 6-item static DATASET_OPTIONS -

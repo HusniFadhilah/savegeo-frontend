@@ -7,6 +7,7 @@ import type {
 } from "leaflet";
 import RasterResolutionNotice from "./RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
+import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import "@/styles/disaster-swipe.css";
 
 export type SwipeOrientation = "vertical" | "horizontal";
@@ -469,6 +470,7 @@ export default function SwipeCompareMap({
           mapRef.current = map;
         }}
       >
+        <BasemapSwitcher />
         <SwipePaneSetup onReady={markAfterPaneReady} />
         {children}
         {afterPaneReady && beforeUrl && (

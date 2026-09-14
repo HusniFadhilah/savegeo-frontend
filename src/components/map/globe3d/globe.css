@@ -1,0 +1,22 @@
+﻿.cesium-globe { min-height: 360px; isolation: isolate; }
+.cesium-globe canvas { touch-action: none; }
+.cesium-globe .cesium-viewer-bottom { max-width: calc(100% - 8px); background: #071a2ccc; }
+.cesium-globe .cesium-credit-textContainer { font-size: 11px; }
+.globe-controls { position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 4px; max-width: calc(100% - 160px); z-index: 3; }
+.globe-controls button, .globe-panels summary, .user-location-control summary, .location-panel button, .globe-settings select { min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid #64748b; border-radius: 5px; background: #102338; color: #fff; cursor: pointer; }
+.globe-panels { position: absolute; top: 10px; right: 10px; display: grid; gap: 6px; z-index: 4; max-width: min(280px, calc(100% - 20px)); }
+.globe-panels details, .user-location-control { color: #fff; background: #102338; border-radius: 5px; }
+.globe-settings-body, .location-panel { padding: 10px; max-height: min(45vh, 320px); overflow: auto; width: min(260px, 75vw); }
+.globe-settings-body label, .location-panel label { display: flex; align-items: center; gap: 8px; min-height: 44px; flex-wrap: wrap; }
+.globe-settings-body p, .location-panel p { font-size: 12px; margin: 4px 0; }
+.globe-status { pointer-events: none; position: absolute; bottom: 32px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 4px; color: white; font-size: 11px; }
+.globe-status span { padding: 3px 6px; background: #102338dd; border-radius: 3px; }
+.map-view-shell { position: relative; }
+.map-view-shell .map-globe-overlay { position: absolute; inset: 0; z-index: 1001; }
+.map-globe-overlay .cesium-globe { height: 100%; min-height: 100%; }
+.map-flat-controls { position: absolute; top: 85px; left: 10px; z-index: 800; display: grid; gap: 5px; }
+.map-flat-controls > button { min-height: 44px; min-width: 44px; border: 1px solid #ccc; border-radius: 4px; background: white; }
+.map-flat-controls .location-panel { position: absolute; left: 0; background: #102338; border-radius: 4px; }
+.map-flat-hidden { visibility: hidden; pointer-events: none; }
+.cesium-globe:fullscreen { height: 100vh; width: 100vw; }
+@media (max-width: 600px) { .globe-controls { max-width: 145px; } .globe-status { font-size: 10px; } .cesium-globe .cesium-infoBox { width: calc(100% - 20px); max-width: 300px; top: 150px; } }
