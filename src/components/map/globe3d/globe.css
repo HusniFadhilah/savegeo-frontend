@@ -14,9 +14,9 @@
 .map-view-shell { position: relative; }
 .map-view-shell .map-globe-overlay { position: absolute; inset: 0; z-index: 1001; }
 .map-globe-overlay .cesium-globe { height: 100%; min-height: 100%; }
-.map-flat-controls { position: absolute; top: 85px; left: 10px; z-index: 800; display: grid; gap: 5px; }
+.map-flat-controls { position: absolute; bottom: 55px; left: 10px; z-index: 800; display: grid; gap: 5px; }
 .map-flat-controls > button { min-height: 44px; min-width: 44px; border: 1px solid #ccc; border-radius: 4px; background: white; }
-.map-flat-controls .location-panel { position: absolute; left: 0; background: #102338; border-radius: 4px; }
+.map-flat-controls .location-panel { position: absolute; left: 0; bottom: 0; background: #102338; border-radius: 4px; }
 .map-flat-hidden { visibility: hidden; pointer-events: none; }
 .cesium-globe:fullscreen { height: 100vh; width: 100vw; }
 @media (max-width: 600px) { .globe-controls { max-width: 145px; } .globe-status { font-size: 10px; } .cesium-globe .cesium-infoBox { width: calc(100% - 20px); max-width: 300px; top: 150px; } }

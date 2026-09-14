@@ -339,7 +339,7 @@ export default function ImageryModule() {
 
   const globeQuery = useGlobeQuery();
   const mapMode: "flat" | "globe" = ["3d", "globe"].includes(globeQuery.get("view") ?? "") ? "globe" : "flat";
-  const setMapMode = (mode: "flat" | "globe") => writeGlobeQuery({ view: mode === "globe" ? "globe" : "single" }, true);
+  const setMapMode = (mode: "flat" | "globe") => writeGlobeQuery({ view: mode === "globe" ? "3d" : "single" }, true);
   const [globeBasemapId, setGlobeBasemapId] = useState(query.basemap ?? "satellite");
   const [globeCamera] = useState({
     lat: query.globeLat ?? -2.5,
@@ -356,7 +356,7 @@ export default function ImageryModule() {
       endDate,
       cloudThreshold: maxCloudCover,
       opacity: tileOpacity,
-      view: mapMode === "globe" ? "globe" : ["3d", "globe"].includes(query.view ?? "") ? "single" : query.view,
+      view: mapMode === "globe" ? "3d" : ["3d", "globe"].includes(query.view ?? "") ? "single" : query.view,
       basemap: globeBasemapId,
     });
   }, [globeBasemapId, globeCamera, mapMode, maxCloudCover, endDate, query, satellite, startDate, tileOpacity]);

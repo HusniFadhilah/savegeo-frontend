@@ -13,6 +13,8 @@ export type Language = "id" | "en";
  */
 export const translations: Record<Language, Record<string, string>> = {
   id: {
+    "map.3d.tilesLoading": "Memuat tile peta...",
+    "map.3d.analysisOpacity": "Opasitas layer hasil",
     "map.3d.title": "Globe 3D interaktif",
     "map.3d.loading": "Memuat globe/data 3D...",
     "map.3d.loadError": "Globe gagal dimuat. Gunakan peta 2D.",
@@ -428,6 +430,8 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.referenceCarbon": "Peta Referensi Asli",
   },
   en: {
+    "map.3d.tilesLoading": "Loading map tiles...",
+    "map.3d.analysisOpacity": "Result layer opacity",
     "map.3d.title": "Interactive 3D globe",
     "map.3d.loading": "Loading globe/3D data...",
     "map.3d.loadError": "The globe could not load. Use the 2D map.",

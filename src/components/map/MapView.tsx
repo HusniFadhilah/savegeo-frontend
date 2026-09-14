@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -83,7 +83,9 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
   const query = useGlobeQuery();
   const globe = query.get("view") === "3d" || query.get("view") === "globe";
   const [globeLayers, setGlobeLayers] = useState<GlobeLayer[]>([]);
-  const defaultBasemap = basemaps.find((b) => b.isDefault) ?? basemaps[0];
+  const globeAoi = globeLayers.find((layer) => layer.type === "geojson" && layer.data.type === "Feature" && ["Polygon", "MultiPolygon"].includes(layer.data.geometry.type));
+  const analysisLayers = useMemo(() => globeLayers.filter(layer => layer !== globeAoi), [globeLayers, globeAoi]);
+  const defaultBasemap = basemaps.find(b => b.id === query.get("basemap")) ?? basemaps.find((b) => b.isDefault) ?? basemaps[0];
   const effectiveMaxZoom = Math.max(maxZoom ?? 0, defaultBasemap?.maxZoom ?? 0, HIGH_DETAIL_MAX_ZOOM);
   const defaultMaxNativeZoom = defaultBasemap?.maxNativeZoom ?? defaultBasemap?.maxZoom;
 
@@ -136,8 +138,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         {children}
       </MapContainer>
     </BasemapContext.Provider></div>
-    {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} layers={globeLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
-      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "globe" }, true)}>3D</button><UserLocationControl /></div>}
+    {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
+      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
     </div>
   );
 }

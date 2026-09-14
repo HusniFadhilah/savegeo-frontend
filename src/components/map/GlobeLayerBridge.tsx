@@ -1,3 +1,5 @@
+import { useGlobeQuery } from "./globe3d/query";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
@@ -49,15 +51,18 @@ export function GlobeLayerBridge({ enabled, onLayers }: { enabled: boolean; onLa
 export function LeafletUserLocation({ active }: { active: boolean }) {
   const map = useMap();
   const location = useUserGeolocation();
+  const query = useGlobeQuery();
+  const show = query.get("show_user_location") !== "false";
+  const t = useI18nStore(s => s.t);
   const revision = useRef(location.revision);
   useEffect(() => {
     if (!map.getPane("user-location")) { const pane = map.createPane("user-location"); pane.style.zIndex = "650"; }
-    if (location.latitude === null || location.longitude === null || !location.visible) return;
+    if (location.latitude === null || location.longitude === null || !location.visible || !show) return;
     const point: L.LatLngTuple = [location.latitude, location.longitude];
     const circle = L.circle(point, { pane: "user-location", radius: Math.max(1, location.accuracy ?? 1), color: "#1e90ff", weight: 1, fillOpacity: 0.15 }).addTo(map);
-    const marker = L.circleMarker(point, { pane: "user-location", radius: 7, color: "white", weight: 3, fillColor: "#1e90ff", fillOpacity: 1 }).addTo(map);
+    const marker = L.circleMarker(point, { pane: "user-location", radius: 7, color: "white", weight: 3, fillColor: "#1e90ff", fillOpacity: 1 }).bindTooltip(t("map.location.title")).addTo(map);
     if (active && revision.current !== location.revision) { revision.current = location.revision; map.flyTo(point, 16); }
     return () => { map.removeLayer(circle); map.removeLayer(marker); };
-  }, [map, active, location.latitude, location.longitude, location.accuracy, location.visible, location.revision]);
+  }, [map, active, location.latitude, location.longitude, location.accuracy, location.visible, location.revision, show, t]);
   return null;
 }

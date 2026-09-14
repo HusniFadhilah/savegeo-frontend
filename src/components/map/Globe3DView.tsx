@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as C from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import type { GlobeLayer, GlobeViewProps } from "./GlobeView";
@@ -12,6 +12,17 @@ import { cameraNumber, useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
 import "./globe3d/globe.css";
 
 const EMPTY_LAYERS: GlobeLayer[] = [];
+function geometryBounds(geometry: GeoJSON.Geometry | null | undefined): C.BoundingSphere | null {
+  if (!geometry || !("coordinates" in geometry)) return null;
+  const points: C.Cartesian3[] = [];
+  const collect = (coordinates: unknown) => {
+    if (!Array.isArray(coordinates)) return;
+    if (typeof coordinates[0] === "number" && typeof coordinates[1] === "number") points.push(C.Cartesian3.fromDegrees(coordinates[0], coordinates[1]));
+    else coordinates.forEach(collect);
+  };
+  collect(geometry.coordinates);
+  return points.length ? C.BoundingSphere.fromPoints(points) : null;
+}
 const env = import.meta.env;
 const terrainConfigured = Boolean(env.VITE_CESIUM_TERRAIN_URL || env.VITE_CESIUM_ION_TOKEN);
 const buildingsConfigured = Boolean(env.VITE_CESIUM_BUILDINGS_URL || (env.VITE_CESIUM_ION_TOKEN && env.VITE_CESIUM_BUILDINGS_ASSET_ID));
@@ -37,6 +48,8 @@ export default function Globe3DView(props: GlobeViewProps) {
   const [layerError, setLayerError] = useState(false);
   const [terrainStatus, setTerrainStatus] = useState("terrainUnavailable");
   const [buildingStatus, setBuildingStatus] = useState("buildingsUnavailable");
+  const [tileQueue, setTileQueue] = useState(0);
+  const analysisImagery = useRef<C.ImageryLayer[]>([]);
   const [heading, setHeading] = useState(0);
   const aoiSource = useRef<C.GeoJsonDataSource | null>(null);
   const privateCamera = useRef(false);
@@ -46,6 +59,7 @@ export default function Globe3DView(props: GlobeViewProps) {
   const { basemaps } = useBasemaps();
   const sharedAoi = useAoiStore(s => s.aoi);
   const aoi = props.aoi === undefined ? sharedAoi?.feature : props.aoi;
+  const aoiBounds = useMemo(() => geometryBounds(aoi?.geometry), [aoi]);
   const t = useI18nStore(s => s.t);
   const query = useGlobeQuery();
   const basemapId = query.get("basemap") ?? props.basemapId;
@@ -57,6 +71,8 @@ export default function Globe3DView(props: GlobeViewProps) {
   const labels = query.get("show_labels") !== "false";
   const roads = query.get("show_roads") !== "false";
   const exaggeration = cameraNumber(query, "terrain_exaggeration", 1, 0.5, 3);
+  const showLocation = query.get("show_user_location") !== "false";
+  const analysisOpacity = cameraNumber(query, "globe_opacity", 1, 0, 1);
   const lighting = query.get("show_lighting") === "true";
 
   const indonesia = () => {
@@ -69,7 +85,7 @@ export default function Globe3DView(props: GlobeViewProps) {
     const v = viewerRef.current;
     if (!v || v.isDestroyed()) return;
     privateCamera.current = false;
-    if (aoiSource.current) void v.flyTo(aoiSource.current, { offset: new C.HeadingPitchRange(0, -C.Math.PI_OVER_FOUR, 0) }).catch(() => undefined);
+    if (aoiBounds) v.camera.flyToBoundingSphere(aoiBounds, { offset: new C.HeadingPitchRange(0, -C.Math.PI_OVER_FOUR, 0) });
     else indonesia();
   };
 
@@ -97,13 +113,14 @@ export default function Globe3DView(props: GlobeViewProps) {
         clearTimeout(timer);
         timer = setTimeout(() => {
           if (v.isDestroyed()) return;
-          setHeading(Math.round(C.Math.toDegrees(v.camera.heading)));
+          setHeading(Math.round(C.Math.toDegrees(v.camera.heading)) % 360);
           if (privateCamera.current || useLocationStore.getState().follow) return;
           const position = v.camera.positionCartographic;
           writeGlobeQuery({ globe_lat: C.Math.toDegrees(position.latitude).toFixed(5), globe_lng: C.Math.toDegrees(position.longitude).toFixed(5), globe_height: Math.round(position.height), globe_heading: C.Math.toDegrees(v.camera.heading).toFixed(2), globe_pitch: C.Math.toDegrees(v.camera.pitch).toFixed(2), globe_roll: C.Math.toDegrees(v.camera.roll).toFixed(2) });
         }, 500);
       };
       const removeMove = v.camera.moveEnd.addEventListener(onMove);
+      const removeProgress = v.scene.globe.tileLoadProgressEvent.addEventListener((count: number) => setTileQueue(count));
       const removeError = v.scene.renderError.addEventListener(() => setError("loadError"));
       const doubleClick = new C.ScreenSpaceEventHandler(v.scene.canvas);
       doubleClick.setInputAction((event: { position: C.Cartesian2 }) => {
@@ -120,7 +137,7 @@ export default function Globe3DView(props: GlobeViewProps) {
       setViewer(v);
       latest.current.onReady?.(v);
       return () => {
-        clearTimeout(timer); resize.disconnect(); removeMove(); removeError(); doubleClick.destroy();
+        clearTimeout(timer); resize.disconnect(); removeProgress(); removeMove(); removeError(); doubleClick.destroy();
         window.removeEventListener("popstate", restoreCamera);
         if (!v.isDestroyed()) v.destroy();
         viewerRef.current = null;
@@ -207,17 +224,18 @@ export default function Globe3DView(props: GlobeViewProps) {
       result.show = new URLSearchParams(window.location.search).get("show_aoi") !== "false";
       await viewer.dataSources.add(result);
       if (cancelled || viewer.isDestroyed()) return;
-      if (!restoreInitialCamera.current) void viewer.flyTo(result, { offset: new C.HeadingPitchRange(0, -C.Math.PI_OVER_FOUR, 0) }).catch(() => undefined);
+      if (!restoreInitialCamera.current && aoiBounds) viewer.camera.flyToBoundingSphere(aoiBounds, { offset: new C.HeadingPitchRange(0, -C.Math.PI_OVER_FOUR, 0), duration: 1.2 });
       viewer.scene.requestRender();
     }).catch(() => { if (!cancelled) setLayerError(true); });
     return () => { cancelled = true; aoiSource.current = null; if (source && !viewer.isDestroyed()) viewer.dataSources.remove(source, true); };
-  }, [viewer, aoi]);
+  }, [viewer, aoi, aoiBounds]);
   useEffect(() => { if (viewer && !viewer.isDestroyed() && aoiSource.current) { aoiSource.current.show = showAoi; viewer.scene.requestRender(); } }, [viewer, showAoi]);
 
   useEffect(() => {
     if (!viewer || viewer.isDestroyed()) return;
     let cancelled = false;
     const raster: C.ImageryLayer[] = [];
+    analysisImagery.current = raster;
     const sources: C.GeoJsonDataSource[] = [];
     const removers: (() => void)[] = [];
     setLayerError(false);
@@ -227,7 +245,7 @@ export default function Globe3DView(props: GlobeViewProps) {
           const provider = imageryProvider(layer.url, layer.attribution, layer.maxNativeZoom ?? layer.maxZoom ?? 19);
           removers.push(provider.errorEvent.addEventListener(() => setLayerError(true)));
           const installed = viewer.imageryLayers.addImageryProvider(provider);
-          installed.alpha = layer.opacity ?? 1; raster.push(installed);
+          installed.alpha = (layer.opacity ?? 1) * cameraNumber(new URLSearchParams(window.location.search), "globe_opacity", 1, 0, 1); raster.push(installed);
         } catch { setLayerError(true); }
       } else {
         void C.GeoJsonDataSource.load(layer.data, { clampToGround: true, stroke: C.Color.fromCssColorString(layer.color ?? "#0d6efd"), fill: C.Color.fromCssColorString(layer.fillColor ?? layer.color ?? "#0d6efd").withAlpha(layer.opacity ?? 0.2), markerColor: C.Color.fromCssColorString(layer.color ?? "#ef4444") }).then(result => {
@@ -242,8 +260,15 @@ export default function Globe3DView(props: GlobeViewProps) {
 
   useEffect(() => {
     if (!viewer || viewer.isDestroyed()) return;
+    const rasterLayers = layers.filter(layer => layer.type === "raster");
+    analysisImagery.current.forEach((layer, index) => { if (!layer.isDestroyed()) layer.alpha = (rasterLayers[index]?.opacity ?? 1) * analysisOpacity; });
+    viewer.scene.requestRender();
+  }, [viewer, analysisOpacity, layers]);
+
+  useEffect(() => {
+    if (!viewer || viewer.isDestroyed()) return;
     viewer.entities.removeById("user-location"); viewer.entities.removeById("user-accuracy");
-    if (location.latitude === null || location.longitude === null || !location.visible) { viewer.scene.requestRender(); return; }
+    if (location.latitude === null || location.longitude === null || !location.visible || !showLocation) { viewer.scene.requestRender(); return; }
     const position = C.Cartesian3.fromDegrees(location.longitude, location.latitude);
     viewer.entities.add({ id: "user-accuracy", position, ellipse: { semiMajorAxis: Math.max(1, location.accuracy ?? 1), semiMinorAxis: Math.max(1, location.accuracy ?? 1), material: C.Color.DODGERBLUE.withAlpha(0.15), heightReference: C.HeightReference.CLAMP_TO_GROUND } });
     viewer.entities.add({ id: "user-location", name: t("map.location.title"), position, point: { pixelSize: 14, color: C.Color.DODGERBLUE, outlineColor: C.Color.WHITE, outlineWidth: 3, heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity }, label: { text: t("map.location.title"), font: "14px sans-serif", pixelOffset: new C.Cartesian2(0, -30), heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity } });
@@ -253,7 +278,7 @@ export default function Globe3DView(props: GlobeViewProps) {
       viewer.camera.flyTo({ destination: C.Cartesian3.fromDegrees(location.longitude, location.latitude, Math.max(1000, (location.accuracy ?? 0) * 4)), duration: 1.2 });
     }
     viewer.scene.requestRender();
-  }, [viewer, location.latitude, location.longitude, location.accuracy, location.visible, location.revision, t]);
+  }, [viewer, location.latitude, location.longitude, location.accuracy, location.visible, location.revision, showLocation, t]);
 
   const toggle = (key: string, value: boolean) => writeGlobeQuery({ [key]: value });
   const back = () => { writeGlobeQuery({ view: "single" }, true); props.onViewChange?.("flat"); };
@@ -279,6 +304,7 @@ export default function Globe3DView(props: GlobeViewProps) {
           <p role="status">{t(`map.3d.${terrainStatus}`)}</p>
           {terrainStatus === "terrainActive" && <label>{t("map.3d.exaggeration")} {exaggeration}×<input type="range" min="0.5" max="3" step="0.1" value={exaggeration} onChange={e => writeGlobeQuery({ terrain_exaggeration: e.target.value })} /></label>}
           <label><input type="checkbox" checked={buildings && buildingsConfigured} disabled={!buildingsConfigured} onChange={e => toggle("show_buildings", e.target.checked)} />{t("map.3d.buildings")}</label><p role="status">{t(`map.3d.${buildingStatus}`)}</p>
+          <label>{t("map.3d.analysisOpacity")} {Math.round(analysisOpacity * 100)}%<input aria-label={t("map.3d.analysisOpacity")} type="range" min="0" max="1" step="0.05" value={analysisOpacity} onChange={e => writeGlobeQuery({ globe_opacity: e.target.value })} /></label>
           <label><input type="checkbox" checked={showAoi} onChange={e => toggle("show_aoi", e.target.checked)} />AOI</label>
           <label><input type="checkbox" disabled={!basemap?.overlayUrl} checked={roads && Boolean(basemap?.overlayUrl)} onChange={e => toggle("show_roads", e.target.checked)} />{t("map.3d.roads")}</label>
           <label><input type="checkbox" disabled={!basemap?.labelsUrl} checked={labels && Boolean(basemap?.labelsUrl)} onChange={e => toggle("show_labels", e.target.checked)} />{t("map.3d.labels")}</label>
@@ -287,6 +313,7 @@ export default function Globe3DView(props: GlobeViewProps) {
         <UserLocationControl />
       </div>
       <div className="globe-status" role="status">
+        {tileQueue > 0 && <span>{t("map.3d.tilesLoading")}</span>}
         {!terrainConfigured && <span>{t("map.3d.terrainUnavailable")}</span>}
         {imageryError && <span>{t("map.3d.imageryError")}</span>}{layerError && <span>{t("map.3d.layerError")}</span>}
         {aoi && <span>{String(aoi.properties?.name ?? sharedAoi?.name ?? "AOI")}{sharedAoi?.areaKm2 != null ? ` · ${sharedAoi.areaKm2.toLocaleString()} km²` : ""}</span>}

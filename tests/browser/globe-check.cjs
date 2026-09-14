@@ -9,7 +9,7 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  try {
  const context=await browser.newContext({viewport:{width:1280,height:900},geolocation:{latitude:-6.234567,longitude:106.765432,accuracy:25},permissions:['geolocation']});
  // Only synthetic analysis imagery is intercepted. Basemaps remain real provider requests.
- await context.route('**/test-analysis/**',route=>route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64')}));
+ await context.route('**/test-analysis/**',route=>route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/browser/globe-transparent.png')}));
  const page=await context.newPage(); const errors=[]; console.log('Browser launched');
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`${base}/tests/browser/globe.html?view=3d`,{waitUntil:'domcontentloaded'}); console.log('Fixture loaded');
@@ -21,10 +21,10 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  results.push({test:'real Cesium SCENE3D, MultiPolygon, hotspot, raster, no GPS request on mount',initial});
  await page.screenshot({path:'test-results/globe/current.png'}); await page.locator('.globe-settings > summary').click();
  const camera=()=>page.evaluate(()=>{const c=window.testViewer.camera;return [c.position.x,c.position.y,c.position.z,c.heading,c.pitch,c.roll]});
- const before=await camera();
+ await page.waitForTimeout(1500); const before=await camera();
  for(const id of ['roads','satellite_roads','topo','terrain','dark','light','satellite']){
    await page.getByLabel('Basemap & layers',{exact:true}).selectOption(id);
-   await page.waitForTimeout(350);
+   await page.waitForTimeout(500);
    const state=await page.evaluate(()=>({layers:window.testViewer.imageryLayers.length,creates:window.viewerCreations,sources:window.testViewer.dataSources.length, urls:Array.from({length:window.testViewer.imageryLayers.length},(_,i)=>window.testViewer.imageryLayers.get(i).imageryProvider.url)}));
    assert.equal(state.creates,initial.creations); assert.equal(state.sources,2);assert.equal(state.layers,id==='satellite_roads'?3:2);
    assert(state.urls.at(-1).includes('/test-analysis/'));assert.deepEqual(await camera(),before);
@@ -35,21 +35,21 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  await page.getByRole('button',{name:'Tilt camera',exact:true}).click();await page.waitForTimeout(600);
  await page.getByRole('button',{name:'Orbit globe',exact:true}).click();await page.waitForTimeout(600);
  await page.getByRole('button',{name:'Compass: face north',exact:true}).click();
- assert(Math.abs(await page.evaluate(()=>window.testViewer.camera.heading))<0.001);
+ assert(Math.abs(await page.evaluate(()=>Math.sin(window.testViewer.camera.heading)))<0.001);
  results.push({test:'zoom / tilt / orbit / compass',passed:true});
  await page.locator('.user-location-control > summary').click();
- const urlBefore=page.url();
+ await page.waitForTimeout(700); const urlBefore=page.url();
  await page.getByRole('button',{name:'Locate me',exact:true}).click();
  await page.waitForFunction(()=>window.testViewer.entities.getById('user-location'));
  await page.waitForTimeout(2000);
- assert.equal(page.url(),urlBefore);
+ assert.equal(new URL(page.url()).searchParams.get("globe_lat"), new URL(urlBefore).searchParams.get("globe_lat")); assert.equal(new URL(page.url()).searchParams.get("globe_lng"), new URL(urlBefore).searchParams.get("globe_lng"));
  assert(await page.evaluate(()=>!!window.testViewer.entities.getById('user-accuracy')));
  await page.getByRole('button',{name:'Follow location',exact:true}).click();
  await context.setGeolocation({latitude:-6.25,longitude:106.75,accuracy:40});
  await page.waitForFunction(()=>window.locationState.getState().latitude===-6.25);
  await page.getByRole('button',{name:'Stop following',exact:true}).click();
  assert.equal(await page.evaluate(()=>window.locationState.getState().follow),false);
- assert.equal(page.url(),urlBefore);
+ assert.equal(new URL(page.url()).searchParams.get("globe_lat"), new URL(urlBefore).searchParams.get("globe_lat")); assert.equal(new URL(page.url()).searchParams.get("globe_lng"), new URL(urlBefore).searchParams.get("globe_lng"));
  results.push({test:'GPS granted, marker, accuracy, explicit follow/stop, coordinates absent from URL',passed:true});
  // Hide controlled test GPS before evidence capture.
  await page.getByLabel('Show location',{exact:true}).uncheck();

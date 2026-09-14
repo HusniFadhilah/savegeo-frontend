@@ -30,6 +30,7 @@ export default function AppRoutes() {
     { path: "/satellite-imagery", module: "imagery" },
     { path: "/imagery", module: "imagery" },
     { path: "/crop-monitoring", module: "crop-monitoring" },
+    { path: "/disaster", module: "disaster" },
     { path: "/guide", module: "guide" },
     { path: "/about", module: "about" },
   ];
@@ -75,6 +76,7 @@ export default function AppRoutes() {
         path="/pemetaan-bencana/:eventId"
         element={<ProtectedAppRoute><DisasterDashboard /></ProtectedAppRoute>}
       />
+      <Route path="/disaster/event/:eventId" element={<ProtectedAppRoute><DisasterDashboard /></ProtectedAppRoute>} />
       <Route path="*" element={<LandingPage />} />
     </Routes>
   );
