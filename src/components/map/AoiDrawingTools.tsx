@@ -137,6 +137,18 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
     });
     map.addControl(drawControl);
 
+    // Leaflet.Draw uses a raster sprite for the polygon action. The sprite
+    // becomes hard to see when the application switches theme and can render
+    // as an empty square in dark mode. Keep the Leaflet action/keyboard
+    // handlers, but replace only its visual with a theme-safe icon font.
+    const polygonButton = map.getContainer().querySelector<HTMLAnchorElement>(".leaflet-draw-draw-polygon");
+    if (polygonButton) {
+      polygonButton.classList.add("savegeo-draw-polygon");
+      polygonButton.innerHTML = '<i class="bi bi-pentagon" aria-hidden="true"></i>';
+      polygonButton.title = "Gambar polygon AOI";
+      polygonButton.setAttribute("aria-label", polygonButton.title);
+    }
+
     const updateEditToolsVisibility = () => {
       map.getContainer().classList.toggle("aoi-draw-empty", drawnItems.getLayers().length === 0);
     };

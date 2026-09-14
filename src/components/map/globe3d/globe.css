@@ -14,9 +14,78 @@
 .map-view-shell { position: relative; }
 .map-view-shell .map-globe-overlay { position: absolute; inset: 0; z-index: 1001; }
 .map-globe-overlay .cesium-globe { height: 100%; min-height: 100%; }
-.map-flat-controls { position: absolute; bottom: 55px; left: 10px; z-index: 800; display: grid; gap: 5px; }
-.map-flat-controls > button { min-height: 44px; min-width: 44px; border: 1px solid #ccc; border-radius: 4px; background: white; }
-.map-flat-controls .location-panel { position: absolute; left: 0; bottom: 0; background: #102338; border-radius: 4px; }
+.map-flat-controls {
+  position: absolute;
+  bottom: 55px;
+  left: 10px;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(190px, calc(100vw - 20px));
+  gap: 0;
+  filter: drop-shadow(0 2px 5px rgba(15, 23, 42, 0.2));
+}
+.map-flat-controls > button,
+.map-flat-controls > .user-location-control > summary {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 54px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #64748b;
+  color: #1f2937;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+.map-flat-controls > button {
+  border-radius: 6px 6px 0 0;
+  border-bottom-width: 0;
+  background: #fff;
+}
+.map-flat-controls > button:hover,
+.map-flat-controls > button:focus-visible {
+  background: #f1f5f9;
+  outline: none;
+}
+.map-flat-controls > .user-location-control {
+  margin: 0;
+  border: 1px solid #64748b;
+  border-radius: 0 0 6px 6px;
+  background: #102338;
+  color: #fff;
+}
+.map-flat-controls > .user-location-control > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: inherit;
+  list-style: none;
+  text-align: center;
+}
+.map-flat-controls > .user-location-control > summary::-webkit-details-marker { display: none; }
+.map-flat-controls > .user-location-control > summary:hover,
+.map-flat-controls > .user-location-control > summary:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+.map-flat-controls > .user-location-control[open] > summary {
+  border-bottom: 1px solid #64748b;
+  border-radius: 0;
+}
+.map-flat-controls .location-panel {
+  position: absolute;
+  left: calc(100% + 8px);
+  bottom: 0;
+  background: #102338;
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+}
 .map-flat-hidden { visibility: hidden; pointer-events: none; }
 .cesium-globe:fullscreen { height: 100vh; width: 100vw; }
 @media (max-width: 600px) { .globe-controls { max-width: 145px; } .globe-status { font-size: 10px; } .cesium-globe .cesium-infoBox { width: calc(100% - 20px); max-width: 300px; top: 150px; } }

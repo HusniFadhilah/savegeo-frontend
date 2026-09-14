@@ -2364,6 +2364,23 @@
   outline: none;
 }
 
+/* Leaflet.Draw's default polygon icon is a raster sprite. A Bootstrap icon
+   keeps the action visible in both themes and remains attached to the same
+   Leaflet click/keyboard handler. */
+.savegeo-draw-polygon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background-image: none !important;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.savegeo-draw-polygon i {
+  display: block;
+  line-height: 1;
+}
+
 .leaflet-container.is-drawing-rectangle {
   cursor: crosshair;
 }
@@ -6408,10 +6425,13 @@ html[data-theme="dark"] .fullscreen-control-btn,
 html[data-theme="dark"] .leaflet-draw-toolbar a,
 html[data-theme="dark"] .leaflet-control-zoom a,
 html[data-theme="dark"] .aoi-curve-control__button,
-html[data-theme="dark"] .aoi-rectangle-control__button {
+html[data-theme="dark"] .aoi-rectangle-control__button,
+html[data-theme="dark"] .map-flat-controls > button,
+html[data-theme="dark"] .map-flat-controls > .user-location-control,
+html[data-theme="dark"] .map-flat-controls > .user-location-control > summary {
   border-color: #475569 !important;
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
+  background-color: #111827 !important;
+  color: #f8fafc !important;
 }
 
 html[data-theme="dark"] .leaflet-bar a:hover,
@@ -6422,7 +6442,11 @@ html[data-theme="dark"] .leaflet-control-zoom a:hover,
 html[data-theme="dark"] .aoi-curve-control__button:hover,
 html[data-theme="dark"] .aoi-rectangle-control__button:hover,
 html[data-theme="dark"] .aoi-curve-control__button:focus-visible,
-html[data-theme="dark"] .aoi-rectangle-control__button:focus-visible {
+html[data-theme="dark"] .aoi-rectangle-control__button:focus-visible,
+html[data-theme="dark"] .map-flat-controls > button:hover,
+html[data-theme="dark"] .map-flat-controls > button:focus-visible,
+html[data-theme="dark"] .map-flat-controls > .user-location-control > summary:hover,
+html[data-theme="dark"] .map-flat-controls > .user-location-control > summary:focus-visible {
   background-color: #dcfce7 !important;
   color: #14532d !important;
 }
@@ -6445,6 +6469,12 @@ html[data-theme="dark"] .aoi-rectangle-control__button i {
   color: currentColor !important;
   fill: currentColor !important;
   stroke: currentColor !important;
+}
+
+html[data-theme="dark"] .map-flat-controls .location-panel {
+  border-color: #475569 !important;
+  background: #111827 !important;
+  color: #f8fafc !important;
 }
 
 html[data-theme="dark"] .leaflet-disabled,
