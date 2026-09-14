@@ -475,6 +475,7 @@ export default function SatelliteViewer({
             afterResolutionM={postImg?.resolution_m ?? undefined}
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
+            showGlobeControl={showGlobeControl}
             initialPercent={35}
             bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}
             clipGeometry={aoi?.geojson as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}

@@ -314,6 +314,8 @@ interface Props {
   clipGeometry?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
   /** Rendered inside the map, unclipped (e.g. AOI GeoJSON boundary). */
   children?: ReactNode;
+  /** Render the shared 3D/globe shortcut for this comparison map. */
+  showGlobeControl?: boolean;
 }
 
 /**
@@ -346,6 +348,7 @@ export default function SwipeCompareMap({
   opacity = 1,
   clipGeometry,
   children,
+  showGlobeControl = true,
 }: Props) {
   const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
@@ -466,6 +469,7 @@ export default function SwipeCompareMap({
         center={center}
         zoom={zoom}
         maxZoom={maxZoom}
+        showGlobeControl={showGlobeControl}
         onMapReady={(map) => {
           mapRef.current = map;
         }}

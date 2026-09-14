@@ -92,7 +92,8 @@ export default function SegmentationComparison({result, showGlobeControl = true}
     {mode === "swipe" ? <SwipeCompareMap id="segmentation-swipe" beforeUrl={result.pre_tile_url} afterUrl={result.post_tile_url}
       beforeLabel="Segmentasi pre" afterLabel="Segmentasi post" orientation={orientation} onOrientationChange={setOrientation}
       opacity={opacity} bounds={bounds} clipGeometry={clipGeometry}
-      beforeMaxNativeZoom={nativeZoom} afterMaxNativeZoom={nativeZoom} beforeResolutionM={result.resolution_m} afterResolutionM={result.resolution_m}>
+      beforeMaxNativeZoom={nativeZoom} afterMaxNativeZoom={nativeZoom} beforeResolutionM={result.resolution_m} afterResolutionM={result.resolution_m}
+      showGlobeControl={showGlobeControl}>
       <MapSetup aoi={result.aoi} maps={maps} />
     </SwipeCompareMap> : mode === "split" ? <div className="row g-2"><div className="col-md-6"><strong>Pre</strong>{single("pre", showGlobeControl)}</div><div className="col-md-6"><strong>Post</strong>{single("post", false)}</div></div>
       : single(mode === "pre" ? "pre" : mode === "change" ? "change" : "post")}
