@@ -357,8 +357,8 @@ export const setPrimaryImagery = (id: number, imageryId: number) =>
     auth: true,
   });
 
-export const listDisasterModels = () =>
-  apiClient.get<{ models: DisasterModelRegistryEntry[] }>("/admin/disasters/models", { auth: true });
+export const listDisasterModels = (eventId?: number) =>
+  apiClient.get<{ models: DisasterModelRegistryEntry[] }>(`/admin/disasters/models${eventId ? `?event_id=${eventId}` : ""}`, { auth: true });
 
 export const createAnalysisRun = (
   id: number,
@@ -368,8 +368,8 @@ export const createAnalysisRun = (
 export const listAnalysisRuns = (id: number) =>
   apiClient.get<{ runs: AnalysisRunWithResult[] }>(`/admin/disasters/${id}/analyses`, { auth: true });
 
-export const runAnalysis = (runId: number) =>
-  apiClient.post<{ run: AnalysisRun; result: AnalysisResult }>(`/admin/analyses/${runId}/run`, undefined, {
+export const runAnalysis = (runId: number, force = false) =>
+  apiClient.post<{ run: AnalysisRun; result: AnalysisResult }>(`/admin/analyses/${runId}/run${force ? "?force=true" : ""}`, undefined, {
     auth: true,
   });
 

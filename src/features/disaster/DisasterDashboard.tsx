@@ -1,3 +1,4 @@
+import SegmentationComparison from "./components/SegmentationComparison";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
@@ -398,13 +399,14 @@ export default function DisasterDashboard() {
 
         {/* The old duplicate analysis map is intentionally removed. */}
         <div className="disaster-map-column">
+          {analyses.filter(entry => checkedAnalyses.has(entry.model_id) && entry.result?.comparison).map(entry => <SegmentationComparison key={`${entry.model_id}-${entry.run?.id}`} result={entry.result!.comparison!} />)}
           <SatelliteViewer
             aoi={aoi}
             imagery={imagery}
             primaryImagery={primary_imagery}
             satellite={satellite}
             showSatellite={showSatellite}
-            analyses={analyses}
+            analyses={analyses.filter(entry => !entry.result?.comparison)}
             checkedAnalyses={checkedAnalyses}
             showAoi={showAoi}
             hotspots={hotspots}
