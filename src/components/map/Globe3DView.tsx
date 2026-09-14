@@ -293,7 +293,7 @@ export default function Globe3DView(props: GlobeViewProps) {
     {!viewer && !error && <div className="savegeo-globe-loading" role="status">{t("map.3d.loading")}</div>}
     {error ? <div className="savegeo-globe-error" role="alert">{t(`map.3d.${error}`)}<button type="button" onClick={back}>{t("map.3d.backTo2d")}</button></div> : showControls && <>
       <div className="globe-controls" role="toolbar" aria-label={t("map.3d.title")}>
-        {button("home", "house", home)}{button("indonesia", "globe-asia-australia", indonesia)}
+        {button("home", "house", home)}
         {button("zoomIn", "plus-lg", () => viewer?.camera.zoomIn(Math.max(50, viewer.camera.positionCartographic.height * 0.4)))}
         {button("zoomOut", "dash-lg", () => viewer?.camera.zoomOut(Math.max(50, viewer.camera.positionCartographic.height * 0.4)))}
         {button("tilt", "box", () => { if (viewer) viewer.camera.lookUp(C.Math.toRadians(15)); })}
