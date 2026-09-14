@@ -93,6 +93,11 @@ export default function Globe3DView(props: GlobeViewProps) {
     if (!container.current) return;
     let v: C.Viewer;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const probe = document.createElement("canvas");
+    if (!probe.getContext("webgl2") && !probe.getContext("webgl")) {
+      setError("webglUnavailable");
+      return () => undefined;
+    }
     try {
       C.Ion.defaultAccessToken = "";
       v = new C.Viewer(container.current, { baseLayer: false, baseLayerPicker: false, terrainProvider: new C.EllipsoidTerrainProvider(), animation: false, timeline: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, selectionIndicator: true, infoBox: true, requestRenderMode: true, maximumRenderTimeChange: Infinity });

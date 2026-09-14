@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { MapActivityContext } from "./MapActivityContext";
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -81,7 +82,8 @@ function ResultPaneSetup() {
 export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className }: Props) {
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
-  const globe = query.get("view") === "3d" || query.get("view") === "globe";
+  const active = useContext(MapActivityContext);
+  const globe = active && (query.get("view") === "3d" || query.get("view") === "globe");
   const [globeLayers, setGlobeLayers] = useState<GlobeLayer[]>([]);
   const globeAoi = globeLayers.find((layer) => layer.type === "geojson" && layer.data.type === "Feature" && ["Polygon", "MultiPolygon"].includes(layer.data.geometry.type));
   const analysisLayers = useMemo(() => globeLayers.filter(layer => layer !== globeAoi), [globeLayers, globeAoi]);
@@ -128,7 +130,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
           </>
         )}
         <GlobeLayerBridge enabled={globe} onLayers={setGlobeLayers} />
-        <LeafletUserLocation active={!globe} />
+        {active && <LeafletUserLocation active={!globe} />}
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
@@ -139,7 +141,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
       </MapContainer>
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
-      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
+      active && <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
     </div>
   );
 }

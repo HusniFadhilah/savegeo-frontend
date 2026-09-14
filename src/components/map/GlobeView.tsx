@@ -1,4 +1,5 @@
-import { Component, lazy, Suspense, type ReactNode } from "react";
+import { MapActivityContext } from "./MapActivityContext";
+import { Component, useContext, lazy, Suspense, type ReactNode } from "react";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { Viewer } from "cesium";
 import { writeGlobeQuery } from "./globe3d/query";
@@ -22,5 +23,7 @@ class GlobeLoadBoundary extends Component<{ children: ReactNode; message: string
 const Globe3DView = lazy(() => import("./Globe3DView"));
 export default function GlobeView(props: GlobeViewProps) {
   const t = useI18nStore(s => s.t);
+  const active = useContext(MapActivityContext);
+  if (!active) return null;
   return <GlobeLoadBoundary message={t("map.3d.loadError")} backLabel={t("map.3d.backTo2d")} back={() => { writeGlobeQuery({ view: "single" }, true); props.onViewChange?.("flat"); }}><Suspense fallback={<div className="savegeo-globe" role="status">{t("map.3d.loading")}</div>}><Globe3DView {...props} /></Suspense></GlobeLoadBoundary>;
 }

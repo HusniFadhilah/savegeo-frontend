@@ -1,3 +1,4 @@
+import { MapActivityContext } from "@/components/map/MapActivityContext";
 import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
@@ -83,7 +84,7 @@ export default function DashboardPage({ module = DEFAULT_DASHBOARD_MODULE }: { m
               const Component = MODULES[key];
               return (
                 <div key={key} className={`module-container ${visibleModule === key ? "active" : ""}`}>
-                  <Component />
+                  <MapActivityContext.Provider value={visibleModule === key}><Component /></MapActivityContext.Provider>
                 </div>
               );
             })}

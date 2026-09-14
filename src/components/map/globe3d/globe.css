@@ -1,4 +1,6 @@
 ﻿.cesium-globe { min-height: 360px; isolation: isolate; }
+.cesium-globe .savegeo-globe-loading,
+.cesium-globe .savegeo-globe-error { z-index: 10; }
 .cesium-globe canvas { touch-action: none; }
 .cesium-globe .cesium-viewer-bottom { max-width: calc(100% - 8px); background: #071a2ccc; }
 .cesium-globe .cesium-credit-textContainer { font-size: 11px; }
