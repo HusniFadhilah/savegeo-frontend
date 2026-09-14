@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   define: { CESIUM_BASE_URL: JSON.stringify("/cesium/") },
-  plugins: [react(), viteStaticCopy({ targets: ["Workers", "ThirdParty", "Assets", "Widgets"].map(dir => ({ src: `node_modules/cesium/Build/Cesium/${dir}`, dest: "cesium" })) })],
+  plugins: [react(), viteStaticCopy({ targets: ["Workers", "ThirdParty", "Assets", "Widgets"].map(dir => ({ src: `node_modules/cesium/Build/Cesium/${dir}`, dest: "cesium", rename: { stripBase: 4 } })) })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

@@ -1,7 +1,7 @@
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/ACER/AppData/Local/npm-cache/_npx/db89d7302a373f10/node_modules/playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const base = process.env.GLOBE_TEST_URL || 'http://127.0.0.1:5503';
+const base = process.env.GLOBE_TEST_URL || 'http://127.0.0.1:5789';
 fs.mkdirSync('test-results/globe', {recursive:true});
 (async()=>{
  const browser = await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -17,9 +17,9 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  await page.waitForFunction(()=>window.testViewer.dataSources.length===2,{timeout:30000});
  await page.waitForTimeout(4000);
  const initial=await page.evaluate(()=>({mode:window.testViewer.scene.mode, dataSources:window.testViewer.dataSources.length, aoi:window.testViewer.dataSources.get(0).entities.values.length, creations:window.viewerCreations, layers:window.testViewer.imageryLayers.length, terrain:window.testViewer.terrainProvider.constructor.name, status:window.locationState.getState().status}));
- assert.equal(initial.mode,3);assert.equal(initial.status,'idle');assert.equal(initial.layers,2);assert.equal(initial.dataSources,2);
+ console.log('Viewer state',initial); assert.equal(initial.mode,3);assert.equal(initial.status,'idle');assert.equal(initial.layers,2);assert.equal(initial.dataSources,2);
  results.push({test:'real Cesium SCENE3D, MultiPolygon, hotspot, raster, no GPS request on mount',initial});
- await page.locator('.globe-settings > summary').click();
+ await page.screenshot({path:'test-results/globe/current.png'}); await page.locator('.globe-settings > summary').click();
  const camera=()=>page.evaluate(()=>{const c=window.testViewer.camera;return [c.position.x,c.position.y,c.position.z,c.heading,c.pitch,c.roll]});
  const before=await camera();
  for(const id of ['roads','satellite_roads','topo','terrain','dark','light','satellite']){
