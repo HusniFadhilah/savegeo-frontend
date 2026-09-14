@@ -19,7 +19,7 @@ import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
 import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
-import { listEsriWaybackScenes, type WaybackScene } from "./wayback";
+import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
 import ImageryToolsPanel from "./ImageryToolsPanel";
@@ -455,6 +455,13 @@ export default function ImageryModule() {
     setCogAssetKey("visual");
     setCogBands("");
     setCogRescale("");
+    if (satellite === ESRI_WAYBACK_PROVIDER_KEY) {
+      // Wayback contains monthly archive releases, so the generic "last 30
+      // days" scene default often has no results. Start at archive coverage
+      // when the provider is selected; users can still narrow the range.
+      setStartDate(ESRI_WAYBACK_START_DATE);
+      setEndDate(todayIso());
+    }
   }, [satellite]);
 
   // Fixed group order (SearchableSelect renders a group header whenever an

@@ -3,6 +3,10 @@ import type { ImageryScene } from "./types";
 const WAYBACK_CAPABILITIES_URL =
   "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/1.0.0/WMTSCapabilities.xml";
 
+/** The archive starts with the first 2014 release; use this for the initial
+ * provider range because the archive is released monthly rather than daily. */
+export const ESRI_WAYBACK_START_DATE = "2014-01-01";
+
 export interface WaybackScene extends ImageryScene {
   tile_url: string;
   release_label: string;
@@ -15,6 +19,9 @@ function childText(node: Element, localName: string): string | null {
 
 function normalizeWaybackTileUrl(template: string): string {
   return template
+    .trim()
+    // Esri advertises both GoogleMapsCompatible and default028mm matrices;
+    // Leaflet's XYZ grid must use the former so z/x/y indices line up.
     .replace("{TileMatrixSet}", "GoogleMapsCompatible")
     .replace("{TileMatrix}", "{z}")
     .replace("{TileRow}", "{y}")
@@ -46,7 +53,7 @@ export async function listEsriWaybackScenes(startDate: string, endDate: string):
       const resource = Array.from(layer.getElementsByTagName("*")).find(
         (el) => el.localName === "ResourceURL" && el.getAttribute("resourceType") === "tile",
       );
-      const template = resource?.getAttribute("template");
+      const template = resource?.getAttribute("template")?.trim();
       const identifier = childText(layer, "Identifier");
       if (!date || !template || !identifier) return null;
       if (date < startDate || date > endDate) return null;
@@ -63,4 +70,3 @@ export async function listEsriWaybackScenes(startDate: string, endDate: string):
 
   return scenes.slice(0, 200);
 }
-
