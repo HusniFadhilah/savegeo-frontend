@@ -16,6 +16,38 @@
 .map-view-shell { position: relative; }
 .map-view-shell .map-globe-overlay { position: absolute; inset: 0; z-index: 1001; }
 .map-globe-overlay .cesium-globe { height: 100%; min-height: 100%; }
+/* Leaflet gives every top-left control a 10px margin. The map toolbar is a
+   single control stack, so remove those margins (and Draw's own 12px margin)
+   to keep zoom, fullscreen, polygon, curve and rectangle actions attached. */
+.map-view-shell .leaflet-top.leaflet-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.map-view-shell .leaflet-top.leaflet-left .leaflet-draw-toolbar {
+  margin-top: 0;
+}
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control .leaflet-bar,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control .leaflet-bar a {
+  border-radius: 0;
+}
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:first-child,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:first-child .leaflet-bar,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:first-child .leaflet-bar a:first-child {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:last-child,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:last-child .leaflet-bar,
+.map-view-shell .leaflet-top.leaflet-left > .leaflet-control:last-child .leaflet-bar a:last-child {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
 .map-flat-controls {
   position: absolute;
   bottom: 55px;
