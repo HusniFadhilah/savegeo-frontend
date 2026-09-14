@@ -319,6 +319,7 @@ export default function ImageryModule() {
   const [maxCloudCover, setMaxCloudCover] = useState(query.cloudThreshold ?? 60);
   const [superResolution, setSuperResolution] = useState<ImagerySuperResolutionMode>("off");
   const [visualEnhancement, setVisualEnhancement] = useState(Boolean(query.enhance));
+  const [gpuOpacity, setGpuOpacity] = useState(query.showOriginal ? 0 : 1);
   const gpuEnhancement = useGpuSuperResolution(visualEnhancement);
   const [stacCatalogUrl, setStacCatalogUrl] = useState("");
   const [stacCollections, setStacCollections] = useState("");
@@ -366,9 +367,9 @@ export default function ImageryModule() {
       enhanceModel: gpuEnhancement.model,
       enhanceScale: gpuEnhancement.model === "shader_x4" ? 4 : 2,
       enhanceBackend: gpuEnhancement.backend,
-      showOriginal: !visualEnhancement,
+      showOriginal: !visualEnhancement || gpuOpacity < 0.5,
     });
-  }, [globeBasemapId, globeCamera, mapMode, maxCloudCover, endDate, query, satellite, startDate, tileOpacity, visualEnhancement, gpuEnhancement.backend, gpuEnhancement.model]);
+  }, [globeBasemapId, globeCamera, mapMode, maxCloudCover, endDate, query, satellite, startDate, tileOpacity, visualEnhancement, gpuOpacity, gpuEnhancement.backend, gpuEnhancement.model]);
   const [tileLoading, setTileLoading] = useState(false);
   const [tileError, setTileError] = useState<string | null>(null);
   const [segmentation, setSegmentation] = useState<FeatureCollection | null>(null);
@@ -942,6 +943,7 @@ export default function ImageryModule() {
                 <div className="row g-2 mt-1"><div className="col-7"><select className="form-select form-select-sm" value={gpuEnhancement.model} onChange={(event) => gpuEnhancement.setModel(event.target.value as "shader_x2" | "shader_x4")} disabled={!visualEnhancement} aria-label="Model enhancement"><option value="shader_x2">GPU shader x2 (aman)</option><option value="shader_x4">GPU shader x4 (perangkat kuat)</option></select></div><div className="col-5"><select className="form-select form-select-sm" value={gpuEnhancement.quality} onChange={(event) => gpuEnhancement.setQuality(event.target.value as "low" | "medium" | "high")} disabled={!visualEnhancement} aria-label="Kualitas enhancement"><option value="low">Kualitas rendah</option><option value="medium">Kualitas sedang</option><option value="high">Kualitas tinggi</option></select></div></div>
                 <div className="small mt-2" aria-live="polite">Status: <strong>{gpuEnhancement.status}</strong> · Backend: <strong>{gpuEnhancement.backend}</strong>{gpuEnhancement.capabilities?.webgpu ? " (WebGPU tersedia; shader memakai jalur WebGL2 yang kompatibel)" : ""}</div>
                 <div className="small text-muted mt-1">Peningkatan ini hanya untuk visualisasi. Resolusi asli dan nilai analitik citra tidak berubah.</div>
+                <div className="d-flex align-items-center gap-2 mt-2"><span className="small text-muted">Original</span><input type="range" className="form-range" min={0} max={1} step={0.05} value={gpuOpacity} onChange={(event) => setGpuOpacity(Number(event.target.value))} disabled={!visualEnhancement} aria-label="Perbandingan original enhanced" /><span className="small text-muted">Enhanced</span></div>
                 {selectedScene && <div className="small mt-1"><strong>{satelliteMeta?.name ?? "Scene"}</strong> · Resolusi asli: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta?.resolution_m))} · Enhancement: {visualEnhancement ? `GPU x${gpuEnhancement.model === "shader_x4" ? 4 : 2}` : "nonaktif"} · Mode: Visual only</div>}
                 {visualEnhancement && gpuEnhancement.status === "fallback_original" && <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">GPU enhancement tidak tersedia pada perangkat ini. Citra original tetap ditampilkan.</div>}
                 {visualEnhancement && gpuEnhancement.status === "error" && <div className="alert alert-danger py-1 px-2 mt-2 mb-0 small">Model visual gagal dimuat. Citra original tetap ditampilkan.</div>}
@@ -1388,7 +1390,7 @@ export default function ImageryModule() {
                           <GpuEnhancedTileLayer
                             key={`gpu:${selectedSceneId ?? "scene"}:${tileUrl}:${gpuEnhancement.model}:${gpuEnhancement.quality}:${gpuEnhancement.cacheVersion}`}
                             url={tileUrl}
-                            opacity={tileOpacity}
+                            opacity={tileOpacity * gpuOpacity}
                             pane={RESULT_PANE}
                             maxNativeZoom={sceneTileMaxNativeZoom}
                             maxZoom={SCENE_TILE_MAX_ZOOM}
