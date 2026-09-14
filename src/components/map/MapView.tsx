@@ -28,6 +28,8 @@ interface Props {
   zoom?: number;
   maxZoom?: number;
   className?: string;
+  /** Render the shared 3D/globe shortcut for this map instance. */
+  showGlobeControl?: boolean;
 }
 
 function InvalidateOnResize() {
@@ -79,7 +81,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true }: Props) {
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
   const active = useContext(MapActivityContext);
@@ -141,7 +143,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
       </MapContainer>
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
-      active && <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
+      active && <div className="map-flat-controls">{showGlobeControl && <button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)} aria-label="Beralih ke globe" title="Beralih ke globe">3D</button>}<UserLocationControl /></div>}
     </div>
   );
 }

@@ -54,7 +54,7 @@ function MapSetup({aoi, maps}: {aoi: GeoJSON.Geometry; maps: React.MutableRefObj
 }
 
 /** Uses stored outputs only: changing a mode or divider never requests analysis. */
-export default function SegmentationComparison({result}: {result: SegmentationResult}) {
+export default function SegmentationComparison({result, showGlobeControl = true}: {result: SegmentationResult; showGlobeControl?: boolean}) {
   const [mode, setMode] = useState<keyof typeof modes>("swipe");
   const [orientation, setOrientation] = useState<SwipeOrientation>("vertical");
   const [opacity, setOpacity] = useState(1);
@@ -65,7 +65,7 @@ export default function SegmentationComparison({result}: {result: SegmentationRe
   const nativeZoom = nativeZoomForResolution(result.resolution_m);
   if (!result.pre_tile_url || !result.post_tile_url || !result.classes.length)
     return <div role="alert" className="alert alert-warning">Hasil pre/post atau kelas belum tersedia. Jalankan analisis lengkap.</div>;
-  const single = (phase: "pre" | "post" | "change") => <MapView id={`segmentation-${phase}`}>
+  const single = (phase: "pre" | "post" | "change", showControl = showGlobeControl) => <MapView id={`segmentation-${phase}`} showGlobeControl={showControl}>
     <BasemapSwitcher />
     <TileLayer key={result[`${phase}_tile_url`]} url={result[`${phase}_tile_url`]} bounds={bounds}
       pane={RESULT_PANE} opacity={opacity} maxNativeZoom={nativeZoom} maxZoom={22}
@@ -94,7 +94,7 @@ export default function SegmentationComparison({result}: {result: SegmentationRe
       opacity={opacity} bounds={bounds} clipGeometry={clipGeometry}
       beforeMaxNativeZoom={nativeZoom} afterMaxNativeZoom={nativeZoom} beforeResolutionM={result.resolution_m} afterResolutionM={result.resolution_m}>
       <MapSetup aoi={result.aoi} maps={maps} />
-    </SwipeCompareMap> : mode === "split" ? <div className="row g-2"><div className="col-md-6"><strong>Pre</strong>{single("pre")}</div><div className="col-md-6"><strong>Post</strong>{single("post")}</div></div>
+    </SwipeCompareMap> : mode === "split" ? <div className="row g-2"><div className="col-md-6"><strong>Pre</strong>{single("pre", showGlobeControl)}</div><div className="col-md-6"><strong>Post</strong>{single("post", false)}</div></div>
       : single(mode === "pre" ? "pre" : mode === "change" ? "change" : "post")}
     {mode === "change" && result.changed_area_ha === 0 && <p>Tidak ada perubahan kelas pada piksel valid bersama.</p>}
     <p className="small mt-2">{result.coverage_note} Luas AOI: {number(result.aoi_area_ha)} ha; valid bersama: {number(result.valid_area_ha)} ha; no-data: {number(result.no_data_area_ha)} ha. Berubah: {number(result.changed_area_ha)} ha; tetap: {number(result.unchanged_area_ha)} ha.</p>

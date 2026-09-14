@@ -188,6 +188,7 @@ interface Props {
   onHotspotClick?: (hotspotId: number) => void;
   focusFeature?: GeoJSON.Feature | GeoJSON.Geometry | null;
   focusSignal?: number;
+  showGlobeControl?: boolean;
 }
 
 /**
@@ -214,6 +215,7 @@ export default function SatelliteViewer({
   onHotspotClick,
   focusFeature = null,
   focusSignal = 0,
+  showGlobeControl = true,
 }: Props) {
   const [preId, setPreId] = useState<number | null>(
     primaryImagery.pre?.id ?? imagery.pre[0]?.id ?? null,
@@ -326,7 +328,7 @@ export default function SatelliteViewer({
         </div>
 
         {(view === "pre" || view === "post") && (
-          <MapView id={`disasterSatMap-${view}`}>
+          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl}>
             <BasemapSwitcher />
             <LayerOpacityControl
               opacity={imageryOpacity}
@@ -376,7 +378,7 @@ export default function SatelliteViewer({
         {view === "split" && (
           <div className="row g-2">
             <div className="col-md-6">
-              <MapView id="disasterSatMapPre">
+              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl}>
                 <BasemapSwitcher />
                 <LayerOpacityControl
                   opacity={imageryOpacity}
@@ -415,7 +417,7 @@ export default function SatelliteViewer({
               </div>
             </div>
             <div className="col-md-6">
-              <MapView id="disasterSatMapPost">
+              <MapView id="disasterSatMapPost" showGlobeControl={false}>
                 <BasemapSwitcher />
                 <LayerOpacityControl
                   opacity={imageryOpacity}

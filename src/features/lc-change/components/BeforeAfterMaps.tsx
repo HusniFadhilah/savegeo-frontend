@@ -237,7 +237,7 @@ export default function BeforeAfterMaps({
       {view === "split" && (
         <div className="row g-2">
           <div className="col-md-6">
-            <MapView id="lcChangeBeforeMap">
+            <MapView id="lcChangeBeforeMap" showGlobeControl>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
               <MapClickInspector onClick={handleMapClick} />
@@ -249,7 +249,7 @@ export default function BeforeAfterMaps({
             <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
           </div>
           <div className="col-md-6">
-            <MapView id="lcChangeAfterMap">
+            <MapView id="lcChangeAfterMap" showGlobeControl={false}>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
               <MapClickInspector onClick={handleMapClick} />

@@ -7,7 +7,6 @@ import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
-import MapModeControl from "@/components/map/MapModeControl";
 import { useGlobeQuery, writeGlobeQuery } from "@/components/map/globe3d/query";
 import GlobeView, { type GlobeLayer } from "@/components/map/GlobeView";
 import SearchableSelect from "@/components/ui/SearchableSelect";
@@ -1319,7 +1318,6 @@ export default function ImageryModule() {
                 ) : (
                   <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
-                    <MapModeControl mode={mapMode} onChange={setMapMode} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <SceneFootprintLayer
                       data={footprintData}

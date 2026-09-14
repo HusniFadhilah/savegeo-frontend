@@ -303,6 +303,7 @@ export default function DisasterDashboard() {
   const { event, aoi, imagery, primary_imagery } = detail;
   const analyses = layers?.analyses ?? [];
   const satellite = layers?.satellite ?? null;
+  const comparisonEntries = analyses.filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.comparison);
   const availableAnalyses = analyses.filter((entry) => entry.available).length;
   const totalImagery = imagery.pre.length + imagery.post.length;
 
@@ -399,7 +400,7 @@ export default function DisasterDashboard() {
 
         {/* The old duplicate analysis map is intentionally removed. */}
         <div className="disaster-map-column">
-          {analyses.filter(entry => checkedAnalyses.has(entry.model_id) && entry.result?.comparison).map(entry => <SegmentationComparison key={`${entry.model_id}-${entry.run?.id}`} result={entry.result!.comparison!} />)}
+          {comparisonEntries.map((entry, index) => <SegmentationComparison key={`${entry.model_id}-${entry.run?.id}`} result={entry.result!.comparison!} showGlobeControl={index === 0} />)}
           <SatelliteViewer
             aoi={aoi}
             imagery={imagery}
@@ -408,6 +409,7 @@ export default function DisasterDashboard() {
             showSatellite={showSatellite}
             analyses={analyses.filter(entry => !entry.result?.comparison)}
             checkedAnalyses={checkedAnalyses}
+            showGlobeControl={comparisonEntries.length === 0}
             showAoi={showAoi}
             hotspots={hotspots}
             showHotspots={showHotspots}
