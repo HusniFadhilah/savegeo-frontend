@@ -28,6 +28,9 @@ export function useGpuSuperResolution(enabled: boolean) {
     loadSuperResolutionModel().then(() => setStatus("active")).catch(() => { setStatus("error"); setBackend("original"); });
   }, [enabled, model]);
 
-  const clearCache = useCallback(() => setCacheVersion((value) => value + 1), []);
+  const clearCache = useCallback(() => {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("savegeo:gpu-cache-clear"));
+    setCacheVersion((value) => value + 1);
+  }, []);
   return { status, capabilities, backend, model, setModel, quality, setQuality, clearCache, cacheVersion, recommendedScale: capabilities ? recommendedEnhancementScale(capabilities) : 2 };
 }

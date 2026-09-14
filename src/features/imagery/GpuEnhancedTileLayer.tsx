@@ -30,6 +30,8 @@ export default function GpuEnhancedTileLayer({ url, opacity = 1, pane, maxNative
   const map = useMap();
   useEffect(() => {
     let disposed = false;
+    const clear = () => cache.clear();
+    window.addEventListener("savegeo:gpu-cache-clear", clear);
     const modelPromise = loadSuperResolutionModel();
     const Layer = L.GridLayer.extend({
       createTile(coords: L.Coords, done: L.DoneCallback) {
@@ -54,7 +56,7 @@ export default function GpuEnhancedTileLayer({ url, opacity = 1, pane, maxNative
     const LayerConstructor = Layer as unknown as new (options?: L.GridLayerOptions) => L.GridLayer;
     const layer = new LayerConstructor({ tileSize: 256, opacity, pane, maxNativeZoom, maxZoom, zIndex: 402 });
     layer.addTo(map);
-    return () => { disposed = true; map.removeLayer(layer); };
+    return () => { disposed = true; window.removeEventListener("savegeo:gpu-cache-clear", clear); map.removeLayer(layer); };
   }, [map, maxNativeZoom, maxZoom, model, onStatus, opacity, pane, quality, url]);
   return null;
 }
