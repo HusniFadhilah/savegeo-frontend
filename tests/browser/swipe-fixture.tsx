@@ -1,3 +1,6 @@
+/* The browser fixture intentionally supplies minimal partial API objects for
+ * production components; these casts are isolated to test setup data. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Development-only browser fixture. Uses production Leaflet components and
 // deterministic tile responses supplied by swipe-check.cjs, never live data.
 import React, { useEffect, useState } from "react";
