@@ -9,7 +9,7 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  try {
  const context=await browser.newContext({viewport:{width:1280,height:900},geolocation:{latitude:-6.234567,longitude:106.765432,accuracy:25},permissions:['geolocation']});
  // Only synthetic analysis imagery is intercepted. Basemaps remain real provider requests.
- await context.route('**/test-analysis/**',route=>route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/browser/globe-transparent.png')}));
+ await context.route('**/test-analysis/**',route=>route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAABFUlEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMBPAABPO1TCQAAAABJRU5ErkJggg==','base64')}));
  const page=await context.newPage(); const errors=[]; console.log('Browser launched');
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`${base}/tests/browser/globe.html?view=3d`,{waitUntil:'domcontentloaded'}); console.log('Fixture loaded');
