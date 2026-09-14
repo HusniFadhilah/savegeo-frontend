@@ -6434,6 +6434,10 @@ html[data-theme="dark"] .map-flat-controls > .user-location-control > summary {
   color: #f8fafc !important;
 }
 
+html[data-theme="dark"] .map-flat-controls {
+  border-color: #475569 !important;
+}
+
 html[data-theme="dark"] .leaflet-bar a:hover,
 html[data-theme="dark"] .leaflet-control button:hover,
 html[data-theme="dark"] .fullscreen-control-btn:hover,
