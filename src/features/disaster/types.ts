@@ -309,6 +309,7 @@ export interface AnalysisRunRecord {
  * routes - features are always null/empty for the 3 MVP models anyway, see
  * contract doc's "MVP scope reality check"). */
 export interface AnalysisResultRecord {
+  comparison?: import("@/features/disaster/components/SegmentationComparison").SegmentationResult | null;
   id: number;
   run_id: number;
   tile_url: string | null;

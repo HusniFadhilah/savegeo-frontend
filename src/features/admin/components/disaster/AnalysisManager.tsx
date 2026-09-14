@@ -54,7 +54,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
   useEffect(() => {
     let cancelled = false;
     setLoadingModels(true);
-    listDisasterModels()
+    listDisasterModels(eventId)
       .then((res) => {
         if (!cancelled) setModels(res.models);
       })
@@ -67,7 +67,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [eventId]);
 
   const runsByModel = new Map<string, AnalysisRunWithResult[]>();
   for (const r of runs) {
@@ -78,8 +78,9 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
 
   const openConfig = (modelId: string) => {
     setOpenConfigModelId(modelId);
-    setPreImageryId("");
-    setPostImageryId("");
+    const model = models.find(m => m.model_id === modelId);
+    setPreImageryId(model?.default_pre_imagery_id ? String(model.default_pre_imagery_id) : "");
+    setPostImageryId(model?.default_post_imagery_id ? String(model.default_post_imagery_id) : "");
     setConfigError(null);
   };
 
@@ -122,13 +123,13 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
   const handleRun = async (runId: number) => {
     setBusyRunId(runId);
     try {
-      await runAnalysis(runId);
-      notify("Analisis selesai dijalankan", "s");
-      onChanged();
+      const outcome = await runAnalysis(runId);
+      notify(outcome.run.status === "review_required" ? "Analisis selesai; hasil memerlukan peninjauan kualitas" : "Analisis selesai dijalankan", "s");
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal menjalankan analisis", "e");
     } finally {
       setBusyRunId(null);
+      onChanged();
     }
   };
 
@@ -145,6 +146,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
         )}
         {loadingModels && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Memuat daftar model...</div>}
         {modelsError && <div className="alert alert-danger py-1 px-2 small">{modelsError}</div>}
+        {busyRunId !== null && <div className="alert alert-info" role="status"><span className="spinner-border spinner-border-sm me-2" />Memproses analisis #{busyRunId}: membaca model, menyelaraskan grid dan menghitung statistik. Hasil tampil setelah seluruh pemeriksaan berhasil.</div>}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {!loadingModels &&
@@ -166,17 +168,17 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>
-                          {model.user_label}{" "}
+                          {model.user_label}{model.recommended && " · Direkomendasikan untuk input tersedia"}{" "}
                           <span style={{ fontWeight: 400, fontSize: 11, color: "var(--text-muted)" }}>({model.backend_label})</span>
                         </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{model.description}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{model.description} {model.reliability} {model.availability_reason}</div>
                         <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
                           <span className="badge-label">{model.category}</span>
                           {!model.enabled && <span className="stat-badge badge-gray">Not Available</span>}
                         </div>
                       </div>
                       {model.enabled && (
-                        <button type="button" className="btn-sm" disabled={!aoi} onClick={() => openConfig(model.model_id)}>
+                        <button type="button" className="btn-sm" disabled={!aoi || model.configured === false} onClick={() => openConfig(model.model_id)}>
                           <i className="bi bi-plus-lg" /> Konfigurasi Analisis Baru
                         </button>
                       )}

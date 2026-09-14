@@ -1,3 +1,4 @@
+import SegmentationComparison from "@/features/disaster/components/SegmentationComparison";
 import { useEffect, useMemo, useState } from "react";
 import MapView from "@/components/map/MapView";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
@@ -34,7 +35,7 @@ interface Props {
  * per-feature UI (MVP has none of that data anyway). */
 export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
   const { notify } = useAdmin();
-  const reviewable = useMemo(() => runs.filter((r) => r.result), [runs]);
+  const reviewable = useMemo(() => runs.filter((r) => r.result && ["completed", "review_required", "published"].includes(r.run.status)), [runs]);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(reviewable[0]?.run.id ?? null);
   const [qc, setQc] = useState<DisasterQcStatus | null>(null);
   const [qcLoading, setQcLoading] = useState(true);
@@ -96,7 +97,7 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
     if (!selected) return;
     setBusy(true);
     try {
-      await runAnalysis(selected.run.id);
+      await runAnalysis(selected.run.id, true);
       notify("Analisis dijalankan ulang", "s");
       onChanged();
     } catch (err) {
@@ -134,7 +135,7 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
         {selected && selected.result && (
           <>
             <div style={{ marginBottom: 10 }}>
-              <MapView id={`disaster-review-map-${eventId}`}>
+              {selected.result.comparison ? <SegmentationComparison key={selected.run.id} result={selected.result.comparison} /> : <MapView id={`disaster-review-map-${eventId}`}>
                 {selected.result.tile_url && (
                   <ResultTileLayer
                     layerKey={`review-${selected.run.id}`}
@@ -142,7 +143,7 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
                     opacity={0.85}
                   />
                 )}
-              </MapView>
+              </MapView>}
               {selected.result.legend.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                   <MapLegend title="Legenda" entries={selected.result.legend.map((l) => ({ color: l.color, label: l.label }))} />

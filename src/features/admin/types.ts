@@ -278,6 +278,7 @@ export interface AnalysisRun {
 }
 
 export interface AnalysisResult {
+  comparison?: import("@/features/disaster/components/SegmentationComparison").SegmentationResult | null;
   id: number;
   run_id: number;
   tile_url?: string | null;
@@ -299,6 +300,8 @@ export interface AnalysisRunWithResult {
 
 /** One entry from `app/registries/disaster_model_registry.py::list_models()`. */
 export interface DisasterModelRegistryEntry {
+  configured?: boolean; recommended?: boolean; availability_reason?: string; reliability?: string;
+  inputs_ready?: boolean; default_pre_imagery_id?: number; default_post_imagery_id?: number;
   model_id: string;
   backend_label: string;
   user_label: string;
