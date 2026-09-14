@@ -137,7 +137,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
       </MapContainer>
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} layers={globeLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
-      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)}>3D</button><UserLocationControl /></div>}
+      <div className="map-flat-controls"><button type="button" onClick={() => writeGlobeQuery({ view: "globe" }, true)}>3D</button><UserLocationControl /></div>}
     </div>
   );
 }
