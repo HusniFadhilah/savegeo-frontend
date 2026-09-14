@@ -13,4 +13,14 @@ describe("module query state", () => {
     expect(q.toString()).not.toMatch(/token|password|secret/i);
     expect(buildModuleShareUrl("/land-cover-change", { dataset: "dynamic_world" })).toContain("dataset=dynamic_world");
   });
+  it("round trips visual enhancement preferences without imagery data", () => {
+    const state = parseModuleQuery("?enhance=true&enhance_model=shader_x2&enhance_scale=2&enhance_backend=webgl2&show_original=false");
+    expect(state.enhance).toBe(true);
+    expect(state.enhanceModel).toBe("shader_x2");
+    expect(state.enhanceScale).toBe(2);
+    expect(state.showOriginal).toBe(false);
+    const query = serializeModuleQuery(state);
+    expect(query.get("enhance")).toBe("true");
+    expect(query.toString()).not.toMatch(/data:image|token|password|secret/i);
+  });
 });

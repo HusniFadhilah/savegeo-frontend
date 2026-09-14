@@ -114,6 +114,8 @@ export interface ImagerySuperResolutionResult {
   native_resolution_m: number;
   render_scale_m: number;
   method: string;
+  enhancement_backend?: string;
+  is_visual_only?: boolean;
 }
 
 export interface GetSceneTileParams {
