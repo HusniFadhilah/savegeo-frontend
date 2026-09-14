@@ -7,7 +7,7 @@ export default function UserLocationControl() {
   const query = useGlobeQuery();
   const t = useI18nStore(s => s.t);
   return <details className="user-location-control">
-    <summary aria-label={t("map.location.locateMe")}><i className="bi bi-crosshair" /> {t("map.location.title")}</summary>
+    <summary title={t("map.location.title")} aria-label={t("map.location.title")}><i className="bi bi-crosshair" aria-hidden="true" /></summary>
     <div className="location-panel">
       <button type="button" onClick={() => { writeGlobeQuery({ show_user_location: true, follow_user_location: false }); location.locate(); }} disabled={location.status === "requesting"}>{t("map.location.locateMe")}</button>
       <p role="status">{t(`map.location.${location.status}`)}</p>

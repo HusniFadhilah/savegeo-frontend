@@ -9,6 +9,10 @@
 .globe-controls button + button { border-left-width: 0; }
 .globe-panels { position: absolute; top: 8px; right: 10px; display: grid; gap: 0; z-index: 4; max-width: min(280px, calc(100% - 20px)); }
 .globe-panels details, .globe-panels .user-location-control { color: #1f2937; background: #fff; border: 1px solid #ccc; border-radius: 0; }
+.globe-panels > details > summary, .globe-panels > .user-location-control > summary { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; font-size: 0; list-style: none; }
+.globe-panels > details > summary::-webkit-details-marker, .globe-panels > .user-location-control > summary::-webkit-details-marker { display: none; }
+.globe-panels > details > summary::marker, .globe-panels > .user-location-control > summary::marker { content: ""; }
+.globe-panels > details > summary i, .globe-panels > .user-location-control > summary i { font-size: 1.05rem; line-height: 1; }
 .globe-panels > :first-child { border-radius: 5px 5px 0 0; }
 .globe-panels > :last-child { border-radius: 0 0 5px 5px; }
 .globe-panels > details + .user-location-control { border-top-width: 0; }

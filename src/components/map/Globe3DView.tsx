@@ -303,7 +303,7 @@ export default function Globe3DView(props: GlobeViewProps) {
         {button("backTo2d", "map", back)}
       </div>
       <div className="globe-panels">
-        <details className="globe-settings"><summary>{t("map.3d.basemap")}</summary><div className="globe-settings-body">
+        <details className="globe-settings"><summary title={t("map.3d.basemap")} aria-label={t("map.3d.basemap")}><i className="bi bi-layers" aria-hidden="true" /></summary><div className="globe-settings-body">
           <select aria-label={t("map.3d.basemap")} value={basemap?.id ?? ""} onChange={e => { writeGlobeQuery({ basemap: e.target.value }); props.onBasemapChange?.(e.target.value); }}>{basemaps.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
           <label><input type="checkbox" checked={terrain && terrainConfigured} disabled={!terrainConfigured} onChange={e => toggle("show_terrain", e.target.checked)} />{t("map.3d.terrain")}</label>
           <p role="status">{t(`map.3d.${terrainStatus}`)}</p>
