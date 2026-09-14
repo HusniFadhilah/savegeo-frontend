@@ -1,4 +1,4 @@
-﻿const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/ACER/AppData/Local/npm-cache/_npx/db89d7302a373f10/node_modules/playwright');
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/ACER/AppData/Local/npm-cache/_npx/db89d7302a373f10/node_modules/playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const base = process.env.GLOBE_TEST_URL || 'http://127.0.0.1:5503';
@@ -10,12 +10,12 @@ fs.mkdirSync('test-results/globe', {recursive:true});
  const context=await browser.newContext({viewport:{width:1280,height:900},geolocation:{latitude:-6.234567,longitude:106.765432,accuracy:25},permissions:['geolocation']});
  // Only synthetic analysis imagery is intercepted. Basemaps remain real provider requests.
  await context.route('**/test-analysis/**',route=>route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64')}));
- const page=await context.newPage(); const errors=[];
+ const page=await context.newPage(); const errors=[]; console.log('Browser launched');
  page.on('pageerror',e=>errors.push(e.message));
- await page.goto(`${base}/tests/browser/globe.html?view=3d`,{waitUntil:'domcontentloaded'});
- await page.waitForFunction(()=>window.testViewer && !window.testViewer.isDestroyed(),{timeout:90000});
+ await page.goto(`${base}/tests/browser/globe.html?view=3d`,{waitUntil:'domcontentloaded'}); console.log('Fixture loaded');
+ try { await page.waitForFunction(()=>window.testViewer && !window.testViewer.isDestroyed(),null,{timeout:90000}); } catch(e) { await page.screenshot({path:'test-results/globe/failure.png'}); console.log(await page.locator('body').innerText()); console.log(errors); throw e; }
  await page.waitForFunction(()=>window.testViewer.dataSources.length===2,{timeout:30000});
- await page.waitForTimeout(2500);
+ await page.waitForTimeout(4000);
  const initial=await page.evaluate(()=>({mode:window.testViewer.scene.mode, dataSources:window.testViewer.dataSources.length, aoi:window.testViewer.dataSources.get(0).entities.values.length, creations:window.viewerCreations, layers:window.testViewer.imageryLayers.length, terrain:window.testViewer.terrainProvider.constructor.name, status:window.locationState.getState().status}));
  assert.equal(initial.mode,3);assert.equal(initial.status,'idle');assert.equal(initial.layers,2);assert.equal(initial.dataSources,2);
  results.push({test:'real Cesium SCENE3D, MultiPolygon, hotspot, raster, no GPS request on mount',initial});
