@@ -1,5 +1,6 @@
 import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE } from "../utils";
 import type { HealthResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   health: HealthResult;
@@ -7,21 +8,22 @@ interface Props {
 
 /** Sub-analysis A: crop health (NDVI-based). */
 export default function CropHealthCard({ health }: Props) {
+  const t = useI18nStore((state) => state.t);
   return (
     <div className="card mb-3 cm-panel-card cm-health-card">
       <div className="card-header">
-        <i className="bi bi-heart-pulse-fill me-1" /> A. Kesehatan Tanaman
+        <i className="bi bi-heart-pulse-fill me-1" /> {t("crop.card.healthTitle")}
       </div>
       <div className="card-body">
         {!health.available ? (
           <div className="alert alert-secondary py-2 mb-0 small">
-            Tidak tersedia{health.reason ? `: ${health.reason}` : "."}
+            {t("crop.unavailable")}{health.reason ? `: ${health.reason}` : "."}
           </div>
         ) : (
           <>
             <div className="cm-health-metrics">
               <div className="cm-mini-stat">
-                <span>Status</span>
+                <span>{t("crop.status")}</span>
                 <strong className={styleFor(HEALTH_LABEL_STYLE, health.health_label).className}>
                   <span
                     className="cm-status-dot"
@@ -31,17 +33,17 @@ export default function CropHealthCard({ health }: Props) {
                 </strong>
               </div>
               <div className="cm-mini-stat">
-                <span>NDVI Rata-rata</span>
+                <span>{t("crop.ndviMean")}</span>
                 <strong>{fmtNum(health.ndvi_mean, 4)}</strong>
               </div>
               <div className="cm-mini-stat">
-                <span>Perubahan vs Bulan Sebelumnya</span>
+                <span>{t("crop.changeVsPrevious")}</span>
                 <strong className={health.change_vs_previous_month_pct != null && health.change_vs_previous_month_pct < 0 ? "text-danger" : "text-success"}>
                   {health.change_vs_previous_month_pct != null ? `${health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(health.change_vs_previous_month_pct)}` : "-"}
                 </strong>
               </div>
               <div className="cm-mini-stat">
-                <span>Piksel Valid</span>
+                <span>{t("crop.validPixels")}</span>
                 <strong>
                   {fmtPct(health.valid_pixel_pct)} <small className="text-muted">({health.images_used} citra)</small>
                 </strong>
@@ -51,15 +53,15 @@ export default function CropHealthCard({ health }: Props) {
             <div className="cm-health-distribution">
               <div className="cm-health-segment cm-health-segment-good">
                 <strong>{fmtPct(health.healthy_pct)}</strong>
-                <span>Sehat</span>
+                <span>{t("crop.healthy")}</span>
               </div>
               <div className="cm-health-segment cm-health-segment-mid">
                 <strong>{fmtPct(health.moderate_pct)}</strong>
-                <span>Sedang</span>
+                <span>{t("crop.moderate")}</span>
               </div>
               <div className="cm-health-segment cm-health-segment-bad">
                 <strong>{fmtPct(health.stressed_pct)}</strong>
-                <span>Stres</span>
+                <span>{t("crop.stressed")}</span>
               </div>
             </div>
 
@@ -74,9 +76,9 @@ export default function CropHealthCard({ health }: Props) {
                 <table className="table table-hover table-sm mb-0 cm-data-table">
                   <thead>
                     <tr>
-                      <th>Kelas</th>
-                      <th>Luas (ha)</th>
-                      <th>Persentase</th>
+                      <th>{t("crop.class")}</th>
+                      <th>{t("crop.areaHa")}</th>
+                      <th>{t("crop.percentage")}</th>
                     </tr>
                   </thead>
                   <tbody>

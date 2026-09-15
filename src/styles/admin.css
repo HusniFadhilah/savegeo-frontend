@@ -302,6 +302,23 @@
   gap: 8px;
 }
 
+.admin-panel .admin-language-switch {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.admin-panel .admin-language-switch .btn-sm {
+  min-width: 34px;
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.admin-panel .admin-language-switch .btn-sm.active {
+  background: var(--green, #1f7a36);
+  color: #fff;
+  border-color: var(--green, #1f7a36);
+}
+
 .admin-panel .ee-badge {
   display: flex;
   align-items: center;

@@ -1,5 +1,6 @@
 import { fmtNum } from "../utils";
 import type { WeatherResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   weather: WeatherResult;
@@ -7,46 +8,47 @@ interface Props {
 
 /** Sub-analysis F: weather stat tiles + warning banners. */
 export default function WeatherPanel({ weather }: Props) {
+  const t = useI18nStore((state) => state.t);
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-cloud-rain-fill me-1" /> F. Cuaca
+        <i className="bi bi-cloud-rain-fill me-1" /> {t("crop.card.weatherTitle")}
       </div>
       <div className="card-body">
         {!weather.available ? (
           <div className="alert alert-secondary py-2 mb-0 small">
-            Tidak tersedia{weather.reason ? `: ${weather.reason}` : "."}
+            {t("crop.unavailable")}{weather.reason ? `: ${weather.reason}` : "."}
           </div>
         ) : (
           <>
             <div className="row g-2 text-center mb-2">
               <div className="col-6 col-md-3">
                 <div className="fw-bold">{fmtNum(weather.rainfall_mm_period, 1)} mm</div>
-                <div className="small text-muted">Curah Hujan Periode</div>
+                <div className="small text-muted">{t("crop.rainfallPeriod")}</div>
               </div>
               <div className="col-6 col-md-3">
                 <div className="fw-bold">{fmtNum(weather.rainfall_mm_historical_normal, 1)} mm</div>
-                <div className="small text-muted">Normal Historis</div>
+                <div className="small text-muted">{t("crop.historicalNormal")}</div>
               </div>
               <div className="col-6 col-md-3">
                 <div className="fw-bold">{weather.rainfall_deficit_pct != null ? `${fmtNum(weather.rainfall_deficit_pct, 1)}%` : "-"}</div>
-                <div className="small text-muted">Defisit Hujan</div>
+                <div className="small text-muted">{t("crop.rainfallDeficit")}</div>
               </div>
               <div className="col-6 col-md-3">
                 <div className="fw-bold">{weather.dry_days}</div>
-                <div className="small text-muted">Hari Kering</div>
+                <div className="small text-muted">{t("crop.dryDays")}</div>
               </div>
               <div className="col-6 col-md-4">
                 <div className="fw-bold">{fmtNum(weather.tmax, 1)}°C</div>
-                <div className="small text-muted">Suhu Maks</div>
+                <div className="small text-muted">{t("crop.maxTemperature")}</div>
               </div>
               <div className="col-6 col-md-4">
                 <div className="fw-bold">{fmtNum(weather.tmin, 1)}°C</div>
-                <div className="small text-muted">Suhu Min</div>
+                <div className="small text-muted">{t("crop.minTemperature")}</div>
               </div>
               <div className="col-6 col-md-4">
                 <div className="fw-bold">{weather.humidity != null ? `${fmtNum(weather.humidity, 0)}%` : "-"}</div>
-                <div className="small text-muted">Kelembaban</div>
+                <div className="small text-muted">{t("crop.humidity")}</div>
               </div>
             </div>
             <small className="text-muted d-block">
