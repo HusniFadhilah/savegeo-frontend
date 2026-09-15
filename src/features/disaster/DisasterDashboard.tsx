@@ -442,6 +442,11 @@ export default function DisasterDashboard() {
         <div className="alert alert-warning py-2">{statsError}</div>
       ) : statistics ? (
         <>
+          {statistics.event && (
+            <div className="alert alert-info py-2 small mb-3">
+              <i className="bi bi-shield-check me-1" /> Statistik tervalidasi untuk kejadian <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type}</strong> — {statistics.event.name}. Hanya model yang kompatibel dengan jenis bencana ini yang ditampilkan.
+            </div>
+          )}
           <KpiTiles kpis={statistics.kpis} analyses={analyses} />
 
           {/* 9. Cross-layer stat card - only rendered if the backend actually returned entries */}

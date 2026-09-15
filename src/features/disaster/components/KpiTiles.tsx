@@ -48,7 +48,9 @@ function metricIcon(key: string): string {
  * headed by its `user_label` (never the raw `model_id`).
  */
 export default function KpiTiles({ kpis, analyses }: Props) {
-  const entries = Object.entries(kpis).filter(([, stats]) => stats && Object.keys(stats).length);
+  const entries = Object.entries(kpis).filter(([modelId, stats]) =>
+    stats && Object.keys(stats).length && analyses.some((analysis) => analysis.model_id === modelId && analysis.available),
+  );
   if (!entries.length) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
@@ -60,13 +62,21 @@ export default function KpiTiles({ kpis, analyses }: Props) {
   return (
     <div className="mb-3 disaster-kpi-stack">
       {entries.map(([modelId, stats]) => {
-        const label = analyses.find((a) => a.model_id === modelId)?.user_label ?? modelId;
+        const analysis = analyses.find((a) => a.model_id === modelId);
+        const label = analysis?.user_label ?? modelId;
         return (
           <section className="disaster-kpi-group" key={modelId}>
             <div className="disaster-kpi-group-title">
               <i className={`bi ${modelIcon(modelId)}`} />
               {label}
             </div>
+            {analysis && !analysis.damage_model && (
+              <div className="alert alert-warning py-1 px-2 mb-2 small">
+                <i className="bi bi-info-circle me-1" />
+                Statistik ini adalah {analysis.result_semantics === "water_extent" ? "luas air terdeteksi" : "indikator perubahan"}, bukan estimasi kerusakan terlatih.
+                {analysis.limitations?.[0] ? ` ${analysis.limitations[0]}` : ""}
+              </div>
+            )}
             <div className="row g-2">
               {Object.entries(stats).map(([key, value]) => (
                 <div className="col-6 col-md-3" key={key}>

@@ -364,6 +364,7 @@ export interface CrossLayerStat {
 /** `GET /disasters/{id}/statistics` - `kpis` flattened from each published
  * result's statistics, namespaced by model_id. */
 export interface DisasterStatisticsResponse {
+  event?: Pick<DisasterEventRecord, "id" | "name" | "disaster_type" | "event_date" | "start_date" | "end_date">;
   kpis: Record<string, Record<string, number | string | null>>;
   cross_layer: CrossLayerStat[];
 }

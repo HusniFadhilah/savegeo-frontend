@@ -45,7 +45,9 @@ interface Props {
  * output.
  */
 export default function StatisticsPanel({ kpis, analyses }: Props) {
-  const entries = Object.entries(kpis).filter(([, stats]) => stats && Object.keys(stats).length);
+  const entries = Object.entries(kpis).filter(([modelId, stats]) =>
+    stats && Object.keys(stats).length && analyses.some((analysis) => analysis.model_id === modelId && analysis.available),
+  );
   if (!entries.length) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
@@ -93,9 +95,7 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
                           },
                         },
                       },
-                      scales: {
-                        x: { title: { display: true, text: "Luas (ha)" } },
-                      },
+                      scales: { x: { title: { display: true, text: rows.every(([key]) => key.endsWith("_ha")) ? "Luas (ha)" : "Nilai" } } },
                     }}
                   />
                 </div>
