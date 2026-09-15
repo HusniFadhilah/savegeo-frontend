@@ -2603,7 +2603,7 @@
 .swipe-label {
   position: absolute;
   z-index: 999;
-  bottom: 8px;
+  bottom: -30px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
   padding: 2px 10px;
@@ -5095,7 +5095,8 @@
 }
 
 .cm-table-wrap {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #e2e8e5;
   border-radius: 8px;
 }
@@ -5314,6 +5315,127 @@
   .cm-empty-state {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .cm-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .cm-page > .row {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .cm-hero {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .cm-hero h1 {
+    font-size: 1.18rem;
+    line-height: 1.3;
+  }
+
+  .cm-hero p {
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .cm-workflow .card-body,
+  .cm-page .card-body {
+    padding: 11px;
+  }
+
+  .cm-workflow .btn,
+  .cm-workflow .form-control,
+  .cm-workflow .form-select {
+    min-height: 40px;
+  }
+
+  .cm-workflow .list-group {
+    max-height: 220px !important;
+  }
+
+  .cm-workflow .nav-tabs,
+  .cm-map-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+  }
+
+  .cm-workflow .nav-tabs .nav-item,
+  .cm-map-tabs .nav-item {
+    flex: 0 0 auto;
+  }
+
+  .cm-workflow .nav-link,
+  .cm-map-tabs .nav-link {
+    white-space: nowrap;
+    padding: 7px 8px;
+  }
+
+  .cm-page .card-header {
+    gap: 5px;
+    padding: 10px 11px;
+    font-size: 0.82rem;
+  }
+
+  .cm-summary-grid,
+  .cm-health-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cm-summary-tile,
+  .cm-mini-stat {
+    min-height: 64px;
+    padding: 9px;
+  }
+
+  .cm-summary-tile {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .cm-summary-tile > i {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  .cm-summary-tile strong {
+    font-size: 0.88rem;
+  }
+
+  .cm-result-map-card .savegeo-map {
+    height: 360px;
+  }
+
+  .cm-map-legend {
+    right: 8px;
+    bottom: 8px;
+    width: min(220px, calc(100% - 16px));
+  }
+
+  .cm-data-table {
+    min-width: 520px;
+    font-size: 0.76rem;
+  }
+
+  .cm-page canvas {
+    max-width: 100%;
+  }
+
+  .cm-page .alert {
+    overflow-wrap: anywhere;
   }
 }
 
@@ -5581,6 +5703,21 @@
 [data-theme="dark"] .table td,
 [data-theme="dark"] .table th {
   border-color: #334155;
+  color: #e5e7eb;
+  background-color: transparent;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > *,
+[data-theme="dark"] .cm-data-table tbody tr:nth-child(odd) {
+  --bs-table-accent-bg: #162033;
+  background-color: #162033 !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > *,
+[data-theme="dark"] .cm-data-table tbody tr:nth-child(even) {
+  background-color: #111827 !important;
+  color: #e5e7eb !important;
 }
 
 [data-theme="dark"] .metric-card,
@@ -5785,6 +5922,22 @@ html[data-theme="dark"] .table-primary {
   --bs-table-bg: #1f2937;
   --bs-table-color: #f8fafc;
   --bs-table-border-color: #334155;
+}
+
+html[data-theme="dark"] table.table,
+html[data-theme="dark"] table.table td,
+html[data-theme="dark"] table.table th,
+html[data-theme="dark"] table.table span,
+html[data-theme="dark"] table.table small,
+html[data-theme="dark"] table.table a {
+  --bs-table-color: #e5e7eb;
+  --bs-table-color-state: #e5e7eb;
+  --bs-table-striped-color: #f8fafc;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] table.table thead th {
+  color: #f8fafc !important;
 }
 
 html[data-theme="dark"] .chartjs-render-monitor,

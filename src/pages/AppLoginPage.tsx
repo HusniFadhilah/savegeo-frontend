@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import LoginIllustration from "@/components/auth/LoginIllustration";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
@@ -108,18 +108,15 @@ function UnifiedAccessForm() {
 }
 
 export default function AppLoginPage() {
-  const location = useLocation();
   const navigate = useNavigate();
   const userAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const adminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userLoading = useUserAuthStore((state) => state.isLoading);
   const adminLoading = useAuthStore((state) => state.isLoading);
-  const from = (location.state as { from?: string } | null)?.from;
-  const destination = adminAuthenticated
-    ? "/admin"
-    : from && from !== "/login"
-      ? from
-      : "/dashboard";
+  // All authenticated accounts enter the main analysis workspace. Keeping a
+  // single landing route avoids role-dependent redirects and makes login
+  // behavior consistent after session expiry and deep links.
+  const destination = "/carbon-estimation";
 
   useEffect(() => {
     if (userAuthenticated || adminAuthenticated) navigate(destination, { replace: true });

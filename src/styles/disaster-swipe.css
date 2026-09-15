@@ -2,7 +2,7 @@
 
 .swipe-status {
   position: absolute;
-  top: 12px;
+  top: 50px;
   left: 50%;
   z-index: 1000;
   transform: translateX(-50%);

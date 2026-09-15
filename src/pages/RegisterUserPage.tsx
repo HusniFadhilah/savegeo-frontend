@@ -23,7 +23,7 @@ export default function RegisterUserPage() {
       setLocalError("Password minimal 8 karakter.");
       return;
     }
-    if (await register(username, email, password)) navigate("/dashboard", { replace: true });
+    if (await register(username, email, password)) navigate("/carbon-estimation", { replace: true });
   };
 
   return (
