@@ -1,5 +1,6 @@
 import { fmtNum } from "../utils";
 import type { HistoricalComparisonResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   historicalComparison: HistoricalComparisonResult;
@@ -8,14 +9,15 @@ interface Props {
 /** Sub-analysis I: multi-year NDVI comparison, with the backend's
  * auto-generated Indonesian narrative shown as a highlighted callout. */
 export default function HistoricalComparisonPanel({ historicalComparison }: Props) {
+  const t = useI18nStore((state) => state.t);
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-bar-chart-line-fill me-1" /> I. Perbandingan Historis
+        <i className="bi bi-bar-chart-line-fill me-1" /> {t("crop.card.historicalTitle")}
       </div>
       <div className="card-body">
         {!historicalComparison.available ? (
-          <div className="alert alert-secondary py-2 mb-0 small">Tidak tersedia.</div>
+          <div className="alert alert-secondary py-2 mb-0 small">{t("crop.unavailable")}.</div>
         ) : (
           <>
             {historicalComparison.narrative && (
@@ -27,9 +29,9 @@ export default function HistoricalComparisonPanel({ historicalComparison }: Prop
               <table className="table table-striped table-hover table-sm mb-0">
                 <thead className="table-secondary">
                   <tr>
-                    <th>Tahun</th>
-                    <th>NDVI Rata-rata</th>
-                    <th>Status</th>
+                    <th>{t("crop.year")}</th>
+                    <th>{t("crop.ndviMean")}</th>
+                    <th>{t("crop.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -39,9 +41,9 @@ export default function HistoricalComparisonPanel({ historicalComparison }: Prop
                       <td>{y.ndvi_mean != null ? fmtNum(y.ndvi_mean, 4) : "-"}</td>
                       <td>
                         {y.available ? (
-                          <span className="badge bg-success">Tersedia</span>
+                          <span className="badge bg-success">{t("crop.available")}</span>
                         ) : (
-                          <span className="badge bg-secondary">Tidak tersedia</span>
+                          <span className="badge bg-secondary">{t("crop.unavailable")}</span>
                         )}
                       </td>
                     </tr>
