@@ -249,7 +249,7 @@ export default function SatelliteViewer({
   }
 
   return (
-    <div className="card mb-3 disaster-modern-card disaster-satellite-card">
+    <div className="card mb-3 pb-4 disaster-modern-card disaster-satellite-card">
       <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap disaster-soft-header">
         <span className="fw-semibold disaster-panel-title">
           <i className="bi bi-images" /> Citra Satelit
@@ -328,7 +328,7 @@ export default function SatelliteViewer({
         </div>
 
         {(view === "pre" || view === "post") && (
-          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl}>
+          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? preImg?.acquisition_date : postImg?.acquisition_date}>
             <BasemapSwitcher />
             <LayerOpacityControl
               opacity={imageryOpacity}
@@ -378,7 +378,7 @@ export default function SatelliteViewer({
         {view === "split" && (
           <div className="row g-2">
             <div className="col-md-6">
-              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl}>
+              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl} historicalDate={preImg?.acquisition_date}>
                 <BasemapSwitcher />
                 <LayerOpacityControl
                   opacity={imageryOpacity}
@@ -417,7 +417,7 @@ export default function SatelliteViewer({
               </div>
             </div>
             <div className="col-md-6">
-              <MapView id="disasterSatMapPost" showGlobeControl={false}>
+              <MapView id="disasterSatMapPost" showGlobeControl={false} historicalDate={postImg?.acquisition_date}>
                 <BasemapSwitcher />
                 <LayerOpacityControl
                   opacity={imageryOpacity}
@@ -475,6 +475,7 @@ export default function SatelliteViewer({
             afterResolutionM={postImg?.resolution_m ?? undefined}
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
+            historicalDate={postImg?.acquisition_date ?? preImg?.acquisition_date}
             showGlobeControl={showGlobeControl}
             initialPercent={35}
             bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}

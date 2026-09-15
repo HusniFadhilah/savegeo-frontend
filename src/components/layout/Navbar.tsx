@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { isViewerRole } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
@@ -26,6 +27,7 @@ export default function Navbar() {
 
   const activeIsAdmin = isAuthenticated;
   const activeUser = activeIsAdmin ? user : appUser;
+  const isViewer = activeIsAdmin && isViewerRole(user?.role);
 
   const handleLogout = () => {
     if (isAuthenticated) logout();
@@ -89,7 +91,7 @@ export default function Navbar() {
                       <i className="bi bi-speedometer2 me-2" /> Dashboard
                     </Link>
                   </li>
-                  {isAuthenticated && isUserAuthenticated && (
+                  {isAuthenticated && !isViewer && isUserAuthenticated && (
                     <li>
                       <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
                         <i className="bi bi-shield-lock me-2" /> Dashboard Admin

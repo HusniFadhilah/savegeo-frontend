@@ -84,7 +84,7 @@ export interface ImagerySceneListResponse {
   scenes: ImageryScene[];
   count: number;
   satellite: ImageryProvider;
-  /** true if results were capped (backend limits to 200 scenes per request). */
+  /** true if the provider safety ceiling was reached; the UI still paginates all returned scenes. */
   truncated: boolean;
 }
 

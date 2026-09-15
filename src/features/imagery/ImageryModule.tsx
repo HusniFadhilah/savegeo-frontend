@@ -328,6 +328,9 @@ export default function ImageryModule() {
   const [cogRescale, setCogRescale] = useState("");
 
   const [scenes, setScenes] = useState<ImageryScene[]>([]);
+  const [sceneSearch, setSceneSearch] = useState("");
+  const [scenePage, setScenePage] = useState(1);
+  const [scenePageSize, setScenePageSize] = useState(25);
   const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
   const [truncated, setTruncated] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -719,6 +722,15 @@ export default function ImageryModule() {
     () => [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1)),
     [scenes],
   );
+  const filteredScenes = useMemo(() => {
+    const needle = sceneSearch.trim().toLowerCase();
+    if (!needle) return sortedScenes;
+    return sortedScenes.filter((scene) => [scene.id, scene.title, scene.acquired_at, scene.platform, scene.producer, scene.default_asset_key].some((value) => String(value ?? "").toLowerCase().includes(needle)));
+  }, [sceneSearch, sortedScenes]);
+  const scenePageCount = Math.max(1, Math.ceil(filteredScenes.length / scenePageSize));
+  const visibleScenes = useMemo(() => filteredScenes.slice((scenePage - 1) * scenePageSize, scenePage * scenePageSize), [filteredScenes, scenePage, scenePageSize]);
+  useEffect(() => { setScenePage(1); }, [sceneSearch, scenes]);
+  useEffect(() => { setScenePage((page) => Math.min(page, scenePageCount)); }, [scenePageCount]);
   const selectedScene = useMemo(
     () => scenes.find((s) => s.id === selectedSceneId) ?? null,
     [scenes, selectedSceneId],
@@ -1086,8 +1098,8 @@ export default function ImageryModule() {
             </div>
             <small className="text-muted">
               {isEsriWayback
-                ? "Rilis World Imagery Wayback di rentang ini akan dicari (maks. 200 hasil)."
-                : "Semua scene asli di rentang ini akan dicari (maks. 200 hasil)."}
+                ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
+                : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
             </small>
           </div>
 
@@ -1201,8 +1213,8 @@ export default function ImageryModule() {
               </span>
               <span className="badge bg-secondary">{scenes.length}</span>
               {truncated && (
-                <span className="badge bg-warning text-dark" title="Hasil dibatasi 200 scene - persempit rentang tanggal untuk melihat semuanya">
-                  dibatasi 200
+                <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
+                  batas provider
                 </span>
               )}
               <div className="btn-group btn-group-sm ms-auto" role="group" aria-label="Mode tampilan">
@@ -1222,6 +1234,15 @@ export default function ImageryModule() {
                 </button>
               </div>
             </div>
+            <div className="p-2 border-top border-bottom bg-body-tertiary">
+              <div className="row g-2 align-items-center">
+                <div className="col-md-8">
+                  <label className="visually-hidden" htmlFor="scene-list-search">Cari scene</label>
+                  <div className="input-group input-group-sm"><span className="input-group-text"><i className="fas fa-search" /></span><input id="scene-list-search" className="form-control" value={sceneSearch} onChange={(event) => setSceneSearch(event.target.value)} placeholder="Cari ID, judul, tanggal, platform, produser..." /><button type="button" className="btn btn-outline-secondary" disabled={!sceneSearch} onClick={() => setSceneSearch("")}>Bersihkan</button></div>
+                </div>
+                <div className="col-md-4 d-flex align-items-center gap-2 justify-content-md-end"><label className="small text-muted mb-0" htmlFor="scene-page-size">Per halaman</label><select id="scene-page-size" className="form-select form-select-sm" style={{ maxWidth: 90 }} value={scenePageSize} onChange={(event) => { setScenePageSize(Number(event.target.value)); setScenePage(1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></div>
+              </div>
+            </div>
             <div className="card-body p-0">
               {scenes.length === 0 ? (
                 <div className="p-3 text-center text-muted small">
@@ -1229,6 +1250,7 @@ export default function ImageryModule() {
                   filter awan.
                 </div>
               ) : (
+                <>
                 <div className="table-responsive" style={{ maxHeight: 320, overflowY: "auto" }}>
                   <table className="table table-sm table-hover mb-0">
                     <thead className="table-primary sticky-top">
@@ -1246,7 +1268,7 @@ export default function ImageryModule() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedScenes.map((scene) => (
+                      {visibleScenes.map((scene) => (
                         <tr
                           key={scene.id}
                           className={selectedSceneId === scene.id ? "table-warning" : hoverSceneId === scene.id ? "table-info" : ""}
@@ -1310,6 +1332,11 @@ export default function ImageryModule() {
                     </tbody>
                   </table>
                 </div>
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 border-top">
+                  <small className="text-muted">{filteredScenes.length === 0 ? "Tidak ada hasil" : `Menampilkan ${(scenePage - 1) * scenePageSize + 1}-${Math.min(scenePage * scenePageSize, filteredScenes.length)} dari ${filteredScenes.length} scene`}</small>
+                  <nav aria-label="Paginasi scene"><div className="btn-group btn-group-sm"><button type="button" className="btn btn-outline-secondary" disabled={scenePage <= 1} onClick={() => setScenePage((page) => Math.max(1, page - 1))}>Sebelumnya</button><button type="button" className="btn btn-outline-secondary" disabled>{scenePage} / {scenePageCount}</button><button type="button" className="btn btn-outline-secondary" disabled={scenePage >= scenePageCount} onClick={() => setScenePage((page) => Math.min(scenePageCount, page + 1))}>Berikutnya</button></div></nav>
+                </div>
+                </>
               )}
             </div>
           </div>
@@ -1354,7 +1381,7 @@ export default function ImageryModule() {
                     onViewChange={setMapMode}
                   />
                 ) : (
-                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM}>
+                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={selectedScene?.acquired_at?.slice(0, 10)}>
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <SceneFootprintLayer

@@ -237,7 +237,7 @@ export default function BeforeAfterMaps({
       {view === "split" && (
         <div className="row g-2">
           <div className="col-md-6">
-            <MapView id="lcChangeBeforeMap" showGlobeControl>
+            <MapView id="lcChangeBeforeMap" showGlobeControl historicalDate={startDate ?? (yearA != null ? `${yearA}-12-31` : undefined)}>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
               <MapClickInspector onClick={handleMapClick} />
@@ -249,7 +249,7 @@ export default function BeforeAfterMaps({
             <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
           </div>
           <div className="col-md-6">
-            <MapView id="lcChangeAfterMap" showGlobeControl={false}>
+            <MapView id="lcChangeAfterMap" showGlobeControl={false} historicalDate={endDate ?? (yearB != null ? `${yearB}-12-31` : undefined)}>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
               <MapClickInspector onClick={handleMapClick} />
@@ -297,6 +297,7 @@ export default function BeforeAfterMaps({
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
             opacity={opacity}
+            historicalDate={endDate ?? startDate ?? (yearB != null ? `${yearB}-12-31` : yearA != null ? `${yearA}-12-31` : undefined)}
             bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
             clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
           >

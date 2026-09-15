@@ -12,6 +12,12 @@ export interface WaybackScene extends ImageryScene {
   release_label: string;
 }
 
+/** Pick the latest published Wayback snapshot that does not exceed the analysis date. */
+export function selectEsriWaybackScene(scenes: WaybackScene[], targetDate: string): WaybackScene | null {
+  const candidates = scenes.filter((scene) => scene.release_label <= targetDate).sort((a, b) => b.release_label.localeCompare(a.release_label));
+  return candidates[0] ?? scenes.slice().sort((a, b) => a.release_label.localeCompare(b.release_label))[0] ?? null;
+}
+
 function childText(node: Element, localName: string): string | null {
   const found = Array.from(node.getElementsByTagName("*")).find((el) => el.localName === localName);
   return found?.textContent?.trim() ?? null;
@@ -36,7 +42,7 @@ function parseWaybackDate(title: string): string | null {
   return match?.[1] ?? null;
 }
 
-export async function listEsriWaybackScenes(startDate: string, endDate: string): Promise<WaybackScene[]> {
+export async function listEsriWaybackScenes(startDate: string, endDate: string, limit = 2000): Promise<WaybackScene[]> {
   const res = await fetch(WAYBACK_CAPABILITIES_URL);
   if (!res.ok) throw new Error(`Gagal memuat Esri Wayback (${res.status}).`);
 
@@ -68,5 +74,5 @@ export async function listEsriWaybackScenes(startDate: string, endDate: string):
     .filter((scene): scene is WaybackScene => Boolean(scene))
     .sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1));
 
-  return scenes.slice(0, 200);
+  return scenes.slice(0, limit);
 }

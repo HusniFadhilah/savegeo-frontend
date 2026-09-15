@@ -1,0 +1,15 @@
+.cloud-dataset-panel { margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--bs-border-color); border-radius: 14px; background: var(--bs-body-bg); color: var(--bs-body-color); }
+.cloud-dataset-heading, .cloud-control-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.cloud-dataset-heading h2 { margin: 0; font-size: 1rem; }
+.cloud-dataset-heading p { margin: .2rem 0 0; color: var(--bs-secondary-color); font-size: .82rem; }
+.cloud-eyebrow { color: #198754; font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.cloud-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+.cloud-dataset-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: .75rem; margin-top: .9rem; }
+.cloud-dataset-grid label { display: block; margin-bottom: .35rem; font-size: .75rem; font-weight: 600; }
+.cloud-control-row { justify-content: flex-start; margin-top: .6rem; }
+.cloud-status { color: var(--bs-secondary-color); font-size: .75rem; overflow-wrap: anywhere; }
+.cloud-query-box textarea { min-height: 76px; resize: vertical; font-family: var(--bs-font-monospace); font-size: .78rem; }
+.cloud-metadata, .cloud-results pre { max-height: 180px; margin: .75rem 0 0; padding: .7rem; overflow: auto; border-radius: 8px; background: var(--bs-tertiary-bg); color: var(--bs-body-color); font-size: .72rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cloud-results { margin-top: .75rem; }
+@media (max-width: 720px) { .cloud-dataset-heading { align-items: flex-start; flex-direction: column; } .cloud-actions { justify-content: flex-start; } .cloud-dataset-grid { grid-template-columns: 1fr; } }
+

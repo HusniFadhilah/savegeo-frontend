@@ -3,6 +3,8 @@ import { createContext, useContext } from "react";
 interface BasemapContextValue {
   activeBasemapId: string | null;
   setActiveBasemapId: (id: string) => void;
+  historicalImageryDate?: string | null;
+  setHistoricalImageryDate?: (date: string | null) => void;
 }
 
 const noop = () => {};

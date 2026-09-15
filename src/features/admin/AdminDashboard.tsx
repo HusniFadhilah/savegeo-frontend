@@ -15,6 +15,7 @@ import AdminUsers from "./components/AdminUsers";
 import CompanyBoundaries from "./components/CompanyBoundaries";
 import SatelliteProviders from "./components/SatelliteProviders";
 import DisasterManagement from "./components/disaster/DisasterManagement";
+import CloudDatasetPanel from "@/features/geospatial/CloudDatasetPanel";
 import { lazy, Suspense } from "react";
 
 const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
@@ -37,6 +38,7 @@ const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; 
     items: [
       { id: "co", icon: "bi-building-fill", label: "Batas Perusahaan" },
       { id: "ds", icon: "bi-exclamation-triangle-fill", label: "Disaster Management" },
+      { id: "gd", icon: "bi-database-fill-gear", label: "Geospatial Data" },
     ],
   },
   // {
@@ -55,6 +57,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   sp: ["Satellite Providers", "Kelola sumber citra satelit (Sentinel-2/Landsat) + resolusi/koleksi GEE"],
   co: ["Batas Perusahaan", "Kelola batas wilayah konsesi dan perusahaan industri"],
   ds: ["Disaster Management", "Kelola kejadian bencana, AOI, citra satelit, dan analisis"],
+  gd: ["Geospatial Data", "Kelola dataset cloud-native, cache geospasial, dan Spatial SQL"],
   ri: ["Informasi Riset", "Detail riset internal yang dibatasi untuk administrator"],
 };
 
@@ -208,6 +211,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "sp" && <SatelliteProviders />}
               {section === "co" && <CompanyBoundaries />}
               {section === "ds" && <DisasterManagement />}
+              {section === "gd" && <CloudDatasetPanel />}
               {/* {section === "ri" && (
                 <Suspense fallback={<div className="adm-loading">Memuat informasi riset...</div>}>
                   <ResearchInformation />

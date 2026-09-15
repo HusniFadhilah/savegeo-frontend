@@ -316,6 +316,8 @@ interface Props {
   children?: ReactNode;
   /** Render the shared 3D/globe shortcut for this comparison map. */
   showGlobeControl?: boolean;
+  /** Analysis date used to select the historical satellite basemap. */
+  historicalDate?: string;
 }
 
 /**
@@ -349,6 +351,7 @@ export default function SwipeCompareMap({
   clipGeometry,
   children,
   showGlobeControl = true,
+  historicalDate,
 }: Props) {
   const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
@@ -470,6 +473,7 @@ export default function SwipeCompareMap({
         zoom={zoom}
         maxZoom={maxZoom}
         showGlobeControl={showGlobeControl}
+        historicalDate={historicalDate}
         onMapReady={(map) => {
           mapRef.current = map;
         }}

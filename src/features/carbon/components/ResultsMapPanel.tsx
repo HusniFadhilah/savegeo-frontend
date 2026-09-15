@@ -40,6 +40,7 @@ interface Props {
   legendBins: number;
   showReference: boolean;
   mapKey: string | number;
+  analysisDate?: string;
 }
 
 function buildTabs(results: AnalysisResultsBundle, showReference: boolean): ResultTab[] {
@@ -191,6 +192,7 @@ export default function ResultsMapPanel({
   legendBins,
   showReference,
   mapKey,
+  analysisDate,
 }: Props) {
   const tabs = useMemo(() => buildTabs(results, showReference), [results, showReference]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
@@ -318,6 +320,7 @@ export default function ResultsMapPanel({
               center={center}
               zoom={zoom}
               opacity={opacity}
+              historicalDate={analysisDate}
               bounds={aoi.bounds ?? undefined}
               clipGeometry={aoi.feature}
             >
@@ -347,6 +350,7 @@ export default function ResultsMapPanel({
               className="result-map"
               center={center}
               zoom={zoom}
+              historicalDate={analysisDate}
               onMapReady={(map) => registerMap("results", map)}
             >
               <BasemapSwitcher />

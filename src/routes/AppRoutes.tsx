@@ -12,6 +12,10 @@ import type { DashboardModule } from "@/hooks/useUiStore";
 import type { AdminSection } from "@/features/admin/types";
 import ProtectedAppRoute from "@/components/auth/ProtectedAppRoute";
 import DashboardEntryRoute from "@/routes/DashboardEntryRoute";
+import WorkflowBuilderPage from "@/pages/WorkflowBuilderPage";
+import EmbedPage from "@/pages/EmbedPage";
+import PluginManagerPage from "@/pages/PluginManagerPage";
+import DatasetViewerPage from "@/pages/DatasetViewerPage";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -45,6 +49,7 @@ export default function AppRoutes() {
     { path: "/admin/satellite-providers", section: "sp" },
     { path: "/admin/company-boundaries", section: "co" },
     { path: "/admin/disasters", section: "ds" },
+    { path: "/admin/geospatial-data", section: "gd" },
     { path: "/admin/research-information", section: "ri" },
   ];
 
@@ -68,6 +73,14 @@ export default function AppRoutes() {
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
       ))}
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/workflow" element={<WorkflowBuilderPage />} />
+      <Route path="/workflow/new" element={<WorkflowBuilderPage />} />
+      <Route path="/workflow/:id/edit" element={<WorkflowBuilderPage />} />
+      <Route path="/workflow/:id/run" element={<WorkflowBuilderPage />} />
+      <Route path="/embed/workflow/:workflowId" element={<EmbedPage />} />
+      <Route path="/embed/map/:mapId" element={<EmbedPage />} />
+      <Route path="/settings/plugins" element={<PluginManagerPage />} />
+      <Route path="/dataset-viewer" element={<ProtectedAppRoute><DatasetViewerPage /></ProtectedAppRoute>} />
       <Route
         path="/pemetaan-bencana"
         element={<ProtectedAppRoute><DisasterListPage /></ProtectedAppRoute>}

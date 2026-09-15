@@ -344,7 +344,11 @@ export default function CropMonitoringModule() {
             {sub.historical_comparison && <HistoricalComparisonPanel historicalComparison={sub.historical_comparison} />}
             {sub.risk_score && <CropRiskScoreCard riskScore={sub.risk_score} />}
 
-            <CropMonitoringResultsMapPanel fieldFeature={fieldFeature} subAnalyses={sub} />
+            <CropMonitoringResultsMapPanel
+              fieldFeature={fieldFeature}
+              subAnalyses={sub}
+              analysisDate={result.period.end || customEnd || customStart || undefined}
+            />
           </>
         )}
 

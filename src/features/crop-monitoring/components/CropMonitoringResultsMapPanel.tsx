@@ -74,6 +74,7 @@ function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
 interface Props {
   fieldFeature: AoiFeature | null;
   subAnalyses: CropMonitoringSubAnalyses;
+  analysisDate?: string;
 }
 
 /**
@@ -82,7 +83,7 @@ interface Props {
  * none directly, RGB is not part of this response shape). Always shows the
  * field boundary as a default context layer, even with zero tile tabs.
  */
-export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyses }: Props) {
+export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyses, analysisDate }: Props) {
   const tabs = useMemo(() => buildTabs(subAnalyses), [subAnalyses]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
@@ -122,7 +123,7 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
         )}
 
         <div className="cm-map-shell">
-          <MapView id="cropMonitoringResultMap" center={center} zoom={fieldFeature ? 13 : 5}>
+          <MapView id="cropMonitoringResultMap" center={center} zoom={fieldFeature ? 13 : 5} historicalDate={analysisDate}>
             <BasemapSwitcher />
             {fieldFeature && <GeoJSON data={fieldFeature} style={{ color: "#ef4444", weight: 2, fillOpacity: 0.04 }} />}
             {activeTab && (

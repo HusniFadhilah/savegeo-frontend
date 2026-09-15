@@ -3,6 +3,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
+import "./map-tools.css";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import type { AoiFeature } from "@/types/map";
 
@@ -286,6 +287,46 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
     };
     map.addControl(rectangleControl);
 
+    // Keep the original Leaflet handlers and toolbars inside one flyout.
+    const toolsControl = new L.Control({ position: "topleft" });
+    toolsControl.onAdd = () => {
+      const container = L.DomUtil.create("div", "leaflet-control aoi-tools-control");
+      const trigger = L.DomUtil.create("button", "aoi-tools-trigger", container);
+      trigger.type = "button";
+      trigger.title = "Alat gambar AOI";
+      trigger.setAttribute("aria-label", trigger.title);
+      trigger.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
+      const panel = L.DomUtil.create("div", "aoi-tools-panel", container);
+      panel.setAttribute("role", "group");
+      panel.setAttribute("aria-label", "Alat gambar AOI");
+      panel.id = `${map.getContainer().id}-aoi-tools`;
+      trigger.setAttribute("aria-controls", panel.id);
+      const setOpen = (open: boolean) => {
+        panel.hidden = !open;
+        trigger.setAttribute("aria-expanded", String(open));
+      };
+      setOpen(false);
+      [drawControl, curveControl, rectangleControl].forEach(control => {
+        const element = control.getContainer();
+        if (element) panel.appendChild(element);
+      });
+      container.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") setOpen(true); });
+      container.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse" && !container.contains(document.activeElement)) setOpen(false);
+      });
+      container.addEventListener("focusout", event => {
+        if (!container.contains(event.relatedTarget as Node | null)) setOpen(false);
+      });
+      trigger.addEventListener("click", () => setOpen(panel.hidden));
+      container.addEventListener("keydown", event => {
+        if (event.key === "Escape") { trigger.focus(); setOpen(false); }
+      });
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+      return container;
+    };
+    map.addControl(toolsControl);
+
     const handleCreated = (e: L.LeafletEvent) => {
       drawnItems.clearLayers();
       drawnItems.addLayer((e as L.DrawEvents.Created).layer);
@@ -410,6 +451,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
       map.removeControl(rectangleControl);
       map.removeControl(curveControl);
       map.removeControl(drawControl);
+      map.removeControl(toolsControl);
       map.removeLayer(drawnItems);
       if (externalGroupRef) externalGroupRef.current = null;
     };

@@ -639,6 +639,7 @@ export default function CarbonModule() {
           legendBins={carbonLegendBins}
           showReference={carbonParams.showReference}
           mapKey={mapKey}
+          analysisDate={`${year}-12-31`}
         />
 
             <div className="card">

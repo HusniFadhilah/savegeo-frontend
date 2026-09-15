@@ -1,0 +1,14 @@
+import type { RasterOperation, RasterSourceKind } from "./rasterTypes";
+
+export interface RasterQueryState { operation?: RasterOperation; sourceType?: Exclude<RasterSourceKind, "array">; sourceId?: string; assetKey?: string; expression?: string; red?: number; green?: number; blue?: number; nir?: number; swir?: number; threshold?: number; changeMode?: string; outputType?: "preview" | "geotiff" | "cog"; }
+export function parseRasterQuery(search: string): RasterQueryState {
+  const q = new URLSearchParams(search); const operation = q.get("raster_operation") as RasterOperation | null; const sourceType = q.get("raster_source_type") as RasterQueryState["sourceType"];
+  const operations: RasterOperation[] = ["ndvi", "evi", "ndwi", "savi", "band_math", "clip", "stretch", "clip_stretch", "reclassify", "histogram", "statistics", "zonal_statistics", "slope", "aspect", "hillshade", "change_detection"];
+  const changeMode = q.get("raster_change_mode"); const outputType = q.get("raster_output_type");
+  return { operation: operation && operations.includes(operation) ? operation : undefined, sourceType: sourceType && ["file", "url", "cog", "scene_asset"].includes(sourceType) ? sourceType : undefined, sourceId: q.get("raster_source_id") || undefined, assetKey: q.get("raster_asset_key") || undefined, expression: q.get("raster_expression") || undefined, red: number(q.get("raster_band_red")), green: number(q.get("raster_band_green")), blue: number(q.get("raster_band_blue")), nir: number(q.get("raster_band_nir")), swir: number(q.get("raster_band_swir")), threshold: number(q.get("raster_threshold")), changeMode: changeMode === "difference" || changeMode === "ratio" || changeMode === "threshold" ? changeMode : undefined, outputType: outputType === "preview" || outputType === "geotiff" || outputType === "cog" ? outputType : undefined };
+}
+function number(value: string | null) { const result = value == null ? NaN : Number(value); return Number.isFinite(result) && result > 0 ? result : undefined; }
+export function updateRasterQuery(state: RasterQueryState) {
+  const url = new URL(window.location.href); const values: Record<string, unknown> = { raster_operation: state.operation, raster_source_type: state.sourceType, raster_source_id: state.sourceId, raster_asset_key: state.assetKey, raster_expression: state.expression, raster_band_red: state.red, raster_band_green: state.green, raster_band_blue: state.blue, raster_band_nir: state.nir, raster_band_swir: state.swir, raster_threshold: state.threshold, raster_change_mode: state.changeMode, raster_output_type: state.outputType };
+  Object.entries(values).forEach(([key, value]) => value == null || value === "" ? url.searchParams.delete(key) : url.searchParams.set(key, String(value))); window.history.replaceState(window.history.state, "", url.toString());
+}

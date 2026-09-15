@@ -65,7 +65,8 @@ export default function SegmentationComparison({result, showGlobeControl = true}
   const nativeZoom = nativeZoomForResolution(result.resolution_m);
   if (!result.pre_tile_url || !result.post_tile_url || !result.classes.length)
     return <div role="alert" className="alert alert-warning">Hasil pre/post atau kelas belum tersedia. Jalankan analisis lengkap.</div>;
-  const single = (phase: "pre" | "post" | "change", showControl = showGlobeControl) => <MapView id={`segmentation-${phase}`} showGlobeControl={showControl}>
+  const single = (phase: "pre" | "post" | "change", showControl = showGlobeControl) => <MapView id={`segmentation-${phase}`} showGlobeControl={showControl}
+    historicalDate={phase === "pre" ? result.pre.date : phase === "post" ? result.post.date : result.post.date}>
     <BasemapSwitcher />
     <TileLayer key={result[`${phase}_tile_url`]} url={result[`${phase}_tile_url`]} bounds={bounds}
       pane={RESULT_PANE} opacity={opacity} maxNativeZoom={nativeZoom} maxZoom={22}
@@ -92,6 +93,7 @@ export default function SegmentationComparison({result, showGlobeControl = true}
     {mode === "swipe" ? <SwipeCompareMap id="segmentation-swipe" beforeUrl={result.pre_tile_url} afterUrl={result.post_tile_url}
       beforeLabel="Segmentasi pre" afterLabel="Segmentasi post" orientation={orientation} onOrientationChange={setOrientation}
       opacity={opacity} bounds={bounds} clipGeometry={clipGeometry}
+      historicalDate={result.post.date}
       beforeMaxNativeZoom={nativeZoom} afterMaxNativeZoom={nativeZoom} beforeResolutionM={result.resolution_m} afterResolutionM={result.resolution_m}
       showGlobeControl={showGlobeControl}>
       <MapSetup aoi={result.aoi} maps={maps} />

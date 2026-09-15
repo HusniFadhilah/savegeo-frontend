@@ -304,7 +304,7 @@ export default function CarbonTimeSeriesPanel({ result, zoom, center, visMin, vi
               </span>
             </div>
             <div className="carbon-timelapse-map-shell">
-              <MapView id="carbonTimelapseMap" center={center} zoom={zoom}>
+              <MapView id="carbonTimelapseMap" center={center} zoom={zoom} historicalDate={series[frame]?.year != null ? `${series[frame].year}-12-31` : undefined}>
                 <BasemapSwitcher />
                 {series.map((point, idx) =>
                   point.tile_url ? (

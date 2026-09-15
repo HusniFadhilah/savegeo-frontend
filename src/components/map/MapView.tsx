@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
 import ImageryAttribution from "@/components/map/ImageryAttribution";
+import HistoricalImageryControl from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
@@ -30,6 +31,8 @@ interface Props {
   className?: string;
   /** Render the shared 3D/globe shortcut for this map instance. */
   showGlobeControl?: boolean;
+  /** Analysis date used to select an Esri Wayback snapshot for the basemap. */
+  historicalDate?: string;
 }
 
 function InvalidateOnResize() {
@@ -81,7 +84,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate }: Props) {
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
   const active = useContext(MapActivityContext);
@@ -98,12 +101,13 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
   // rendered below even when no <BasemapSwitcher/> child is present to write
   // it explicitly (e.g. SwipeCompareMap never renders one).
   const [activeBasemapId, setActiveBasemapId] = useState<string | null>(null);
+  const [historicalImageryDate, setHistoricalImageryDate] = useState<string | null>(null);
   useEffect(() => {
     if (defaultBasemap && activeBasemapId === null) setActiveBasemapId(defaultBasemap.id);
   }, [defaultBasemap, activeBasemapId]);
 
   return (
-    <div className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId }}>
+    <div className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId, historicalImageryDate, setHistoricalImageryDate }}>
       <MapContainer
         id={id}
         center={center ?? INDONESIA_CENTER}
@@ -139,6 +143,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <FullscreenControl />
         <ZoomScaleControl />
         <ImageryAttribution />
+        <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />
         {children}
       </MapContainer>
     </BasemapContext.Provider></div>

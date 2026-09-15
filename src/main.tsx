@@ -9,6 +9,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "@/styles/legacy-base.css";
 import "@/styles/app.css";
 import "@/styles/landing.css";
+import "@/styles/workflow.css";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

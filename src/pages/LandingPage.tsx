@@ -1,65 +1,67 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 const FEATURES = [
   {
-    eyebrow: "Forestry & climate",
-    title: "Estimasi Stok Karbon",
-    description: "Ukur indikasi stok karbon, vegetasi, dan tutupan lahan dari AOI yang sama.",
+    eyebrowKey: "home.feature.carbon.eyebrow",
+    titleKey: "home.feature.carbon.title",
+    descriptionKey: "home.feature.carbon.description",
     image: "/images/carbon-forest-loss.jpg",
     icon: "bi-tree-fill",
     path: "/carbon-estimation",
   },
   {
-    eyebrow: "Risk intelligence",
-    title: "Pemetaan Bencana",
-    description: "Pahami area terdampak, hotspot, dan informasi pendukung untuk respons yang lebih cepat.",
+    eyebrowKey: "home.feature.disaster.eyebrow",
+    titleKey: "home.feature.disaster.title",
+    descriptionKey: "home.feature.disaster.description",
     image: "/images/disaster-water-risk.jpg",
     icon: "bi-water",
     path: "/pemetaan-bencana",
   },
   {
-    eyebrow: "Precision agriculture",
-    title: "Crop Monitoring",
-    description: "Pantau kesehatan tanaman, moisture, cuaca, fase pertumbuhan, dan anomali lahan.",
+    eyebrowKey: "home.feature.crop.eyebrow",
+    titleKey: "home.feature.crop.title",
+    descriptionKey: "home.feature.crop.description",
     image: "/images/crop-monitoring-fields.jpg",
     icon: "bi-flower1",
     path: "/crop-monitoring",
   },
   {
-    eyebrow: "Change intelligence",
-    title: "Land Cover Change",
-    description: "Bandingkan perubahan tutupan lahan lintas waktu dengan peta dan statistik yang mudah dibaca.",
+    eyebrowKey: "home.feature.landChange.eyebrow",
+    titleKey: "home.feature.landChange.title",
+    descriptionKey: "home.feature.landChange.description",
     image: "/images/guide-hero-satellite.jpg",
     icon: "bi-arrow-left-right",
     path: "/land-cover-change",
   },
   {
-    eyebrow: "Earth observation",
-    title: "Satellite Imagery",
-    description: "Eksplorasi scene, tanggal akuisisi, basemap, dan layer citra untuk kebutuhan analisis.",
+    eyebrowKey: "home.feature.imagery.eyebrow",
+    titleKey: "home.feature.imagery.title",
+    descriptionKey: "home.feature.imagery.description",
     image: "/images/imagery-landsat-australia.jpg",
     icon: "bi-camera",
     path: "/satellite-imagery",
   },
   {
-    eyebrow: "Research workflow",
-    title: "Insight & Reporting",
-    description: "Susun temuan geospasial menjadi visualisasi dan hasil yang siap digunakan untuk riset.",
+    eyebrowKey: "home.feature.workflow.eyebrow",
+    titleKey: "home.feature.workflow.title",
+    descriptionKey: "home.feature.workflow.description",
     image: "/images/land-change-disturbance.jpg",
     icon: "bi-bar-chart-line",
-    path: "/guide",
+    path: "/workflow",
   },
 ];
 
 const USE_CASES = [
-  ["bi-tree", "Kehutanan & karbon", "Inventarisasi, pemantauan perubahan, dan dukungan carbon accounting."],
-  ["bi-moisture", "Pemantauan Pertanian", "Temukan variasi kondisi lahan dan tanda awal stres tanaman."],
-  ["bi-shield-exclamation", "Pemetaan bencana", "Dukung pemetaan dampak dan prioritas respons berbasis lokasi."],
-  ["bi-buildings", "Tata ruang & riset", "Hubungkan data spasial dengan analisis yang transparan dan dapat ditelusuri."],
+  ["bi-tree", "home.useCase.forest.title", "home.useCase.forest.description", "/carbon-estimation"],
+  ["bi-moisture", "home.useCase.crop.title", "home.useCase.crop.description", "/crop-monitoring"],
+  ["bi-shield-exclamation", "home.useCase.disaster.title", "home.useCase.disaster.description", "/pemetaan-bencana"],
+  ["bi-buildings", "home.useCase.research.title", "home.useCase.research.description", "/workflow"],
 ];
 
 export default function LandingPage() {
+  const { language, setLanguage, t } = useI18nStore();
   const [scrolled, setScrolled] = useState(false);
   const [ctaVisible, setCtaVisible] = useState(false);
   const ctaRef = useRef<HTMLElement | null>(null);
@@ -113,21 +115,28 @@ export default function LandingPage() {
     <div className="landing-page">
       <header className={`landing-nav ${scrolled ? "is-scrolled" : ""}`}>
         <div className="landing-shell landing-nav-inner">
-          <Link to="/" className="landing-brand" aria-label="SaveGeo beranda">
-            <img src="/images/savegeo-logo.svg" alt="SaveGeo" />
+          <Link to="/" className="landing-brand" aria-label={t("home.homeLink")}>
+            <img src="/images/savegeo-logo.svg" alt={t("home.brand")} />
             <span>
               <strong>SaveGeo</strong>
-              <small>AI Imagery Analytics Platform</small>
+              <small>{t("home.brandTagline")}</small>
             </span>
           </Link>
-          <nav className="landing-links" aria-label="Navigasi utama">
-            <a href="#fitur">Fitur</a>
-            <a href="#cara-kerja">Cara Kerja</a>
-            <a href="#solusi">Solusi</a>
-            <a href="#tentang">Tentang</a>
+          <nav className="landing-links" aria-label={t("home.mainNavigation")}>
+            <a href="#fitur">{t("home.nav.features")}</a>
+            <a href="#cara-kerja">{t("home.nav.process")}</a>
+            <a href="#solusi">{t("home.nav.solutions")}</a>
+            <a href="#tentang">{t("home.nav.about")}</a>
           </nav>
           <div className="landing-nav-actions">
-            <Link to="/carbon-estimation" className="landing-nav-cta">Buka Platform <i className="bi bi-arrow-up-right" /></Link>
+            <label className="landing-language" aria-label={t("home.language")}>
+              <i className="bi bi-translate" aria-hidden="true" />
+              <select value={language} onChange={(event) => setLanguage(event.target.value as "id" | "en")}>
+                <option value="id">ID</option>
+                <option value="en">EN</option>
+              </select>
+            </label>
+            <Link to="/carbon-estimation" className="landing-nav-cta">{t("home.openPlatform")} <i className="bi bi-arrow-up-right" /></Link>
           </div>
         </div>
       </header>
@@ -137,45 +146,45 @@ export default function LandingPage() {
           <div ref={heroImageRef} className="landing-hero-image" aria-hidden="true" />
           <div className="landing-shell landing-hero-content">
             <div className="landing-hero-copy">
-              <div className="landing-kicker"><span /> EARTH OBSERVATION, MADE ACTIONABLE</div>
-              <h1>Melihat lebih jauh.<br /><em>Memutuskan lebih tepat.</em></h1>
-              <p>SaveGeo menggunakan teknologi berbasis AI untuk mengubah citra satelit dan data geospasial menjadi insight yang membantu Anda memahami wilayah, memantau perubahan, dan mengambil keputusan berbasis bukti.</p>
+              <div className="landing-kicker"><span /> {t("home.hero.kicker")}</div>
+              <h1>{t("home.hero.titleLine1")}<br /><em>{t("home.hero.titleLine2")}</em></h1>
+              <p>{t("home.hero.description")}</p>
               <div className="landing-hero-actions">
-                <Link to="/dashboard" className="landing-primary-button">Mulai Analisis <i className="bi bi-arrow-up-right" /></Link>
-                <a href="#fitur" className="landing-secondary-button"><i className="bi bi-play-circle" /> Jelajahi Fitur</a>
+                <Link to="/carbon-estimation" className="landing-primary-button">{t("home.startAnalysis")} <i className="bi bi-arrow-up-right" /></Link>
+                <a href="#fitur" className="landing-secondary-button"><i className="bi bi-play-circle" /> {t("home.exploreFeatures")}</a>
               </div>
             </div>
             <div className="landing-hero-panel-float">
-              <div className="landing-hero-panel" aria-label="Ringkasan kemampuan SaveGeo">
-                <div className="landing-panel-top"><span className="status-dot" /> PLATFORM AKTIF <span>2026</span></div>
+              <div className="landing-hero-panel" aria-label={t("home.panel.aria")}>
+                <div className="landing-panel-top"><span className="status-dot" /> {t("home.panel.active")} <span>2026</span></div>
                 <div className="landing-panel-map"><div className="map-crosshair" /><div className="map-aoi map-aoi-one" /><div className="map-aoi map-aoi-two" /><div className="map-scanline" /></div>
-                <div className="landing-panel-footer"><div><small>ANALYTICS LAYERS</small><strong>Multi-source imagery</strong></div><i className="bi bi-layers" /></div>
+                <div className="landing-panel-footer"><div><small>{t("home.panel.layers")}</small><strong>{t("home.panel.multiSource")}</strong></div><i className="bi bi-layers" /></div>
               </div>
             </div>
           </div>
-          <a className="landing-scroll-button" href="#fitur" aria-label="Jelajahi fitur SaveGeo">
+          <a className="landing-scroll-button" href="#fitur" aria-label={t("home.exploreFeatures")}>
             <span className="landing-scroll-button-icon"><i className="bi bi-arrow-down" /></span>
           </a>
         </section>
 
-        <section className="landing-trust" aria-label="Mitra SaveGeo">
-          <div className="landing-shell landing-trust-inner"><span>DIKEMBANGKAN UNTUK ANALISIS BUMI YANG LEBIH BAIK</span><div className="landing-trust-logos"><strong>SaveGeo</strong><b>Universitas Diponegoro</b><b>PT LEN Industri (Persero)</b></div></div>
+        <section className="landing-trust" aria-label={t("home.partners.aria")}>
+          <div className="landing-shell landing-trust-inner"><span>{t("home.partners.kicker")}</span><div className="landing-trust-logos"><strong>SaveGeo</strong><b>Universitas Diponegoro</b><b>PT LEN Industri (Persero)</b></div></div>
         </section>
 
         <section id="fitur" className="landing-section landing-features-section">
           <div className="landing-shell">
-            <div className="landing-section-heading"><div><div className="landing-kicker green"><span /> APA YANG BISA ANDA LAKUKAN</div><h2>Pahami wilayah Anda<br /><em>dengan lebih jelas.</em></h2></div><p>Dari hutan hingga lahan pertanian, SaveGeo membantu Anda membaca sinyal perubahan di permukaan bumi dengan cara yang lebih sederhana.</p></div>
-            <div className="landing-feature-grid">{FEATURES.map((feature) => <Link to="/login" className="landing-feature-card" key={feature.title}><div className="landing-feature-image" style={{ backgroundImage: `url(${feature.image})` }}><span className="landing-feature-icon"><i className={`bi ${feature.icon}`} /></span><span className="landing-feature-arrow"><i className="bi bi-arrow-up-right" /></span></div><div className="landing-feature-body"><small>{feature.eyebrow}</small><h3>{feature.title}</h3><p>{feature.description}</p><span className="landing-text-link">Pelajari lebih lanjut <i className="bi bi-arrow-right" /></span></div></Link>)}</div>
+            <div className="landing-section-heading"><div><div className="landing-kicker green"><span /> {t("home.features.kicker")}</div><h2>{t("home.features.titleLine1")}<br /><em>{t("home.features.titleLine2")}</em></h2></div><p>{t("home.features.description")}</p></div>
+            <div className="landing-feature-grid">{FEATURES.map((feature) => <Link to={feature.path} className="landing-feature-card" key={feature.titleKey}><div className="landing-feature-image" style={{ backgroundImage: `url(${feature.image})` }}><span className="landing-feature-icon"><i className={`bi ${feature.icon}`} /></span><span className="landing-feature-arrow"><i className="bi bi-arrow-up-right" /></span></div><div className="landing-feature-body"><small>{t(feature.eyebrowKey)}</small><h3>{t(feature.titleKey)}</h3><p>{t(feature.descriptionKey)}</p><span className="landing-text-link">{t("home.learnMore")} <i className="bi bi-arrow-right" /></span></div></Link>)}</div>
           </div>
         </section>
 
         <section id="cara-kerja" className="landing-process-section">
-          <div className="landing-shell"><div className="landing-section-heading light"><div><div className="landing-kicker"><span /> WORKFLOW YANG JELAS</div><h2>Dari wilayah pilihan<br /><em>menjadi insight.</em></h2></div><p>Mulai dari AOI yang Anda kenal. Atur analisis yang dibutuhkan. Baca hasilnya dalam satu ruang kerja interaktif.</p></div><div className="landing-process-grid"><div className="landing-process-line" />{[["01", "Pilih AOI", "Tentukan provinsi, area perusahaan, koordinat, gambar di peta, atau unggah file."], ["02", "Jalankan analisis", "Pilih periode, dataset, dan parameter yang relevan dengan pertanyaan Anda."], ["03", "Ambil keputusan", "Gunakan peta, statistik, perbandingan waktu, dan ekspor untuk langkah berikutnya."]].map(([number, title, description]) => <div className="landing-process-step" key={number}><span className="landing-process-number">{number}</span><h3>{title}</h3><p>{description}</p></div>)}</div></div>
+          <div className="landing-shell"><div className="landing-section-heading light"><div><div className="landing-kicker"><span /> {t("home.process.kicker")}</div><h2>{t("home.process.titleLine1")}<br /><em>{t("home.process.titleLine2")}</em></h2></div><p>{t("home.process.description")}</p></div><div className="landing-process-grid"><div className="landing-process-line" />{[["01", "home.process.step1.title", "home.process.step1.description"], ["02", "home.process.step2.title", "home.process.step2.description"], ["03", "home.process.step3.title", "home.process.step3.description"]].map(([number, titleKey, descriptionKey]) => <div className="landing-process-step" key={number}><span className="landing-process-number">{number}</span><h3>{t(titleKey)}</h3><p>{t(descriptionKey)}</p></div>)}</div></div>
         </section>
 
-        <section id="solusi" className="landing-section landing-usecase-section"><div className="landing-shell"><div className="landing-section-heading"><div><div className="landing-kicker green"><span /> DIBUAT UNTUK KONTEKS NYATA</div><h2>Data yang dekat dengan<br /><em>keputusan Anda.</em></h2></div><p>SaveGeo dirancang untuk menjembatani data pengamatan bumi dengan kebutuhan operasional, riset, dan kebijakan.</p></div><div className="landing-usecase-grid">{USE_CASES.map(([icon, title, description]) => <div className="landing-usecase-card" key={title}><i className={`bi ${icon}`} /><h3>{title}</h3><p>{description}</p><span>Explore solution <i className="bi bi-arrow-up-right" /></span></div>)}</div></div></section>
+        <section id="solusi" className="landing-section landing-usecase-section"><div className="landing-shell"><div className="landing-section-heading"><div><div className="landing-kicker green"><span /> {t("home.solutions.kicker")}</div><h2>{t("home.solutions.titleLine1")}<br /><em>{t("home.solutions.titleLine2")}</em></h2></div><p>{t("home.solutions.description")}</p></div><div className="landing-usecase-grid">{USE_CASES.map(([icon, titleKey, descriptionKey, path]) => <Link to={path} className="landing-usecase-card" key={titleKey}><i className={`bi ${icon}`} /><h3>{t(titleKey)}</h3><p>{t(descriptionKey)}</p><span>{t("home.exploreSolution")} <i className="bi bi-arrow-up-right" /></span></Link>)}</div></div></section>
 
-        <section ref={ctaRef} id="tentang" className={`landing-cta-section ${ctaVisible ? "is-visible" : ""}`}><div className="landing-shell landing-cta-inner"><div className="landing-cta-orbit orbit-one" /><div className="landing-cta-orbit orbit-two" /><div className="landing-kicker"><span /> SAVEGEO PLATFORM</div><h2>Mulai memantau wilayah<br /><em>dengan perspektif baru.</em></h2><p>Masuk ke ruang kerja analitik SaveGeo dan ubah data permukaan bumi menjadi langkah yang lebih terarah.</p><Link to="/dashboard" className="landing-primary-button">Masuk ke SaveGeo <i className="bi bi-arrow-up-right" /></Link></div></section>
+        <section ref={ctaRef} id="tentang" className={`landing-cta-section ${ctaVisible ? "is-visible" : ""}`}><div className="landing-shell landing-cta-inner"><div className="landing-cta-orbit orbit-one" /><div className="landing-cta-orbit orbit-two" /><div className="landing-kicker"><span /> {t("home.cta.kicker")}</div><h2>{t("home.cta.titleLine1")}<br /><em>{t("home.cta.titleLine2")}</em></h2><p>{t("home.cta.description")}</p><Link to="/carbon-estimation" className="landing-primary-button">{t("home.enterPlatform")} <i className="bi bi-arrow-up-right" /></Link></div></section>
       </main>
 
       <footer className="landing-footer">
@@ -183,13 +192,13 @@ export default function LandingPage() {
           <div className="landing-footer-main">
             <div className="landing-footer-about">
               <div className="landing-brand">
-                <img src="/images/savegeo-logo.svg" alt="SaveGeo" />
-                <span><strong>SaveGeo</strong><small>AI Imagery Analytics Platform</small></span>
+                <img src="/images/savegeo-logo.svg" alt={t("home.brand")} />
+                <span><strong>SaveGeo</strong><small>{t("home.brandTagline")}</small></span>
               </div>
-              <p>Geospatial intelligence untuk vegetasi, tutupan lahan, stok karbon, dan pemetaan bencana.</p>
+              <p>{t("home.footer.description")}</p>
             </div>
-            <div className="landing-footer-partners" aria-label="Mitra SaveGeo">
-              <small>DIDUKUNG OLEH</small>
+            <div className="landing-footer-partners" aria-label={t("home.partners.aria")}>
+              <small>{t("home.footer.supportedBy")}</small>
               <div className="landing-footer-logo-row">
                 <img src="https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png" alt="Universitas Diponegoro" />
                 <img src="https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png" alt="PT LEN Industri (Persero)" />
@@ -202,11 +211,11 @@ export default function LandingPage() {
           <div className="landing-footer-bottom">
             <span>© 2025-{new Date().getFullYear()} SaveGeo</span>
             <span>Universitas Diponegoro × PT LEN Industri (Persero)</span>
-            <span>Built for a better view of Earth.</span>
+            <span>{t("home.footer.tagline")}</span>
           </div>
         </div>
       </footer>
-      {scrolled && <button type="button" className="landing-scroll-top" onClick={scrollToTop} aria-label="Kembali ke atas"><i className="bi bi-arrow-up" /></button>}
+      {scrolled && <button type="button" className="landing-scroll-top" onClick={scrollToTop} aria-label={t("home.backToTop")}><i className="bi bi-arrow-up" /></button>}
     </div>
   );
 }

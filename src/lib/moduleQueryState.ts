@@ -8,6 +8,7 @@ export interface ModuleQueryState {
   globeHeight?: number; globeRoll?: number; showTerrain?: boolean; showBuildings?: boolean; showLabels?: boolean; showRoads?: boolean; showUserLocation?: boolean; followUserLocation?: boolean; terrainExaggeration?: number;
   globeLat?: number; globeLng?: number; globeZoom?: number; globeHeading?: number; globePitch?: number;
   enhance?: boolean; enhanceModel?: string; enhanceScale?: number; enhanceBackend?: string; showOriginal?: boolean;
+  rasterOperation?: string; rasterSourceType?: "file" | "url" | "cog" | "scene_asset"; rasterSourceId?: string; rasterAssetKey?: string; rasterExpression?: string; rasterBandRed?: number; rasterBandGreen?: number; rasterBandBlue?: number; rasterBandNir?: number; rasterBandSwir?: number; rasterThreshold?: number; rasterChangeMode?: string; rasterOutputType?: "preview" | "geotiff" | "cog";
 }
 const n=(v:string|null,min?:number,max?:number)=>{if(!v)return undefined;const x=Number(v);return Number.isFinite(x)&&(min===undefined||x>=min)&&(max===undefined||x<=max)?x:undefined};
 const b=(v:string|null)=>v==null?undefined:v==="true"||v==="1";

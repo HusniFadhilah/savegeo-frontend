@@ -26,7 +26,7 @@ const SATELLITE_BASEMAP_ID = "satellite";
  */
 export default function ImageryAttribution() {
   const map = useMap();
-  const { activeBasemapId } = useBasemapContext();
+  const { activeBasemapId, historicalImageryDate } = useBasemapContext();
   const dateTextRef = useRef<string | null>(null);
   const dateElRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,7 +60,7 @@ export default function ImageryAttribution() {
   }, [map]);
 
   useEffect(() => {
-    if (activeBasemapId !== SATELLITE_BASEMAP_ID) {
+    if (activeBasemapId !== SATELLITE_BASEMAP_ID || historicalImageryDate) {
       dateTextRef.current = null;
       dateElRef.current?.remove();
       return;
@@ -89,7 +89,7 @@ export default function ImageryAttribution() {
       cancelled = true;
       map.off("moveend", update);
     };
-  }, [map, activeBasemapId]);
+  }, [map, activeBasemapId, historicalImageryDate]);
 
   return null;
 }

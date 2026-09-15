@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { isViewerRole } from "@/auth/access";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 
@@ -284,6 +286,7 @@ const MODEL_DOCS = [
  */
 export default function GuideModule() {
   const setActiveModule = useUiStore((s) => s.setActiveModule);
+  const isViewer = useAuthStore((s) => isViewerRole(s.user?.role));
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<StepId>("step1");
   const toggle = (id: StepId) => setOpenId((cur) => (cur === id ? ("" as StepId) : id));
@@ -916,7 +919,8 @@ export default function GuideModule() {
         </GuideStep>
       </div>
 
-      <div className="guide-doc-section">
+      {!isViewer && (
+        <div className="guide-doc-section">
         <div className="guide-doc-heading">
           <span className="guide-hero-eyebrow">Referensi Teknis</span>
           <h2>Dokumentasi Dataset & Model</h2>
@@ -1023,7 +1027,8 @@ export default function GuideModule() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       <div className="guide-quickref">
         <h2 className="guide-section-title">
