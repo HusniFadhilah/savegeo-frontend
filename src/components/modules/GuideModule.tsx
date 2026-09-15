@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { isViewerRole } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 
 type StepId = "step1" | "step2" | "step3" | "step4" | "stepTips";
@@ -285,6 +286,7 @@ const MODEL_DOCS = [
  * tab switcher instead of three full tables stacked back to back).
  */
 export default function GuideModule() {
+  const t = useI18nStore((state) => state.t);
   const setActiveModule = useUiStore((s) => s.setActiveModule);
   const isViewer = useAuthStore((s) => isViewerRole(s.user?.role));
   const navigate = useNavigate();
@@ -320,44 +322,43 @@ export default function GuideModule() {
           <i className="bi bi-journal-text" />
         </div>
         <div className="guide-hero-body">
-          <span className="guide-hero-eyebrow">Panduan Pengguna</span>
-          <h1 className="guide-hero-title">Panduan Lengkap Penggunaan Platform</h1>
+          <span className="guide-hero-eyebrow">{t("guide.eyebrow")}</span>
+          <h1 className="guide-hero-title">{t("guide.title")}</h1>
           <p className="guide-hero-desc">
-            Alur ringkas untuk menyiapkan AOI, memilih analisis, mengatur parameter, menjalankan proses, dan membaca
-            hasil tanpa bolak-balik menebak tombol.
+            {t("guide.description")}
           </p>
           <div className="guide-flow">
             <span className="guide-flow-step">
-              <i className="bi bi-geo-alt-fill" /> Pilih AOI
+              <i className="bi bi-geo-alt-fill" /> {t("guide.chooseAoi")}
             </span>
             <i className="bi bi-arrow-right guide-flow-arrow" />
             <span className="guide-flow-step">
-              <i className="bi bi-sliders" /> Atur Parameter
+              <i className="bi bi-sliders" /> {t("guide.setParameters")}
             </span>
             <i className="bi bi-arrow-right guide-flow-arrow" />
             <span className="guide-flow-step">
-              <i className="bi bi-play-fill" /> Jalankan Analisis
+              <i className="bi bi-play-fill" /> {t("guide.runAnalysis")}
             </span>
           </div>
         </div>
-        <div className="guide-hero-metrics" aria-label="Ringkasan panduan">
+        <div className="guide-hero-metrics" aria-label={t("guide.summary")}>
           <div>
             <strong>3</strong>
-            <span>cara pilih AOI</span>
+            <span>{t("guide.aoiWays")}</span>
           </div>
           <div>
             <strong>4</strong>
-            <span>jenis analisis</span>
+            <span>{t("guide.analysisTypes")}</span>
           </div>
           <div>
             <strong>5</strong>
-            <span>bagian praktis</span>
+            <span>{t("guide.practicalParts")}</span>
           </div>
         </div>
       </div>
 
       <div className="guide-accordion">
-        <GuideStep id="step1" num="1" icon="bi-geo-alt-fill" title="Memilih Area of Interest (AOI)" openId={openId} onToggle={toggle}>
+        <GuideStep id="step1" num="1" icon="bi-geo-alt-fill" title={t("guide.step.aoi")} openId={openId} onToggle={toggle}>
           <p className="guide-lead">Ada 3 cara untuk memilih area analisis:</p>
           <div className="guide-method-grid">
             <div className="guide-method-card">
@@ -437,7 +438,7 @@ export default function GuideModule() {
           </div>
         </GuideStep>
 
-        <GuideStep id="step2" num="2" icon="bi-diagram-3-fill" title="Memilih Jenis Analisis" openId={openId} onToggle={toggle}>
+        <GuideStep id="step2" num="2" icon="bi-diagram-3-fill" title={t("guide.step.analysis")} openId={openId} onToggle={toggle}>
           <p className="guide-lead">Platform menyediakan 4 jenis analisis:</p>
           <div className="guide-analysis-grid">
             <div className="guide-analysis-card">
@@ -487,7 +488,7 @@ export default function GuideModule() {
           </div>
         </GuideStep>
 
-        <GuideStep id="step3" num="3" icon="bi-sliders" title="Mengatur Parameter" openId={openId} onToggle={toggle}>
+        <GuideStep id="step3" num="3" icon="bi-sliders" title={t("guide.step.parameters")} openId={openId} onToggle={toggle}>
           <Note tone="warn">
             <strong>Parameter berbeda untuk setiap jenis analisis.</strong> Pilih tab di bawah untuk masing-masing:
           </Note>
@@ -647,7 +648,7 @@ export default function GuideModule() {
           )}
         </GuideStep>
 
-        <GuideStep id="step4" num="4" icon="bi-play-circle-fill" title="Menjalankan & Membaca Hasil" openId={openId} onToggle={toggle}>
+        <GuideStep id="step4" num="4" icon="bi-play-circle-fill" title={t("guide.step.results")} openId={openId} onToggle={toggle}>
           <div className="guide-block">
             <h3>
               <i className="bi bi-play-fill" /> Menjalankan Analisis
@@ -793,7 +794,7 @@ export default function GuideModule() {
           </div>
         </GuideStep>
 
-        <GuideStep id="stepTips" num="★" icon="bi-lightbulb-fill" title="Tips & Best Practices" openId={openId} onToggle={toggle}>
+        <GuideStep id="stepTips" num="★" icon="bi-lightbulb-fill" title={t("guide.step.tips")} openId={openId} onToggle={toggle}>
           <div className="guide-do-dont-grid">
             <div className="guide-do-card">
               <h3>

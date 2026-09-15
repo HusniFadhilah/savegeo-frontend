@@ -1,4 +1,5 @@
 import type { SubAnalysisKey, WeatherProvider } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   sentinel1Enabled: boolean;
@@ -12,17 +13,17 @@ interface Props {
   onSubAnalysesChange: (keys: SubAnalysisKey[]) => void;
 }
 
-const SUB_ANALYSIS_OPTIONS: { key: SubAnalysisKey; label: string; extra?: boolean }[] = [
-  { key: "health", label: "A. Kesehatan Tanaman (NDVI)" },
-  { key: "timeseries", label: "B. Time-Series Vegetasi" },
-  { key: "anomaly", label: "C. Deteksi Anomali" },
-  { key: "growth_stage", label: "D. Fase Pertumbuhan" },
-  { key: "water_moisture", label: "E. Kelembaban Air (NDMI)" },
-  { key: "weather", label: "F. Cuaca" },
-  { key: "flood", label: "G. Dampak Banjir (butuh tanggal pre/post)", extra: true },
-  { key: "productivity_zones", label: "H. Zona Produktivitas" },
-  { key: "historical_comparison", label: "I. Perbandingan Historis", extra: true },
-  { key: "risk_score", label: "J. Skor Risiko" },
+const SUB_ANALYSIS_OPTIONS: { key: SubAnalysisKey; labelKey: string; extra?: boolean }[] = [
+  { key: "health", labelKey: "crop.sub.health" },
+  { key: "timeseries", labelKey: "crop.sub.timeseries" },
+  { key: "anomaly", labelKey: "crop.sub.anomaly" },
+  { key: "growth_stage", labelKey: "crop.sub.growthStage" },
+  { key: "water_moisture", labelKey: "crop.sub.moisture" },
+  { key: "weather", labelKey: "crop.sub.weather" },
+  { key: "flood", labelKey: "crop.sub.flood", extra: true },
+  { key: "productivity_zones", labelKey: "crop.sub.productivity" },
+  { key: "historical_comparison", labelKey: "crop.sub.historical", extra: true },
+  { key: "risk_score", labelKey: "crop.sub.risk" },
 ];
 
 /**
@@ -42,6 +43,7 @@ export default function DataSourceTogglesPanel({
   subAnalyses,
   onSubAnalysesChange,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
   function toggleSub(key: SubAnalysisKey, checked: boolean) {
     if (checked) {
       if (!subAnalyses.includes(key)) onSubAnalysesChange([...subAnalyses, key]);
@@ -53,10 +55,10 @@ export default function DataSourceTogglesPanel({
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-sliders me-1" /> Sumber Data &amp; Sub-Analisis
+        <i className="bi bi-sliders me-1" /> {t("crop.sources.title")}
       </div>
       <div className="card-body">
-        <label className="form-label">Citra Satelit</label>
+        <label className="form-label">{t("crop.sources.imagery")}</label>
         <div className="form-check">
           <input
             id="cmSentinel2"
@@ -66,7 +68,7 @@ export default function DataSourceTogglesPanel({
             onChange={(e) => onSentinel2Change(e.target.checked)}
           />
           <label className="form-check-label" htmlFor="cmSentinel2">
-            Sentinel-2 (optik, wajib untuk sebagian besar sub-analisis)
+            {t("crop.sources.sentinel2")}
           </label>
         </div>
         <div className="form-check mb-3">
@@ -78,12 +80,12 @@ export default function DataSourceTogglesPanel({
             onChange={(e) => onSentinel1Change(e.target.checked)}
           />
           <label className="form-check-label" htmlFor="cmSentinel1">
-            Sentinel-1 (radar, dipakai Zona Produktivitas jika aktif)
+            {t("crop.sources.sentinel1")}
           </label>
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Sumber Data Cuaca</label>
+          <label className="form-label">{t("crop.sources.weather")}</label>
           <select className="form-select form-select-sm" value={weatherSource} onChange={(e) => onWeatherSourceChange(e.target.value)}>
             {Object.entries(weatherProviders).map(([key, p]) => (
               <option key={key} value={key}>
@@ -93,7 +95,7 @@ export default function DataSourceTogglesPanel({
           </select>
         </div>
 
-        <label className="form-label">Sub-Analisis yang Dijalankan</label>
+        <label className="form-label">{t("crop.sources.subAnalyses")}</label>
         {SUB_ANALYSIS_OPTIONS.map((opt) => (
           <div className="form-check" key={opt.key}>
             <input
@@ -104,7 +106,7 @@ export default function DataSourceTogglesPanel({
               onChange={(e) => toggleSub(opt.key, e.target.checked)}
             />
             <label className="form-check-label small" htmlFor={`cmSub_${opt.key}`}>
-              {opt.label}
+              {t(opt.labelKey)}
             </label>
           </div>
         ))}

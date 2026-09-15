@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useFieldStore } from "@/hooks/useFieldStore";
 import { useUiStore } from "@/hooks/useUiStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import { getCropMonitoringCommodities, getWeatherProviders, runCropMonitoring } from "./api";
 import { DEFAULT_SUB_ANALYSES, type Commodity, type CropMonitoringPeriodInput, type CropMonitoringPeriodMode, type CropMonitoringResult, type FloodResult, type SubAnalysisKey, type TimeseriesResult, type WeatherProvider } from "./types";
@@ -35,6 +36,7 @@ const CURRENT_YEAR = new Date().getFullYear();
  * layered on top.
  */
 export default function CropMonitoringModule() {
+  const t = useI18nStore((state) => state.t);
   const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const aoi = useAoiStore((s) => s.aoi);
   const selectedField = useFieldStore((s) => s.selectedField);
@@ -76,6 +78,7 @@ export default function CropMonitoringModule() {
   const [timeseriesIndex, setTimeseriesIndex] = useState((query.index ?? "ndvi").toUpperCase());
 
   useEffect(() => {
+    if (typeof window === "undefined" || window.location.pathname !== "/crop-monitoring") return;
     updateUrlFromState({ ...query, analysis: query.analysis ?? "health", index: timeseriesIndex.toLowerCase(), startDate: customStart || query.startDate, endDate: customEnd || query.endDate });
   }, [timeseriesIndex, customStart, customEnd]);
 
@@ -93,12 +96,12 @@ export default function CropMonitoringModule() {
 
   async function handleRun() {
     if (!selectedField) {
-      setRunError("Pilih atau simpan Lahan terlebih dahulu.");
+      setRunError(t("crop.selectField"));
       return;
     }
     const period = buildPeriod();
     if (!period) {
-      setRunError("Isi tanggal mulai dan akhir untuk periode kustom.");
+      setRunError(t("crop.customDatesRequired"));
       return;
     }
 
@@ -107,9 +110,9 @@ export default function CropMonitoringModule() {
 
     setRunning(true);
     setRunError(null);
-    showLoading("Menjalankan pemantauan tanaman...", "Menghubungi Google Earth Engine...");
+    showLoading(t("crop.runningTitle"), t("crop.runningSubtitle"));
     try {
-      setLoadingProgress(25, "Memproses sub-analisis (kesehatan, time-series, cuaca, ...)");
+      setLoadingProgress(25, t("crop.runningProgress"));
       const res = await runCropMonitoring({
         field_id: selectedField.id,
         period,
@@ -126,7 +129,7 @@ export default function CropMonitoringModule() {
       setRunError(
         err instanceof ApiError
           ? ((err.payload as { detail?: string } | undefined)?.detail ?? err.message)
-          : "Gagal menjalankan pemantauan tanaman.",
+          : t("crop.runFailed"),
       );
       setResult(null);
     } finally {
@@ -149,45 +152,44 @@ export default function CropMonitoringModule() {
   const fieldFeature = aoi?.feature ?? null;
   const activePeriodLabel =
     periodMode === "current_season"
-      ? "Musim berjalan"
+      ? t("crop.period.currentSeason")
       : periodMode === "30d"
-        ? "30 hari terakhir"
-        : periodMode === "90d"
-          ? "90 hari terakhir"
-          : customStart && customEnd
+        ? t("crop.period.last30")
+      : periodMode === "90d"
+        ? t("crop.period.last90")
+      : customStart && customEnd
             ? `${customStart} - ${customEnd}`
-            : "Kustom";
+            : t("crop.period.custom");
 
   return (
     <div className="cm-page">
       <div className="cm-hero">
         <div className="cm-hero-main">
-          <span className="cm-eyebrow">Crop Monitoring</span>
-          <h1>Pemantauan Tanaman Berbasis Citra Satelit</h1>
+          <span className="cm-eyebrow">{t("crop.eyebrow")}</span>
+          <h1>{t("crop.title")}</h1>
           <p>
-            Kelola batas lahan, periode musim, kesehatan vegetasi, kelembaban, cuaca, anomali, dan risiko dalam satu
-            ruang kerja.
+            {t("crop.description")}
           </p>
         </div>
         <div className="cm-hero-status">
           <div className="cm-status-card">
             <i className="bi bi-bounding-box-circles" />
             <div>
-              <span>Lahan aktif</span>
-              <strong>{selectedField?.name ?? "Belum dipilih"}</strong>
+              <span>{t("crop.activeField")}</span>
+              <strong>{selectedField?.name ?? t("crop.notSelected")}</strong>
             </div>
           </div>
           <div className="cm-status-card">
             <i className="bi bi-flower2" />
             <div>
-              <span>Komoditas</span>
+              <span>{t("crop.commodity")}</span>
               <strong>{activeCommodity?.label ?? selectedField?.commodity ?? "-"}</strong>
             </div>
           </div>
           <div className="cm-status-card">
             <i className="bi bi-calendar2-week" />
             <div>
-              <span>Periode</span>
+              <span>{t("crop.period.label")}</span>
               <strong>{activePeriodLabel}</strong>
             </div>
           </div>
@@ -202,8 +204,8 @@ export default function CropMonitoringModule() {
               <i className="bi bi-sliders2-vertical" />
             </span>
             <div>
-              <h5>Panel Pemantauan</h5>
-              <p>Siapkan lahan dan parameter analisis.</p>
+              <h5>{t("crop.panel.title")}</h5>
+              <p>{t("crop.panel.description")}</p>
             </div>
           </div>
 
@@ -236,16 +238,16 @@ export default function CropMonitoringModule() {
           <button className="btn btn-primary w-100 mt-1" onClick={handleRun} disabled={running || !selectedField}>
             {running ? (
               <>
-                <span className="spinner-border spinner-border-sm me-1" /> Menganalisis...
+                <span className="spinner-border spinner-border-sm me-1" /> {t("crop.analyzing")}
               </>
             ) : (
               <>
-                <i className="bi bi-play-fill me-1" /> Jalankan Pemantauan Tanaman
+                <i className="bi bi-play-fill me-1" /> {t("crop.run")}
               </>
             )}
           </button>
           {!selectedField && (
-            <small className="text-muted d-block mt-2">Pilih Lahan terlebih dahulu untuk mengaktifkan tombol.</small>
+            <small className="text-muted d-block mt-2">{t("crop.selectFieldHint")}</small>
           )}
           {runError && <div className="alert alert-warning py-2 mt-2 small mb-0">{runError}</div>}
         </div>
@@ -263,14 +265,14 @@ export default function CropMonitoringModule() {
           <>
             <div className="card mb-3 cm-summary-card">
               <div className="card-header">
-                <i className="bi bi-speedometer2 me-1" /> Ringkasan
+                <i className="bi bi-speedometer2 me-1" /> {t("crop.summary")}
               </div>
               <div className="card-body">
                 <div className="cm-summary-grid">
                   <div className="cm-summary-tile">
                     <i className="bi bi-heart-pulse" />
                     <div>
-                      <span>Kesehatan</span>
+                      <span>{t("crop.health")}</span>
                       <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
                         {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
                       </strong>
@@ -286,7 +288,7 @@ export default function CropMonitoringModule() {
                   <div className="cm-summary-tile">
                     <i className="bi bi-graph-up-arrow" />
                     <div>
-                      <span>Perubahan</span>
+                        <span>{t("crop.change")}</span>
                       <strong>
                         {sub.health?.available && sub.health.change_vs_previous_month_pct != null
                           ? `${sub.health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(sub.health.change_vs_previous_month_pct)}`
@@ -297,7 +299,7 @@ export default function CropMonitoringModule() {
                   <div className="cm-summary-tile">
                     <i className="bi bi-droplet-half" />
                     <div>
-                      <span>Kelembaban</span>
+                      <span>{t("crop.moisture")}</span>
                       <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
                         {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
                       </strong>
@@ -306,14 +308,14 @@ export default function CropMonitoringModule() {
                   <div className="cm-summary-tile">
                     <i className="bi bi-flower2" />
                     <div>
-                      <span>Fase</span>
+                      <span>{t("crop.growthStage")}</span>
                       <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
                     </div>
                   </div>
                   <div className="cm-summary-tile">
                     <i className="bi bi-shield-exclamation" />
                     <div>
-                      <span>Risiko</span>
+                      <span>{t("crop.risk")}</span>
                       <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
                         {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
                       </strong>
@@ -322,7 +324,7 @@ export default function CropMonitoringModule() {
                 </div>
                 {result.skipped.length > 0 && (
                   <small className="text-muted d-block mt-2">
-                    Dilewati: {result.skipped.map((s) => `${s.sub_analysis} (${s.reason})`).join("; ")}
+                    {t("crop.skipped")}: {result.skipped.map((s) => `${s.sub_analysis} (${s.reason})`).join("; ")}
                   </small>
                 )}
               </div>
@@ -358,11 +360,10 @@ export default function CropMonitoringModule() {
               <i className="bi bi-radar" />
             </div>
             <div>
-              <span className="cm-eyebrow">Siap memantau</span>
-              <h2>Mulai dari lahan aktif di panel kiri.</h2>
+              <span className="cm-eyebrow">{t("crop.ready")}</span>
+              <h2>{t("crop.emptyTitle")}</h2>
               <p>
-                Pilih atau simpan Lahan, atur periode dan sub-analisis, lalu jalankan pemantauan untuk menampilkan
-                peta, indikator kesehatan, tren vegetasi, dan skor risiko di sini.
+                {t("crop.emptyDescription")}
               </p>
             </div>
           </div>

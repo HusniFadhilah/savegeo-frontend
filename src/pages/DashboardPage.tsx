@@ -11,6 +11,7 @@ import GuideModule from "@/components/modules/GuideModule";
 import AboutModule from "@/components/modules/AboutModule";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useConfigStore } from "@/hooks/useConfigStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { DEFAULT_DASHBOARD_MODULE, getDashboardModuleSeo } from "@/routes/dashboardModuleRoutes";
 
 const UNDIP_LOGO_URL = "https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png";
@@ -45,6 +46,7 @@ export default function DashboardPage({ module = DEFAULT_DASHBOARD_MODULE }: { m
   const activeModule = useUiStore((s) => s.activeModule);
   const setActiveModule = useUiStore((s) => s.setActiveModule);
   const loadConfig = useConfigStore((s) => s.load);
+  const t = useI18nStore((s) => s.t);
   const [mountedModules, setMountedModules] = useState<DashboardModule[]>([module]);
   const visibleModule = activeModule === module ? activeModule : module;
 
@@ -91,17 +93,17 @@ export default function DashboardPage({ module = DEFAULT_DASHBOARD_MODULE }: { m
           </main>
           <footer className="app-footer">
             <div className="app-footer-brand">
-              <div className="app-footer-logos" aria-label="Mitra SaveGeo">
+              <div className="app-footer-logos" aria-label={t("footer.partners")}>
                 <img src={UNDIP_LOGO_URL} alt="Universitas Diponegoro" />
                 <img src={LEN_LOGO_URL} alt="PT LEN Industri" />
               </div>
               <div>
                 <strong>SaveGeo</strong>
-                <span>Geospatial System for Vegetation, Land Cover, and Carbon Estimation</span>
+                <span>{t("footer.tagline")}</span>
               </div>
             </div>
             <p className="app-footer-copy">
-              Copyright &copy; 2025-{new Date().getFullYear()} Universitas Diponegoro & PT LEN Industri.
+              {t("footer.copyright", { year: new Date().getFullYear() })}
             </p>
           </footer>
         </div>

@@ -83,7 +83,7 @@ export default function Sidebar() {
           <span>
             <i className="bi bi-grid-3x3-gap-fill" /> <span className="header-text">{t("sidebar.modules")}</span>
           </span>
-          <button type="button" className="sidebar-toggle" onClick={toggleSidebar} title="Toggle sidebar">
+          <button type="button" className="sidebar-toggle" onClick={toggleSidebar} title={t("sidebar.toggle")} aria-label={t("sidebar.toggle")}>
             <i className="bi bi-chevron-right" />
           </button>
         </div>
@@ -126,12 +126,12 @@ export default function Sidebar() {
                 >
                   <li>
                     <button type="button" className="dropdown-item language-option" onClick={() => selectLanguage("id")}>
-                      <span className="language-code">ID</span> <span>Indonesia</span>
+                      <span className="language-code">ID</span> <span>{t("language.indonesia")}</span>
                     </button>
                   </li>
                   <li>
                     <button type="button" className="dropdown-item language-option" onClick={() => selectLanguage("en")}>
-                      <span className="language-code">EN</span> <span>English</span>
+                      <span className="language-code">EN</span> <span>{t("language.english")}</span>
                     </button>
                   </li>
                 </ul>,

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFieldStore } from "@/hooks/useFieldStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { updateField } from "../api";
 import { ApiError } from "@/services/apiClient";
 import type { Commodity, Field, UpdateFieldPayload } from "../types";
@@ -16,6 +17,7 @@ interface Props {
  * (immutable after creation per the backend contract).
  */
 export default function CropInfoPanel({ commodities, field }: Props) {
+  const t = useI18nStore((state) => state.t);
   const setSelectedField = useFieldStore((s) => s.selectField);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function CropInfoPanel({ commodities, field }: Props) {
       await updateField(field.id, partial);
       await setSelectedField(field.id);
     } catch (err) {
-      setError(err instanceof ApiError ? (err.payload as { detail?: string })?.detail ?? err.message : "Gagal memperbarui data lahan.");
+      setError(err instanceof ApiError ? (err.payload as { detail?: string })?.detail ?? err.message : t("crop.field.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -39,19 +41,19 @@ export default function CropInfoPanel({ commodities, field }: Props) {
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-clipboard-data me-1" /> Info Tanaman
+        <i className="bi bi-clipboard-data me-1" /> {t("crop.info.title")}
         {saving && <span className="spinner-border spinner-border-sm ms-2" />}
       </div>
       <div className="card-body">
         {disabled && (
           <div className="alert alert-secondary py-2 small mb-0">
-            Pilih atau simpan Lahan terlebih dahulu untuk mengisi info tanaman.
+            {t("crop.info.selectHint")}
           </div>
         )}
         {field && (
           <>
             <div className="mb-2">
-              <label className="form-label">Komoditas</label>
+              <label className="form-label">{t("crop.commodity")}</label>
               <select
                 className="form-select form-select-sm"
                 value={field.commodity}
@@ -65,17 +67,17 @@ export default function CropInfoPanel({ commodities, field }: Props) {
               </select>
             </div>
             <div className="mb-2">
-              <label className="form-label">Varietas</label>
+              <label className="form-label">{t("crop.info.variety")}</label>
               <input
                 type="text"
                 className="form-control form-control-sm"
                 defaultValue={field.variety ?? ""}
-                placeholder="mis. Ciherang, IR64"
+                placeholder={t("crop.info.varietyPlaceholder")}
                 onBlur={(e) => void patch({ variety: e.target.value || undefined })}
               />
             </div>
             <div className="mb-2">
-              <label className="form-label">Tanggal Tanam</label>
+              <label className="form-label">{t("crop.info.plantingDate")}</label>
               <input
                 type="date"
                 className="form-control form-control-sm"
@@ -84,18 +86,18 @@ export default function CropInfoPanel({ commodities, field }: Props) {
               />
             </div>
             <div className="mb-1">
-              <label className="form-label">Label Musim</label>
+              <label className="form-label">{t("crop.info.seasonLabel")}</label>
               <input
                 type="text"
                 className="form-control form-control-sm"
                 defaultValue={field.season_label ?? ""}
-                placeholder="mis. MT1 2026"
+                placeholder={t("crop.info.seasonPlaceholder")}
                 onBlur={(e) => void patch({ season_label: e.target.value || undefined })}
               />
             </div>
             {field.estimated_harvest_date && (
               <small className="text-muted d-block mt-2">
-                <i className="bi bi-calendar-check me-1" /> Estimasi panen: <strong>{field.estimated_harvest_date}</strong>
+                <i className="bi bi-calendar-check me-1" /> {t("crop.info.estimatedHarvest")}: <strong>{field.estimated_harvest_date}</strong>
               </small>
             )}
             {error && <div className="alert alert-danger py-1 px-2 mt-2 small mb-0">{error}</div>}

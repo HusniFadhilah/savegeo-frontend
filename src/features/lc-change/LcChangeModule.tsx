@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AoiFeature } from "@/types/map";
 import { useConfigStore } from "@/hooks/useConfigStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
@@ -79,6 +80,7 @@ const TANGGAL_INPUT_YEAR = 2000;
  *    single year's raw classification).
  */
 export default function LcChangeModule() {
+  const t = useI18nStore((state) => state.t);
   const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const { getInt } = useConfigStore();
   const { showLoading, setLoadingProgress, hideLoading } = useUiStore();
@@ -143,6 +145,7 @@ export default function LcChangeModule() {
   const [tab, setTab] = useState<Tab>("matrix");
 
   useEffect(() => {
+    if (typeof window === "undefined" || !["/land-cover-change", "/lc-change"].includes(window.location.pathname)) return;
     updateUrlFromState({ ...query, dataset, yearFrom: years[0], yearTo: years[1], monthFrom: startMonth, monthTo: endMonth, dwProbabilityThreshold, changeMode: mode });
   }, [dataset, years, startMonth, endMonth, dwProbabilityThreshold, mode]);
 
@@ -460,11 +463,10 @@ export default function LcChangeModule() {
     <div className="analysis-page analysis-page-lc">
       <section className="analysis-hero analysis-hero-lc" aria-labelledby="lcChangeHeroTitle">
         <div className="analysis-hero-main">
-          <span className="analysis-eyebrow">Perubahan Lahan</span>
-          <h1 id="lcChangeHeroTitle">Analisis Perubahan Tutupan Lahan Multi-Tahun</h1>
+          <span className="analysis-eyebrow">{t("lc.eyebrow")}</span>
+          <h1 id="lcChangeHeroTitle">{t("lc.title")}</h1>
           <p>
-            Bandingkan kelas tutupan lahan antarperiode, lihat transisi dominan, dan telusuri
-            hotspot perubahan pada AOI yang sama.
+            {t("lc.description")}
           </p>
         </div>
         <div className="analysis-hero-status">
@@ -475,21 +477,21 @@ export default function LcChangeModule() {
               <strong>
                 {aoiState?.areaKm2 != null
                   ? `${aoiState.areaKm2.toFixed(2)} km2`
-                  : "Belum digambar"}
+                  : t("lc.notDrawn")}
               </strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-layers" />
             <div>
-              <span>Dataset</span>
+              <span>{t("lc.dataset")}</span>
               <strong>{dataset.replace(/_/g, " ")}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-calendar-range" />
             <div>
-              <span>Tahun</span>
+              <span>{t("lc.year")}</span>
               <strong>{yearRangeLabel}</strong>
             </div>
           </div>
@@ -501,21 +503,21 @@ export default function LcChangeModule() {
         <div className="col-lg-3">
           <div className="sidebar">
             <h5 className="mb-3">
-              <i className="fas fa-cog" /> Pengaturan
+              <i className="fas fa-cog" /> {t("lc.settings")}
             </h5>
 
             <div className="mb-3">
               <label className="form-label fw-bold">
-                <i className="fas fa-map-marker-alt" /> Area of Interest
+                <i className="fas fa-map-marker-alt" /> {t("lc.aoi")}
               </label>
               {aoi ? (
                 <div className="alert alert-success py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                  <i className="fas fa-check-circle" /> AOI tergambar ({aoi.geometry.type})
+                  <i className="fas fa-check-circle" /> {t("lc.aoiDrawn")} ({aoi.geometry.type})
                   {aoiState?.areaKm2 != null && <> &middot; {aoiState.areaKm2.toFixed(2)} km²</>}
                 </div>
               ) : (
                 <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                  <i className="fas fa-exclamation-triangle" /> Pilih AOI lewat modal peta.
+                  <i className="fas fa-exclamation-triangle" /> {t("lc.chooseAoi")}
                 </div>
               )}
               <button
@@ -523,7 +525,7 @@ export default function LcChangeModule() {
                 className="btn btn-sm btn-outline-success w-100 mt-2"
                 onClick={() => setAoiModalOpen(true)}
               >
-                <i className="bi bi-bounding-box-circles" /> Pilih/Gambar AOI
+                <i className="bi bi-bounding-box-circles" /> {t("lc.selectDrawAoi")}
               </button>
               {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
                 <div className="alert alert-warning py-2 mb-0 mt-2" style={{ fontSize: ".8rem" }}>
@@ -538,7 +540,7 @@ export default function LcChangeModule() {
                   className="btn btn-sm btn-outline-secondary w-100 mt-2"
                   onClick={() => setAoiState(null)}
                 >
-                  <i className="fas fa-eraser" /> Hapus AOI
+                  <i className="fas fa-eraser" /> {t("lc.removeAoi")}
                 </button>
               )}
             </div>
@@ -547,7 +549,7 @@ export default function LcChangeModule() {
 
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="lcChangeDataset">
-                <i className="fas fa-database" /> Dataset LULC
+                <i className="fas fa-database" /> {t("lc.datasetLulc")}
               </label>
               <SearchableSelect
                 id="lcChangeDataset"
@@ -560,14 +562,14 @@ export default function LcChangeModule() {
 
             <div className="mb-3">
               <label className="form-label fw-bold">
-                <i className="fas fa-calendar-alt" /> Tahun Analisis
+                <i className="fas fa-calendar-alt" /> {t("lc.analysisYears")}
               </label>
               <YearSelector years={years} minYear={minYear} maxYear={maxYear} onChange={setYears} />
             </div>
 
             <div className="mb-3">
               <label className="form-label fw-bold">
-                <i className="fas fa-calendar" /> Mode Tanggal Analisis
+                <i className="fas fa-calendar" /> {t("lc.dateMode")}
               </label>
               <div className="btn-group w-100" role="group">
                 <button
@@ -575,21 +577,21 @@ export default function LcChangeModule() {
                   className={`btn btn-sm ${dateMode === "year" ? "btn-warning" : "btn-outline-secondary"}`}
                   onClick={() => setDateMode("year")}
                 >
-                  Tahun
+                  {t("lc.yearMode")}
                 </button>
                 <button
                   type="button"
                   className={`btn btn-sm ${dateMode === "month" ? "btn-warning" : "btn-outline-secondary"}`}
                   onClick={() => setDateMode("month")}
                 >
-                  Bulan
+                  {t("lc.monthMode")}
                 </button>
                 <button
                   type="button"
                   className={`btn btn-sm ${dateMode === "date" ? "btn-warning" : "btn-outline-secondary"}`}
                   onClick={() => setDateMode("date")}
                 >
-                  Tanggal
+                  {t("lc.dateModeShort")}
                 </button>
               </div>
 
@@ -723,7 +725,7 @@ export default function LcChangeModule() {
                 </>
               ) : (
                 <>
-                  <i className="fas fa-play" /> Jalankan Analisis
+                  <i className="fas fa-play" /> {t("lc.run")}
                 </>
               )}
             </button>
@@ -742,9 +744,9 @@ export default function LcChangeModule() {
             <div className="card text-center py-5 border-dashed">
               <div className="card-body">
                 <i className="bi bi-arrow-left-right text-muted" style={{ fontSize: "3.5rem" }} />
-                <h5 className="mt-3 text-muted">Belum Ada Hasil</h5>
+                <h5 className="mt-3 text-muted">{t("lc.noResults")}</h5>
                 <p className="text-muted mb-4">
-                  Gambar AOI, pilih dataset dan tahun lalu klik <strong>Jalankan Analisis</strong>
+                  {t("lc.noResultsHint")} <strong>{t("lc.run")}</strong>
                 </p>
               </div>
             </div>
@@ -887,7 +889,7 @@ export default function LcChangeModule() {
                         className={`nav-link ${tab === "matrix" ? "active" : "text-white"}`}
                         onClick={() => setTab("matrix")}
                       >
-                        <i className="fas fa-th" /> Matriks Transisi
+                        <i className="fas fa-th" /> {t("lc.tab.matrix")}
                       </button>
                     </li>
                     <li className="nav-item">
@@ -895,7 +897,7 @@ export default function LcChangeModule() {
                         className={`nav-link ${tab === "netchange" ? "active" : "text-white"}`}
                         onClick={() => setTab("netchange")}
                       >
-                        <i className="fas fa-balance-scale" /> Net Change
+                        <i className="fas fa-balance-scale" /> {t("lc.tab.netChange")}
                       </button>
                     </li>
                     <li className="nav-item">
@@ -903,7 +905,7 @@ export default function LcChangeModule() {
                         className={`nav-link ${tab === "timeseries" ? "active" : "text-white"}`}
                         onClick={() => setTab("timeseries")}
                       >
-                        <i className="fas fa-chart-area" /> Time Series
+                        <i className="fas fa-chart-area" /> {t("lc.tab.timeSeries")}
                       </button>
                     </li>
                     <li className="nav-item">
@@ -911,7 +913,7 @@ export default function LcChangeModule() {
                         className={`nav-link ${tab === "maps" ? "active" : "text-white"}`}
                         onClick={() => setTab("maps")}
                       >
-                        <i className="fas fa-map-location-dot" /> Peta Perubahan
+                        <i className="fas fa-map-location-dot" /> {t("lc.tab.changeMap")}
                       </button>
                     </li>
                     <li className="nav-item">
@@ -919,7 +921,7 @@ export default function LcChangeModule() {
                         className={`nav-link ${tab === "hotspot" ? "active" : "text-white"}`}
                         onClick={() => setTab("hotspot")}
                       >
-                        <i className="fas fa-map-pin" /> Hotspot
+                        <i className="fas fa-map-pin" /> {t("lc.tab.hotspot")}
                       </button>
                     </li>
                   </ul>

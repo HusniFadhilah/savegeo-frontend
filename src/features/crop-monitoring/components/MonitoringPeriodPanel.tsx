@@ -1,4 +1,5 @@
 import type { CropMonitoringPeriodMode } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   mode: CropMonitoringPeriodMode;
@@ -13,11 +14,11 @@ interface Props {
   onCompareYearsChange: (years: number[]) => void;
 }
 
-const MODE_OPTIONS: { value: CropMonitoringPeriodMode; label: string }[] = [
-  { value: "current_season", label: "Musim Berjalan" },
-  { value: "30d", label: "30 Hari Terakhir" },
-  { value: "90d", label: "90 Hari Terakhir" },
-  { value: "custom", label: "Kustom" },
+const MODE_OPTIONS: { value: CropMonitoringPeriodMode; key: string }[] = [
+  { value: "current_season", key: "crop.period.currentSeason" },
+  { value: "30d", key: "crop.period.last30" },
+  { value: "90d", key: "crop.period.last90" },
+  { value: "custom", key: "crop.period.custom" },
 ];
 
 export default function MonitoringPeriodPanel({
@@ -32,6 +33,7 @@ export default function MonitoringPeriodPanel({
   compareYears,
   onCompareYearsChange,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
   function setCompareYear(index: number, value: number) {
     const next = [...compareYears];
     next[index] = value;
@@ -41,15 +43,15 @@ export default function MonitoringPeriodPanel({
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-calendar-range me-1" /> Periode Pemantauan
+        <i className="bi bi-calendar-range me-1" /> {t("crop.period.monitoringTitle")}
       </div>
       <div className="card-body">
         <div className="mb-2">
-          <label className="form-label">Mode Periode</label>
+          <label className="form-label">{t("crop.period.mode")}</label>
           <select className="form-select form-select-sm" value={mode} onChange={(e) => onModeChange(e.target.value as CropMonitoringPeriodMode)}>
             {MODE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label}
+                {t(o.key)}
               </option>
             ))}
           </select>
@@ -58,11 +60,11 @@ export default function MonitoringPeriodPanel({
         {mode === "custom" && (
           <div className="d-flex gap-2 mb-2">
             <div className="flex-grow-1">
-              <label className="form-label small">Mulai</label>
+              <label className="form-label small">{t("crop.period.start")}</label>
               <input type="date" className="form-control form-control-sm" value={customStart} onChange={(e) => onCustomStartChange(e.target.value)} />
             </div>
             <div className="flex-grow-1">
-              <label className="form-label small">Akhir</label>
+              <label className="form-label small">{t("crop.period.end")}</label>
               <input type="date" className="form-control form-control-sm" value={customEnd} onChange={(e) => onCustomEndChange(e.target.value)} />
             </div>
           </div>
@@ -77,13 +79,13 @@ export default function MonitoringPeriodPanel({
             onChange={(e) => onCompareSeasonChange(e.target.checked)}
           />
           <label className="form-check-label" htmlFor="cmCompareSeason">
-            <i className="bi bi-bar-chart-steps me-1" /> Bandingkan Musim (Historical Comparison)
+            <i className="bi bi-bar-chart-steps me-1" /> {t("crop.period.compare")}
           </label>
         </div>
 
         {compareSeasonEnabled && (
           <div className="mt-2">
-            <label className="form-label small">Tahun Pembanding</label>
+            <label className="form-label small">{t("crop.period.compareYears")}</label>
             <div className="d-flex gap-2">
               {compareYears.map((year, i) => (
                 <input

@@ -3,13 +3,7 @@ import { getHealth, getGeeStatus, listModels, getConfig, reinitEE } from "../api
 import type { AdminSection } from "../types";
 import { useAdmin } from "../AdminContext";
 import { useAuthStore } from "@/hooks/useAuthStore";
-
-function greetingForHour(h: number): string {
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 19) return "Selamat sore";
-  return "Selamat malam";
-}
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface OverviewData {
   eeOk: boolean;
@@ -22,11 +16,13 @@ interface OverviewData {
 export default function DashboardOverview({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const { refreshHealth, notify } = useAdmin();
   const { user } = useAuthStore();
+  const { language, t } = useI18nStore();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reiniting, setReiniting] = useState(false);
-  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const today = new Intl.DateTimeFormat(language === "id" ? "id-ID" : "en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const greeting = t(new Date().getHours() < 11 ? "admin.greeting.morning" : new Date().getHours() < 15 ? "admin.greeting.afternoon" : new Date().getHours() < 19 ? "admin.greeting.evening" : "admin.greeting.night");
 
   const load = async () => {
     setLoading(true);
@@ -41,13 +37,13 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
       const cfgCount = Object.values(cfg.config).reduce((s, v) => s + v.length, 0);
       setData({
         eeOk: Boolean(health.ee_initialized),
-        activeCredLabel: gee.active_credential?.label ?? "Tidak ada",
+        activeCredLabel: gee.active_credential?.label ?? t("admin.none"),
         activeCredEmail: gee.active_credential?.client_email ?? null,
         modelCount: models.models.length,
         cfgCount,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat overview");
+      setError(err instanceof Error ? err.message : t("admin.overview.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -61,9 +57,9 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
   const hero = (
     <div className="adm-hero">
       <div>
-        <div className="adm-hero-greeting">{greetingForHour(new Date().getHours())}</div>
-        <div className="adm-hero-title">{user?.username ?? "Admin"} 👋</div>
-        <div className="adm-hero-sub">
+    <div className="adm-hero-greeting">{greeting}</div>
+        <div className="adm-hero-title">{user?.username ?? t("admin.defaultUser")} 👋</div>
+          <div className="adm-hero-sub">
           <i className="bi bi-calendar3 me-1" /> {today}
         </div>
       </div>
@@ -77,7 +73,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
     return (
       <>
         {hero}
-        <div className="adm-loading">Memuat overview...</div>
+        <div className="adm-loading">{t("admin.overview.loading")}</div>
       </>
     );
   }
@@ -86,9 +82,9 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
       <>
         {hero}
         <div className="alert alert-danger py-2 px-3 small">
-          {error || "Gagal memuat data"}{" "}
+          {error || t("admin.overview.loadFailed")}{" "}
           <button type="button" className="btn-sm" onClick={load}>
-            Coba lagi
+            {t("admin.retry")}
           </button>
         </div>
       </>
@@ -103,10 +99,10 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
           <div className="stat-icon">
             <i className="bi bi-cpu-fill" />
           </div>
-          <div className="stat-val">{data.eeOk ? "Aktif" : "Offline"}</div>
-          <div className="stat-label">Earth Engine</div>
+          <div className="stat-val">{data.eeOk ? t("admin.active") : t("admin.offline")}</div>
+            <div className="stat-label">{t("admin.stat.earthEngine")}</div>
           <span className={`stat-badge ${data.eeOk ? "badge-green" : "badge-red"}`}>
-            {data.eeOk ? "initialized" : "not ready"}
+            {data.eeOk ? t("admin.initialized") : t("admin.notReady")}
           </span>
         </div>
         <div className="stat-card accent-blue">
@@ -116,41 +112,41 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
           <div className="stat-val" style={{ fontSize: 13, paddingTop: 4 }}>
             {data.activeCredLabel}
           </div>
-          <div className="stat-label">Credential Aktif</div>
-          <span className="stat-badge badge-blue">service account</span>
+            <div className="stat-label">{t("admin.stat.activeCredential")}</div>
+          <span className="stat-badge badge-blue">{t("admin.serviceAccount")}</span>
         </div>
         <div className="stat-card accent-blue">
           <div className="stat-icon">
             <i className="bi bi-diagram-3-fill" />
           </div>
           <div className="stat-val">{data.modelCount}</div>
-          <div className="stat-label">ML Models</div>
-          <span className="stat-badge badge-blue">carbon</span>
+            <div className="stat-label">{t("admin.stat.mlModels")}</div>
+          <span className="stat-badge badge-blue">{t("admin.carbon")}</span>
         </div>
         <div className="stat-card accent-gray">
           <div className="stat-icon">
             <i className="bi bi-sliders" />
           </div>
           <div className="stat-val">{data.cfgCount}</div>
-          <div className="stat-label">Config Keys</div>
-          <span className="stat-badge badge-gray">kategori</span>
+            <div className="stat-label">{t("admin.stat.configKeys")}</div>
+          <span className="stat-badge badge-gray">{t("admin.category")}</span>
         </div>
       </div>
       <div className="two-col">
         <div className="card">
           <div className="card-header-custom">
-            <span>Status sistem</span>
+            <span>{t("admin.overview.systemStatus")}</span>
           </div>
           <div className="card-body-custom">
             {[
-              ["Earth Engine", data.eeOk ? "Initialized" : "Offline", data.eeOk ? "badge-green" : "badge-red"],
-              ["Database", "Connected", "badge-green"],
+              [t("admin.stat.earthEngine"), data.eeOk ? t("admin.initialized") : t("admin.offline"), data.eeOk ? "badge-green" : "badge-red"],
+              [t("admin.stat.database"), t("admin.connected"), "badge-green"],
               [
-                "Credential aktif",
-                data.activeCredEmail ? data.activeCredEmail.split("@")[0] : "—",
+                t("admin.stat.activeCredential"),
+                data.activeCredEmail ? data.activeCredEmail.split("@")[0] : t("admin.none"),
                 "badge-blue",
               ],
-              ["Active models", `${data.modelCount} carbon`, "badge-blue"],
+              [t("admin.stat.activeModels"), `${data.modelCount} ${t("admin.carbon")}`, "badge-blue"],
             ].map(([label, val, cls]) => (
               <div
                 key={label}
@@ -170,17 +166,17 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
         </div>
         <div className="card">
           <div className="card-header-custom">
-            <span>Aksi cepat</span>
+            <span>{t("admin.overview.quickActions")}</span>
           </div>
           <div className="card-body-custom" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <button type="button" className="btn-sm primary" onClick={() => onNavigate("ge")}>
-              <i className="bi bi-key" /> Kelola GEE Credentials
+              <i className="bi bi-key" /> {t("admin.quick.gee")}
             </button>
             <button type="button" className="btn-sm primary" onClick={() => onNavigate("ml")}>
-              <i className="bi bi-upload" /> Upload ML Model
+              <i className="bi bi-upload" /> {t("admin.quick.uploadModel")}
             </button>
             <button type="button" className="btn-sm primary" onClick={() => onNavigate("cf")}>
-              <i className="bi bi-pencil-square" /> Edit System Config
+              <i className="bi bi-pencil-square" /> {t("admin.quick.config")}
             </button>
             <button
               type="button"
@@ -190,9 +186,9 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
                 setReiniting(true);
                 try {
                   await reinitEE();
-                  notify("Earth Engine berhasil diinisialisasi ulang", "s");
+                  notify(t("admin.reinitSuccess"), "s");
                 } catch (err) {
-                  notify(err instanceof Error ? err.message : "Gagal reinit EE", "e");
+                  notify(err instanceof Error ? err.message : t("admin.reinitFailed"), "e");
                 } finally {
                   setReiniting(false);
                   refreshHealth();
@@ -200,7 +196,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
                 }
               }}
             >
-              <i className="bi bi-power" /> {reiniting ? "Memproses..." : "Reinitialize Earth Engine"}
+              <i className="bi bi-power" /> {reiniting ? t("admin.processing") : t("admin.quick.reinit")}
             </button>
           </div>
         </div>

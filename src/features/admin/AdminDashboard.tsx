@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import "@/styles/admin.css";
 import { AdminContext, type ToastType } from "./AdminContext";
 import type { AdminSection } from "./types";
@@ -20,25 +21,25 @@ import { lazy, Suspense } from "react";
 
 const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
 
-const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; label: string }[] }[] = [
-  { section: "Utama", items: [{ id: "ov", icon: "bi-grid-1x2-fill", label: "Overview" }] },
+const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string }[] }[] = [
+  { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview" }] },
   {
-    section: "Konfigurasi",
+    sectionKey: "admin.nav.configuration",
     items: [
-      { id: "ge", icon: "bi-broadcast-pin", label: "GEE Credentials" },
-      { id: "ag", icon: "bi-geo-alt-fill", label: "ArcGIS" },
-      { id: "ml", icon: "bi-cpu-fill", label: "ML Models" },
-      { id: "cf", icon: "bi-sliders", label: "System Config" },
-      { id: "us", icon: "bi-shield-lock-fill", label: "Admin Users" },
-      { id: "sp", icon: "bi-camera-fill", label: "Satellite Providers" },
+      { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee" },
+      { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis" },
+      { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models" },
+      { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config" },
+      { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users" },
+      { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites" },
     ],
   },
   {
-    section: "Data Spasial",
+    sectionKey: "admin.nav.spatialData",
     items: [
-      { id: "co", icon: "bi-building-fill", label: "Batas Perusahaan" },
-      { id: "ds", icon: "bi-exclamation-triangle-fill", label: "Disaster Management" },
-      { id: "gd", icon: "bi-database-fill-gear", label: "Geospatial Data" },
+      { id: "co", icon: "bi-building-fill", labelKey: "admin.menu.companies" },
+      { id: "ds", icon: "bi-exclamation-triangle-fill", labelKey: "admin.menu.disasters" },
+      { id: "gd", icon: "bi-database-fill-gear", labelKey: "admin.menu.geospatial" },
     ],
   },
   // {
@@ -48,21 +49,22 @@ const NAV_SECTIONS: { section: string; items: { id: AdminSection; icon: string; 
 ];
 
 const TITLES: Record<AdminSection, [string, string]> = {
-  ov: ["Overview", "Dashboard sistem SAVEGEO"],
-  ge: ["GEE Credentials", "Kelola service account Google Earth Engine"],
-  ag: ["ArcGIS", "Status integrasi ArcGIS Living Atlas"],
-  ml: ["ML Models", "Kelola model machine learning yang diupload"],
-  cf: ["System Config", "Konfigurasi aplikasi tersimpan di database"],
-  us: ["Admin Users", "Kelola akun administrator"],
-  sp: ["Satellite Providers", "Kelola sumber citra satelit (Sentinel-2/Landsat) + resolusi/koleksi GEE"],
-  co: ["Batas Perusahaan", "Kelola batas wilayah konsesi dan perusahaan industri"],
-  ds: ["Disaster Management", "Kelola kejadian bencana, AOI, citra satelit, dan analisis"],
-  gd: ["Geospatial Data", "Kelola dataset cloud-native, cache geospasial, dan Spatial SQL"],
-  ri: ["Informasi Riset", "Detail riset internal yang dibatasi untuk administrator"],
+  ov: ["admin.title.overview", "admin.subtitle.overview"],
+  ge: ["admin.title.gee", "admin.subtitle.gee"],
+  ag: ["admin.title.arcgis", "admin.subtitle.arcgis"],
+  ml: ["admin.title.models", "admin.subtitle.models"],
+  cf: ["admin.title.config", "admin.subtitle.config"],
+  us: ["admin.title.users", "admin.subtitle.users"],
+  sp: ["admin.title.satellites", "admin.subtitle.satellites"],
+  co: ["admin.title.companies", "admin.subtitle.companies"],
+  ds: ["admin.title.disasters", "admin.subtitle.disasters"],
+  gd: ["admin.title.geospatial", "admin.subtitle.geospatial"],
+  ri: ["admin.title.research", "admin.subtitle.research"],
 };
 
 export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
   const { user, logout } = useAuthStore();
+  const { language, setLanguage, t } = useI18nStore();
   const navigate = useNavigate();
   const [section, setSection] = useState<AdminSection>(routeSection);
   const [eeInitialized, setEeInitialized] = useState<boolean | null>(null);
@@ -121,16 +123,16 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
     setReiniting(true);
     try {
       await reinitEE();
-      notify("Earth Engine berhasil diinisialisasi ulang", "s");
+      notify(t("admin.reinitSuccess"), "s");
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal reinit EE", "e");
+      notify(err instanceof Error ? err.message : t("admin.reinitFailed"), "e");
     } finally {
       setReiniting(false);
       refreshHealth();
     }
   };
 
-  const [title, subtitle] = TITLES[section];
+  const [titleKey, subtitleKey] = TITLES[section];
   const initials = (user?.username ?? "AD").slice(0, 2).toUpperCase();
 
   return (
@@ -141,15 +143,15 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
 
           <div className={`sidebar ${mobileNavOpen ? "mobile-open" : ""}`}>
             <Link to="/carbon-estimation" className="sb-logo" style={{ textDecoration: "none" }}>
-              <img src="/logo.jpg" alt="SAVEGEO" className="sb-logo-img" />
+              <img src="/logo.jpg" alt={t("home.brand")} className="sb-logo-img" />
               <div className="sb-logo-text">
-                SAVEGEO <small>Admin Panel v1.0</small>
+                SAVEGEO <small>{t("admin.panelVersion")}</small>
               </div>
             </Link>
             <div className="sb-nav">
               {NAV_SECTIONS.map((grp) => (
-                <div key={grp.section}>
-                  <div className="sb-section">{grp.section}</div>
+                  <div key={grp.sectionKey}>
+                  <div className="sb-section">{t(grp.sectionKey)}</div>
                   {grp.items.map((item) => (
                     <a
                       key={item.id}
@@ -158,7 +160,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
                       onClick={(event) => selectSection(item.id, event)}
                     >
                       <i className={`bi ${item.icon}`} />
-                      <span>{item.label}</span>
+                      <span>{t(item.labelKey)}</span>
                     </a>
                   ))}
                 </div>
@@ -166,8 +168,8 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
             </div>
             <div className="sb-foot">
               <div className="sb-avatar">{initials}</div>
-              <span className="sb-foot-name">{user?.username ?? "admin"}</span>
-              <span className="sb-foot-logout" onClick={logout} title="Logout">
+              <span className="sb-foot-name">{user?.username ?? t("admin.defaultUser")}</span>
+              <span className="sb-foot-logout" onClick={logout} title={t("auth.logout")}>
                 <i className="bi bi-box-arrow-right" />
               </span>
             </div>
@@ -180,23 +182,27 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
                   type="button"
                   className="sb-mobile-toggle"
                   onClick={() => setMobileNavOpen((v) => !v)}
-                  aria-label={mobileNavOpen ? "Tutup menu" : "Buka menu"}
+                  aria-label={mobileNavOpen ? t("nav.closeMenu") : t("nav.openMenu")}
                   aria-expanded={mobileNavOpen}
                 >
                   <i className={`bi ${mobileNavOpen ? "bi-x-lg" : "bi-list"}`} />
                 </button>
                 <div>
-                  <div className="topbar-title">{title}</div>
-                  <div className="topbar-sub">{subtitle}</div>
+              <div className="topbar-title">{t(titleKey)}</div>
+              <div className="topbar-sub">{t(subtitleKey)}</div>
                 </div>
               </div>
               <div className="topbar-right">
+                <div className="admin-language-switch" role="group" aria-label={t("language.label")}>
+                  <button type="button" className={`btn-sm ${language === "id" ? "active" : ""}`} onClick={() => setLanguage("id")} aria-pressed={language === "id"}>ID</button>
+                  <button type="button" className={`btn-sm ${language === "en" ? "active" : ""}`} onClick={() => setLanguage("en")} aria-pressed={language === "en"}>EN</button>
+                </div>
                 <div className={`ee-badge ${eeInitialized ? "ok" : "fail"}`}>
                   <div className="ee-dot" />
-                  <span>{eeInitialized === null ? "Checking..." : eeInitialized ? "Earth Engine aktif" : "Earth Engine offline"}</span>
+                  <span>{eeInitialized === null ? t("admin.checking") : eeInitialized ? t("admin.eeActive") : t("admin.eeOffline")}</span>
                 </div>
                 <button type="button" className="btn-sm" disabled={reiniting} onClick={handleReinit}>
-                  <i className="bi bi-arrow-repeat" /> Reinit EE
+                  <i className="bi bi-arrow-repeat" /> {t("admin.reinitEe")}
                 </button>
               </div>
             </div>

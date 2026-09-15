@@ -13,6 +13,7 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { useAoiStore } from "@/hooks/useAoiStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
@@ -256,6 +257,7 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
  * enabled by default and can be disabled to inspect the original clouds.
  */
 export default function ImageryModule() {
+  const t = useI18nStore((state) => state.t);
   const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
@@ -357,6 +359,7 @@ export default function ImageryModule() {
     pitch: query.globePitch ?? 0,
   });
   useEffect(() => {
+    if (typeof window === "undefined" || !["/satellite-imagery", "/imagery"].includes(window.location.pathname)) return;
     updateUrlFromState({
       ...query,
       satellite,
@@ -794,11 +797,10 @@ export default function ImageryModule() {
     <div className="analysis-page analysis-page-imagery">
       <section className="analysis-hero analysis-hero-imagery" aria-labelledby="imageryHeroTitle">
         <div className="analysis-hero-main">
-          <span className="analysis-eyebrow">Citra Satelit</span>
-          <h1 id="imageryHeroTitle">Eksplorasi Scene Satelit</h1>
+          <span className="analysis-eyebrow">{t("imagery.eyebrow")}</span>
+          <h1 id="imageryHeroTitle">{t("imagery.title")}</h1>
           <p>
-            Cari scene berdasarkan tanggal akuisisi (optik: Sentinel-2/3, Landsat 8/9; radar: Sentinel-1; gas atmosfer:
-            Sentinel-5P), lalu tampilkan citra asli, layer DEMNAS, 3D terrain, atau bandingkan dua scene.
+            {t("imagery.description")}
           </p>
         </div>
         <div className="analysis-hero-status">
@@ -806,21 +808,21 @@ export default function ImageryModule() {
             <i className="bi bi-bounding-box-circles" />
             <div>
               <span>AOI</span>
-              <strong>{aoi ? aoi.geometry.type : "Belum digambar"}</strong>
+              <strong>{aoi ? aoi.geometry.type : t("imagery.notDrawn")}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-globe2" />
             <div>
-              <span>Satelit</span>
+              <span>{t("imagery.satellite")}</span>
               <strong>{satelliteMeta?.name ?? satellite}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-images" />
             <div>
-              <span>Scene</span>
-              <strong>{searched ? `${sortedScenes.length} ditemukan` : "Belum dicari"}</strong>
+              <span>{t("imagery.scene")}</span>
+              <strong>{searched ? `${sortedScenes.length} ${t("imagery.found")}` : t("imagery.notSearched")}</strong>
             </div>
           </div>
         </div>
@@ -830,32 +832,31 @@ export default function ImageryModule() {
         <div className="col-lg-3">
         <div className="sidebar">
           <h5 className="mb-3">
-            <i className="fas fa-camera" /> Citra Satelit
+            <i className="fas fa-camera" /> {t("imagery.sidebarTitle")}
           </h5>
           <p className="text-muted small">
-            Lihat citra mentah satu scene asli (bukan komposit) beserta tanggal dan jam akuisisi persisnya - tanpa
-            analisis tutupan lahan/vegetasi/karbon.
+            {t("imagery.sidebarDescription")}
           </p>
 
           <div className="mb-3">
             <label className="form-label fw-bold">
-              <i className="fas fa-map-marker-alt" /> Area of Interest
+              <i className="fas fa-map-marker-alt" /> {t("imagery.aoi")}
             </label>
             {aoi ? (
               <div className="alert alert-success py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-check-circle" /> AOI tergambar ({aoi.geometry.type})
+                <i className="fas fa-check-circle" /> {t("imagery.aoiDrawn")} ({aoi.geometry.type})
               </div>
             ) : (
               <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-exclamation-triangle" /> Pilih AOI lewat modal peta.
+                <i className="fas fa-exclamation-triangle" /> {t("imagery.chooseAoi")}
               </div>
             )}
             <button type="button" className="btn btn-sm btn-outline-success w-100 mt-2" onClick={() => setAoiModalOpen(true)}>
-              <i className="bi bi-bounding-box-circles" /> Pilih/Gambar AOI
+              <i className="bi bi-bounding-box-circles" /> {t("imagery.selectDrawAoi")}
             </button>
             {aoi && (
               <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-2" onClick={() => setAoiState(null)}>
-                <i className="fas fa-eraser" /> Hapus AOI
+                <i className="fas fa-eraser" /> {t("imagery.removeAoi")}
               </button>
             )}
           </div>
@@ -864,7 +865,7 @@ export default function ImageryModule() {
 
           <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySatellite">
-              <i className="fas fa-satellite" /> Satelit
+              <i className="fas fa-satellite" /> {t("imagery.satellite")}
             </label>
             <SearchableSelect
               id="imagerySatellite"

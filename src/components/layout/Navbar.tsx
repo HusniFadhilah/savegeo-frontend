@@ -21,7 +21,7 @@ export default function Navbar() {
   const [statusOpen, setStatusOpen] = useState(false);
 
   const statusLabel =
-    state === "online" ? " Terhubung" : state === "offline" ? " Terputus" : " Menghubungkan...";
+    state === "online" ? ` ${t("status.online")}` : state === "offline" ? ` ${t("status.offline")}` : ` ${t("status.connecting")}`;
   const statusBadgeClass =
     state === "online" ? "bg-success-subtle text-success" : state === "offline" ? "bg-danger-subtle text-danger" : "bg-light text-dark";
 
@@ -39,11 +39,11 @@ export default function Navbar() {
   return (
     <nav className="navbar navbar-dark bg-dark app-navbar">
       <div className="container-fluid d-flex align-items-center gap-3">
-        <Link to="/" className="navbar-brand app-brand m-0 p-0" aria-label="SaveGeo beranda">
-          <img src="/images/savegeo-logo.svg" alt="SaveGeo" className="app-brand-logo" />
+        <Link to="/" className="navbar-brand app-brand m-0 p-0" aria-label={t("home.homeLink")}>
+          <img src="/images/savegeo-logo.svg" alt={t("home.brand")} className="app-brand-logo" />
           <div>
             <strong>SaveGeo</strong>
-            <span>AI Imagery Analytics Platform</span>
+            <span>{t("home.brandTagline")}</span>
           </div>
         </Link>
 
@@ -52,8 +52,8 @@ export default function Navbar() {
             type="button"
             className="theme-toggle-btn"
             onClick={toggleTheme}
-            title={isDark ? "Gunakan light mode" : "Gunakan dark mode"}
-            aria-label={isDark ? "Gunakan light mode" : "Gunakan dark mode"}
+            title={isDark ? t("theme.lightMode") : t("theme.darkMode")}
+            aria-label={isDark ? t("theme.lightMode") : t("theme.darkMode")}
             aria-pressed={isDark}
           >
             <i className={`bi ${isDark ? "bi-sun-fill" : "bi-moon-stars-fill"}`} />
@@ -63,7 +63,7 @@ export default function Navbar() {
             type="button"
             className={`badge navbar-status-btn ${statusBadgeClass}`}
             onClick={() => setStatusOpen(true)}
-            title="View system status"
+            title={t("status.view")}
           >
             <i className={`bi ${state === "connecting" ? "bi-arrow-repeat spin" : "bi-broadcast"}`} />
             <span className="navbar-status-label">{statusLabel}</span>
@@ -88,13 +88,13 @@ export default function Navbar() {
                   </li>
                   <li>
                     <Link className="dropdown-item" to="/dashboard" onClick={() => setMenuOpen(false)}>
-                      <i className="bi bi-speedometer2 me-2" /> Dashboard
+                      <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
                     </Link>
                   </li>
                   {isAuthenticated && !isViewer && isUserAuthenticated && (
                     <li>
                       <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
-                        <i className="bi bi-shield-lock me-2" /> Dashboard Admin
+                      <i className="bi bi-shield-lock me-2" /> {t("auth.adminDashboard")}
                       </Link>
                     </li>
                   )}
@@ -117,7 +117,7 @@ export default function Navbar() {
             type="button"
             className="mobile-menu-toggle"
             onClick={toggleMobileSidebar}
-            aria-label={mobileSidebarOpen ? "Tutup menu" : "Buka menu"}
+            aria-label={mobileSidebarOpen ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-expanded={mobileSidebarOpen}
           >
             <i className={`bi ${mobileSidebarOpen ? "bi-x-lg" : "bi-list"}`} />
