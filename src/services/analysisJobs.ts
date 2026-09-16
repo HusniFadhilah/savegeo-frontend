@@ -29,7 +29,17 @@ function wait(ms: number) {
 }
 
 export async function runAnalysisJob<T>(
-  type: "carbon" | "carbon_local" | "carbon_delta" | "geotiff" | "vegetation" | "landcover" | "crop_monitoring",
+  type:
+    | "carbon"
+    | "carbon_local"
+    | "carbon_delta"
+    | "geotiff"
+    | "vegetation"
+    | "landcover"
+    | "landcover_transition"
+    | "landcover_change_map"
+    | "landcover_hotspots"
+    | "crop_monitoring",
   payload: unknown,
   options: RunJobOptions,
 ): Promise<T> {

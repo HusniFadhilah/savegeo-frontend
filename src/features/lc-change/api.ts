@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { runAnalysisJob } from "@/services/analysisJobs";
 import type {
   LcAnalyzeParams,
   LcAnalyzeResponse,
@@ -20,12 +21,12 @@ import type {
 
 /** POST /analyze/landcover - one request per year, single dataset in the array. */
 export function analyzeLandCoverYear(params: LcAnalyzeParams) {
-  return apiClient.post<LcAnalyzeResponse>("/analyze/landcover", params, { auth: "app" });
+  return runAnalysisJob<LcAnalyzeResponse>("landcover", params, { timeoutMs: 650_000 });
 }
 
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */
 export function analyzeLandCoverChangeMap(params: LcChangeMapParams) {
-  return apiClient.post<LcChangeMapResponse>("/analyze/landcover-change-map", params, { auth: "app" });
+  return runAnalysisJob<LcChangeMapResponse>("landcover_change_map", params, { timeoutMs: 900_000 });
 }
 
 export function identifyLandCoverPoint(params: {
@@ -45,5 +46,5 @@ export function identifyLandCoverPoint(params: {
 
 /** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */
 export function analyzeLandCoverHotspots(params: LcHotspotParams) {
-  return apiClient.post<LcHotspotResponse>("/analyze/landcover-hotspots", params, { auth: "app" });
+  return runAnalysisJob<LcHotspotResponse>("landcover_hotspots", params, { timeoutMs: 900_000 });
 }
