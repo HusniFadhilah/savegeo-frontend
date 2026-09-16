@@ -1,6 +1,7 @@
 export type Language = "id" | "en";
 
 import { legacyTranslations } from "./legacyTranslations";
+import { approvedTranslations } from "./approvedTranslations";
 
 /**
  * Chrome-level (nav/sidebar/status/login) strings, plus the Carbon module
@@ -911,6 +912,14 @@ export const translations: Record<Language, Record<string, string>> = {
     "disaster.firms.disclaimer": "Hotspots are remote-sensing indications and require field verification.",
   },
 };
+
+// Restore the reviewed copy that predates the accidental translation-table
+// reduction, while keeping newer explicit entries in this file authoritative.
+for (const language of ["id", "en"] as const) {
+  for (const [key, value] of Object.entries(approvedTranslations[language])) {
+    translations[language][key] ??= value;
+  }
+}
 
 // Keep legacy/migrated modules readable while their product copy is reviewed.
 // Existing approved translations win because the bridge only contains keys
