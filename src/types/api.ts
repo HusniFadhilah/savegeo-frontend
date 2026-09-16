@@ -19,7 +19,8 @@ export interface RegionOption {
 
 export interface AdminUser {
   username: string;
-  role: string;
+  role: string | null;
+  permissions?: string[] | null;
 }
 
 export interface LoginResponse {

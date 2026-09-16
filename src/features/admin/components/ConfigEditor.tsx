@@ -6,6 +6,8 @@ import AiProviderConfig from "./AiProviderConfig";
 import KeyPool from "./KeyPool";
 import { useAdmin } from "../AdminContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { hasAdminPermission } from "@/auth/access";
 
 type NumericControl = {
   mode: "range" | "number";
@@ -193,6 +195,7 @@ function ConfigValueControl({
  * below, matching the legacy page (#cfg-sections + #key-pool-section). */
 export default function ConfigEditor() {
   const { notify } = useAdmin();
+  const { user } = useAuthStore();
   const t = useI18nStore((state) => state.t);
   const [categories, setCategories] = useState<AdminConfigCategories | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +203,7 @@ export default function ConfigEditor() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const canManageKeyPool = hasAdminPermission(user, "secret.read") && hasAdminPermission(user, "secret.write");
 
   const load = async () => {
     setLoading(true);
@@ -351,7 +355,7 @@ export default function ConfigEditor() {
           </div>
         ))}
 
-      <KeyPool />
+      {canManageKeyPool && <KeyPool />}
     </>
   );
 }

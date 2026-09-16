@@ -1,8 +1,8 @@
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { isViewerRole } from "@/auth/access";
+import { canAccessAdminSection, firstAccessibleAdminSection, isViewerRole } from "@/auth/access";
 import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/features/admin/AdminDashboard";
-import { DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
+import { DEFAULT_ADMIN_SECTION, getAdminSectionPath } from "@/routes/adminSectionRoutes";
 import type { AdminSection } from "@/features/admin/types";
 import { Navigate } from "react-router-dom";
 
@@ -19,6 +19,11 @@ export default function AdminPage({ section = DEFAULT_ADMIN_SECTION }: { section
 
   if (isViewerRole(user?.role)) {
     return <Navigate to="/carbon-estimation" replace />;
+  }
+
+  if (!canAccessAdminSection(user, section)) {
+    const fallbackSection = firstAccessibleAdminSection(user);
+    return <Navigate to={fallbackSection ? getAdminSectionPath(fallbackSection as AdminSection) : "/carbon-estimation"} replace />;
   }
 
   return <AdminDashboard section={section} />;

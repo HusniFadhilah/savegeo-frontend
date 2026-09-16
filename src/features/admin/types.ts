@@ -103,6 +103,7 @@ export interface AdminUserRow {
   email?: string | null;
   is_active: boolean;
   role?: string | null;
+  permissions?: string[] | null;
   created_at?: string | null;
   last_login?: string | null;
 }

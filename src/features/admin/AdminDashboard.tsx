@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { hasAdminPermission } from "@/auth/access";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import "@/styles/admin.css";
 import { AdminContext, type ToastType } from "./AdminContext";
@@ -21,25 +22,25 @@ import { lazy, Suspense } from "react";
 
 const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
 
-const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string }[] }[] = [
-  { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview" }] },
+const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string; permission: string }[] }[] = [
+  { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview", permission: "config.read" }] },
   {
     sectionKey: "admin.nav.configuration",
     items: [
-      { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee" },
-      { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis" },
-      { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models" },
-      { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config" },
-      { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users" },
-      { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites" },
+      { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee", permission: "credential.read" },
+      { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis", permission: "credential.read" },
+      { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models", permission: "model.read" },
+      { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config", permission: "config.read" },
+      { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users", permission: "users.read" },
+      { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites", permission: "satellite.read" },
     ],
   },
   {
     sectionKey: "admin.nav.spatialData",
     items: [
-      { id: "co", icon: "bi-building-fill", labelKey: "admin.menu.companies" },
-      { id: "ds", icon: "bi-exclamation-triangle-fill", labelKey: "admin.menu.disasters" },
-      { id: "gd", icon: "bi-database-fill-gear", labelKey: "admin.menu.geospatial" },
+      { id: "co", icon: "bi-building-fill", labelKey: "admin.menu.companies", permission: "company.read" },
+      { id: "ds", icon: "bi-exclamation-triangle-fill", labelKey: "admin.menu.disasters", permission: "disaster.read" },
+      { id: "gd", icon: "bi-database-fill-gear", labelKey: "admin.menu.geospatial", permission: "geospatial.read" },
     ],
   },
   // {
@@ -134,6 +135,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
 
   const [titleKey, subtitleKey] = TITLES[section];
   const initials = (user?.username ?? "AD").slice(0, 2).toUpperCase();
+  const canReinitializeEe = hasAdminPermission(user, "credential.write");
 
   return (
     <AdminContext.Provider value={{ notify, refreshHealth, eeInitialized }}>
@@ -149,22 +151,26 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               </div>
             </Link>
             <div className="sb-nav">
-              {NAV_SECTIONS.map((grp) => (
+              {NAV_SECTIONS.map((grp) => {
+                const items = grp.items.filter((item) => hasAdminPermission(user, item.permission));
+                if (!items.length) return null;
+                return (
                   <div key={grp.sectionKey}>
-                  <div className="sb-section">{t(grp.sectionKey)}</div>
-                  {grp.items.map((item) => (
-                    <a
-                      key={item.id}
-                      className={`sb-item ${section === item.id ? "active" : ""}`}
-                      href={getAdminSectionPath(item.id)}
-                      onClick={(event) => selectSection(item.id, event)}
-                    >
-                      <i className={`bi ${item.icon}`} />
-                      <span>{t(item.labelKey)}</span>
-                    </a>
-                  ))}
-                </div>
-              ))}
+                    <div className="sb-section">{t(grp.sectionKey)}</div>
+                    {items.map((item) => (
+                      <a
+                        key={item.id}
+                        className={`sb-item ${section === item.id ? "active" : ""}`}
+                        href={getAdminSectionPath(item.id)}
+                        onClick={(event) => selectSection(item.id, event)}
+                      >
+                        <i className={`bi ${item.icon}`} />
+                        <span>{t(item.labelKey)}</span>
+                      </a>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
             <div className="sb-foot">
               <div className="sb-avatar">{initials}</div>
@@ -201,9 +207,9 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
                   <div className="ee-dot" />
                   <span>{eeInitialized === null ? t("admin.checking") : eeInitialized ? t("admin.eeActive") : t("admin.eeOffline")}</span>
                 </div>
-                <button type="button" className="btn-sm" disabled={reiniting} onClick={handleReinit}>
+                {canReinitializeEe && <button type="button" className="btn-sm" disabled={reiniting} onClick={handleReinit}>
                   <i className="bi bi-arrow-repeat" /> {t("admin.reinitEe")}
-                </button>
+                </button>}
               </div>
             </div>
 

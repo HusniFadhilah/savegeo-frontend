@@ -6,6 +6,7 @@ import { createAdminUser, deleteAdminUser, getCurrentAdminUser, listRoles, updat
 import type { AdminRole, AdminUserRow } from "../types";
 import PasswordChange from "./PasswordChange";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { hasAdminPermission } from "@/auth/access";
 
 interface FormState {
   id: number | null;
@@ -17,6 +18,10 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = { id: null, username: "", email: "", password: "", roleId: "", isActive: true };
+
+function roleLabel(name: string): string {
+  return name === "geospatial_expert" ? "Ahli Geospasial" : name;
+}
 
 function formatAdminDate(value: string | null | undefined, language: "id" | "en"): string {
   if (!value) return "—";
@@ -46,6 +51,7 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const canAssignFullAccess = hasAdminPermission(me, "secret.write");
 
   useEffect(() => {
     listRoles()
@@ -189,10 +195,10 @@ export default function AdminUsers() {
               <div className="form-field">
                 <label className="form-label">{t("admin.users.role")}</label>
                 <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}>
-                  <option value="">{t("admin.users.fullAccess")}</option>
+                  {canAssignFullAccess && <option value="">{t("admin.users.fullAccess")}</option>}
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name}
+                      {roleLabel(r.name)}
                     </option>
                   ))}
                 </select>
@@ -257,18 +263,18 @@ export default function AdminUsers() {
                       <strong>{u.username}</strong>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
                     </td>
-                    <td>{u.role || t("admin.users.fullAccess")}</td>
+                    <td>{u.role ? roleLabel(u.role) : t("admin.users.fullAccess")}</td>
                     <td>
                       <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? t("admin.users.active") : t("admin.users.inactive")}</span>
                     </td>
                     <td>{formatAdminDate(u.created_at, language)}</td>
                     <td>{formatAdminDate(u.last_login, language)}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                        {(!me?.role || u.role) && <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
                           <i className="bi bi-pencil-square" />
-                        </button>
-                        <button
+                        </button>}
+                        {(!me?.role || u.role) && <button
                           type="button"
                           className="btn-xs danger"
                           title={t("admin.delete")}
@@ -277,7 +283,7 @@ export default function AdminUsers() {
                           onClick={() => handleDelete(u)}
                         >
                           <i className="bi bi-trash3" />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

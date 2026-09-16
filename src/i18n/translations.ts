@@ -1,5 +1,7 @@
 export type Language = "id" | "en";
 
+import { legacyTranslations } from "./legacyTranslations";
+
 /**
  * Chrome-level (nav/sidebar/status/login) strings, plus the Carbon module
  * (features/carbon/** + the AOI tabs it shares) under the `carbon.*`
@@ -909,6 +911,15 @@ export const translations: Record<Language, Record<string, string>> = {
     "disaster.firms.disclaimer": "Hotspots are remote-sensing indications and require field verification.",
   },
 };
+
+// Keep legacy/migrated modules readable while their product copy is reviewed.
+// Existing approved translations win because the bridge only contains keys
+// absent from this dictionary at audit time.
+for (const language of ["id", "en"] as const) {
+  for (const [key, value] of Object.entries(legacyTranslations[language])) {
+    translations[language][key] ??= value;
+  }
+}
 
 /**
  * Lightweight `{placeholder}` interpolation on top of a translated string -
