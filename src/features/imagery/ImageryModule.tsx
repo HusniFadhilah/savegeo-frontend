@@ -78,6 +78,7 @@ type SceneFootprintProperties = {
 };
 
 function ScientificCapabilitiesPanel() {
+  const t = useI18nStore((state) => state.t);
   const [capabilities, setCapabilities] = useState<AdvancedImageryCapabilities | null>(null);
   useEffect(() => {
     let active = true;
@@ -86,16 +87,16 @@ function ScientificCapabilitiesPanel() {
   }, []);
   if (!capabilities) return null;
   const items = [
-    ["Hyperspectral", capabilities.hyperspectral.status],
-    ["Thermal calibration", capabilities.thermal.status],
-    ["InSAR", capabilities.insar.status],
-    ["AI server-side", capabilities.ai.status],
+    [t("imagery.scientific.hyperspectral"), capabilities.hyperspectral.status],
+    [t("imagery.scientific.thermal"), capabilities.thermal.status],
+    [t("imagery.scientific.insar"), capabilities.insar.status],
+    [t("imagery.scientific.ai"), capabilities.ai.status],
   ] as const;
   return <div className="card border-secondary mb-3">
-    <div className="card-header py-2"><i className="bi bi-cpu" /> <strong><small>Scientific processing</small></strong></div>
+    <div className="card-header py-2"><i className="bi bi-cpu" /> <strong><small>{t("imagery.scientific.title")}</small></strong></div>
     <div className="card-body py-2 small">
       {items.map(([label, status]) => <div key={label} className="d-flex justify-content-between align-items-center border-bottom py-1"><span>{label}</span><span className={`badge ${status === "ready" ? "text-bg-success" : "text-bg-secondary"}`}>{status}</span></div>)}
-      <div className="text-muted mt-2">Nilai thermal harus memakai scale/offset produk. InSAR membutuhkan pasangan SLC dan processor yang tersedia di server.</div>
+      <div className="text-muted mt-2">{t("imagery.scientific.hint")}</div>
     </div>
   </div>;
 }
@@ -606,7 +607,7 @@ export default function ImageryModule() {
       return;
     }
     if (!startDate || !endDate || startDate >= endDate) {
-      setSearchError("Rentang tanggal tidak valid (tanggal awal harus sebelum tanggal akhir).");
+      setSearchError(`${t("imagery.dateRange")} tidak valid (tanggal awal harus sebelum tanggal akhir).`);
       return;
     }
     const requestId = ++searchRequestRef.current;
@@ -999,12 +1000,12 @@ export default function ImageryModule() {
 
           <div className="mb-3">
             <div className="card border-primary">
-              <div className="card-header py-2 d-flex align-items-center gap-2"><i className="bi bi-gpu-card" /> <strong><small>Peningkatan visual GPU</small></strong></div>
+              <div className="card-header py-2 d-flex align-items-center gap-2"><i className="bi bi-gpu-card" /> <strong><small>{t("imagery.gpu.title")}</small></strong></div>
               <div className="card-body py-2">
-                <div className="form-check form-switch"><input className="form-check-input" type="checkbox" id="imageryGpuEnhancement" checked={visualEnhancement} onChange={(event) => setVisualEnhancement(event.target.checked)} /><label className="form-check-label fw-semibold" htmlFor="imageryGpuEnhancement"><small>Aktifkan enhancement viewport</small></label></div>
-                <div className="row g-2 mt-1"><div className="col-7"><select className="form-select form-select-sm" value={gpuEnhancement.model} onChange={(event) => gpuEnhancement.setModel(event.target.value as "shader_x2" | "shader_x4")} disabled={!visualEnhancement} aria-label="Model enhancement"><option value="shader_x2">GPU shader x2 (aman)</option><option value="shader_x4">GPU shader x4 (perangkat kuat)</option></select></div><div className="col-5"><select className="form-select form-select-sm" value={gpuEnhancement.quality} onChange={(event) => gpuEnhancement.setQuality(event.target.value as "low" | "medium" | "high")} disabled={!visualEnhancement} aria-label="Kualitas enhancement"><option value="low">Kualitas rendah</option><option value="medium">Kualitas sedang</option><option value="high">Kualitas tinggi</option></select></div></div>
+                <div className="form-check form-switch"><input className="form-check-input" type="checkbox" id="imageryGpuEnhancement" checked={visualEnhancement} onChange={(event) => setVisualEnhancement(event.target.checked)} /><label className="form-check-label fw-semibold" htmlFor="imageryGpuEnhancement"><small>{t("imagery.gpu.enable")}</small></label></div>
+                <div className="row g-2 mt-1"><div className="col-7"><select className="form-select form-select-sm" value={gpuEnhancement.model} onChange={(event) => gpuEnhancement.setModel(event.target.value as "shader_x2" | "shader_x4")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.modelAria")}><option value="shader_x2">{t("imagery.gpu.shaderSafe")}</option><option value="shader_x4">{t("imagery.gpu.shaderStrong")}</option></select></div><div className="col-5"><select className="form-select form-select-sm" value={gpuEnhancement.quality} onChange={(event) => gpuEnhancement.setQuality(event.target.value as "low" | "medium" | "high")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.qualityAria")}><option value="low">{t("imagery.gpu.qualityLow")}</option><option value="medium">{t("imagery.gpu.qualityMedium")}</option><option value="high">{t("imagery.gpu.qualityHigh")}</option></select></div></div>
                 <div className="small mt-2" aria-live="polite">Status: <strong>{gpuEnhancement.status}</strong> · Backend: <strong>{gpuEnhancement.backend}</strong>{gpuEnhancement.capabilities?.webgpu ? " (WebGPU tersedia; shader memakai jalur WebGL2 yang kompatibel)" : ""}</div>
-                <div className="small text-muted mt-1">Peningkatan ini hanya untuk visualisasi. Resolusi asli dan nilai analitik citra tidak berubah.</div>
+                <div className="small text-muted mt-1">{t("imagery.gpu.hint")}</div>
                 <div className="d-flex align-items-center gap-2 mt-2"><span className="small text-muted">Original</span><input type="range" className="form-range" min={0} max={1} step={0.05} value={gpuOpacity} onChange={(event) => setGpuOpacity(Number(event.target.value))} disabled={!visualEnhancement} aria-label="Perbandingan original enhanced" /><span className="small text-muted">Enhanced</span></div>
                 {selectedScene && <div className="small mt-1"><strong>{satelliteMeta?.name ?? "Scene"}</strong> · Resolusi asli: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta?.resolution_m))} · Enhancement: {visualEnhancement ? `GPU x${gpuEnhancement.model === "shader_x4" ? 4 : 2}` : "nonaktif"} · Mode: Visual only</div>}
                 {visualEnhancement && gpuEnhancement.status === "fallback_original" && <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">GPU enhancement tidak tersedia pada perangkat ini. Citra original tetap ditampilkan.</div>}
@@ -1016,7 +1017,7 @@ export default function ImageryModule() {
 
           <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
-              <i className="bi bi-stars" /> Interpolasi tampilan
+              <i className="bi bi-stars" /> {t("imagery.interpolation")}
             </label>
             <SearchableSelect
               id="imagerySuperResolution"
@@ -1029,9 +1030,7 @@ export default function ImageryModule() {
               ]}
             />
             <small className="text-muted d-block mt-1">
-              {supportsSuperResolution
-                ? "Interpolasi tidak menambah detail sumber. Zoom di atas resolusi asli hanya memperbesar piksel."
-                : "Tidak tersedia untuk provider ini karena tile tidak dirender ulang oleh backend GEE."}
+              {supportsSuperResolution ? t("imagery.interpolationHint") : t("imagery.interpolationUnavailable")}
             </small>
           </div>
 
@@ -1122,7 +1121,7 @@ export default function ImageryModule() {
 
           <div className="mb-3">
             <label className="form-label fw-bold">
-              <i className="fas fa-calendar" /> Rentang Tanggal
+              <i className="fas fa-calendar" /> {t("imagery.dateRange")}
             </label>
             <div className="d-flex align-items-center gap-2">
               <input
@@ -1160,7 +1159,7 @@ export default function ImageryModule() {
                   onChange={(e) => setCloudFilterEnabled(e.target.checked)}
                 />
                 <label className="form-check-label fw-bold" htmlFor="imageryCloudFilterSwitch">
-                  <i className="fas fa-cloud" /> Filter Tutupan Awan
+                  <i className="fas fa-cloud" /> {t("imagery.cloudFilter")}
                 </label>
               </div>
               {cloudFilterEnabled && (
@@ -1243,9 +1242,9 @@ export default function ImageryModule() {
           <div className="card text-center py-5 border-dashed mb-3">
             <div className="card-body">
               <i className="bi bi-camera text-muted" style={{ fontSize: "3.5rem" }} />
-              <h5 className="mt-3 text-muted">Belum Ada Pencarian</h5>
+              <h5 className="mt-3 text-muted">{t("imagery.search.emptyTitle")}</h5>
               <p className="text-muted mb-0">
-                Gambar AOI, pilih satelit dan rentang tanggal, lalu klik <strong>Cari Scene</strong>
+                {t("imagery.search.emptyHint")} <strong>{t("imagery.search.button")}</strong>
               </p>
             </div>
           </div>
@@ -1255,7 +1254,7 @@ export default function ImageryModule() {
           <div className="card mb-3">
             <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
               <span className="fw-semibold">
-                <i className="bi bi-list-ul" /> Scene Ditemukan
+                <i className="bi bi-list-ul" /> {t("imagery.search.found")}
               </span>
               <span className="badge bg-secondary">{scenes.length}</span>
               {truncated && (
@@ -1276,7 +1275,7 @@ export default function ImageryModule() {
                   className={`btn text-white ${viewMode === "compare" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setViewMode("compare")}
                 >
-                  <i className="fas fa-arrows-alt-h" /> Bandingkan 2 Waktu
+                  <i className="fas fa-arrows-alt-h" /> {t("imagery.compareTwo")}
                 </button>
               </div>
             </div>
@@ -1292,7 +1291,7 @@ export default function ImageryModule() {
             <div className="card-body p-0">
               {scenes.length === 0 ? (
                 <div className="p-3 text-center text-muted small">
-                  Tidak ada scene ditemukan untuk AOI/rentang/filter ini. Coba perlebar rentang tanggal atau nonaktifkan
+                  Tidak ada scene ditemukan untuk AOI/rentang/filter ini. Coba perlebar {t("imagery.dateRange")} atau nonaktifkan
                   filter awan.
                 </div>
               ) : (
@@ -1418,7 +1417,7 @@ export default function ImageryModule() {
               <div className="alert alert-warning py-2 mb-3 small">
                 <i className="bi bi-cloud-haze2 me-1" />
                 Scene ini sangat berawan ({selectedScene.cloud_cover_pct}%). Tampilan abu-abu/pudar berasal dari citra
-                asli pada tanggal tersebut, bukan komposit bebas awan. Aktifkan Filter Tutupan Awan atau pilih scene
+                asli pada tanggal tersebut, bukan komposit bebas awan. Aktifkan {t("imagery.cloudFilter")} atau pilih scene
                 dengan badge hijau untuk visual yang lebih jelas.
               </div>
             )}

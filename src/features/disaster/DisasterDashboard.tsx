@@ -39,6 +39,7 @@ import BmkgAlerts from "./components/BmkgAlerts";
 import DemSlopeControls from "./components/DemSlopeControls";
 import FirmsHotspotPanel from "./components/FirmsHotspotPanel";
 import { clearFirmsQuery } from "./lib/firmsQueryState";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
@@ -89,6 +90,7 @@ const EMPTY_FIRMS_LAYER: FirmsLayerState = {
  * other multi-section modules (carbon/lc-change).
  */
 export default function DisasterDashboard() {
+  const { t } = useI18nStore();
   const { eventId } = useParams<{ eventId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useUserAuthStore();
@@ -147,7 +149,7 @@ export default function DisasterDashboard() {
       .catch((err) => {
         if (cancelled) return;
         setDetailError(
-          errorMessage(err, "Terjadi kesalahan jaringan saat memuat detail kejadian."),
+          errorMessage(err, t("disaster.detail.loadFailed")),
         );
       })
       .finally(() => {
@@ -183,7 +185,7 @@ export default function DisasterDashboard() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setLayersError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat layer analisis."));
+        setLayersError(errorMessage(err, t("disaster.detail.layersFailed")));
       })
       .finally(() => {
         if (!cancelled) setLayersLoading(false);
@@ -204,7 +206,7 @@ export default function DisasterDashboard() {
       })
       .catch((err) => {
         if (!cancelled)
-          setStatsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat statistik."));
+          setStatsError(errorMessage(err, t("disaster.detail.statsFailed")));
       })
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
@@ -225,7 +227,7 @@ export default function DisasterDashboard() {
       })
       .catch((err) => {
         if (!cancelled)
-          setHotspotsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat hotspot."));
+          setHotspotsError(errorMessage(err, t("disaster.detail.hotspotsFailed")));
       })
       .finally(() => {
         if (!cancelled) setHotspotsLoading(false);
@@ -267,7 +269,7 @@ export default function DisasterDashboard() {
     try {
       setSources(await fetchDisasterSources());
     } catch (err) {
-      setSourcesError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat sumber resmi."));
+      setSourcesError(errorMessage(err, t("disaster.detail.sourcesFailed")));
     } finally {
       setSourcesLoading(false);
     }
@@ -280,7 +282,7 @@ export default function DisasterDashboard() {
       const res = await fetchBmkgAlerts(20);
       setAlerts(res.alerts ?? []);
     } catch (err) {
-      setAlertsError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat peringatan BMKG."));
+      setAlertsError(errorMessage(err, t("disaster.detail.bmkgFailed")));
     } finally {
       setAlertsLoading(false);
     }
@@ -288,7 +290,7 @@ export default function DisasterDashboard() {
 
   async function handleLoadDem() {
     if (!detail?.aoi?.geojson) {
-      setDemError("Event ini belum memiliki AOI.");
+      setDemError(t("disaster.detail.noAoi"));
       return;
     }
     setDemLoading(true);
@@ -300,7 +302,7 @@ export default function DisasterDashboard() {
       });
       setDemResult(res);
     } catch (err) {
-      setDemError(errorMessage(err, "Terjadi kesalahan jaringan saat memuat DEM."));
+      setDemError(errorMessage(err, t("disaster.detail.demFailed")));
     } finally {
       setDemLoading(false);
     }
@@ -315,7 +317,7 @@ export default function DisasterDashboard() {
             role="status"
             aria-hidden="true"
           />
-          Memuat detail kejadian bencana...
+          {t("disaster.detail.loading")}
         </div>
       </div>
     );
@@ -325,10 +327,10 @@ export default function DisasterDashboard() {
     return (
       <div className="container-fluid py-4">
         <div className="alert alert-danger py-2">
-          {detailError || "Kejadian bencana tidak ditemukan."}
+          {detailError || t("disaster.detail.notFound")}
         </div>
         <Link to="/pemetaan-bencana" className="btn btn-sm btn-outline-secondary">
-          <i className="bi bi-arrow-left" /> Kembali ke daftar
+          <i className="bi bi-arrow-left" /> {t("disaster.detail.backToList")}
         </Link>
       </div>
     );
@@ -345,12 +347,12 @@ export default function DisasterDashboard() {
     <div className="disaster-shell disaster-detail-shell">
       <div className="disaster-topbar">
         <Link to="/pemetaan-bencana" className="btn btn-sm btn-outline-secondary">
-          <i className="bi bi-arrow-left" /> Daftar Bencana
+          <i className="bi bi-arrow-left" /> {t("disaster.detail.backToList")}
         </Link>
         <div className="disaster-topbar-actions">
           <span>{user?.username}</span>
           <button type="button" className="btn btn-sm btn-outline-secondary" onClick={logout}>
-            <i className="bi bi-box-arrow-right" /> Logout
+            <i className="bi bi-box-arrow-right" /> {t("common.logout")}
           </button>
         </div>
       </div>
@@ -385,7 +387,7 @@ export default function DisasterDashboard() {
         <div className="disaster-detail-facts">
           <div>
             <i className="bi bi-bounding-box-circles" />
-            <span>AOI</span>
+            <span>{t("disaster.detail.aoi")}</span>
             <strong>
               {aoi?.area_ha != null
                 ? `${aoi.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 1 })} ha`
@@ -394,12 +396,12 @@ export default function DisasterDashboard() {
           </div>
           <div>
             <i className="bi bi-images" />
-            <span>Citra</span>
+            <span>{t("disaster.detail.imagery")}</span>
             <strong>{totalImagery}</strong>
           </div>
           <div>
             <i className="bi bi-diagram-3" />
-            <span>Analisis</span>
+            <span>{t("disaster.detail.analysis")}</span>
             <strong>{availableAnalyses}</strong>
           </div>
         </div>
@@ -431,7 +433,7 @@ export default function DisasterDashboard() {
           {isKarhutla && (
             <FirmsHotspotPanel aoi={aoi} onChange={setFirmsLayer} onZoom={handleFirmsZoom} />
           )}
-          {hotspotsLoading && <div className="text-muted small mb-3">Memuat hotspot...</div>}
+          {hotspotsLoading && <div className="text-muted small mb-3">{t("disaster.detail.hotspotsLoading")}</div>}
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
         </aside>
 
@@ -464,8 +466,8 @@ export default function DisasterDashboard() {
       {/* 4. KPI tiles */}
       <div className="disaster-section-heading">
         <div>
-          <span>Hasil Analisis</span>
-          <h2>Statistik Dampak</h2>
+          <span>{t("disaster.detail.analysisResults")}</span>
+          <h2>{t("disaster.detail.impactStats")}</h2>
         </div>
         <i className="bi bi-bar-chart-fill" />
       </div>
@@ -476,7 +478,7 @@ export default function DisasterDashboard() {
             role="status"
             aria-hidden="true"
           />
-          Memuat statistik...
+          {t("disaster.detail.statsLoading")}
         </div>
       ) : statsError ? (
         <div className="alert alert-warning py-2">{statsError}</div>
@@ -493,7 +495,7 @@ export default function DisasterDashboard() {
           {statistics.cross_layer.length > 0 && (
             <div className="card mb-3 disaster-modern-card">
               <div className="card-header py-2 disaster-soft-header">
-                <i className="bi bi-intersect" /> Statistik Lintas-Layer
+                <i className="bi bi-intersect" /> {t("disaster.detail.crossLayer")}
               </div>
               <div className="card-body">
                 {statistics.cross_layer.map((stat, idx) => (
@@ -524,7 +526,7 @@ export default function DisasterDashboard() {
           onClick={() => setAdditionalSourcesOpen((v) => !v)}
         >
           <span>
-            <i className="bi bi-database-fill" /> Sumber Tambahan
+            <i className="bi bi-database-fill" /> {t("disaster.detail.additionalSources")}
           </span>
           <i className={`bi ${additionalSourcesOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
         </button>
@@ -537,7 +539,7 @@ export default function DisasterDashboard() {
                 onClick={handleLoadSources}
                 disabled={sourcesLoading}
               >
-                <i className="bi bi-database-fill" /> Muat Sumber Resmi
+                <i className="bi bi-database-fill" /> {t("disaster.detail.loadOfficial")}
               </button>
               <button
                 type="button"
@@ -545,7 +547,7 @@ export default function DisasterDashboard() {
                 onClick={handleLoadBmkg}
                 disabled={alertsLoading}
               >
-                <i className="bi bi-cloud-rain-heavy-fill" /> Peringatan BMKG
+                <i className="bi bi-cloud-rain-heavy-fill" /> {t("disaster.detail.bmkgAlerts")}
               </button>
               <button
                 type="button"
@@ -553,7 +555,7 @@ export default function DisasterDashboard() {
                 onClick={handleLoadDem}
                 disabled={demLoading}
               >
-                <i className="bi bi-triangle-fill" /> Layer Kemiringan DEM
+                <i className="bi bi-triangle-fill" /> {t("disaster.detail.demSlope")}
               </button>
             </div>
             <SourceStatusPanel loading={sourcesLoading} error={sourcesError} sources={sources} />

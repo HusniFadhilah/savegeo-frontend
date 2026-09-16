@@ -12,6 +12,7 @@ import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcIdentifyResponse, LcYearResult } from "../types";
 import { translateLulcClass } from "../utils";
 import { RESULT_PANE } from "@/config/mapPanes";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 type ViewMode = "split" | "swipe";
 
@@ -87,6 +88,7 @@ export default function BeforeAfterMaps({
   endDate,
   dwProbabilityThreshold,
 }: Props) {
+  const { t } = useI18nStore();
   const beforeTile = (yearA != null ? yearData[yearA]?.tile_url : null) ?? changeMapData?.from_tile_url ?? null;
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? afterRawTile : afterRawTile;
@@ -144,8 +146,8 @@ export default function BeforeAfterMaps({
     <div>
       <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
         <p className="text-muted mb-0 me-auto" style={{ fontSize: ".8rem" }}>
-          <i className="fas fa-info-circle" /> {view === "split" ? "Kiri" : "Sebelum"} = tahun awal (
-          {yearA ?? "-"}) · {view === "split" ? "Kanan" : "Sesudah"} = tahun akhir ({yearB ?? "-"})
+          <i className="fas fa-info-circle" /> {view === "split" ? t("lc.left") : t("lc.before")} = {t("lc.startYear")} (
+          {yearA ?? "-"}) · {view === "split" ? t("lc.right") : t("lc.after")} = {t("lc.endYear")} ({yearB ?? "-"})
         </p>
         <div className="btn-group btn-group-sm" role="group" aria-label="Tampilan peta">
           <button
@@ -153,14 +155,14 @@ export default function BeforeAfterMaps({
             className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`}
             onClick={() => setView("split")}
           >
-            <i className="fas fa-columns" /> Berdampingan
+            <i className="fas fa-columns" /> {t("lc.sideBySide")}
           </button>
           <button
             type="button"
             className={`btn btn-outline-secondary ${view === "swipe" ? "active" : ""}`}
             onClick={() => setView("swipe")}
           >
-            <i className="fas fa-arrows-alt-h" /> Geser (Slider)
+            <i className="fas fa-arrows-alt-h" /> {t("lc.rangeSlider")}
           </button>
         </div>
         <div className="btn-group btn-group-sm" role="group" aria-label="Mode peta perubahan">
@@ -169,28 +171,28 @@ export default function BeforeAfterMaps({
             className={`btn btn-outline-success ${mode === "normal" ? "active" : ""}`}
             onClick={() => onModeChange("normal")}
           >
-            <i className="fas fa-map" /> Kelas Tahun
+            <i className="fas fa-map" /> {t("lc.yearClasses")}
           </button>
           <button
             type="button"
             className={`btn btn-outline-success ${mode === "changed" ? "active" : ""}`}
             onClick={() => onModeChange("changed")}
           >
-            <i className="fas fa-highlighter" /> Area Berubah
+            <i className="fas fa-highlighter" /> {t("lc.changedArea")}
           </button>
           <button
             type="button"
             className={`btn btn-outline-success ${mode === "destination" ? "active" : ""}`}
             onClick={() => onModeChange("destination")}
           >
-            <i className="fas fa-layer-group" /> Kelas Tujuan
+            <i className="fas fa-layer-group" /> {t("lc.destinationClasses")}
           </button>
         </div>
       </div>
 
       {changeMapLoading && (
         <div className="alert alert-info py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          <i className="fas fa-spinner fa-spin" /> Memuat peta perubahan {yearA} → {yearB}...
+          <i className="fas fa-spinner fa-spin" /> Memuat peta perubahan {yearA} â†’ {yearB}...
         </div>
       )}
       {changeMapError && (
@@ -216,7 +218,7 @@ export default function BeforeAfterMaps({
                     </strong>
                     <small>
                       {result.percentage != null
-                        ? `${result.percentage.toFixed(1)}% dari 100% luas AOI · ${formatArea(result.area_ha)}`
+                        ? `${result.percentage.toFixed(1)}% dari 100% luas AOI Â· ${formatArea(result.area_ha)}`
                         : "Titik berada di luar AOI atau kelas tidak tersedia."}
                     </small>
                   </div>

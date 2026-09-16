@@ -597,7 +597,7 @@ export default function LcChangeModule() {
 
               {dateMode === "year" && (
                 <small className="text-muted d-block mt-2">
-                  Seluruh tahun (Jan–Des) untuk setiap tahun yang dipilih.
+                  {t("lc.fullYearHint")}
                 </small>
               )}
 
@@ -649,7 +649,7 @@ export default function LcChangeModule() {
                     />
                   </div>
                   <small className="text-muted d-block mt-1">
-                    Hanya bulan/tanggal dipakai - diterapkan ke setiap tahun yang dianalisis.
+                    {t("lc.partialDateHint")}
                   </small>
                 </div>
               )}
@@ -674,7 +674,7 @@ export default function LcChangeModule() {
                     onChange={(e) => setDwThresholdEnabled(e.target.checked)}
                   />
                   <label className="form-check-label fw-bold" htmlFor="lcDwThresholdSwitch">
-                    <i className="fas fa-shield-halved" /> Ambang Keyakinan Klasifikasi
+                    <i className="fas fa-shield-halved" /> {t("lc.confidenceThreshold")}
                   </label>
                 </div>
                 {dwThresholdEnabled && (
@@ -694,13 +694,13 @@ export default function LcChangeModule() {
                       </span>
                     </div>
                     <small className="text-muted d-block">
-                      Piksel dengan keyakinan kelas di bawah ambang ini disamarkan (tidak dihitung).
+                      {t("lc.confidenceMaskHint")}
                     </small>
                   </>
                 )}
                 {!dwThresholdEnabled && (
                   <small className="text-muted d-block">
-                    Statistik keyakinan tetap ditampilkan meski ambang tidak diaktifkan.
+                    {t("lc.confidenceDisabledHint")}
                   </small>
                 )}
               </div>
@@ -731,9 +731,9 @@ export default function LcChangeModule() {
             </button>
 
             <div className="mt-3 text-muted" style={{ fontSize: ".8rem" }}>
-              <i className="fas fa-clock" /> ~1–2 menit per tahun
+              <i className="fas fa-clock" /> {t("lc.processingTime")}
               <br />
-              <i className="fas fa-info-circle" /> Setiap tahun = 1 request ke backend
+              <i className="fas fa-info-circle" /> {t("lc.requestPerYear")}
             </div>
           </div>
         </div>
@@ -755,10 +755,7 @@ export default function LcChangeModule() {
           <div className="alert alert-info d-flex align-items-start gap-2 mb-3">
             <i className="fas fa-info-circle mt-1 flex-shrink-0" />
             <div style={{ fontSize: ".875rem" }}>
-              <strong>Catatan Metodologi:</strong> Transisi antar kelas (Matriks &amp; Net Change)
-              dihitung dari <em>perubahan agregat luas area</em>, bukan analisis pixel-per-pixel GEE
-              - kecuali tab <strong>Peta Perubahan</strong>, yang memakai data riil piksel dari
-              backend.
+              <strong>{t("lc.methodologyTitle")}</strong> {t("lc.methodologyText")}
             </div>
           </div>
 
@@ -767,7 +764,7 @@ export default function LcChangeModule() {
               <div className="card mb-3">
                 <div className="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
                   <span className="fw-bold text-muted flex-shrink-0">
-                    <i className="fas fa-exchange-alt" /> Periode:
+                    <i className="fas fa-exchange-alt" /> {t("lc.period")}:
                   </span>
                   <div className="d-flex align-items-center gap-2 flex-wrap">
                     <div style={{ width: 96 }}>
@@ -785,15 +782,15 @@ export default function LcChangeModule() {
                         options={periodToOptions}
                       />
                     </div>
-                    <span className="text-muted small">Perbandingan bebas</span>
+                    <span className="text-muted small">{t("lc.freeComparison")}</span>
                   </div>
-                  <span className="badge bg-secondary">{activeYears.length} tahun dianalisis</span>
+                  <span className="badge bg-secondary">{activeYears.length} {t("lc.yearsAnalyzed")}</span>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary ms-auto"
                     onClick={downloadData}
                   >
-                    <i className="fas fa-download" /> Export JSON
+                    <i className="fas fa-download" /> {t("lc.exportJson")}
                   </button>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
 import type { LandCoverDatasetCatalog, LandCoverParams } from "@/features/landcover/types";
 import SearchableMultiSelect from "@/components/ui/SearchableMultiSelect";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   params: LandCoverParams;
@@ -61,6 +62,7 @@ function dateForYear(year: number, month: number, day: number) {
 
 /** Ported from module-carbon.html's #landcoverParams block. */
 export default function LandCoverParamsPanel({ params, year, onParamsChange }: Props) {
+  const { t } = useI18nStore();
   const [catalog, setCatalog] = useState<LandCoverDatasetCatalog>({});
 
   useEffect(() => {
@@ -95,11 +97,11 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
   return (
     <div id="landcoverParams">
       <h6 className="mb-3">
-        <i className="bi bi-map me-1" /> Dataset Tutupan Lahan
+        <i className="bi bi-map me-1" /> {t("landcover.title")}
       </h6>
 
       <div className="mb-3">
-        <label className="form-label">Dataset LULC</label>
+        <label className="form-label">{t("landcover.dataset")}</label>
         <SearchableMultiSelect
           id="landcoverDatasetSelectSearch"
           value={params.datasets}
@@ -109,8 +111,8 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
             label: ds.name,
             description: ds.resolution ? `Resolusi ${ds.resolution}` : undefined,
           }))}
-          placeholder="Cari dataset LULC..."
-          emptyHint="Dataset LULC tidak ditemukan"
+          placeholder={t("landcover.searchPlaceholder")}
+          emptyHint={t("landcover.empty")}
         />
         <select
           id="landcoverDatasetSelect"
@@ -133,20 +135,20 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
           ))}
         </select>
         <small className="text-muted d-block mt-1">
-          Pilih satu atau beberapa dataset LULC. Terpilih: {params.datasets.length}.
+          {t("landcover.selected", { count: params.datasets.length })}
         </small>
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Mode Dynamic World</label>
+        <label className="form-label">{t("landcover.dwMode")}</label>
         <select
           className="form-select"
           value={params.dwMode}
           onChange={(e) => onParamsChange({ dwMode: e.target.value as LandCoverParams["dwMode"] })}
         >
-          <option value="mode">Mode (Paling Sering)</option>
-          <option value="hillshade">Hillshade</option>
-          <option value="probability">Probability</option>
+          <option value="mode">{t("landcover.modeMostFrequent")}</option>
+          <option value="hillshade">{t("landcover.hillshade")}</option>
+          <option value="probability">{t("landcover.probability")}</option>
         </select>
       </div>
 
@@ -159,15 +161,15 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
           onChange={(e) => onParamsChange({ includeImprobableClasses: e.target.checked })}
         />
         <label className="form-check-label" htmlFor="includeImprobableClasses">
-          Tampilkan kelas langka/tidak relevan tropis
+          {t("landcover.includeRare")}
           <small className="text-muted d-block">
-            Contoh: Snow/Ice. Default disembunyikan untuk AOI Indonesia.
+            {t("landcover.includeRareHint")}
           </small>
         </label>
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Mode Tanggal Analisis</label>
+        <label className="form-label">{t("landcover.dateMode")}</label>
         <div className="btn-group w-100" role="group" aria-label="Mode tanggal analisis LULC">
           {(["year", "month", "date"] as const).map((mode) => (
             <button
@@ -177,7 +179,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
               onClick={() => setDateMode(mode)}
             >
               <i className="bi bi-calendar-event me-1" />
-              {mode === "year" ? "Tahun" : mode === "month" ? "Bulan" : "Tanggal"}
+              {mode === "year" ? t("landcover.year") : mode === "month" ? t("landcover.month") : t("landcover.date")}
             </button>
           ))}
         </div>
@@ -186,7 +188,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
       {dateMode === "year" && (
         <div className="mb-3">
           <label className="form-label">
-            Rentang Bulan <span className="text-muted">(Dynamic World)</span>
+            {t("landcover.monthRange")} <span className="text-muted">(Dynamic World)</span>
           </label>
           <div className="d-flex gap-2">
             <select
@@ -216,14 +218,14 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
             </select>
           </div>
           <small className="text-muted">
-            Dataset tahunan menggunakan tahun penuh yang dipilih.
+            {t("landcover.fullYearHint")}
           </small>
         </div>
       )}
 
       {dateMode === "month" && (
         <div className="mb-3">
-          <label className="form-label">Pilih Bulan</label>
+          <label className="form-label">{t("landcover.selectMonth")}</label>
           <select
             className="form-select"
             id="lcSelectedMonth"
@@ -237,7 +239,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
             ))}
           </select>
           <small className="text-muted d-block mt-1">
-            Dynamic World difilter per bulan. Dataset tahunan menggunakan tahun dari slider di atas.
+            {t("landcover.monthHint")}
           </small>
         </div>
       )}
@@ -246,7 +248,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         <div className="mb-3">
           <div className="row g-2">
             <div className="col-6">
-              <label className="form-label">Dari Tanggal</label>
+              <label className="form-label">{t("landcover.fromDate")}</label>
               <input
                 id="lcStartDate"
                 type="date"
@@ -256,7 +258,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
               />
             </div>
             <div className="col-6">
-              <label className="form-label">Sampai Tanggal</label>
+              <label className="form-label">{t("landcover.toDate")}</label>
               <input
                 id="lcEndDate"
                 type="date"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CloudMaskTechnique, CloudMaskTechniqueInfo, SatelliteProvider, VegetationParams } from "@/features/vegetation/types";
 import { VEGETATION_INDICES } from "@/features/vegetation/indices";
 import { getCloudMaskTechniques, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   params: VegetationParams;
@@ -54,6 +55,7 @@ function indexIcon(code: string) {
  * catalog request fails, so the panel still works offline.
  */
 export default function VegetationParamsPanel({ params, onParamsChange }: Props) {
+  const { t } = useI18nStore();
   const [badges, setBadges] = useState<BadgeIndex[]>(FALLBACK_BADGES);
   const [satellites, setSatellites] = useState<Record<string, SatelliteProvider>>({});
   const [techniques, setTechniques] = useState<Record<string, CloudMaskTechniqueInfo>>({});
@@ -107,11 +109,11 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
   return (
     <div id="vegetationParams">
       <h6 className="mb-3">
-        <i className="bi bi-flower2 me-1" /> Parameter Citra
+        <i className="bi bi-flower2 me-1" /> {t("imagery.parametersTitle")}
       </h6>
 
       <div className="mb-3">
-        <label className="form-label">Provider Satelit</label>
+        <label className="form-label">{t("imagery.satelliteProvider")}</label>
         <select
           className="form-select"
           value={params.satellite}
@@ -120,7 +122,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
         >
           {Object.values(satellites).map((sat) => (
             <option key={sat.key} value={sat.key}>
-              {sat.name} — {sat.resolution_label} · revisit {sat.revisit_days} hari
+              {sat.name} — {sat.resolution_label} · {t("imagery.revisit", { days: sat.revisit_days })}
             </option>
           ))}
         </select>
@@ -134,22 +136,22 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
                 <i className="bi bi-aspect-ratio me-1" /> {activeSatellite.resolution_label}
               </span>
               <span>
-                <i className="bi bi-arrow-repeat me-1" /> Revisit {activeSatellite.revisit_days} hari
+                <i className="bi bi-arrow-repeat me-1" /> {t("imagery.revisit", { days: activeSatellite.revisit_days })}
               </span>
               <span>
-                <i className="bi bi-calendar-event me-1" /> Sejak {activeSatellite.launch}
+                <i className="bi bi-calendar-event me-1" /> {t("imagery.since", { year: activeSatellite.launch })}
               </span>
             </div>
             <div className="text-muted mb-1">{activeSatellite.description}</div>
             <div className="text-muted">
-              <i className="bi bi-layers me-1" /> Band: {activeSatellite.bands_available.join(", ")}
+              <i className="bi bi-layers me-1" /> {t("imagery.bands")}: {activeSatellite.bands_available.join(", ")}
             </div>
           </div>
         )}
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Teknik Pemrosesan Awan</label>
+        <label className="form-label">{t("imagery.cloudTechnique")}</label>
         <select
           className="form-select"
           value={params.cloudMaskTechnique}
@@ -164,7 +166,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
         </select>
         {isLandsat ? (
           <small className="text-muted d-block mt-1">
-            Landsat pakai masking QA_PIXEL sendiri - opsi ini hanya berlaku untuk Sentinel-2.
+            {t("imagery.landsatCloudHint")}
           </small>
         ) : (
           activeTechnique && <small className="text-muted d-block mt-1">{activeTechnique.description}</small>
@@ -172,7 +174,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Rentang Bulan</label>
+        <label className="form-label">{t("imagery.monthRange")}</label>
         <div className="d-flex gap-2">
           <select
             className="form-select"
@@ -203,7 +205,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Ambang Awan (%)</label>
+        <label className="form-label">{t("imagery.cloudThreshold")}</label>
         <input
           id="cloudSlider"
           type="range"

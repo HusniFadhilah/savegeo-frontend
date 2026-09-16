@@ -1,5 +1,6 @@
 import { useState } from "react";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   years: number[];
@@ -20,6 +21,7 @@ type Mode = "list" | "slider";
  * doesn't reset a selection made in the other one.
  */
 export default function YearSelector({ years, minYear, maxYear, onChange }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [mode, setMode] = useState<Mode>("list");
 
   const options: number[] = [];
@@ -70,20 +72,20 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
 
   return (
     <div>
-      <div className="btn-group btn-group-sm w-100 mb-2" role="group" aria-label="Mode pilih tahun">
+      <div className="btn-group btn-group-sm w-100 mb-2" role="group" aria-label={t("lc.yearSelectMode")}>
         <button
           type="button"
           className={`btn btn-outline-secondary ${mode === "list" ? "active" : ""}`}
           onClick={() => setMode("list")}
         >
-          <i className="bi bi-list-ol" /> Custom
+          <i className="bi bi-list-ol" /> {t("lc.custom")}
         </button>
         <button
           type="button"
           className={`btn btn-outline-secondary ${mode === "slider" ? "active" : ""}`}
           onClick={() => setMode("slider")}
         >
-          <i className="bi bi-sliders" /> Slider Rentang
+          <i className="bi bi-sliders" /> {t("lc.rangeSlider")}
         </button>
       </div>
 
@@ -107,7 +109,7 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
                   className="btn btn-sm btn-outline-danger py-0 px-1"
                   style={{ lineHeight: 1.4 }}
                   onClick={() => removeYear(i)}
-                  aria-label="Hapus tahun"
+                  aria-label={t("lc.removeYear")}
                 >
                   <i className="bi bi-x" style={{ fontSize: 12 }} />
                 </button>
@@ -117,9 +119,9 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
             </div>
           ))}
           <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-1" onClick={addYear}>
-            <i className="bi bi-plus-circle" /> Tambah Tahun
+            <i className="bi bi-plus-circle" /> {t("lc.addYear")}
           </button>
-          <small className="text-muted d-block mt-1">Minimal 2 · Urutan otomatis</small>
+          <small className="text-muted d-block mt-1">{t("lc.minimumTwoAuto")}</small>
         </div>
       )}
 
@@ -127,7 +129,7 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
         <div>
           <div className="d-flex justify-content-between mb-1">
             <span className="badge bg-success">{sliderStart}</span>
-            <span className="text-muted small align-self-center">sampai</span>
+            <span className="text-muted small align-self-center">{t("lc.to")}</span>
             <span className="badge bg-success">{sliderEnd}</span>
           </div>
           <div className="dual-range-slider">
@@ -142,7 +144,7 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
               max={maxYear}
               value={sliderStart}
               onChange={(e) => setSliderRange(Number(e.target.value), sliderEnd)}
-              aria-label="Tahun awal"
+              aria-label={t("lc.startYear")}
             />
             <input
               type="range"
@@ -150,14 +152,14 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
               max={maxYear}
               value={sliderEnd}
               onChange={(e) => setSliderRange(sliderStart, Number(e.target.value))}
-              aria-label="Tahun akhir"
+              aria-label={t("lc.endYear")}
             />
           </div>
           <div className="d-flex justify-content-between text-muted" style={{ fontSize: ".72rem" }}>
             <span>{minYear}</span>
             <span>{maxYear}</span>
           </div>
-          <small className="text-muted d-block mt-1">Geser kedua gagang untuk pilih tahun awal &amp; akhir</small>
+          <small className="text-muted d-block mt-1">{t("lc.sliderHint")}</small>
         </div>
       )}
     </div>

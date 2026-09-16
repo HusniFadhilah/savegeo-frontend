@@ -57,10 +57,10 @@ function Note({ tone, title, children }: { tone: NoteTone; title?: string; child
   );
 }
 
-const PARAM_TABS: { key: ParamKey; label: string; icon: string }[] = [
-  { key: "veg", label: "Vegetation Indices", icon: "bi-tree-fill" },
-  { key: "lc", label: "Land Cover", icon: "bi-map-fill" },
-  { key: "carbon", label: "Carbon Stock", icon: "bi-graph-up-arrow" },
+const PARAM_TABS: { key: ParamKey; labelKey: string; icon: string }[] = [
+  { key: "veg", labelKey: "guide.param.vegetation", icon: "bi-tree-fill" },
+  { key: "lc", labelKey: "guide.param.landcover", icon: "bi-map-fill" },
+  { key: "carbon", labelKey: "guide.param.carbon", icon: "bi-graph-up-arrow" },
 ];
 
 const DATASET_DOCS = [
@@ -359,33 +359,33 @@ export default function GuideModule() {
 
       <div className="guide-accordion">
         <GuideStep id="step1" num="1" icon="bi-geo-alt-fill" title={t("guide.step.aoi")} openId={openId} onToggle={toggle}>
-          <p className="guide-lead">Ada 3 cara untuk memilih area analisis:</p>
+          <p className="guide-lead">{t("guide.aoiIntro")}</p>
           <div className="guide-method-grid">
             <div className="guide-method-card">
               <h3>
-                <i className="bi bi-flag-fill" /> Metode A: Indonesia Admin Boundaries
+                <i className="bi bi-flag-fill" /> {t("guide.method.adminTitle")}
               </h3>
               <ol>
                 <li>
-                  Klik tab <strong>&quot;Indonesia Admin&quot;</strong>
+                  {t("guide.method.clickTab")} <strong>&quot;{t("aoi.tab.admin")}&quot;</strong>
                 </li>
                 <li>
-                  Pilih <strong>Provinsi</strong> dari dropdown
+                  {t("guide.method.choose")} <strong>{t("carbon.aoiRegion.province")}</strong> {t("guide.method.fromDropdown")}
                 </li>
                 <li>
-                  Pilih <strong>Kota/Kabupaten</strong> (opsional)
+                  {t("guide.method.choose")} <strong>{t("carbon.aoiRegion.city")}</strong> ({t("guide.optional")})
                 </li>
                 <li>
-                  Pilih <strong>Kecamatan</strong> (opsional)
+                  {t("guide.method.choose")} <strong>{t("carbon.aoiRegion.district")}</strong> ({t("guide.optional")})
                 </li>
                 <li>
-                  Pilih <strong>Kelurahan/Desa</strong> (opsional)
+                  {t("guide.method.choose")} <strong>{t("carbon.aoiRegion.village")}</strong> ({t("guide.optional")})
                 </li>
                 <li>
-                  Klik tombol <strong>&quot;Load Region&quot;</strong>
+                  {t("guide.method.clickButton")} <strong>&quot;{t("carbon.aoiRegion.loadRegion")}&quot;</strong>
                 </li>
               </ol>
-              <Note tone="info" title="Tips:">
+              <Note tone="info" title={t("guide.tips")}>
                 Anda bisa memilih hanya sampai level provinsi dengan klik &quot;📍 Use Province Only&quot; atau level
                 lainnya sesuai kebutuhan.
               </Note>
@@ -393,45 +393,45 @@ export default function GuideModule() {
 
             <div className="guide-method-card">
               <h3>
-                <i className="bi bi-geo-alt-fill" /> Metode B: Koordinat + Buffer
+                <i className="bi bi-geo-alt-fill" /> {t("guide.method.coordinateTitle")}
               </h3>
               <ol>
                 <li>
-                  Klik tab <strong>&quot;Coordinates&quot;</strong>
+                  {t("guide.method.clickTab")} <strong>&quot;{t("aoi.tab.coordinate")}&quot;</strong>
                 </li>
                 <li>
-                  Masukkan <strong>Latitude</strong> (contoh: -6.9667)
+                  {t("guide.method.enter")} <strong>Latitude</strong> ({t("guide.example")}: -6.9667)
                 </li>
                 <li>
-                  Masukkan <strong>Longitude</strong> (contoh: 110.4167)
+                  {t("guide.method.enter")} <strong>Longitude</strong> ({t("guide.example")}: 110.4167)
                 </li>
                 <li>
-                  Atur <strong>Buffer</strong> dalam kilometer (1-50 km)
+                  {t("guide.method.set")} <strong>Buffer</strong> ({t("guide.kilometers")}: 1-50 km)
                 </li>
                 <li>
-                  Klik tombol <strong>&quot;Set AOI&quot;</strong>
+                  {t("guide.method.clickButton")} <strong>&quot;{t("carbon.aoiCoord.setAoi")}&quot;</strong>
                 </li>
               </ol>
-              <Note tone="warn" title="Catatan:">
+              <Note tone="warn" title={t("guide.note")}>
                 Buffer yang terlalu besar dapat memperlambat processing.
               </Note>
             </div>
 
             <div className="guide-method-card">
               <h3>
-                <i className="bi bi-pencil-fill" /> Metode C: Gambar Manual
+                <i className="bi bi-pencil-fill" /> {t("guide.method.drawTitle")}
               </h3>
               <ol>
                 <li>
-                  Klik tab <strong>&quot;Draw on Map&quot;</strong>
+                  {t("guide.method.clickTab")} <strong>&quot;{t("aoi.tab.draw")}&quot;</strong>
                 </li>
-                <li>Gunakan tool polygon/rectangle di peta</li>
-                <li>Gambar area yang diinginkan di peta</li>
+                <li>{t("guide.method.useDrawTools")}</li>
+                <li>{t("guide.method.drawArea")}</li>
                 <li>
-                  Klik tombol <strong>&quot;Use Drawn AOI&quot;</strong>
+                  {t("guide.method.clickButton")} <strong>&quot;{t("guide.method.useDrawnAoi")}&quot;</strong>
                 </li>
               </ol>
-              <Note tone="success" title="Kelebihan:">
+              <Note tone="success" title={t("guide.advantage")}>
                 Metode ini paling fleksibel untuk area yang spesifik.
               </Note>
             </div>
@@ -439,7 +439,7 @@ export default function GuideModule() {
         </GuideStep>
 
         <GuideStep id="step2" num="2" icon="bi-diagram-3-fill" title={t("guide.step.analysis")} openId={openId} onToggle={toggle}>
-          <p className="guide-lead">Platform menyediakan 4 jenis analisis:</p>
+          <p className="guide-lead">{t("guide.analysisIntro")}</p>
           <div className="guide-analysis-grid">
             <div className="guide-analysis-card">
               <i className="bi bi-tree-fill" />
@@ -503,7 +503,7 @@ export default function GuideModule() {
                 className={`guide-param-tab ${paramTab === p.key ? "active" : ""}`}
                 onClick={() => setParamTab(p.key)}
               >
-                <i className={`bi ${p.icon}`} /> {p.label}
+                <i className={`bi ${p.icon}`} /> {t(p.labelKey)}
               </button>
             ))}
           </div>
@@ -651,7 +651,7 @@ export default function GuideModule() {
         <GuideStep id="step4" num="4" icon="bi-play-circle-fill" title={t("guide.step.results")} openId={openId} onToggle={toggle}>
           <div className="guide-block">
             <h3>
-              <i className="bi bi-play-fill" /> Menjalankan Analisis
+              <i className="bi bi-play-fill" /> {t("guide.runAnalysisTitle")}
             </h3>
             <div className="guide-run-grid">
               <div className="guide-run-step">

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { env } from "@/config/env";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/features/admin/components/SearchableSelect";
 import { fetchDisasterEvents } from "./api";
@@ -72,6 +73,7 @@ function resolveThumbnailUrl(thumbnail: string | null | undefined): string | nul
  */
 export default function DisasterListPage() {
   const { user, logout } = useUserAuthStore();
+  const { t } = useI18nStore();
   const { getInt } = useConfigStore();
   const yearMin = getInt("year.min", 2015);
   const yearMax = getInt("year.max", new Date().getFullYear());
@@ -99,7 +101,7 @@ export default function DisasterListPage() {
         setError(
           err instanceof ApiError
             ? err.message
-            : "Terjadi kesalahan jaringan saat memuat daftar bencana.",
+            : t("disaster.list.loadFailed"),
         );
       })
       .finally(() => {
@@ -186,29 +188,28 @@ export default function DisasterListPage() {
 
       <section className="disaster-list-hero">
         <div>
-          <span className="disaster-eyebrow">Pemetaan Bencana</span>
-          <h1>Dashboard Intelijen Bencana</h1>
+          <span className="disaster-eyebrow">{t("disaster.list.eyebrow")}</span>
+          <h1>{t("disaster.list.title")}</h1>
           <p>
-            Pantau kejadian terpublikasi, buka citra pre/post, dan telusuri hasil analisis spasial
-            dalam satu alur kerja yang ringkas.
+            {t("disaster.list.description")}
           </p>
         </div>
         <div className="disaster-hero-metrics">
           <div>
             <i className="bi bi-broadcast-pin" />
-            <span>Event Aktif</span>
+            <span>{t("disaster.list.activeEvents")}</span>
             <strong>{events.length}</strong>
           </div>
           <div>
             <i className="bi bi-cpu" />
-            <span>Analisis</span>
+            <span>{t("disaster.list.analysis")}</span>
             <strong>
               {events.reduce((sum, event) => sum + (event.available_analysis_count ?? 0), 0)}
             </strong>
           </div>
           <div>
             <i className="bi bi-funnel" />
-            <span>Filter</span>
+            <span>{t("disaster.list.filter")}</span>
             <strong>{filterCount}</strong>
           </div>
         </div>
@@ -219,7 +220,7 @@ export default function DisasterListPage() {
       <form className="disaster-filter-panel" onSubmit={applyFilters}>
         <div className="disaster-filter-grid">
           <div>
-            <label className="form-label small fw-semibold mb-1">Jenis Bencana</label>
+            <label className="form-label small fw-semibold mb-1">{t("disaster.list.type")}</label>
             <select
               className="form-select form-select-sm"
               value={pendingFilters.disaster_type ?? ""}
@@ -227,7 +228,7 @@ export default function DisasterListPage() {
                 setPendingFilters((f) => ({ ...f, disaster_type: e.target.value || undefined }))
               }
             >
-              <option value="">Semua Jenis</option>
+              <option value="">{t("disaster.list.allTypes")}</option>
               {EVENT_DISASTER_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -236,7 +237,7 @@ export default function DisasterListPage() {
             </select>
           </div>
           <div>
-            <label className="form-label small fw-semibold mb-1">Tahun</label>
+            <label className="form-label small fw-semibold mb-1">{t("disaster.list.year")}</label>
             <select
               className="form-select form-select-sm"
               value={pendingFilters.year ?? ""}
@@ -244,7 +245,7 @@ export default function DisasterListPage() {
                 setPendingFilters((f) => ({ ...f, year: e.target.value || undefined }))
               }
             >
-              <option value="">Semua Tahun</option>
+              <option value="">{t("disaster.list.allYears")}</option>
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
@@ -253,12 +254,12 @@ export default function DisasterListPage() {
             </select>
           </div>
           <div>
-            <label className="form-label small fw-semibold mb-1">Provinsi</label>
+            <label className="form-label small fw-semibold mb-1">{t("disaster.list.province")}</label>
             <SearchableSelect
               value={pendingFilters.province ?? ""}
               options={provinceOptions}
-              placeholder="Cari provinsi"
-              emptyHint="Belum ada event pada provinsi"
+              placeholder={t("disaster.list.searchProvince")}
+              emptyHint={t("disaster.list.noProvinceEvents")}
               allowCustomValue={false}
               variant="plain"
               className="disaster-province-select form-select-sm"
@@ -268,7 +269,7 @@ export default function DisasterListPage() {
             />
           </div>
           <div>
-            <label className="form-label small fw-semibold mb-1">Tingkat Keparahan</label>
+            <label className="form-label small fw-semibold mb-1">{t("disaster.list.severity")}</label>
             <select
               className="form-select form-select-sm"
               value={pendingFilters.severity ?? ""}
@@ -276,7 +277,7 @@ export default function DisasterListPage() {
                 setPendingFilters((f) => ({ ...f, severity: e.target.value || undefined }))
               }
             >
-              <option value="">Semua</option>
+              <option value="">{t("disaster.list.all")}</option>
               {SEVERITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -285,11 +286,11 @@ export default function DisasterListPage() {
             </select>
           </div>
           <div className="disaster-filter-search">
-            <label className="form-label small fw-semibold mb-1">Cari</label>
+            <label className="form-label small fw-semibold mb-1">{t("disaster.list.search")}</label>
             <input
               type="text"
               className="form-control form-control-sm"
-              placeholder="Nama / lokasi kejadian"
+              placeholder={t("disaster.list.searchPlaceholder")}
               value={pendingFilters.search ?? ""}
               onChange={(e) =>
                 setPendingFilters((f) => ({ ...f, search: e.target.value || undefined }))
@@ -299,10 +300,10 @@ export default function DisasterListPage() {
         </div>
         <div className="disaster-filter-actions">
           <button type="submit" className="btn btn-sm btn-primary">
-            <i className="bi bi-funnel-fill" /> Terapkan
+            <i className="bi bi-funnel-fill" /> {t("disaster.list.apply")}
           </button>
           <button type="button" className="btn btn-sm btn-outline-secondary" onClick={resetFilters}>
-            Reset
+            {t("admin.reset")}
           </button>
         </div>
       </form>
@@ -314,20 +315,20 @@ export default function DisasterListPage() {
             role="status"
             aria-hidden="true"
           />
-          Memuat daftar kejadian bencana...
+          {t("disaster.list.loading")}
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {!loading && !error && !events.length && (
         <div className="alert alert-secondary py-2">
-          Tidak ada kejadian bencana yang cocok dengan filter ini.
+          {t("disaster.list.empty")}
         </div>
       )}
 
       {!loading && !error && events.length > 0 && (
         <div className="disaster-pagination-bar">
           <div className="disaster-pagination-size">
-            <span>Tampil</span>
+            <span>{t("disaster.list.show")}</span>
             <select
               className="form-select form-select-sm"
               value={pageSize}
@@ -339,7 +340,7 @@ export default function DisasterListPage() {
                 </option>
               ))}
             </select>
-            <span>per halaman</span>
+            <span>{t("disaster.list.perPage")}</span>
           </div>
           <div className="disaster-pagination-info">
             <span>
