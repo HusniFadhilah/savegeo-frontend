@@ -12,3 +12,11 @@
  */
 export const RESULT_PANE = "gee-result-pane";
 export const RESULT_PANE_Z_INDEX = 350;
+
+/**
+ * Reference layers belonging to a basemap (for example Esri's
+ * World_Transportation roads) must stay above the AOI/GeoJSON overlay, while
+ * the basemap imagery itself remains in Leaflet's tilePane below scene tiles.
+ */
+export const BASEMAP_REFERENCE_PANE = "basemap-reference-pane";
+export const BASEMAP_REFERENCE_PANE_Z_INDEX = 450;

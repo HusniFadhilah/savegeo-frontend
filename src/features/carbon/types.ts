@@ -214,6 +214,8 @@ export interface CarbonDeltaResponse {
     net_delta_co2e_tons: number;
   };
   parameters: { start_month: number; end_month: number; cloud_threshold: number; scale: number; interval: number };
+  /** Exact visualization parameters used to create all timelapse tiles. */
+  visualization?: { min: number; max: number; palette: string[]; legend_bins: number };
   model_info: { model_name: string; algorithm?: string; scale: number };
 }
 

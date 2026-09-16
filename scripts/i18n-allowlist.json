@@ -1,0 +1,37 @@
+{
+  "technicalTerms": [
+    "SaveGeo",
+    "AOI",
+    "CRS",
+    "EPSG",
+    "API",
+    "NASA FIRMS",
+    "NASA GIBS",
+    "Sentinel-2",
+    "Landsat",
+    "MODIS",
+    "VIIRS",
+    "GeoTIFF",
+    "COG",
+    "PMTiles",
+    "GeoParquet",
+    "DuckDB",
+    "NDVI",
+    "EVI",
+    "NDWI",
+    "SAVI",
+    "NBR",
+    "NDMI",
+    "NDRE"
+  ],
+  "hardcodedValues": [
+    "AOI",
+    "3D",
+    "2D",
+    "ID",
+    "EN",
+    "R²",
+    "RMSE",
+    "CV"
+  ]
+}

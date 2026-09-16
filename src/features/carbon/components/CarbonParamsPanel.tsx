@@ -13,6 +13,7 @@ import type {
   ClipMode,
 } from "@/features/carbon/types";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import LocalCalibrationNotice from "./LocalCalibrationNotice";
 
 interface Props {
   params: CarbonParams;
@@ -320,6 +321,8 @@ export default function CarbonParamsPanel({
           </small>
         )}
       </div>
+
+      <LocalCalibrationNotice />
 
       <div className="mb-3">
         <label className="form-label">

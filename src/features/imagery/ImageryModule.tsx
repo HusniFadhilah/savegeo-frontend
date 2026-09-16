@@ -1301,7 +1301,7 @@ export default function ImageryModule() {
               <div className="btn-group btn-group-sm ms-auto" role="group" aria-label="Mode tampilan">
                 <button
                   type="button"
-                  className={`btn ${viewMode === "single" ? "btn-primary" : "btn-outline-secondary"}`}
+                  className={`btn text-white ${viewMode === "single" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setViewMode("single")}
                 >
                   Satu Scene
@@ -1648,7 +1648,7 @@ export default function ImageryModule() {
               <div className="card-body">
                 <div className="row g-2 mb-2">
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">Scene A (Sebelum)</label>
+                    <label className="form-label small fw-semibold mb-1">Scene A</label>
                     <SearchableSelect
                       value={compareSceneAId ?? ""}
                       onChange={(v) => setCompareSceneAId(v || null)}
@@ -1659,7 +1659,7 @@ export default function ImageryModule() {
                     />
                   </div>
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">Scene B (Sesudah)</label>
+                    <label className="form-label small fw-semibold mb-1">Scene B</label>
                     <SearchableSelect
                       value={compareSceneBId ?? ""}
                       onChange={(v) => setCompareSceneBId(v || null)}

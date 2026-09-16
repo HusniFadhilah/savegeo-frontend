@@ -131,7 +131,7 @@ export async function analyzeCarbon({
         model_name: selectedModel.name,
         start_date: `${params.year}-${pad(params.startMonth)}-01`,
         end_date: `${params.year}-${pad(params.endMonth)}-${pad(lastDayOfEndMonth)}`,
-        scale: 100,
+        scale: 10,
         n_samples: 2000,
         vis_min: visMin,
         vis_max: visMax,

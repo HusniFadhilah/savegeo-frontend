@@ -12,6 +12,7 @@ import DashboardOverview from "./components/DashboardOverview";
 import GeeCredentials from "./components/GeeCredentials";
 import ArcgisStatus from "./components/ArcgisStatus";
 import ModelRegistry from "./components/ModelRegistry";
+import CarbonCalibration from "./components/CarbonCalibration";
 import ConfigEditor from "./components/ConfigEditor";
 import AdminUsers from "./components/AdminUsers";
 import CompanyBoundaries from "./components/CompanyBoundaries";
@@ -30,6 +31,7 @@ const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: strin
       { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee", permission: "credential.read" },
       { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis", permission: "credential.read" },
       { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models", permission: "model.read" },
+      { id: "cc", icon: "bi-tree-fill", labelKey: "admin.menu.calibration", permission: "calibration.read" },
       { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config", permission: "config.read" },
       { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users", permission: "users.read" },
       { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites", permission: "satellite.read" },
@@ -54,6 +56,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   ge: ["admin.title.gee", "admin.subtitle.gee"],
   ag: ["admin.title.arcgis", "admin.subtitle.arcgis"],
   ml: ["admin.title.models", "admin.subtitle.models"],
+  cc: ["admin.title.calibration", "admin.subtitle.calibration"],
   cf: ["admin.title.config", "admin.subtitle.config"],
   us: ["admin.title.users", "admin.subtitle.users"],
   sp: ["admin.title.satellites", "admin.subtitle.satellites"],
@@ -218,6 +221,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "ge" && <GeeCredentials />}
               {section === "ag" && <ArcgisStatus />}
               {section === "ml" && <ModelRegistry />}
+              {section === "cc" && <CarbonCalibration />}
               {section === "cf" && <ConfigEditor />}
               {section === "us" && <AdminUsers />}
               {section === "sp" && <SatelliteProviders />}

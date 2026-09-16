@@ -123,7 +123,13 @@ export default function CarbonTimeSeriesPanel({ result, zoom, center, visMin, vi
   }, [series]);
 
   const activeTile = series[frame]?.tile_url;
-  const legendEntries = buildCarbonLegend(visMin, visMax, visPalette, legendBins);
+  const visualization = result.visualization;
+  const legendEntries = buildCarbonLegend(
+    visualization?.min ?? visMin,
+    visualization?.max ?? visMax,
+    visualization?.palette?.length ? visualization.palette : visPalette,
+    visualization?.legend_bins ?? legendBins,
+  );
 
   return (
     <div className="card mt-3">

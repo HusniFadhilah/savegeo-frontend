@@ -167,7 +167,30 @@ export const CAT_COLORS: Record<string, string> = {
 // from this module keep working unchanged.
 export { INDUSTRY_LABEL, INDUSTRY_OPTIONS, COMPANY_SOURCE_LABEL as SOURCE_LABEL } from "@/types/api";
 
-export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cf" | "us" | "co" | "ds" | "sp" | "gd" | "ri";
+export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cc" | "cf" | "us" | "co" | "ds" | "sp" | "gd" | "ri";
+
+export interface CarbonCalibrationDataset {
+  id: number;
+  dataset_id: string;
+  name: string;
+  manifest: Record<string, unknown>;
+  access: string;
+  status: string;
+  is_active: boolean;
+  validation_report?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface CarbonCalibrationFile {
+  id: number;
+  source_name: string;
+  media_type?: string | null;
+  size_bytes: number;
+  sha256: string;
+  file_kind: string;
+  metadata?: Record<string, unknown> | null;
+}
 
 /** GET /admin/satellite-providers row - merged registry defaults + DB
  * override, plus admin-only bookkeeping fields not exposed on the public
@@ -227,6 +250,12 @@ export interface DisasterEvent {
   description?: string | null;
   source?: string | null;
   thumbnail?: string | null;
+  slug?: string | null;
+  short_title?: string | null;
+  monitoring_from?: string | null;
+  monitoring_to?: string | null;
+  methodology?: string | null;
+  limitations?: string[];
   created_at?: string | null;
   updated_at?: string | null;
 }

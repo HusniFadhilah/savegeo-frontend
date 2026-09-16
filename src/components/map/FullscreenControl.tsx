@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 /**
  * Native Fullscreen API toggle, added as a real Leaflet control (topleft)
@@ -9,6 +10,8 @@ import L from "leaflet";
  */
 export default function FullscreenControl() {
   const map = useMap();
+  const language = useI18nStore((state) => state.language);
+  const t = useI18nStore.getState().t;
 
   useEffect(() => {
     const container = map.getContainer();
@@ -18,7 +21,7 @@ export default function FullscreenControl() {
       const wrapper = L.DomUtil.create("div", "leaflet-bar leaflet-control");
       const link = L.DomUtil.create("a", "fullscreen-control-btn", wrapper) as HTMLAnchorElement;
       link.href = "#";
-      link.title = "Layar penuh";
+      link.title = t("map.fullscreen");
       link.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>';
 
       L.DomEvent.on(link, "click", (e) => {
@@ -42,7 +45,7 @@ export default function FullscreenControl() {
       const isFs = document.fullscreenElement === container;
       icon.className = isFs ? "bi bi-fullscreen-exit" : "bi bi-arrows-fullscreen";
       const link = control.getContainer()?.querySelector(".fullscreen-control-btn");
-      link?.setAttribute("title", isFs ? "Keluar layar penuh" : "Layar penuh");
+      link?.setAttribute("title", isFs ? t("map.exitFullscreen") : t("map.fullscreen"));
     };
     document.addEventListener("fullscreenchange", updateIcon);
 
@@ -50,7 +53,7 @@ export default function FullscreenControl() {
       document.removeEventListener("fullscreenchange", updateIcon);
       map.removeControl(control);
     };
-  }, [map]);
+  }, [language, map, t]);
 
   return null;
 }

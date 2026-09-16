@@ -67,6 +67,11 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
   const [description, setDescription] = useState(event?.description ?? "");
   const [source, setSource] = useState(event?.source ?? "");
   const [thumbnail, setThumbnail] = useState(event?.thumbnail ?? "");
+  const [slug, setSlug] = useState(event?.slug ?? "");
+  const [shortTitle, setShortTitle] = useState(event?.short_title ?? "");
+  const [monitoringFrom, setMonitoringFrom] = useState(event?.monitoring_from ?? event?.start_date ?? "");
+  const [monitoringTo, setMonitoringTo] = useState(event?.monitoring_to ?? event?.end_date ?? "");
+  const [methodology, setMethodology] = useState(event?.methodology ?? "");
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -93,6 +98,11 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
         description: description.trim(),
         source: source.trim(),
         thumbnail: thumbnail.trim(),
+        slug: slug.trim() || undefined,
+        short_title: shortTitle.trim() || undefined,
+        monitoring_from: monitoringFrom || undefined,
+        monitoring_to: monitoringTo || undefined,
+        methodology: methodology.trim() || undefined,
       };
       const saved = isEdit
         ? await updateDisasterEvent(event!.id, { ...basePayload, status })
@@ -194,6 +204,23 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <input className="form-input" type="date" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
+
+        {disasterType === "forest_fire" && (
+          <div className="card mb-3" style={{ background: "var(--surface-muted, rgba(13,139,97,.05))" }}>
+            <div className="card-body-custom">
+              <div className="form-field" style={{ marginBottom: "0.75rem" }}>
+                <label className="form-label">Slug event (URL)</label>
+                <input className="form-input" placeholder="kalimantan-2026" value={slug} onChange={(e) => setSlug(e.target.value)} />
+              </div>
+              <div className="two-col" style={{ marginBottom: "0.75rem" }}>
+                <div className="form-field"><label className="form-label">Judul singkat</label><input className="form-input" value={shortTitle} onChange={(e) => setShortTitle(e.target.value)} /></div>
+                <div className="form-field"><label className="form-label">Mulai pemantauan</label><input className="form-input" type="date" value={monitoringFrom} onChange={(e) => setMonitoringFrom(e.target.value)} /></div>
+              </div>
+              <div className="two-col" style={{ marginBottom: "0.75rem" }}><div className="form-field"><label className="form-label">Selesai pemantauan</label><input className="form-input" type="date" value={monitoringTo} onChange={(e) => setMonitoringTo(e.target.value)} /></div><div /></div>
+              <div className="form-field"><label className="form-label">Metodologi / catatan data</label><textarea className="form-input" rows={2} value={methodology} onChange={(e) => setMethodology(e.target.value)} /></div>
+            </div>
+          </div>
+        )}
 
         {isEdit && (
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>

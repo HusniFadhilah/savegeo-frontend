@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useUiStore } from "@/hooks/useUiStore";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 /**
  * Global loading indicator - GEE-backed analyses (carbon especially, up to
@@ -15,6 +16,7 @@ export default function LoadingOverlay() {
   const loading = useUiStore((s) => s.loading);
   const minimizeLoading = useUiStore((s) => s.minimizeLoading);
   const restoreLoading = useUiStore((s) => s.restoreLoading);
+  const t = useI18nStore((s) => s.t);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(0);
 
@@ -32,12 +34,12 @@ export default function LoadingOverlay() {
 
   if (loading.minimized) {
     return (
-      <div className="loading-pill" onClick={restoreLoading} role="button" title="Buka kembali">
+      <div className="loading-pill" onClick={restoreLoading} role="button" title={t("loading.backgroundResume")}>
         <div className="loading-pill-spinner" />
         <div className="loading-pill-text">
           <div className="loading-pill-title">{loading.text}</div>
           <div className="loading-pill-sub">
-            {elapsed.toFixed(0)}s · {loading.progress}%
+            {t("loading.elapsed", { seconds: elapsed.toFixed(0), progress: loading.progress })}
           </div>
         </div>
         <i className="bi bi-arrows-angle-expand loading-pill-expand" />
@@ -52,9 +54,9 @@ export default function LoadingOverlay() {
           type="button"
           className="loading-minimize-btn"
           onClick={minimizeLoading}
-          title="Jalankan di background - lanjut pakai modul lain"
+          title={t("loading.backgroundTitle")}
         >
-          <i className="bi bi-dash-lg" /> Latar belakang
+          <i className="bi bi-dash-lg" /> {t("loading.backgroundLabel")}
         </button>
         <div className="spinner" />
         <h5>{loading.text}</h5>
@@ -69,7 +71,7 @@ export default function LoadingOverlay() {
             style={{ width: `${loading.progress}%` }}
           />
         </div>
-        <div className="small text-muted mt-2">Estimasi tahap: ±{loading.progress}%</div>
+        <div className="small text-muted mt-2">{t("loading.estimate", { progress: loading.progress })}</div>
         <div className="loading-timer mt-1">
           <i className="bi bi-clock" /> {elapsed.toFixed(1)}s
         </div>

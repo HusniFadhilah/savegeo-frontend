@@ -22,6 +22,7 @@ import type {
   FirmsSourceId,
   FirmsSourcesResponse,
 } from "./types";
+import type { WildfireEventsResponse, WildfireHotspotsResponse } from "@/features/karhutla/types";
 
 /**
  * Disaster-mapping API calls. Two families live in this file:
@@ -185,4 +186,42 @@ export function fetchDisasterHotspots(eventId: number | string) {
 export function fetchDisasterFeatures(eventId: number | string, params: { analysis?: string; bbox?: string } = {}) {
   const qs = buildQuery({ analysis: params.analysis, bbox: params.bbox });
   return userGet<DisasterFeaturesResponse>(`/disasters/${eventId}/features${qs}`);
+}
+
+// --- standalone wildfire explorer ----------------------------------------
+
+export function fetchWildfireEvents(params: {
+  search?: string;
+  year?: string;
+  status?: string;
+  province?: string;
+  severity?: string;
+  sort?: string;
+} = {}) {
+  const qs = buildQuery(params);
+  return userGet<WildfireEventsResponse>(`/disasters/wildfires/events${qs}`);
+}
+
+export function fetchWildfireEvent(slug: string) {
+  return userGet<{ event: import("@/features/karhutla/types").WildfireEvent }>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}`,
+  );
+}
+
+export function fetchWildfireSummary(slug: string, query: Record<string, string | undefined> = {}) {
+  return userGet<import("@/features/karhutla/types").WildfireSummary>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/summary${buildQuery(query)}`,
+  );
+}
+
+export function fetchWildfireHotspots(slug: string, query: Record<string, string | number | undefined> = {}) {
+  return userGet<WildfireHotspotsResponse>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/hotspots${buildQuery(query)}`,
+  );
+}
+
+export function fetchWildfireTimeline(slug: string, query: Record<string, string | undefined> = {}) {
+  return userGet<{ timeline: { date: string; count: number }[] }>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/timeline${buildQuery(query)}`,
+  );
 }

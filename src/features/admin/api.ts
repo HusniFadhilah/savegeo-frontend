@@ -23,6 +23,8 @@ import type {
   DisasterQcStatus,
   Hotspot,
   DisasterAuditLogEntry,
+  CarbonCalibrationDataset,
+  CarbonCalibrationFile,
 } from "./types";
 
 /**
@@ -140,6 +142,42 @@ export const getOpenRouterModels = () =>
 
 export const getKeyPoolStatus = () => apiClient.get<KeyPoolStatus>("/admin/key-pool/status", { auth: true });
 
+// ── Carbon calibration ─────────────────────────────────────────────────────
+export const listCarbonCalibrationDatasets = () =>
+  apiClient.get<{ datasets: CarbonCalibrationDataset[] }>("/admin/carbon-calibration/datasets", { auth: true });
+
+export const getCarbonCalibrationDataset = (datasetId: string) =>
+  apiClient.get<CarbonCalibrationDataset & { files?: CarbonCalibrationFile[] }>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}`, { auth: true });
+
+export const createCarbonCalibrationDataset = (payload: Record<string, unknown>) =>
+  apiClient.post<CarbonCalibrationDataset>("/admin/carbon-calibration/datasets", payload, { auth: true });
+
+export const uploadCarbonCalibrationFile = (datasetId: string, file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return apiClient.upload<CarbonCalibrationFile>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}/files`, form, { auth: true });
+};
+
+export const validateCarbonCalibrationDataset = (datasetId: string) =>
+  apiClient.post<Record<string, unknown>>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}/validate`, undefined, { auth: true });
+
+export const extractCarbonCalibrationDataset = (datasetId: string) =>
+  apiClient.post<{ job_id: string; status: string }>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}/extract`, undefined, { auth: true });
+
+export const validateCarbonCalibrationSpatial = (datasetId: string) =>
+  apiClient.post<Record<string, unknown>>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}/validate-spatial`, undefined, { auth: true });
+
+export const extractCarbonCalibrationFeatures = (datasetId: string) =>
+  apiClient.post<Record<string, unknown>>(`/admin/carbon-calibration/datasets/${encodeURIComponent(datasetId)}/extract-features`, undefined, { auth: true });
+
+export const importCarbonCalibrationSources = (revised: File, previous?: File | null, dem?: File | null) => {
+  const form = new FormData();
+  form.append("revised_workbook", revised);
+  if (previous) form.append("previous_workbook", previous);
+  if (dem) form.append("dem", dem);
+  return apiClient.upload<{ datasets: Array<Record<string, unknown>> }>("/admin/carbon-calibration/datasets/import", form, { auth: true });
+};
+
 // ── Admin users ──────────────────────────────────────────────────
 export const getCurrentAdminUser = () => apiClient.get<AdminUserRow>("/admin/auth/me", { auth: true });
 
@@ -255,6 +293,12 @@ export const createDisasterEvent = (payload: {
   description?: string;
   source?: string;
   thumbnail?: string;
+  slug?: string;
+  short_title?: string;
+  monitoring_from?: string;
+  monitoring_to?: string;
+  methodology?: string;
+  limitations?: string[];
 }) => apiClient.post<DisasterEvent>("/admin/disasters", payload, { auth: true });
 
 export const listDisasterEvents = (params?: {
@@ -293,6 +337,12 @@ export const updateDisasterEvent = (
     description: string;
     source: string;
     thumbnail: string;
+    slug: string;
+    short_title: string;
+    monitoring_from: string;
+    monitoring_to: string;
+    methodology: string;
+    limitations: string[];
   }>,
 ) => apiClient.patch<DisasterEvent>(`/admin/disasters/${id}`, payload, { auth: true });
 

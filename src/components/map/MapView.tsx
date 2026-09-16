@@ -9,13 +9,19 @@ import ImageryAttribution from "@/components/map/ImageryAttribution";
 import HistoricalImageryControl, { HistoricalAoiClipController } from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
-import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
+import {
+  BASEMAP_REFERENCE_PANE,
+  BASEMAP_REFERENCE_PANE_Z_INDEX,
+  RESULT_PANE,
+  RESULT_PANE_Z_INDEX,
+} from "@/config/mapPanes";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 
 import GlobeView, { type GlobeLayer } from "./GlobeView";
 import { GlobeLayerBridge, LeafletUserLocation } from "./GlobeLayerBridge";
 import UserLocationControl from "./UserLocationControl";
 import { useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import "./globe3d/globe.css";
 
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
@@ -87,6 +93,7 @@ function ResultPaneSetup() {
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
 export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate, historicalAoi }: Props) {
+  const t = useI18nStore((state) => state.t);
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
   const active = useContext(MapActivityContext);
@@ -117,6 +124,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         maxZoom={effectiveMaxZoom}
         className={className ?? "savegeo-map"}
       >
+        <Pane name={BASEMAP_REFERENCE_PANE} style={{ zIndex: BASEMAP_REFERENCE_PANE_Z_INDEX, pointerEvents: "none" }} />
         {defaultBasemap && (
           <>
             <TileLayer
@@ -133,6 +141,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
                 maxNativeZoom={defaultMaxNativeZoom}
                 maxZoom={effectiveMaxZoom}
                 className="savegeo-basemap-layer"
+                pane={BASEMAP_REFERENCE_PANE}
               />
             )}
           </>
@@ -152,7 +161,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
       </MapContainer>
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
-      active && <div className="map-flat-controls">{showGlobeControl && <button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)} aria-label="Beralih ke globe" title="Beralih ke globe">3D</button>}<UserLocationControl /></div>}
+      active && <div className="map-flat-controls">{showGlobeControl && <button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)} aria-label={t("map.switchToGlobe")} title={t("map.switchToGlobe")}>3D</button>}<UserLocationControl /></div>}
     </div>
   );
 }

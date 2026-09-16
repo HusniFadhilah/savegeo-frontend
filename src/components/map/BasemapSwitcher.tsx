@@ -5,6 +5,7 @@ import L from "leaflet";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import { useBasemapContext } from "./BasemapContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { BASEMAP_REFERENCE_PANE } from "@/config/mapPanes";
 
 interface ExtraBasemapOption {
   id: string;
@@ -69,6 +70,7 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
           attribution: b.overlayAttribution,
           maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
           maxZoom: effectiveMaxZoom,
+          pane: BASEMAP_REFERENCE_PANE,
         });
         layers[b.id] = L.layerGroup([baseLayer, overlayLayer]);
         return;

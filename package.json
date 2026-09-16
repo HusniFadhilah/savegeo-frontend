@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "i18n:audit": "node scripts/audit-i18n.mjs",
+    "i18n:check": "node scripts/audit-i18n.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run"
   },

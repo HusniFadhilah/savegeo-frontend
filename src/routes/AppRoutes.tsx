@@ -16,6 +16,7 @@ import WorkflowBuilderPage from "@/pages/WorkflowBuilderPage";
 import EmbedPage from "@/pages/EmbedPage";
 import PluginManagerPage from "@/pages/PluginManagerPage";
 import DatasetViewerPage from "@/pages/DatasetViewerPage";
+import { KarhutlaDetailPage, KarhutlaIndexPage } from "@/features/karhutla/components";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -44,6 +45,7 @@ export default function AppRoutes() {
     { path: "/admin/gee-credentials", section: "ge" },
     { path: "/admin/arcgis", section: "ag" },
     { path: "/admin/ml-models", section: "ml" },
+    { path: "/admin/carbon-calibration", section: "cc" },
     { path: "/admin/system-config", section: "cf" },
     { path: "/admin/users", section: "us" },
     { path: "/admin/satellite-providers", section: "sp" },
@@ -84,6 +86,14 @@ export default function AppRoutes() {
       <Route
         path="/pemetaan-bencana"
         element={<ProtectedAppRoute><DisasterListPage /></ProtectedAppRoute>}
+      />
+      <Route
+        path="/pemetaan-bencana/karhutla"
+        element={<ProtectedAppRoute><KarhutlaIndexPage /></ProtectedAppRoute>}
+      />
+      <Route
+        path="/pemetaan-bencana/karhutla/:eventSlug"
+        element={<ProtectedAppRoute><KarhutlaDetailPage /></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/:eventId"

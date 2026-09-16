@@ -7,6 +7,7 @@ export const ADMIN_SECTION_PATHS: Record<AdminSection, string> = {
   ge: "/admin/gee-credentials",
   ag: "/admin/arcgis",
   ml: "/admin/ml-models",
+  cc: "/admin/carbon-calibration",
   cf: "/admin/system-config",
   us: "/admin/users",
   co: "/admin/company-boundaries",
@@ -32,6 +33,10 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   ml: {
     title: "ML Models Admin | SaveGeo",
     description: "Kelola upload, aktivasi, dan model machine learning untuk analisis SaveGeo.",
+  },
+  cc: {
+    title: "Carbon Calibration Admin | SaveGeo",
+    description: "Ingesti, audit, dan kalibrasi plot lapangan PT Dahana Subang untuk model karbon SaveGeo.",
   },
   cf: {
     title: "System Config Admin | SaveGeo",

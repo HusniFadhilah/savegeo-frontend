@@ -7,7 +7,9 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/features/admin/components/SearchableSelect";
 import { fetchDisasterEvents } from "./api";
-import KalimantanFire2026Panel from "./components/KalimantanFire2026Panel";
+import { KarhutlaOverviewCard, adaptLegacyEvent } from "@/features/karhutla/components";
+import { FALLBACK_WILDFIRE_EVENTS } from "@/features/karhutla/data";
+import { isKarhutlaDisasterType } from "./types";
 import {
   EVENT_DISASTER_TYPE_LABELS,
   EVENT_DISASTER_TYPE_OPTIONS,
@@ -140,12 +142,6 @@ export default function DisasterListPage() {
     setFilters(EMPTY_FILTERS);
   };
 
-  const applyKalimantan2026Filter = () => {
-    const nextFilters: DisasterEventListParams = { disaster_type: "forest_fire", year: 2026 };
-    setPendingFilters(nextFilters);
-    setFilters(nextFilters);
-  };
-
   const years = Array.from({ length: Math.max(0, yearMax - yearMin + 1) }, (_, i) => yearMax - i);
 
   const provinceOptions = useMemo(() => {
@@ -165,6 +161,7 @@ export default function DisasterListPage() {
   }, [provinceSourceEvents]);
 
   const filterCount = activeFilterCount(filters);
+  const featuredWildfire = events.find((event) => isKarhutlaDisasterType(event.disaster_type));
   const pageCount = Math.max(1, Math.ceil(events.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
   const pageStart = events.length === 0 ? 0 : currentPage * pageSize + 1;
@@ -215,7 +212,9 @@ export default function DisasterListPage() {
         </div>
       </section>
 
-      <KalimantanFire2026Panel onApplyFilter={applyKalimantan2026Filter} />
+      <KarhutlaOverviewCard
+        event={featuredWildfire ? adaptLegacyEvent(featuredWildfire) : FALLBACK_WILDFIRE_EVENTS[0]}
+      />
 
       <form className="disaster-filter-panel" onSubmit={applyFilters}>
         <div className="disaster-filter-grid">

@@ -12,7 +12,7 @@ import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcIdentifyResponse, LcYearResult } from "../types";
 import { translateLulcClass } from "../utils";
 import { RESULT_PANE } from "@/config/mapPanes";
-import { useI18nStore } from "@/hooks/useI18nStore";
+import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 
 type ViewMode = "split" | "swipe";
 
@@ -88,7 +88,7 @@ export default function BeforeAfterMaps({
   endDate,
   dwProbabilityThreshold,
 }: Props) {
-  const { t } = useI18nStore();
+  const { t, language } = useI18nStore();
   const beforeTile = (yearA != null ? yearData[yearA]?.tile_url : null) ?? changeMapData?.from_tile_url ?? null;
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? afterRawTile : afterRawTile;
@@ -132,7 +132,7 @@ export default function BeforeAfterMaps({
     } catch (error) {
       if (requestId === inspectRequestRef.current) {
         setInspectResults([]);
-        setInspectError(error instanceof Error ? error.message : "Gagal membaca kelas pada titik peta.");
+        setInspectError(error instanceof Error ? error.message : t("lc.inspectError"));
       }
     } finally {
       if (requestId === inspectRequestRef.current) setInspectLoading(false);
@@ -140,7 +140,7 @@ export default function BeforeAfterMaps({
   };
 
   const formatArea = (value: number | null) =>
-    value == null ? "-" : `${value.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha`;
+    value == null ? "-" : `${formatNumber(value, language, { maximumFractionDigits: 2 })} ha`;
 
   return (
     <div>
@@ -149,7 +149,7 @@ export default function BeforeAfterMaps({
           <i className="fas fa-info-circle" /> {view === "split" ? t("lc.left") : t("lc.before")} = {t("lc.startYear")} (
           {yearA ?? "-"}) · {view === "split" ? t("lc.right") : t("lc.after")} = {t("lc.endYear")} ({yearB ?? "-"})
         </p>
-        <div className="btn-group btn-group-sm" role="group" aria-label="Tampilan peta">
+        <div className="btn-group btn-group-sm" role="group" aria-label={t("lc.mapDisplay")}>
           <button
             type="button"
             className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`}
@@ -165,7 +165,7 @@ export default function BeforeAfterMaps({
             <i className="fas fa-arrows-alt-h" /> {t("lc.rangeSlider")}
           </button>
         </div>
-        <div className="btn-group btn-group-sm" role="group" aria-label="Mode peta perubahan">
+        <div className="btn-group btn-group-sm" role="group" aria-label={t("lc.changeMapMode")}>
           <button
             type="button"
             className={`btn btn-outline-success ${mode === "normal" ? "active" : ""}`}
@@ -203,8 +203,8 @@ export default function BeforeAfterMaps({
       {(inspectLoading || inspectError || inspectResults.length > 0) && (
         <div className="lc-map-inspector mb-2" role="status">
           <div className="lc-map-inspector-heading">
-            <strong><i className="fas fa-location-dot" /> Informasi titik tutupan lahan</strong>
-            {inspectLoading && <span><i className="fas fa-spinner fa-spin" /> Membaca kelas...</span>}
+            <strong><i className="fas fa-location-dot" /> {t("lc.inspectorTitle")}</strong>
+            {inspectLoading && <span><i className="fas fa-spinner fa-spin" /> {t("lc.readingClass")}</span>}
           </div>
           {inspectError && <div className="text-danger small">{inspectError}</div>}
           {!inspectLoading && !inspectError && (
@@ -214,12 +214,12 @@ export default function BeforeAfterMaps({
                   <div className="lc-map-inspector-result">
                     <span className="lc-map-inspector-year">{result.year}</span>
                     <strong>
-                      {result.class_name ? translateLulcClass(result.class_name) : "Tidak ada data pada titik ini"}
+                      {result.class_name ? translateLulcClass(result.class_name) : t("lc.noDataAtPoint")}
                     </strong>
                     <small>
                       {result.percentage != null
-                        ? `${result.percentage.toFixed(1)}% dari 100% luas AOI Â· ${formatArea(result.area_ha)}`
-                        : "Titik berada di luar AOI atau kelas tidak tersedia."}
+                        ? `${result.percentage.toFixed(1)}% dari 100% luas AOI · ${formatArea(result.area_ha)}`
+                        : t("lc.pointOutsideAoi")}
                     </small>
                   </div>
                 </div>
@@ -230,8 +230,8 @@ export default function BeforeAfterMaps({
       )}
       {!changeMapLoading && !changeMapError && changeMapData && (
         <div className="alert alert-success py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          <i className="fas fa-check-circle" /> Berubah:{" "}
-          <strong>{Number(changeMapData.changed_area_ha || 0).toLocaleString("id-ID")} ha</strong> (
+          <i className="fas fa-check-circle" /> {t("lc.changedSummary")}:{" "}
+          <strong>{formatNumber(Number(changeMapData.changed_area_ha || 0), language)} ha</strong> (
           {Number(changeMapData.changed_percentage || 0).toFixed(2)}%)
         </div>
       )}
@@ -241,19 +241,19 @@ export default function BeforeAfterMaps({
           <div className="col-md-6">
             <MapView id="lcChangeBeforeMap" showGlobeControl historicalDate={startDate ?? (yearA != null ? `${yearA}-12-31` : undefined)}>
               <BasemapSwitcher />
-              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
               {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
               {beforeTile && <TileLayer url={beforeTile}
                   maxNativeZoom={beforeNativeZoom} maxZoom={HIGH_DETAIL_MAX_ZOOM} opacity={opacity} attribution="Google Earth Engine" pane={RESULT_PANE} />}
               <FitToAoi aoi={aoi} />
             </MapView>
-            <MapLegend title={`Tutupan lahan ${yearA ?? ""}`} entries={beforeLegend} />
+            <MapLegend title={t("lc.landCoverYear", { year: yearA ?? "" })} entries={beforeLegend} />
           </div>
           <div className="col-md-6">
             <MapView id="lcChangeAfterMap" showGlobeControl={false} historicalDate={endDate ?? (yearB != null ? `${yearB}-12-31` : undefined)}>
               <BasemapSwitcher />
-              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
               {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
               {afterTile && (
