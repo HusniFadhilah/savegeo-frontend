@@ -913,11 +913,12 @@ export const translations: Record<Language, Record<string, string>> = {
   },
 };
 
-// Restore the reviewed copy that predates the accidental translation-table
-// reduction, while keeping newer explicit entries in this file authoritative.
+// The reviewed table predates the accidental translation-table reduction.
+// It is authoritative for keys it contains; newer keys absent from that
+// snapshot remain available from the table below and the legacy bridge.
 for (const language of ["id", "en"] as const) {
   for (const [key, value] of Object.entries(approvedTranslations[language])) {
-    translations[language][key] ??= value;
+    translations[language][key] = value;
   }
 }
 
