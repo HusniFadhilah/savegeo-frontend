@@ -69,27 +69,46 @@ jobs:
           name: savegeo-frontend-dist
           path: dist/
       - name: Install deployment tools
-        run: sudo apt-get update && sudo apt-get install -y lftp sshpass netcat-openbsd
+        run: sudo apt-get update && sudo apt-get install -y sshpass netcat-openbsd
       - name: Verify Doltinuku SSH is reachable
         run: nc -z -w 15 "$DOLTINUKU_SERVER" "${DOLTINUKU_SSH_PORT:-22}"
       - name: Upload frontend build
+        env:
+          SSHPASS: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
         run: |
-          lftp -u "$DOLTINUKU_USERNAME,$DOLTINUKU_PASSWORD" \
-            "sftp://$DOLTINUKU_SERVER:${DOLTINUKU_SSH_PORT:-22}" <<EOF
-          set sftp:auto-confirm yes
-          set net:max-retries 3
-          set net:timeout 30
-          mirror --reverse --verbose --overwrite --no-perms --delete \
-            --exclude-glob '.git/**' ./dist/ "$FRONTEND_REMOTE_DIR/dist/"
-          bye
-          EOF
+          set -euo pipefail
+          archive="$RUNNER_TEMP/savegeo-frontend-dist.tar.gz"
+          tar -czf "$archive" -C dist .
+          sshpass -e scp \
+            -P "${DOLTINUKU_SSH_PORT:-22}" \
+            -o StrictHostKeyChecking=accept-new \
+            "$archive" \
+            "$DOLTINUKU_USERNAME@$DOLTINUKU_SERVER:/tmp/savegeo-frontend-dist.tar.gz"
       - name: Reload web server and verify domains
         env:
           SSHPASS: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$DOLTINUKU_PASSWORD" | sshpass -e ssh -p "${DOLTINUKU_SSH_PORT:-22}" \
+          {
+            printf '%s\n' "$DOLTINUKU_PASSWORD"
+            cat <<'REMOTE'
+          set -euo pipefail
+          archive=/tmp/savegeo-frontend-dist.tar.gz
+          test -s "$archive"
+          upload_stage=$(mktemp -d /tmp/savegeo-frontend-upload.XXXXXX)
+          cleanup_upload() {
+            rm -rf "$upload_stage" "$archive"
+          }
+          trap cleanup_upload EXIT
+          tar -xzf "$archive" -C "$upload_stage" --no-same-owner
+          mkdir -p "$FRONTEND_REMOTE_DIR/dist"
+          rsync -a --delete "$upload_stage/" "$FRONTEND_REMOTE_DIR/dist/"
+          apache2ctl configtest
+          systemctl reload apache2
+          REMOTE
+          } | sshpass -e ssh -p "${DOLTINUKU_SSH_PORT:-22}" \
+            -o StrictHostKeyChecking=accept-new \
             "$DOLTINUKU_USERNAME@$DOLTINUKU_SERVER" \
-            "sudo -S -p '' sh -c 'apache2ctl configtest && systemctl reload apache2'"
+            "sudo -S -p '' env FRONTEND_REMOTE_DIR='$FRONTEND_REMOTE_DIR' bash -s"
           curl --fail --silent --show-error --max-time 30 "https://$SAVEGEO_DOMAIN/" >/dev/null
           curl --fail --silent --show-error --max-time 30 "https://$BEGEO_DOMAIN/api/health" >/dev/null
