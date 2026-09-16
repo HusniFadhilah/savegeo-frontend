@@ -180,10 +180,10 @@ export interface AnalyzeCarbonDeltaArgs {
   visPalette: string[];
 }
 
-/** POST /analyze/carbon-delta - multi-year carbon time series (P0 "time-series & timelapse"). Flat body, no {success,data} envelope. */
+/** Multi-year carbon time series (P0 "time-series & timelapse") via the async analysis job queue. */
 export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<CarbonDeltaResponse> {
-  return apiClient.post<CarbonDeltaResponse>(
-    "/analyze/carbon-delta",
+  return runAnalysisJob<CarbonDeltaResponse>(
+    "carbon_delta",
     {
       aoi: args.aoi,
       start_year: args.startYear,
@@ -199,7 +199,7 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
       vis_max: args.visMax,
       vis_palette: args.visPalette.length ? args.visPalette : undefined,
     },
-    { timeoutMs: CARBON_DELTA_TIMEOUT_MS, auth: "app" },
+    { timeoutMs: CARBON_DELTA_TIMEOUT_MS },
   );
 }
 
@@ -227,7 +227,7 @@ export interface ExportGeoTiffArgs {
   filename: string;
 }
 
-/** POST /download/geotiff returns {status:"success", download_url, filename, ...} directly - no {success,data} envelope. */
+/** GeoTIFF export result returned by the async export job. */
 export interface ExportGeoTiffResult {
   status: string;
   download_url: string;
@@ -238,17 +238,21 @@ export interface ExportGeoTiffResult {
 }
 
 export function exportGeoTiff(args: ExportGeoTiffArgs) {
-  return apiClient.post<ExportGeoTiffResult>("/download/geotiff", {
-    aoi: args.aoi,
-    layer_type: args.layerType,
-    index_name: args.indexName ?? null,
-    dataset: args.dataset ?? null,
-    scale: args.scale,
-    year: args.year,
-    start_month: args.startMonth,
-    end_month: args.endMonth,
-    cloud_threshold: args.cloudThreshold,
-    model_name: args.modelName ?? null,
-    filename: args.filename,
-  }, { auth: "app" });
+  return runAnalysisJob<ExportGeoTiffResult>(
+    "geotiff",
+    {
+      aoi: args.aoi,
+      layer_type: args.layerType,
+      index_name: args.indexName ?? null,
+      dataset: args.dataset ?? null,
+      scale: args.scale,
+      year: args.year,
+      start_month: args.startMonth,
+      end_month: args.endMonth,
+      cloud_threshold: args.cloudThreshold,
+      model_name: args.modelName ?? null,
+      filename: args.filename,
+    },
+    { timeoutMs: CARBON_TIMEOUT_MS },
+  );
 }

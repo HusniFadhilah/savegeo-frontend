@@ -1449,7 +1449,7 @@ export default function ImageryModule() {
                     onViewChange={setMapMode}
                   />
                 ) : (
-                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={selectedScene?.acquired_at?.slice(0, 10)}>
+                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={selectedScene?.acquired_at?.slice(0, 10)} historicalAoi={aoi}>
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <SceneFootprintLayer

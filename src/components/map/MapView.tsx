@@ -33,6 +33,8 @@ interface Props {
   showGlobeControl?: boolean;
   /** Analysis date used to select an Esri Wayback snapshot for the basemap. */
   historicalDate?: string;
+  /** Optional AOI used to clip the historical basemap to the selected area. */
+  historicalAoi?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
 }
 
 function InvalidateOnResize() {
@@ -84,7 +86,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate, historicalAoi }: Props) {
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
   const active = useContext(MapActivityContext);
@@ -143,7 +145,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <FullscreenControl />
         <ZoomScaleControl />
         <ImageryAttribution />
-        <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />
+        <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} historicalAoi={historicalAoi} />
         {children}
       </MapContainer>
     </BasemapContext.Provider></div>
