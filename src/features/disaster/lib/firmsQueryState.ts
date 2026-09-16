@@ -23,6 +23,19 @@ const SOURCES = new Set<FirmsSourceId>([
 ]);
 const PERIODS = new Set<FirmsPeriod>(["1", "2", "3", "7", "historical"]);
 
+const FIRMS_QUERY_KEYS = [
+  "firms",
+  "firmsSource",
+  "firmsDays",
+  "firmsDate",
+  "firmsConfidence",
+  "firmsMinFrp",
+  "firmsLabels",
+  "firmsCluster",
+  "firmsDay",
+  "firmsHigh",
+] as const;
+
 function boolParam(params: URLSearchParams, key: string, fallback: boolean): boolean {
   const value = params.get(key);
   return value === null ? fallback : value === "1";
@@ -67,5 +80,12 @@ export function writeFirmsQuery(params: URLSearchParams, state: FirmsQueryState)
     if (value === null) next.delete(key);
     else next.set(key, value);
   }
+  return next;
+}
+
+/** Remove FIRMS-only state when leaving a wildfire event. */
+export function clearFirmsQuery(params: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(params);
+  FIRMS_QUERY_KEYS.forEach((key) => next.delete(key));
   return next;
 }

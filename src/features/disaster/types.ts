@@ -279,6 +279,12 @@ export const EVENT_DISASTER_TYPE_LABELS: Record<EventDisasterType, string> = {
   other: "Lainnya",
 };
 
+/** NASA FIRMS is relevant only to wildfire/forest-fire events. */
+export function isKarhutlaDisasterType(type: string | null | undefined): boolean {
+  const normalized = (type ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return normalized === "forest_fire" || normalized === "wildfire" || normalized === "karhutla" || normalized === "fire";
+}
+
 export const EVENT_DISASTER_TYPE_OPTIONS: { value: EventDisasterType; label: string }[] = Object.entries(
   EVENT_DISASTER_TYPE_LABELS,
 ).map(([value, label]) => ({ value: value as EventDisasterType, label }));

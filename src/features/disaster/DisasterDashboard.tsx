@@ -1,6 +1,6 @@
 import SegmentationComparison from "./components/SegmentationComparison";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
 import type { AoiFeature } from "@/types/map";
@@ -27,6 +27,7 @@ import {
   type HotspotRecord,
   type FirmsLayerState,
   type FirmsHotspotFeature,
+  isKarhutlaDisasterType,
 } from "./types";
 import SatelliteViewer from "./components/SatelliteViewer";
 import LayerPanel from "./components/LayerPanel";
@@ -37,6 +38,7 @@ import SourceStatusPanel from "./components/SourceStatusPanel";
 import BmkgAlerts from "./components/BmkgAlerts";
 import DemSlopeControls from "./components/DemSlopeControls";
 import FirmsHotspotPanel from "./components/FirmsHotspotPanel";
+import { clearFirmsQuery } from "./lib/firmsQueryState";
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
@@ -70,6 +72,14 @@ function typeIcon(type: string): string {
   }
 }
 
+const EMPTY_FIRMS_LAYER: FirmsLayerState = {
+  enabled: false,
+  result: null,
+  features: [],
+  showLabels: false,
+  cluster: true,
+};
+
 /**
  * Item D.14/D.48 of the redesign spec: single event view. Assembled from the
  * 4 independent `GET /disasters/{id}/*` calls the contract doc documents
@@ -80,6 +90,7 @@ function typeIcon(type: string): string {
  */
 export default function DisasterDashboard() {
   const { eventId } = useParams<{ eventId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useUserAuthStore();
 
   const [detail, setDetail] = useState<DisasterEventDetailResponse | null>(null);
@@ -105,13 +116,7 @@ export default function DisasterDashboard() {
   const [highlightedHotspotId, setHighlightedHotspotId] = useState<number | null>(null);
   const [focusFeature, setFocusFeature] = useState<GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null>(null);
   const [focusSignal, setFocusSignal] = useState(0);
-  const [firmsLayer, setFirmsLayer] = useState<FirmsLayerState>({
-    enabled: false,
-    result: null,
-    features: [],
-    showLabels: false,
-    cluster: true,
-  });
+  const [firmsLayer, setFirmsLayer] = useState<FirmsLayerState>(EMPTY_FIRMS_LAYER);
 
   const [additionalSourcesOpen, setAdditionalSourcesOpen] = useState(false);
   const [sources, setSources] = useState<DisasterSourcesMap | null>(null);
@@ -127,6 +132,7 @@ export default function DisasterDashboard() {
   useEffect(() => {
     if (!eventId) return;
     let cancelled = false;
+    setFirmsLayer(EMPTY_FIRMS_LAYER);
     setDetailLoading(true);
     setDetailError(null);
     fetchDisasterEvent(eventId)
@@ -151,6 +157,18 @@ export default function DisasterDashboard() {
       cancelled = true;
     };
   }, [eventId]);
+
+  // FIRMS is a wildfire-only layer. Reset local state and remove stale URL
+  // controls when the selected event is a flood, earthquake, or another type.
+  const isKarhutla = isKarhutlaDisasterType(detail?.event.disaster_type);
+  useEffect(() => {
+    if (!detail || isKarhutla) return;
+    setFirmsLayer(EMPTY_FIRMS_LAYER);
+    const next = clearFirmsQuery(searchParams);
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [detail, isKarhutla, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -410,7 +428,9 @@ export default function DisasterDashboard() {
             onZoom={handleHotspotZoom}
             onHighlight={handleHotspotHighlight}
           />
-          <FirmsHotspotPanel aoi={aoi} onChange={setFirmsLayer} onZoom={handleFirmsZoom} />
+          {isKarhutla && (
+            <FirmsHotspotPanel aoi={aoi} onChange={setFirmsLayer} onZoom={handleFirmsZoom} />
+          )}
           {hotspotsLoading && <div className="text-muted small mb-3">Memuat hotspot...</div>}
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
         </aside>
@@ -432,9 +452,9 @@ export default function DisasterDashboard() {
             showHotspots={showHotspots}
             highlightedHotspotId={highlightedHotspotId}
             onHotspotClick={handleHotspotHighlight}
-            firmsFeatures={firmsLayer.enabled ? firmsLayer.features : []}
-            firmsShowLabels={firmsLayer.showLabels}
-            firmsCluster={firmsLayer.cluster}
+            firmsFeatures={isKarhutla && firmsLayer.enabled ? firmsLayer.features : []}
+            firmsShowLabels={isKarhutla && firmsLayer.showLabels}
+            firmsCluster={isKarhutla ? firmsLayer.cluster : true}
             focusFeature={focusFeature}
             focusSignal={focusSignal}
           />
