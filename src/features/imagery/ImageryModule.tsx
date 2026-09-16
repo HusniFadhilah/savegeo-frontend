@@ -77,21 +77,27 @@ type SceneFootprintProperties = {
   hovered: boolean;
 };
 
-function ScientificCapabilitiesPanel() {
+type ScientificCapabilityKey = "hyperspectral" | "thermal" | "insar" | "ai";
+type ScientificSupport = Record<ScientificCapabilityKey, boolean>;
+
+function ScientificCapabilitiesPanel({ support }: { support: ScientificSupport }) {
   const t = useI18nStore((state) => state.t);
+  const hasSupport = Object.values(support).some(Boolean);
   const [capabilities, setCapabilities] = useState<AdvancedImageryCapabilities | null>(null);
   useEffect(() => {
+    if (!hasSupport) return;
     let active = true;
     void getImageryAdvancedCapabilities().then((value) => { if (active) setCapabilities(value); }).catch(() => undefined);
     return () => { active = false; };
-  }, []);
-  if (!capabilities) return null;
+  }, [hasSupport]);
+  if (!hasSupport || !capabilities) return null;
   const items = [
-    [t("imagery.scientific.hyperspectral"), capabilities.hyperspectral.status],
-    [t("imagery.scientific.thermal"), capabilities.thermal.status],
-    [t("imagery.scientific.insar"), capabilities.insar.status],
-    [t("imagery.scientific.ai"), capabilities.ai.status],
-  ] as const;
+    ["hyperspectral", t("imagery.scientific.hyperspectral"), capabilities.hyperspectral.status],
+    ["thermal", t("imagery.scientific.thermal"), capabilities.thermal.status],
+    ["insar", t("imagery.scientific.insar"), capabilities.insar.status],
+    ["ai", t("imagery.scientific.ai"), capabilities.ai.status],
+  ].filter(([key]) => support[key as ScientificCapabilityKey]).map(([, label, status]) => [label, status] as const);
+  if (!items.length) return null;
   return <div className="card border-secondary mb-3">
     <div className="card-header py-2"><i className="bi bi-cpu" /> <strong><small>{t("imagery.scientific.title")}</small></strong></div>
     <div className="card-body py-2 small">
@@ -458,11 +464,33 @@ export default function ImageryModule() {
     satelliteMeta?.source_kind &&
       ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac", "big_ctsrt"].includes(satelliteMeta.source_kind),
   );
-  const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"));
+  const supportsSuperResolution = Boolean(
+    satelliteMeta &&
+      !isEsriWayback &&
+      satelliteMeta.capabilities?.analytical !== false &&
+      (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"),
+  );
+  // Browser GPU enhancement is meaningful for RGB scene tiles. SAR and
+  // single-band concentration products use different visual semantics, while
+  // Wayback is already a basemap archive rather than an analytic scene.
+  const supportsGpuEnhancement = Boolean(
+    satelliteMeta &&
+      satelliteMeta.visualization === "rgb" &&
+      !isEsriWayback &&
+      satelliteMeta.capabilities?.analytical !== false,
+  );
+  const effectiveVisualEnhancement = visualEnhancement && supportsGpuEnhancement;
+  const supportsSamGeo = Boolean(isCogProvider && satelliteMeta?.capabilities?.supports_ai);
+  const scientificSupport: ScientificSupport = {
+    hyperspectral: ["sentinel3", "aster", "stac_catalog"].includes(satellite),
+    thermal: ["landsat8", "landsat9", "aster"].includes(satellite),
+    insar: satelliteMeta?.visualization === "sar",
+    ai: supportsSamGeo,
+  };
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
   // Keep the source tile native whenever the browser enhancer is active; the
   // two visual passes must never be stacked or fed into analytics.
-  const tileSuperResolution = visualEnhancement ? "off" : activeSuperResolution;
+  const tileSuperResolution = effectiveVisualEnhancement ? "off" : activeSuperResolution;
   const renderOptionsKey = `${activeSuperResolution}:${sarMode}:${cloudFilterEnabled ? cloudMaskTechnique : "raw"}:${cogAssetKey}:${cogBands}:${cogRescale}`;
   const sceneTileMaxNativeZoom =
     isEsriWayback
@@ -998,7 +1026,7 @@ export default function ImageryModule() {
             </div>
           )}
 
-          <div className="mb-3">
+          {supportsGpuEnhancement && <div className="mb-3">
             <div className="card border-primary">
               <div className="card-header py-2 d-flex align-items-center gap-2"><i className="bi bi-gpu-card" /> <strong><small>{t("imagery.gpu.title")}</small></strong></div>
               <div className="card-body py-2">
@@ -1013,9 +1041,9 @@ export default function ImageryModule() {
                 <button type="button" className="btn btn-sm btn-outline-secondary mt-2" onClick={gpuEnhancement.clearCache}><i className="bi bi-trash3" /> Clear cache visual</button>
               </div>
             </div>
-          </div>
+          </div>}
 
-          <div className="mb-3">
+          {supportsSuperResolution && <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
               <i className="bi bi-stars" /> {t("imagery.interpolation")}
             </label>
@@ -1029,10 +1057,8 @@ export default function ImageryModule() {
                 { value: "bicubic_2x", label: "Bicubic (visual saja)" },
               ]}
             />
-            <small className="text-muted d-block mt-1">
-              {supportsSuperResolution ? t("imagery.interpolationHint") : t("imagery.interpolationUnavailable")}
-            </small>
-          </div>
+            <small className="text-muted d-block mt-1">{t("imagery.interpolationHint")}</small>
+          </div>}
 
           {isCogProvider && (
             <div className="mb-3">
@@ -1084,12 +1110,12 @@ export default function ImageryModule() {
             </div>
           )}
 
-          <SamGeoPanel scene={isCogProvider ? selectedScene : null} aoi={aoi}
+          {supportsSamGeo && <SamGeoPanel scene={selectedScene} aoi={aoi}
             assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
-            providerKey={isCogProvider ? satellite : undefined}
-            onResult={setSegmentation} />
+            providerKey={satellite}
+            onResult={setSegmentation} />}
 
-          <ScientificCapabilitiesPanel />
+          <ScientificCapabilitiesPanel support={scientificSupport} />
 
           {satelliteMeta?.visualization === "sar" && (
             <div className="mb-3">
@@ -1494,7 +1520,7 @@ export default function ImageryModule() {
                           maxZoom={SCENE_TILE_MAX_ZOOM}
                           pane={isEsriWayback && aoi ? "historical-imagery" : RESULT_PANE}
                         />
-                        {visualEnhancement && !isEsriWayback && (
+                        {effectiveVisualEnhancement && (
                           <GpuEnhancedTileLayer
                             key={`gpu:${selectedSceneId ?? "scene"}:${tileUrl}:${gpuEnhancement.model}:${gpuEnhancement.quality}:${gpuEnhancement.cacheVersion}`}
                             url={tileUrl}
@@ -1509,7 +1535,7 @@ export default function ImageryModule() {
                         )}
                         <RasterResolutionNotice layers={[{label: satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
                         <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
-                        {visualEnhancement && <div className="small text-muted mt-1">GPU tile status: {gpuTileStatus}. Data analitik tetap memakai citra native.</div>}
+                        {effectiveVisualEnhancement && <div className="small text-muted mt-1">GPU tile status: {gpuTileStatus}. Data analitik tetap memakai citra native.</div>}
                       </>
                     )}
                     {demLayerMode !== "none" && demResult?.tile_url && (
