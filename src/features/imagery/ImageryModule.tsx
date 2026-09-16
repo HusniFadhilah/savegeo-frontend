@@ -18,8 +18,8 @@ import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
-import type { DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
+import { getImageryAdvancedCapabilities, getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
+import type { AdvancedImageryCapabilities, DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
@@ -76,6 +76,29 @@ type SceneFootprintProperties = {
   selected: boolean;
   hovered: boolean;
 };
+
+function ScientificCapabilitiesPanel() {
+  const [capabilities, setCapabilities] = useState<AdvancedImageryCapabilities | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getImageryAdvancedCapabilities().then((value) => { if (active) setCapabilities(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  if (!capabilities) return null;
+  const items = [
+    ["Hyperspectral", capabilities.hyperspectral.status],
+    ["Thermal calibration", capabilities.thermal.status],
+    ["InSAR", capabilities.insar.status],
+    ["AI server-side", capabilities.ai.status],
+  ] as const;
+  return <div className="card border-secondary mb-3">
+    <div className="card-header py-2"><i className="bi bi-cpu" /> <strong><small>Scientific processing</small></strong></div>
+    <div className="card-body py-2 small">
+      {items.map(([label, status]) => <div key={label} className="d-flex justify-content-between align-items-center border-bottom py-1"><span>{label}</span><span className={`badge ${status === "ready" ? "text-bg-success" : "text-bg-secondary"}`}>{status}</span></div>)}
+      <div className="text-muted mt-2">Nilai thermal harus memakai scale/offset produk. InSAR membutuhkan pasangan SLC dan processor yang tersedia di server.</div>
+    </div>
+  </div>;
+}
 
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   const map = useMap();
@@ -889,6 +912,11 @@ export default function ImageryModule() {
             />
             {satelliteMeta && (
               <>
+                {satelliteMeta.configuration_status && satelliteMeta.configuration_status !== "connected" && (
+                  <div className="alert alert-warning py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
+                    <i className="fas fa-lock" /> Provider berlisensi belum siap: {satelliteMeta.configuration_status === "not_configured" ? "isi URL STAC dan credential di backend." : "lengkapi konfigurasi backend."}
+                  </div>
+                )}
                 <small className="text-muted d-block mt-1">
                   {isEsriWayback
                     ? "Resolusi bervariasi (sering sub-meter hingga beberapa meter) · arsip rilis basemap sejak 2014"
@@ -1059,7 +1087,10 @@ export default function ImageryModule() {
 
           <SamGeoPanel scene={isCogProvider ? selectedScene : null} aoi={aoi}
             assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
+            providerKey={isCogProvider ? satellite : undefined}
             onResult={setSegmentation} />
+
+          <ScientificCapabilitiesPanel />
 
           {satelliteMeta?.visualization === "sar" && (
             <div className="mb-3">

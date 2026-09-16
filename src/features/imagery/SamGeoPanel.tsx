@@ -7,12 +7,13 @@ import type { ImageryScene } from "./types";
 type Job = { job_id: string; status: "running" | "complete" | "failed"; message?: string; result?: FeatureCollection };
 type Capability = { available: boolean; message: string };
 
-export default function SamGeoPanel({ scene, aoi, assetKey, bands, rescale, onResult }: {
+export default function SamGeoPanel({ scene, aoi, assetKey, bands, rescale, providerKey, onResult }: {
   scene: ImageryScene | null;
   aoi: AoiFeature | null;
   assetKey: string;
   bands: string;
   rescale: string;
+  providerKey?: string;
   onResult: (result: FeatureCollection | null) => void;
 }) {
   const [capability, setCapability] = useState<Capability | null>(null);
@@ -76,7 +77,7 @@ export default function SamGeoPanel({ scene, aoi, assetKey, bands, rescale, onRe
     setBusy(true); setError(""); setResult(null); onResult(null); setVisible(true);
     try {
       const job = await apiClient.post<Job>("/imagery/samgeo/jobs", {
-        item_url: scene.id, aoi, asset_key: assetKey, bands: bands || undefined, rescale: rescale || undefined,
+        item_url: scene.id, provider_key: providerKey, aoi, asset_key: assetKey, bands: bands || undefined, rescale: rescale || undefined,
       });
       if (generation.current === current) setJobId(job.job_id);
     } catch (reason) {
