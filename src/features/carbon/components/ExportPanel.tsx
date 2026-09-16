@@ -73,7 +73,7 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
       layerType: layerType as ExportChoice["layerType"],
       indexName: layerType === "vegetation" ? extra : null,
       dataset: layerType === "landcover" ? extra : null,
-      scale: layerType === "carbon" ? 250 : layerType === "landcover" ? 10 : 20,
+      scale: layerType === "carbon" ? 100 : layerType === "landcover" ? 10 : 20,
     });
     setExportError(null);
     setModalOpen(true);
