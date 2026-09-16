@@ -36,14 +36,41 @@ function aoiClipPath(aoi: HistoricalAoi, map: L.Map): string {
   return paths.length ? `path(evenodd, "${paths.join(" ")}")` : 'path("M 0 0 Z")';
 }
 
+/** Keep every historical Wayback tile inside the selected AOI while the map moves. */
+export function HistoricalAoiClipController({ aoi, paneName = "historical-imagery" }: { aoi?: HistoricalAoi; paneName?: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!aoi) return;
+    const pane = map.getPane(paneName) ?? map.createPane(paneName);
+    pane.style.position = "absolute";
+    pane.style.left = "0";
+    pane.style.top = "0";
+    pane.style.overflow = "visible";
+    const updateClip = () => {
+      const size = map.getSize();
+      pane.style.width = `${size.x}px`;
+      pane.style.height = `${size.y}px`;
+      const clip = aoiClipPath(aoi, map);
+      pane.style.clipPath = clip;
+      pane.style.setProperty("-webkit-clip-path", clip);
+    };
+    updateClip();
+    map.on("move zoom resize", updateClip);
+    return () => {
+      map.off("move zoom resize", updateClip);
+      pane.style.clipPath = "";
+      pane.style.removeProperty("-webkit-clip-path");
+    };
+  }, [aoi, map, paneName]);
+  return null;
+}
+
 export default function HistoricalImageryControl({
   enabled = true,
   targetDate,
-  historicalAoi = null,
 }: {
   enabled?: boolean;
   targetDate?: string;
-  historicalAoi?: HistoricalAoi;
 }) {
   const map = useMap();
   const { activeBasemapId, setHistoricalImageryDate } = useBasemapContext();
@@ -120,10 +147,6 @@ export default function HistoricalImageryControl({
     const pane = map.getPane(paneName) ?? map.createPane(paneName);
     pane.style.zIndex = "250";
     pane.style.pointerEvents = "none";
-    pane.style.position = "absolute";
-    pane.style.left = "0";
-    pane.style.top = "0";
-    pane.style.overflow = "visible";
     setTileError(false);
     const layer = L.tileLayer(selected.tile_url, {
       pane: paneName,
@@ -134,27 +157,13 @@ export default function HistoricalImageryControl({
     const onError = () => setTileError(true);
     layer.on("tileerror", onError);
     layer.addTo(map);
-    const updateClip = () => {
-      if (!historicalAoi) return;
-      const size = map.getSize();
-      pane.style.width = `${size.x}px`;
-      pane.style.height = `${size.y}px`;
-      const clip = aoiClipPath(historicalAoi, map);
-      pane.style.clipPath = clip;
-      pane.style.setProperty("-webkit-clip-path", clip);
-    };
-    updateClip();
-    map.on("move zoom resize", updateClip);
     setHistoricalImageryDate?.(selected.release_label);
     return () => {
       layer.off("tileerror", onError);
-      map.off("move zoom resize", updateClip);
       map.removeLayer(layer);
-      pane.style.clipPath = "";
-      pane.style.removeProperty("-webkit-clip-path");
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, enabled, historicalAoi, isCurrent, isFetching, map, selected, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, enabled, isCurrent, isFetching, map, selected, setHistoricalImageryDate, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];

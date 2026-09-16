@@ -1,12 +1,12 @@
 import { MapActivityContext } from "./MapActivityContext";
 import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Pane, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
 import ImageryAttribution from "@/components/map/ImageryAttribution";
-import HistoricalImageryControl from "./HistoricalImageryControl";
+import HistoricalImageryControl, { HistoricalAoiClipController } from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
@@ -142,10 +142,12 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
+        <Pane name="historical-imagery" style={{ zIndex: 250, pointerEvents: "none" }} />
         <FullscreenControl />
         <ZoomScaleControl />
         <ImageryAttribution />
-        <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} historicalAoi={historicalAoi} />
+        <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />
+        {historicalAoi && <HistoricalAoiClipController aoi={historicalAoi} />}
         {children}
       </MapContainer>
     </BasemapContext.Provider></div>

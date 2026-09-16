@@ -1492,7 +1492,7 @@ export default function ImageryModule() {
                           }
                           maxNativeZoom={sceneTileMaxNativeZoom}
                           maxZoom={SCENE_TILE_MAX_ZOOM}
-                          pane={RESULT_PANE}
+                          pane={isEsriWayback && aoi ? "historical-imagery" : RESULT_PANE}
                         />
                         {visualEnhancement && !isEsriWayback && (
                           <GpuEnhancedTileLayer
