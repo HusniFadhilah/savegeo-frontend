@@ -5,6 +5,7 @@ import type {
   GetDemTileParams,
   GetSceneTileParams,
   ImageryProviderCatalogResponse,
+  AdvancedImageryCapabilities,
   ImagerySceneListResponse,
   ImagerySceneTileResponse,
   ListScenesParams,
@@ -13,6 +14,22 @@ import type {
 /** GET /imagery/providers - static, no-GEE catalog of selectable satellite/sensor providers for the scene browser. */
 export function getImageryProviders() {
   return apiClient.get<ImageryProviderCatalogResponse>("/imagery/providers");
+}
+
+export function getImageryAdvancedCapabilities() {
+  return apiClient.get<AdvancedImageryCapabilities>("/imagery/advanced/capabilities", { auth: "app" });
+}
+
+export function validateInsarPair(payload: { master: Record<string, unknown>; slave: Record<string, unknown> }) {
+  return apiClient.post("/imagery/advanced/insar/validate", payload, { auth: "app" });
+}
+
+export function calibrateThermal(payload: { values: number[]; scale: number; offset: number; source_unit?: string; output_unit?: string }) {
+  return apiClient.post("/imagery/advanced/thermal-calibration", payload, { auth: "app" });
+}
+
+export function getSpectralProfile(payload: { item_url: string; asset_key?: string; provider_key?: string; longitude: number; latitude: number; wavelengths_nm?: number[] }) {
+  return apiClient.post("/imagery/advanced/spectral-profile", payload, { auth: "app" });
 }
 
 /**

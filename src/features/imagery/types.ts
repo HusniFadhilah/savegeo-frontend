@@ -70,6 +70,13 @@ export interface ImageryProviderCatalogResponse {
   default: string;
 }
 
+export interface AdvancedImageryCapabilities {
+  hyperspectral: { status: string; operations: string[]; max_bands_per_request: number };
+  thermal: { status: string; operations: string[]; requires_scale_offset: boolean };
+  insar: { status: string; processor: string | null; operations: string[]; requires_slc_pair: boolean };
+  ai: { status: string; operations: string[]; server_side_only: boolean };
+}
+
 export interface ImageryStacAssetOption {
   key: string;
   title?: string | null;
