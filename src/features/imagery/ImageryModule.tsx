@@ -382,6 +382,7 @@ export default function ImageryModule() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [sceneResultsOpen, setSceneResultsOpen] = useState(true);
 
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [hoverSceneId, setHoverSceneId] = useState<string | null>(null);
@@ -425,6 +426,8 @@ export default function ImageryModule() {
   const [segmentation, setSegmentation] = useState<FeatureCollection | null>(null);
   const [nasaTimeLayerUrl, setNasaTimeLayerUrl] = useState<string | null>(null);
   const [storyMap, setStoryMap] = useState<FeatureCollection | null>(null);
+  const [provenanceOpen, setProvenanceOpen] = useState(true);
+  const [mapOpen, setMapOpen] = useState(true);
   useEffect(() => { setSegmentation(null); }, [selectedSceneId, satellite, aoi, cogAssetKey, cogBands, cogRescale]);
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
@@ -1279,9 +1282,16 @@ export default function ImageryModule() {
         {searched && (
           <div className="card mb-3">
             <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
-              <span className="fw-semibold">
+              <button
+                type="button"
+                className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                aria-expanded={sceneResultsOpen}
+                aria-controls="imagerySceneResultsBody"
+                onClick={() => setSceneResultsOpen((open) => !open)}
+              >
                 <i className="bi bi-list-ul" /> {t("imagery.search.found")}
-              </span>
+                <i className={`bi bi-chevron-${sceneResultsOpen ? "up" : "down"}`} aria-hidden="true" />
+              </button>
               <span className="badge bg-secondary">{scenes.length}</span>
               {truncated && (
                 <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
@@ -1305,6 +1315,7 @@ export default function ImageryModule() {
                 </button>
               </div>
             </div>
+            <div id="imagerySceneResultsBody" hidden={!sceneResultsOpen}>
             <div className="p-2 border-top border-bottom bg-body-tertiary">
               <div className="row g-2 align-items-center">
                 <div className="col-md-8">
@@ -1410,19 +1421,29 @@ export default function ImageryModule() {
                 </>
               )}
             </div>
+            </div>
           </div>
         )}
 
         {selectedScene && satelliteMeta && (
           <div className="card mb-3" aria-label="Data provenance scene terpilih">
             <div className="card-header py-2 d-flex align-items-center gap-2">
-              <i className="bi bi-info-circle" />
-              <strong>Data Provenance</strong>
+              <button
+                type="button"
+                className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                aria-expanded={provenanceOpen}
+                aria-controls="imageryProvenanceBody"
+                onClick={() => setProvenanceOpen((open) => !open)}
+              >
+                <i className="bi bi-info-circle" />
+                <span>Data Provenance</span>
+                <i className={`bi bi-chevron-${provenanceOpen ? "up" : "down"}`} aria-hidden="true" />
+              </button>
               <span className="badge bg-light text-dark ms-auto">
                 {satelliteMeta.capabilities?.commercial ? "Commercial" : satelliteMeta.capabilities?.open_data ? "Open data" : "Provider access"}
               </span>
             </div>
-            <div className="card-body py-2 small">
+            <div id="imageryProvenanceBody" className="card-body py-2 small" hidden={!provenanceOpen}>
               <div className="row g-2">
                 <div className="col-md-4"><span className="text-muted d-block">Provider / mission</span><strong>{satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.name}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
@@ -1455,14 +1476,23 @@ export default function ImageryModule() {
 
             <div className="card">
               <div className="card-header py-2">
-                <i className="bi bi-map" /> Peta
+                <button
+                  type="button"
+                  className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                  aria-expanded={mapOpen}
+                  aria-controls="imageryMapBody"
+                  onClick={() => setMapOpen((open) => !open)}
+                >
+                  <i className="bi bi-map" /> <span>Peta</span>
+                  <i className={`bi bi-chevron-${mapOpen ? "up" : "down"}`} aria-hidden="true" />
+                </button>
                 {selectedSceneId && (
                   <span className="text-white small ms-2">
                     - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
                   </span>
                 )}
               </div>
-              <div className="card-body p-2">
+              <div id="imageryMapBody" className="card-body p-2" hidden={!mapOpen}>
                 {mapMode === "globe" ? (
                   <GlobeView
                     id="imageryGlobe"
