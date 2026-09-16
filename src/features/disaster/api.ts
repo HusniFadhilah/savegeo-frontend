@@ -18,6 +18,9 @@ import type {
   DisasterLayersResponse,
   DisasterSourcesMap,
   DisasterStatisticsResponse,
+  FirmsFireResponse,
+  FirmsSourceId,
+  FirmsSourcesResponse,
 } from "./types";
 
 /**
@@ -62,6 +65,26 @@ async function userPost<T>(path: string, body?: unknown): Promise<T> {
 
 export function fetchDisasterSources() {
   return userGet<DisasterSourcesMap>("/disaster/sources");
+}
+
+export function fetchFirmsSources() {
+  return userGet<FirmsSourcesResponse>("/disaster/firms/sources");
+}
+
+export function fetchFirmsFires(params: {
+  source: FirmsSourceId;
+  day_range: number;
+  date?: string;
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  min_confidence?: number;
+  min_frp?: number;
+  limit?: number;
+}) {
+  const qs = buildQuery({ ...params, source: params.source });
+  return userGet<FirmsFireResponse>(`/disaster/firms/fires${qs}`);
 }
 
 export function fetchBmkgAlerts(limit = 20) {

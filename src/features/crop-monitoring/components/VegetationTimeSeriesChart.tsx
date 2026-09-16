@@ -6,6 +6,7 @@ import { ApiError } from "@/services/apiClient";
 import { runCropMonitoring } from "../api";
 import { fmtNum } from "../utils";
 import type { CropMonitoringPeriodInput, TimeseriesResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend);
 
@@ -18,10 +19,10 @@ interface Props {
 }
 
 const TREND_LABEL: Record<string, string> = {
-  naik: "Naik",
-  turun: "Turun",
-  stabil: "Stabil",
-  insufficient_data: "Data tidak cukup",
+  naik: "crop.trend.up",
+  turun: "crop.trend.down",
+  stabil: "crop.trend.stable",
+  insufficient_data: "crop.trend.insufficient",
 };
 
 /** Sub-analysis B: vegetation time series. Changing the index triggers a
@@ -29,6 +30,7 @@ const TREND_LABEL: Record<string, string> = {
 export default function VegetationTimeSeriesChart({ fieldId, period, timeseries, index, onResult }: Props) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useI18nStore((state) => state.t);
 
   async function handleIndexChange(newIndex: string) {
     setRunning(true);
@@ -42,7 +44,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
       });
       onResult(newIndex, res.sub_analyses.timeseries ?? { available: false });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat ulang time-series.");
+      setError(err instanceof ApiError ? err.message : t("crop.timeseries.reloadFailed"));
     } finally {
       setRunning(false);
     }
@@ -52,7 +54,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
     <div className="card mb-3">
       <div className="card-header d-flex justify-content-between align-items-center">
         <span>
-          <i className="bi bi-graph-up me-1" /> B. Time-Series Vegetasi
+          <i className="bi bi-graph-up me-1" /> {t("crop.card.timeseriesTitle")}
         </span>
         <select
           className="form-select form-select-sm"
@@ -71,36 +73,36 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
       <div className="card-body">
         {running && (
           <div className="text-muted small mb-2">
-            <span className="spinner-border spinner-border-sm me-1" /> Memuat ulang time-series {index}...
+            <span className="spinner-border spinner-border-sm me-1" /> {t("crop.timeseries.loading")} {index}...
           </div>
         )}
         {error && <div className="alert alert-danger py-2 small">{error}</div>}
         {!timeseries || !timeseries.available ? (
-          <div className="alert alert-secondary py-2 mb-0 small">Tidak tersedia.</div>
+          <div className="alert alert-secondary py-2 mb-0 small">{t("crop.unavailable")}.</div>
         ) : (
           <>
             <div className="row g-2 mb-3 text-center">
               <div className="col-3">
-                <div className="text-muted small">Min</div>
+                <div className="text-muted small">{t("crop.min")}</div>
                 <div className="fw-bold">{fmtNum(timeseries.min, 3)}</div>
               </div>
               <div className="col-3">
-                <div className="text-muted small">Mean</div>
+                <div className="text-muted small">{t("crop.mean")}</div>
                 <div className="fw-bold">{fmtNum(timeseries.mean, 3)}</div>
               </div>
               <div className="col-3">
-                <div className="text-muted small">Median</div>
+                <div className="text-muted small">{t("crop.median")}</div>
                 <div className="fw-bold">{fmtNum(timeseries.median, 3)}</div>
               </div>
               <div className="col-3">
-                <div className="text-muted small">Max</div>
+                <div className="text-muted small">{t("crop.max")}</div>
                 <div className="fw-bold">{fmtNum(timeseries.max, 3)}</div>
               </div>
             </div>
             <div className="mb-2 small">
-              Tren:{" "}
+              {t("crop.trend.label")}:{" "}
               <span className={`fw-bold ${timeseries.trend === "naik" ? "text-success" : timeseries.trend === "turun" ? "text-danger" : "text-muted"}`}>
-                {TREND_LABEL[timeseries.trend] ?? timeseries.trend}
+                {TREND_LABEL[timeseries.trend] ? t(TREND_LABEL[timeseries.trend]) : timeseries.trend}
               </span>
               {timeseries.last_image_date && (
                 <span className="text-muted"> · citra terakhir {timeseries.last_image_date}</span>

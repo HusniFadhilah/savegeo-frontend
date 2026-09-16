@@ -5,6 +5,7 @@ import { useAdmin } from "../AdminContext";
 import { createAdminUser, deleteAdminUser, getCurrentAdminUser, listRoles, updateAdminUser } from "../api";
 import type { AdminRole, AdminUserRow } from "../types";
 import PasswordChange from "./PasswordChange";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface FormState {
   id: number | null;
@@ -17,11 +18,11 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { id: null, username: "", email: "", password: "", roleId: "", isActive: true };
 
-function formatAdminDate(value?: string | null): string {
+function formatAdminDate(value: string | null | undefined, language: "id" | "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("id-ID", {
+  return date.toLocaleString(language === "id" ? "id-ID" : "en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -32,6 +33,7 @@ function formatAdminDate(value?: string | null): string {
 
 export default function AdminUsers() {
   const { notify } = useAdmin();
+  const { language, t } = useI18nStore();
   const [me, setMe] = useState<AdminUserRow | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const { rows, loading, error, page, pageCount, pageSize, recordsTotal, recordsFiltered, search, setSearch, nextPage, prevPage } =
@@ -83,11 +85,11 @@ export default function AdminUsers() {
       setSaving(true);
       if (form.id === null) {
         if (!form.username.trim()) {
-          setFormError("Username wajib diisi");
+          setFormError(t("admin.users.usernameRequired"));
           return;
         }
         if (form.password.length < 8) {
-          setFormError("Password minimal 8 karakter");
+          setFormError(t("admin.users.passwordMin"));
           return;
         }
         await createAdminUser({
@@ -97,10 +99,10 @@ export default function AdminUsers() {
           role_id: roleId,
           is_active: form.isActive,
         });
-        notify("Admin berhasil ditambahkan", "s");
+        notify(t("admin.users.created"), "s");
       } else {
         if (form.password && form.password.length < 8) {
-          setFormError("Password minimal 8 karakter");
+          setFormError(t("admin.users.passwordMin"));
           return;
         }
         await updateAdminUser(form.id, {
@@ -109,26 +111,26 @@ export default function AdminUsers() {
           role_id: roleId,
           ...(form.password ? { new_password: form.password } : {}),
         });
-        notify("Admin berhasil diperbarui", "s");
+        notify(t("admin.users.updated"), "s");
       }
       setFormOpen(false);
       reload();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Gagal menyimpan");
+      setFormError(err instanceof Error ? err.message : t("admin.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (u: AdminUserRow) => {
-    if (!confirm(`Hapus admin "${u.username}"?`)) return;
+    if (!confirm(`${t("admin.users.deleteConfirm")} "${u.username}"?`)) return;
     setBusyId(u.id);
     try {
       await deleteAdminUser(u.id);
-      notify("Admin dihapus", "s");
+      notify(t("admin.users.deleted"), "s");
       reload();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal menghapus admin", "e");
+      notify(err instanceof Error ? err.message : t("admin.users.deleteFailed"), "e");
     } finally {
       setBusyId(null);
     }
@@ -137,13 +139,13 @@ export default function AdminUsers() {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Kelola Pengguna Admin</span>
+        <span>{t("admin.users.title")}</span>
         <div style={{ display: "flex", gap: 6 }}>
           <button type="button" className="btn-sm" onClick={() => setPwOpen((open) => !open)}>
-            <i className="bi bi-key" /> Ganti password
+            <i className="bi bi-key" /> {t("admin.users.changePassword")}
           </button>
           <button type="button" className="btn-sm primary" onClick={openCreate}>
-            <i className="bi bi-plus-lg" /> Tambah admin
+            <i className="bi bi-plus-lg" /> {t("admin.users.add")}
           </button>
         </div>
       </div>
@@ -154,7 +156,7 @@ export default function AdminUsers() {
           <div className="collapse-form open" style={{ marginBottom: "0.875rem" }}>
             <div className="two-col" style={{ marginBottom: "0.75rem" }}>
               <div className="form-field">
-                <label className="form-label">Username {form.id === null && "*"}</label>
+                <label className="form-label">{t("admin.users.username")} {form.id === null && "*"}</label>
                 <input
                   className="form-input"
                   placeholder="cth: budi_admin"
@@ -164,7 +166,7 @@ export default function AdminUsers() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Email</label>
+                <label className="form-label">{t("admin.users.email")}</label>
                 <input
                   className="form-input"
                   placeholder="budi@savegeo.id"
@@ -174,20 +176,20 @@ export default function AdminUsers() {
               </div>
               <div className="form-field">
                 <label className="form-label">
-                  {form.id === null ? "Password (min. 8 karakter) *" : "Password baru (kosongkan jika tidak diganti)"}
+                  {form.id === null ? t("admin.users.passwordNewRequired") : t("admin.users.passwordOptional")}
                 </label>
                 <input
                   type="password"
                   className="form-input"
-                  placeholder="Minimal 8 karakter"
+                  placeholder={t("admin.users.passwordPlaceholder")}
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Role</label>
+                <label className="form-label">{t("admin.users.role")}</label>
                 <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}>
-                  <option value="">Full access</option>
+                  <option value="">{t("admin.users.fullAccess")}</option>
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -199,15 +201,15 @@ export default function AdminUsers() {
             <label className="cfg-switch" style={{ marginBottom: "0.75rem" }}>
               <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
               <span />
-              <strong>{form.isActive ? "Akun aktif" : "Akun nonaktif"}</strong>
+              <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
             </label>
             {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
-                <i className="bi bi-save" /> {saving ? "Menyimpan..." : form.id === null ? "Simpan" : "Update"}
+                <i className="bi bi-save" /> {saving ? t("admin.saving") : form.id === null ? t("admin.save") : t("admin.update")}
               </button>
               <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
-                Batal
+                {t("admin.cancel")}
               </button>
             </div>
           </div>
@@ -217,19 +219,19 @@ export default function AdminUsers() {
           <table className="tbl tbl-wide">
             <thead>
               <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Dibuat</th>
-                <th>Login terakhir</th>
-                <th>Aksi</th>
+                <th>{t("admin.users.user")}</th>
+                <th>{t("admin.users.role")}</th>
+                <th>{t("admin.status")}</th>
+                <th>{t("admin.users.createdAt")}</th>
+                <th>{t("admin.users.lastLogin")}</th>
+                <th>{t("admin.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Memuat...
+                    {t("admin.loading")}
                   </td>
                 </tr>
               )}
@@ -243,7 +245,7 @@ export default function AdminUsers() {
               {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada admin.
+                    {t("admin.users.empty")}
                   </td>
                 </tr>
               )}
@@ -255,22 +257,22 @@ export default function AdminUsers() {
                       <strong>{u.username}</strong>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
                     </td>
-                    <td>{u.role || "Full access"}</td>
+                    <td>{u.role || t("admin.users.fullAccess")}</td>
                     <td>
-                      <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? "Aktif" : "Nonaktif"}</span>
+                      <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? t("admin.users.active") : t("admin.users.inactive")}</span>
                     </td>
-                    <td>{formatAdminDate(u.created_at)}</td>
-                    <td>{formatAdminDate(u.last_login)}</td>
+                    <td>{formatAdminDate(u.created_at, language)}</td>
+                    <td>{formatAdminDate(u.last_login, language)}</td>
                     <td>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button type="button" className="btn-xs" title="Edit" aria-label="Edit" onClick={() => openEdit(u)}>
+                        <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
                           <i className="bi bi-pencil-square" />
                         </button>
                         <button
                           type="button"
                           className="btn-xs danger"
-                          title="Hapus"
-                          aria-label="Hapus"
+                          title={t("admin.delete")}
+                          aria-label={t("admin.delete")}
                           disabled={busyId === u.id || me?.id === u.id}
                           onClick={() => handleDelete(u)}
                         >
@@ -294,7 +296,7 @@ export default function AdminUsers() {
           onSearchChange={setSearch}
           onPrev={prevPage}
           onNext={nextPage}
-          searchPlaceholder="Cari username, email, role..."
+          searchPlaceholder={t("admin.users.searchPlaceholder")}
         />
       </div>
     </div>

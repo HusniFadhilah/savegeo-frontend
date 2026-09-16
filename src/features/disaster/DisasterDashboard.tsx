@@ -25,6 +25,8 @@ import {
   type EventDisasterType,
   type EventSeverity,
   type HotspotRecord,
+  type FirmsLayerState,
+  type FirmsHotspotFeature,
 } from "./types";
 import SatelliteViewer from "./components/SatelliteViewer";
 import LayerPanel from "./components/LayerPanel";
@@ -34,6 +36,7 @@ import HotspotPanel from "./components/HotspotPanel";
 import SourceStatusPanel from "./components/SourceStatusPanel";
 import BmkgAlerts from "./components/BmkgAlerts";
 import DemSlopeControls from "./components/DemSlopeControls";
+import FirmsHotspotPanel from "./components/FirmsHotspotPanel";
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
@@ -100,8 +103,15 @@ export default function DisasterDashboard() {
   const [showAoi, setShowAoi] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
   const [highlightedHotspotId, setHighlightedHotspotId] = useState<number | null>(null);
-  const [focusFeature, setFocusFeature] = useState<GeoJSON.Feature | GeoJSON.Geometry | null>(null);
+  const [focusFeature, setFocusFeature] = useState<GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null>(null);
   const [focusSignal, setFocusSignal] = useState(0);
+  const [firmsLayer, setFirmsLayer] = useState<FirmsLayerState>({
+    enabled: false,
+    result: null,
+    features: [],
+    showLabels: false,
+    cluster: true,
+  });
 
   const [additionalSourcesOpen, setAdditionalSourcesOpen] = useState(false);
   const [sources, setSources] = useState<DisasterSourcesMap | null>(null);
@@ -225,6 +235,12 @@ export default function DisasterDashboard() {
 
   const handleHotspotHighlight = (hotspotId: number) => {
     setHighlightedHotspotId((prev) => (prev === hotspotId ? null : hotspotId));
+  };
+
+  const handleFirmsZoom = (features: FirmsHotspotFeature[]) => {
+    if (!features.length) return;
+    setFocusFeature({ type: "FeatureCollection", features });
+    setFocusSignal((n) => n + 1);
   };
 
   async function handleLoadSources() {
@@ -394,6 +410,7 @@ export default function DisasterDashboard() {
             onZoom={handleHotspotZoom}
             onHighlight={handleHotspotHighlight}
           />
+          <FirmsHotspotPanel aoi={aoi} onChange={setFirmsLayer} onZoom={handleFirmsZoom} />
           {hotspotsLoading && <div className="text-muted small mb-3">Memuat hotspot...</div>}
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
         </aside>
@@ -415,6 +432,9 @@ export default function DisasterDashboard() {
             showHotspots={showHotspots}
             highlightedHotspotId={highlightedHotspotId}
             onHotspotClick={handleHotspotHighlight}
+            firmsFeatures={firmsLayer.enabled ? firmsLayer.features : []}
+            firmsShowLabels={firmsLayer.showLabels}
+            firmsCluster={firmsLayer.cluster}
             focusFeature={focusFeature}
             focusSignal={focusSignal}
           />

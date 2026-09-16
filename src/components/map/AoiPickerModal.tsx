@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import AoiPickerContent from "@/components/map/AoiPickerContent";
 import type { AoiState } from "@/features/carbon/types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   open: boolean;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function AoiPickerModal({ open, id, title, description, aoi, onAoiChange, onClose }: Props) {
+  const t = useI18nStore((state) => state.t);
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -34,11 +36,11 @@ export default function AoiPickerModal({ open, id, title, description, aoi, onAo
       <div className="aoi-modal-dialog">
         <div className="aoi-modal-header">
           <div>
-            <span className="aoi-modal-eyebrow">Area of Interest</span>
+            <span className="aoi-modal-eyebrow">{t("aoi.eyebrow")}</span>
             <h2 id={`${id}Title`}>{title}</h2>
             {description && <p>{description}</p>}
           </div>
-          <button type="button" className="aoi-modal-close" onClick={onClose} aria-label="Tutup modal AOI">
+          <button type="button" className="aoi-modal-close" onClick={onClose} aria-label={t("aoi.close")}>
             <i className="bi bi-x-lg" />
           </button>
         </div>
@@ -50,16 +52,16 @@ export default function AoiPickerModal({ open, id, title, description, aoi, onAo
         <div className="aoi-modal-footer">
           <div className={`aoi-modal-status ${aoi ? "ready" : ""}`}>
             <i className={`bi ${aoi ? "bi-check-circle-fill" : "bi-info-circle"}`} />
-            <span>{aoi ? `AOI aktif: ${aoi.name}` : "Pilih wilayah, koordinat, gambar di peta, unggah file, atau pilih perusahaan."}</span>
+            <span>{aoi ? `${t("aoi.active")}: ${aoi.name}` : t("aoi.statusHint")}</span>
           </div>
           <div className="aoi-modal-actions">
             {aoi && (
               <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => onAoiChange(null)}>
-                <i className="bi bi-eraser" /> Hapus AOI
+                <i className="bi bi-eraser" /> {t("aoi.remove")}
               </button>
             )}
             <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
-              <i className="bi bi-check2" /> Selesai
+              <i className="bi bi-check2" /> {t("aoi.done")}
             </button>
           </div>
         </div>

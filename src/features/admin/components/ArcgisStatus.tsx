@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { getArcgisStatus } from "../api";
 import type { ArcgisStatusInfo } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 export default function ArcgisStatus() {
+  const t = useI18nStore((state) => state.t);
   const [status, setStatus] = useState<ArcgisStatusInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,7 @@ export default function ArcgisStatus() {
       const r = await getArcgisStatus();
       setStatus(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat status ArcGIS");
+      setError(err instanceof Error ? err.message : t("admin.arcgis.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -27,54 +29,54 @@ export default function ArcgisStatus() {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>ArcGIS Integration Status</span>
+        <span>{t("admin.arcgis.title")}</span>
         <button type="button" className="btn-sm" onClick={load} disabled={loading}>
-          <i className="bi bi-arrow-clockwise" /> Refresh
+          <i className="bi bi-arrow-clockwise" /> {t("admin.refresh")}
         </button>
       </div>
       <div className="card-body-custom">
-        {loading && <div style={{ color: "var(--text-muted)", padding: "12px 0" }}>Memuat status...</div>}
+        {loading && <div style={{ color: "var(--text-muted)", padding: "12px 0" }}>{t("admin.loadingStatus")}</div>}
         {!loading && error && (
-          <div style={{ color: "var(--danger-color, #e53935)" }}>Gagal memuat status ArcGIS: {error}</div>
+          <div style={{ color: "var(--danger-color, #e53935)" }}>{t("admin.arcgis.loadFailed")}: {error}</div>
         )}
         {!loading && !error && status && (
           <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <tbody>
               <tr>
-                <td style={{ padding: "6px 0", color: "var(--text-muted)", width: 160 }}>Status</td>
+                <td style={{ padding: "6px 0", color: "var(--text-muted)", width: 160 }}>{t("admin.status")}</td>
                 <td>
                   <span className={`stat-badge ${status.enabled ? "badge-green" : "badge-gray"}`}>
-                    {status.enabled ? "Enabled" : "Disabled"}
+                    {status.enabled ? t("admin.enabled") : t("admin.disabled")}
                   </span>
                 </td>
               </tr>
               <tr>
-                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Credential</td>
+                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.credential")}</td>
                 <td>
                   <span className={`stat-badge ${status.configured ? "badge-green" : "badge-amber"}`}>
-                    {status.configured ? "Configured" : "Not configured"}
+                    {status.configured ? t("admin.configured") : t("admin.notConfigured")}
                   </span>
                 </td>
               </tr>
               <tr>
-                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Auth mode</td>
+                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.authMode")}</td>
                 <td>
                   <code>{status.auth_mode || "—"}</code>
                 </td>
               </tr>
               <tr>
-                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Portal URL</td>
+                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalUrl")}</td>
                 <td>
                   <code>{status.portal_url || "—"}</code>
                 </td>
               </tr>
               {status.can_reach_portal !== undefined && status.can_reach_portal !== null && (
                 <tr>
-                  <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Koneksi portal</td>
+                  <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalConnection")}</td>
                   <td>
                     <span className={`stat-badge ${status.can_reach_portal ? "badge-green" : "badge-red"}`}>
-                      {status.can_reach_portal ? "Reachable" : "Unreachable"}
+                      {status.can_reach_portal ? t("admin.reachable") : t("admin.unreachable")}
                     </span>{" "}
                     {status.portal_error && (
                       <span style={{ color: "var(--danger-color, #e53935)", fontSize: 11 }}>{status.portal_error}</span>
@@ -84,7 +86,7 @@ export default function ArcgisStatus() {
               )}
               {status.portal_name && (
                 <tr>
-                  <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Nama portal</td>
+                  <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalName")}</td>
                   <td>{status.portal_name}</td>
                 </tr>
               )}
@@ -96,7 +98,7 @@ export default function ArcgisStatus() {
                 </tr>
               )}
               <tr>
-                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>Dicek pada</td>
+                <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.checkedAt")}</td>
                 <td style={{ fontSize: 11 }}>{status.checked_at || "—"}</td>
               </tr>
             </tbody>
@@ -113,9 +115,9 @@ export default function ArcgisStatus() {
             color: "var(--text-muted)",
           }}
         >
-          <strong>Cara mengaktifkan ArcGIS:</strong>
+          <strong>{t("admin.arcgis.enableGuide")}</strong>
           <br />
-          Tambahkan env var berikut ke file <code>.env</code> backend:
+          {t("admin.arcgis.envGuide")} <code>.env</code> backend:
           <br />
           <br />
           <code>ARCGIS_ENABLED=true</code>
@@ -129,7 +131,7 @@ export default function ArcgisStatus() {
           <code>ARCGIS_REQUEST_TIMEOUT=30</code>
           <br />
           <br />
-          Token/API key <strong>tidak pernah</strong> dikembalikan ke halaman ini.
+          {t("admin.arcgis.secretNotice")}
         </div>
       </div>
     </div>

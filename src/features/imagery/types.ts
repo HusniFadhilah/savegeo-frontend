@@ -10,6 +10,9 @@ export type ImagerySourceKind =
   | "oam_stac"
   | "maxar_open_data_stac"
   | "planet_open_data_stac"
+  | "planet_stac"
+  | "vantor_stac"
+  | "iceye_stac"
   | "generic_stac"
   | "big_ctsrt";
 
@@ -42,6 +45,24 @@ export interface ImageryProvider {
   unit?: string;
   /** Per-pixel cloud-MASKING techniques this provider's scene-tile supports (Sentinel-2 only: L2A has all 3, L1C/TOA lacks "scl" - no SCL band on that product). null/absent = masking not offered, only the scene-level max_cloud_cover FILTER applies (if cloud_property is set at all). */
   cloud_mask_techniques?: string[] | null;
+  license?: string;
+  configuration_status?: "connected" | "not_configured" | "incomplete_configuration" | string;
+  stac_configured?: boolean;
+  credential_configured?: boolean;
+  capabilities?: {
+    searchable: boolean;
+    downloadable: boolean;
+    analytical: boolean;
+    visualization_only: boolean;
+    supports_time: boolean;
+    supports_cloud_filter: boolean;
+    supports_bands: boolean;
+    supports_raw_data: boolean;
+    supports_ai: boolean;
+    requires_authentication: boolean;
+    commercial: boolean;
+    open_data: boolean;
+  };
 }
 
 export interface ImageryProviderCatalogResponse {

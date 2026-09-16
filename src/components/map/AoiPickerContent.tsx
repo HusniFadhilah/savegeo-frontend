@@ -12,15 +12,16 @@ import MapClickPicker from "@/components/map/MapClickPicker";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 type TabKey = "admin" | "coordinate" | "draw" | "upload" | "company";
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "admin", label: "Indonesia Admin", icon: "bi-map-fill" },
-  { key: "coordinate", label: "Koordinat", icon: "bi-pin-map-fill" },
-  { key: "draw", label: "Gambar di Peta", icon: "bi-vector-pen" },
-  { key: "upload", label: "Unggah File", icon: "bi-upload" },
-  { key: "company", label: "Perusahaan", icon: "bi-building-fill" },
+const TABS: { key: TabKey; labelKey: string; icon: string }[] = [
+  { key: "admin", labelKey: "aoi.tab.admin", icon: "bi-map-fill" },
+  { key: "coordinate", labelKey: "aoi.tab.coordinate", icon: "bi-pin-map-fill" },
+  { key: "draw", labelKey: "aoi.tab.draw", icon: "bi-vector-pen" },
+  { key: "upload", labelKey: "aoi.tab.upload", icon: "bi-upload" },
+  { key: "company", labelKey: "aoi.tab.company", icon: "bi-building-fill" },
 ];
 
 interface Props {
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "admin" }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
   const [coordLat, setCoordLat] = useState("-6.9667");
   const [coordLon, setCoordLon] = useState("110.4167");
@@ -72,7 +74,7 @@ export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "a
             onClick={() => setActiveTab(tab.key)}
           >
             <i className={`bi ${tab.icon}`} />
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -91,8 +93,7 @@ export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "a
         {activeTab === "draw" && (
           <div className="alert alert-info py-2 small mb-0">
             <i className="bi bi-info-circle me-1" />
-            Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi AOI dan tetap bisa
-            diedit/dihapus lewat toolbar peta.
+            {t("aoi.drawHint")}
           </div>
         )}
         {activeTab === "upload" && <AoiUploadTab onApply={(f, n) => applyAoi(f, n, "upload")} />}

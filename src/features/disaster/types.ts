@@ -26,6 +26,101 @@ export interface DisasterSourceItem {
 /** GET /disaster/sources - keyed by source id (e.g. "inarisk", "demnas"). */
 export type DisasterSourcesMap = Record<string, DisasterSourceItem>;
 
+export type FirmsSourceId = "all" | "VIIRS_NOAA20_NRT" | "VIIRS_NOAA21_NRT" | "VIIRS_SNPP_NRT" | "MODIS_NRT" | "LANDSAT_NRT";
+export type FirmsPeriod = "1" | "2" | "3" | "7" | "historical";
+export type FirmsConfidenceLabel = "low" | "nominal" | "high";
+
+export interface FirmsSourceMetadata {
+  id: Exclude<FirmsSourceId, "all">;
+  label: string;
+  sensor: string;
+  resolution_m: number;
+  available: boolean;
+  status: "configured" | "needs_key" | string;
+}
+
+export interface FirmsSourcesResponse {
+  configured: boolean;
+  sources: FirmsSourceMetadata[];
+  wms_layers: { id: string; layer: string; available: boolean }[];
+  cache_ttl_seconds: number;
+  attribution: string;
+}
+
+export interface FirmsHotspotProperties {
+  latitude: number;
+  longitude: number;
+  acq_date: string | null;
+  acq_time: string;
+  acq_datetime_utc: string | null;
+  satellite: string | null;
+  instrument: string | null;
+  confidence: number | string | null;
+  confidence_numeric: number | null;
+  confidence_label: FirmsConfidenceLabel | null;
+  frp: number | null;
+  bright_ti4: number | null;
+  bright_ti5: number | null;
+  scan: number | null;
+  track: number | null;
+  daynight: string | null;
+  source: string;
+  source_label: string;
+  resolution_m: number;
+  is_near_real_time: boolean;
+  raw?: Record<string, string | null>;
+}
+
+export type FirmsHotspotFeature = GeoJSON.Feature<GeoJSON.Point, FirmsHotspotProperties>;
+
+export interface FirmsSummary {
+  total_hotspots: number;
+  high_confidence_hotspots: number;
+  total_frp: number;
+  max_frp: number;
+  latest_detection_utc: string | null;
+  by_day: { date: string; count: number }[];
+  by_source: { source: string; count: number }[];
+}
+
+export interface FirmsFireResponse extends GeoJSON.FeatureCollection<GeoJSON.Point, FirmsHotspotProperties> {
+  metadata: {
+    source: FirmsSourceId | string;
+    fetched_at: string;
+    count: number;
+    raw_count: number;
+    is_near_real_time: boolean;
+    cached: boolean;
+    stale: boolean;
+    truncated: boolean;
+    errors: { source: string; message: string; status: number }[];
+    summary: FirmsSummary;
+    attribution: string;
+    disclaimer: string;
+  };
+}
+
+export interface FirmsQueryState {
+  enabled: boolean;
+  source: FirmsSourceId;
+  period: FirmsPeriod;
+  historicalDate: string;
+  minConfidence: number;
+  minFrp: string;
+  showLabels: boolean;
+  cluster: boolean;
+  dayOnly: boolean;
+  highOnly: boolean;
+}
+
+export interface FirmsLayerState {
+  enabled: boolean;
+  result: FirmsFireResponse | null;
+  features: FirmsHotspotFeature[];
+  showLabels: boolean;
+  cluster: boolean;
+}
+
 export interface BmkgAlert {
   title?: string;
   area?: string;

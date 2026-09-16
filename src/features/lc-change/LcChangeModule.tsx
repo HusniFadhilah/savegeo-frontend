@@ -1027,7 +1027,7 @@ export default function LcChangeModule() {
       <AoiPickerModal
         open={aoiModalOpen}
         id="lcChangeAoiModalMap"
-        title="Pilih AOI Perubahan Lahan"
+        title={t("lc.aoiModalTitle")}
         description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
         aoi={aoiState}
         onAoiChange={setAoiState}

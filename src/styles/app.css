@@ -1344,6 +1344,36 @@
   border-bottom: 1px solid rgba(15, 118, 110, 0.12);
 }
 
+.disaster-kalimantan-accordion-trigger {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.disaster-kalimantan-accordion-trigger > div {
+  min-width: 0;
+}
+
+.disaster-kalimantan-accordion-trigger > i {
+  flex: 0 0 auto;
+  color: #0f766e;
+  font-size: 1.1rem;
+}
+
+.disaster-kalimantan-accordion-trigger:focus-visible {
+  outline: 3px solid rgba(20, 184, 166, 0.35);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .disaster-kalimantan-brief-header h2 {
   margin: 0;
   color: #134e4a;
@@ -2010,6 +2040,34 @@
   color: #0f172a;
 }
 
+.firms-hotspot-panel .card-body {
+  background: transparent;
+}
+
+.firms-hotspot-panel .firms-controls {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.firms-hotspot-panel .form-range {
+  accent-color: #ef4444;
+}
+
+.firms-popup dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 8px;
+}
+
+.firms-popup dt {
+  font-weight: 700;
+}
+
+.firms-popup dd {
+  margin: 0;
+}
+
 .disaster-view-toggle .btn {
   border-color: #cbd5e1;
   color: #334155;
@@ -2229,6 +2287,10 @@
   .disaster-kalimantan-date-grid,
   .disaster-kalimantan-live-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .firms-hotspot-panel .btn {
+    flex: 1 1 auto;
   }
 
   .disaster-hero-metrics,

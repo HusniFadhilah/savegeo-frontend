@@ -250,7 +250,7 @@ export default function FieldPanel({ commodities }: Props) {
       <AoiPickerModal
         open={aoiModalOpen}
         id="cropFieldAoiModalMap"
-        title="Gambar Batas Lahan"
+        title={t("crop.field.aoiModalTitle")}
         description="Pilih wilayah, koordinat, gambar polygon/rectangle, unggah file, atau gunakan batas perusahaan."
         aoi={aoi}
         onAoiChange={handleModalAoiChange}

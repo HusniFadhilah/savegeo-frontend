@@ -8,17 +8,18 @@ import ImageryManager from "./ImageryManager";
 import AnalysisManager from "./AnalysisManager";
 import AnalysisReview from "./AnalysisReview";
 import DisasterAuditTrail from "./DisasterAuditTrail";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 type Mode = "list" | "create" | "detail";
 type DetailTab = "info" | "aoi" | "imagery" | "analysis" | "review" | "audit";
 
-const DETAIL_TABS: { id: DetailTab; icon: string; label: string }[] = [
-  { id: "info", icon: "bi-info-circle", label: "Informasi" },
-  { id: "aoi", icon: "bi-vector-pen", label: "AOI" },
-  { id: "imagery", icon: "bi-image", label: "Citra Satelit" },
-  { id: "analysis", icon: "bi-cpu", label: "Analysis" },
-  { id: "review", icon: "bi-clipboard-check", label: "Review & Publish" },
-  { id: "audit", icon: "bi-clock-history", label: "Audit Trail" },
+const DETAIL_TABS: { id: DetailTab; icon: string; labelKey: string }[] = [
+  { id: "info", icon: "bi-info-circle", labelKey: "admin.disaster.info" },
+  { id: "aoi", icon: "bi-vector-pen", labelKey: "admin.disaster.aoi" },
+  { id: "imagery", icon: "bi-image", labelKey: "admin.disaster.imagery" },
+  { id: "analysis", icon: "bi-cpu", labelKey: "admin.disaster.analysis" },
+  { id: "review", icon: "bi-clipboard-check", labelKey: "admin.disaster.review" },
+  { id: "audit", icon: "bi-clock-history", labelKey: "admin.disaster.audit" },
 ];
 
 /**
@@ -29,6 +30,7 @@ const DETAIL_TABS: { id: DetailTab; icon: string; label: string }[] = [
  * mutation any sub-tab makes.
  */
 export default function DisasterManagement() {
+  const t = useI18nStore((state) => state.t);
   const [mode, setMode] = useState<Mode>("list");
   const [listReloadKey, setListReloadKey] = useState(0);
 
@@ -43,7 +45,7 @@ export default function DisasterManagement() {
     setDetailError(null);
     getDisasterEvent(id)
       .then(setDetail)
-      .catch((err) => setDetailError(err instanceof Error ? err.message : "Gagal memuat data kejadian"))
+      .catch((err) => setDetailError(err instanceof Error ? err.message : t("admin.disaster.loadFailed")))
       .finally(() => setDetailLoading(false));
   }, []);
 
@@ -80,7 +82,7 @@ export default function DisasterManagement() {
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
           <button type="button" className="btn-sm" onClick={backToList}>
-            <i className="bi bi-arrow-left" /> Kembali ke Daftar
+            <i className="bi bi-arrow-left" /> {t("admin.disaster.backToList")}
           </button>
           {detail && (
             <div style={{ fontWeight: 600, fontSize: 14 }}>
@@ -91,19 +93,19 @@ export default function DisasterManagement() {
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: "0.75rem", flexWrap: "wrap" }}>
-          {DETAIL_TABS.map((t) => (
+          {DETAIL_TABS.map((tab) => (
             <button
-              key={t.id}
+              key={tab.id}
               type="button"
-              className={`btn-sm ${detailTab === t.id ? "primary" : ""}`}
-              onClick={() => setDetailTab(t.id)}
+              className={`btn-sm ${detailTab === tab.id ? "primary" : ""}`}
+              onClick={() => setDetailTab(tab.id)}
             >
-              <i className={`bi ${t.icon}`} /> {t.label}
+              <i className={`bi ${tab.icon}`} /> {t(tab.labelKey)}
             </button>
           ))}
         </div>
 
-        {detailLoading && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Memuat...</div>}
+        {detailLoading && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>{t("admin.loading")}</div>}
         {detailError && <div className="alert alert-danger py-1 px-2 small">{detailError}</div>}
 
         {detail && !detailLoading && (

@@ -51,6 +51,20 @@ const ESRI_WAYBACK_PROVIDER: ImageryProvider = {
   start_year: 2014,
   cloud_property: null,
   cloud_mask_techniques: null,
+  capabilities: {
+    searchable: true,
+    downloadable: false,
+    analytical: false,
+    visualization_only: true,
+    supports_time: true,
+    supports_cloud_filter: false,
+    supports_bands: false,
+    supports_raw_data: false,
+    supports_ai: false,
+    requires_authentication: false,
+    commercial: false,
+    open_data: false,
+  },
   description:
     "Arsip rilis World Imagery basemap. Tanggal adalah tanggal publikasi Wayback, bukan selalu tanggal akuisisi sensor.",
 };
@@ -414,11 +428,11 @@ export default function ImageryModule() {
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
   const isCogProvider = Boolean(
     satelliteMeta?.source_kind &&
-      ["maxar_open_data_stac", "planet_open_data_stac", "generic_stac"].includes(satelliteMeta.source_kind),
+      ["maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac"].includes(satelliteMeta.source_kind),
   );
   const isOpenHighResProvider = Boolean(
     satelliteMeta?.source_kind &&
-      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "generic_stac", "big_ctsrt"].includes(satelliteMeta.source_kind),
+      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac", "big_ctsrt"].includes(satelliteMeta.source_kind),
   );
   const supportsSuperResolution = Boolean(satelliteMeta && !isEsriWayback && (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"));
   const activeSuperResolution = supportsSuperResolution ? superResolution : "off";
@@ -1343,6 +1357,29 @@ export default function ImageryModule() {
           </div>
         )}
 
+        {selectedScene && satelliteMeta && (
+          <div className="card mb-3" aria-label="Data provenance scene terpilih">
+            <div className="card-header py-2 d-flex align-items-center gap-2">
+              <i className="bi bi-info-circle" />
+              <strong>Data Provenance</strong>
+              <span className="badge bg-light text-dark ms-auto">
+                {satelliteMeta.capabilities?.commercial ? "Commercial" : satelliteMeta.capabilities?.open_data ? "Open data" : "Provider access"}
+              </span>
+            </div>
+            <div className="card-body py-2 small">
+              <div className="row g-2">
+                <div className="col-md-4"><span className="text-muted d-block">Provider / mission</span><strong>{satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.name}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Akuisisi (UTC)</span><strong>{formatAcquired(selectedScene.acquired_at)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Tutupan awan</span><strong>{selectedScene.cloud_cover_pct == null ? "Tidak tersedia / tidak relevan" : `${selectedScene.cloud_cover_pct}%`}</strong></div>
+                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.key}` : "Asset tile provider"}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Attribution / lisensi</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? "Gunakan sesuai ketentuan sumber."}</span></div>
+              </div>
+              {isEsriWayback && <div className="alert alert-info py-1 px-2 mt-2 mb-0">Tanggal di atas adalah tanggal rilis Wayback (referensi visual), bukan jaminan tanggal akuisisi sensor.</div>}
+            </div>
+          </div>
+        )}
+
         {viewMode === "single" && (
           <>
             {tileError && <div className="alert alert-danger py-2 mb-3">{tileError}</div>}
@@ -1407,8 +1444,14 @@ export default function ImageryModule() {
                               ? "OpenAerialMap / HOT"
                               : satelliteMeta?.source_kind === "maxar_open_data_stac"
                                 ? "Vantor/Maxar Open Data"
-                                : satelliteMeta?.source_kind === "planet_open_data_stac"
+                              : satelliteMeta?.source_kind === "planet_open_data_stac"
                                   ? "Planet Open Data"
+                                  : satelliteMeta?.source_kind === "planet_stac"
+                                    ? "Planet commercial"
+                                    : satelliteMeta?.source_kind === "vantor_stac"
+                                      ? "Vantor/Maxar commercial"
+                                      : satelliteMeta?.source_kind === "iceye_stac"
+                                        ? "ICEYE"
                                   : satelliteMeta?.source_kind === "generic_stac"
                                     ? "STAC/COG source"
                                     : satelliteMeta?.source_kind === "big_ctsrt"
@@ -1601,7 +1644,7 @@ export default function ImageryModule() {
       <AoiPickerModal
         open={aoiModalOpen}
         id="imageryAoiModalMap"
-        title="Pilih AOI Scene Satelit"
+        title={t("imagery.aoiModalTitle")}
         description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
         aoi={aoiState}
         onAoiChange={setAoiState}

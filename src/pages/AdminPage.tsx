@@ -18,7 +18,7 @@ export default function AdminPage({ section = DEFAULT_ADMIN_SECTION }: { section
   }
 
   if (isViewerRole(user?.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/carbon-estimation" replace />;
   }
 
   return <AdminDashboard section={section} />;

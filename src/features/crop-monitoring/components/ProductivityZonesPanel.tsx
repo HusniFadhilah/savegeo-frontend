@@ -1,5 +1,6 @@
 import { fmtNum, fmtPct } from "../utils";
 import type { ProductivityZonesResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   productivityZones: ProductivityZonesResult;
@@ -10,15 +11,16 @@ const ZONE_COLOR: Record<string, string> = { High: "#2e7d32", Medium: "#f9a825",
 
 /** Sub-analysis H: productivity zones. Weights shown transparently. */
 export default function ProductivityZonesPanel({ productivityZones }: Props) {
+  const t = useI18nStore((state) => state.t);
   return (
     <div className="card mb-3">
       <div className="card-header">
-        <i className="bi bi-grid-3x3-gap-fill me-1" /> H. Zona Produktivitas
+        <i className="bi bi-grid-3x3-gap-fill me-1" /> {t("crop.card.productivityTitle")}
       </div>
       <div className="card-body">
         {!productivityZones.available ? (
           <div className="alert alert-secondary py-2 mb-0 small">
-            Tidak tersedia{productivityZones.reason ? `: ${productivityZones.reason}` : "."}
+            {t("crop.unavailable")}{productivityZones.reason ? `: ${productivityZones.reason}` : "."}
           </div>
         ) : (
           <>
@@ -26,9 +28,9 @@ export default function ProductivityZonesPanel({ productivityZones }: Props) {
               <table className="table table-striped table-hover table-sm mb-0">
                 <thead className="table-secondary">
                   <tr>
-                    <th>Zona</th>
-                    <th>Luas (ha)</th>
-                    <th>Persentase</th>
+                    <th>{t("crop.zone")}</th>
+                    <th>{t("crop.areaHa")}</th>
+                    <th>{t("crop.percentage")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -45,7 +47,7 @@ export default function ProductivityZonesPanel({ productivityZones }: Props) {
                             border: "1px solid #ccc",
                           }}
                         />
-                        {z === "High" ? "Tinggi" : z === "Medium" ? "Sedang" : "Rendah"}
+                        {z === "High" ? t("crop.high") : z === "Medium" ? t("crop.moderate") : t("crop.low")}
                       </td>
                       <td>{fmtNum(productivityZones.zones[z].area_ha, 2)}</td>
                       <td>
@@ -62,7 +64,7 @@ export default function ProductivityZonesPanel({ productivityZones }: Props) {
               {productivityZones.weights.sentinel1_vv != null && `, Sentinel-1 VV ${fmtPct(productivityZones.weights.sentinel1_vv * 100, 0)}`}
               {productivityZones.weights.elevation != null && `, Elevasi ${fmtPct(productivityZones.weights.elevation * 100, 0)}`}
               {" · "}
-              {productivityZones.seasons_used} musim digunakan
+              {productivityZones.seasons_used} {t("crop.seasonsUsed")}
             </small>
             {productivityZones.tile_url && (
               <small className="text-muted d-block mt-1">Lihat layer peta "Zona Produktivitas" di panel Peta Hasil di bawah.</small>

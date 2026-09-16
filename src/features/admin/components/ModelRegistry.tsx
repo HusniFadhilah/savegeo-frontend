@@ -4,6 +4,7 @@ import type { MlModel } from "../types";
 import { useAdmin } from "../AdminContext";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 const ALGOS = ["Ridge", "Lasso", "Linear", "ElasticNet", "RandomForest", "XGBoost"];
 const TYPES = ["carbon", "vegetation", "landcover"];
@@ -52,19 +53,21 @@ function ModelMetricSummary({ m }: { m: MlModel }) {
 }
 
 function ModelStatusBadges({ m }: { m: MlModel }) {
+  const t = useI18nStore((state) => state.t);
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
       <span className={`stat-badge ${m.is_active ? "badge-green" : "badge-gray"}`}>
-        {m.is_active ? "Aktif" : "Nonaktif"}
+        {m.is_active ? t("admin.active") : t("admin.inactive")}
       </span>
-      {m.is_default && <span className="stat-badge badge-blue">Default</span>}
-      {m.is_legacy && <span className="stat-badge badge-amber">Legacy</span>}
+      {m.is_default && <span className="stat-badge badge-blue">{t("admin.default")}</span>}
+      {m.is_legacy && <span className="stat-badge badge-amber">{t("admin.legacy")}</span>}
     </div>
   );
 }
 
 export default function ModelRegistry() {
   const { notify } = useAdmin();
+  const t = useI18nStore((state) => state.t);
   const {
     rows, loading, error, page, pageCount, pageSize,
     recordsTotal, recordsFiltered, search, setSearch,
@@ -109,11 +112,11 @@ export default function ModelRegistry() {
   const handleUpload = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setFormError("Name wajib diisi");
+      setFormError(t("admin.models.nameRequired"));
       return;
     }
     if (!file) {
-      setFormError("Pilih file model");
+      setFormError(t("admin.models.fileRequired"));
       return;
     }
     let metrics: string | undefined;
@@ -123,7 +126,7 @@ export default function ModelRegistry() {
         JSON.parse(rawTrim);
         metrics = rawTrim;
       } catch {
-        setFormError("Format metrics tidak valid (harus JSON)");
+        setFormError(t("admin.models.metricsInvalid"));
         return;
       }
     }
@@ -140,14 +143,14 @@ export default function ModelRegistry() {
         set_default: setDefault,
         metrics,
       });
-      notify("Model berhasil diupload", "s");
+      notify(t("admin.models.uploaded"), "s");
       setFormOpen(false);
       setFile(null);
       setName("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       await reload();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal upload";
+      const msg = err instanceof Error ? err.message : t("admin.models.uploadFailed");
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -159,7 +162,7 @@ export default function ModelRegistry() {
     setBusyId(id);
     try {
       await setDefaultModel(id);
-      notify("Default model diperbarui", "s");
+      notify(t("admin.models.defaultUpdated"), "s");
       await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
@@ -172,7 +175,7 @@ export default function ModelRegistry() {
     setBusyId(id);
     try {
       await toggleModelActive(id, current);
-      notify("Status model diperbarui", "s");
+      notify(t("admin.models.statusUpdated"), "s");
       await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
@@ -182,11 +185,11 @@ export default function ModelRegistry() {
   };
 
   const doDelete = async (id: number) => {
-    if (!confirm("Hapus model ini? File juga akan dihapus.")) return;
+    if (!confirm(t("admin.models.deleteConfirm"))) return;
     setBusyId(id);
     try {
       await deleteModel(id);
-      notify("Model dihapus", "s");
+      notify(t("admin.models.deleted"), "s");
       await reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gagal", "e");
@@ -198,9 +201,9 @@ export default function ModelRegistry() {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>ML Models tersimpan</span>
+        <span>{t("admin.models.title")}</span>
         <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-          <i className="bi bi-plus-lg" /> Upload model
+          <i className="bi bi-plus-lg" /> {t("admin.models.upload")}
         </button>
       </div>
       <div className="card-body-custom">

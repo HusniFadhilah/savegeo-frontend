@@ -147,6 +147,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
   const [showBurned, setShowBurned] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
   const [showSam, setShowSam] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -367,6 +368,13 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
   return (
     <section className="disaster-kalimantan-brief" aria-labelledby="kalimantanFireBriefTitle">
       <div className="disaster-kalimantan-brief-header">
+        <button
+          type="button"
+          className="disaster-kalimantan-accordion-trigger"
+          aria-expanded={isExpanded}
+          aria-controls="kalimantanFireBriefContent"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+        >
         <div>
           <span className="disaster-eyebrow">Analisis cepat · 2026</span>
           <h2 id="kalimantanFireBriefTitle">Karhutla Kalimantan 2026</h2>
@@ -375,12 +383,14 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             event kebakaran hutan/lahan yang relevan.
           </p>
         </div>
+          <i className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
+        </button>
         <button type="button" className="btn btn-sm btn-primary" onClick={onApplyFilter}>
           <i className="bi bi-funnel-fill" /> Tampilkan event 2026
         </button>
       </div>
 
-      <div className="disaster-kalimantan-brief-grid">
+      {isExpanded && <div id="kalimantanFireBriefContent" className="disaster-kalimantan-brief-grid">
         <div className="disaster-kalimantan-map-wrap">
           <MapView id="kalimantanFire2026Map" center={[-1.5, 114.5]} zoom={5} maxZoom={14}>
             <BasemapSwitcher />
@@ -849,9 +859,9 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
-      <div className="disaster-kalimantan-brief-footer">
+      {isExpanded && <div className="disaster-kalimantan-brief-footer">
         <div>
           <i className="bi bi-info-circle" /> Hotspot adalah indikasi anomali suhu permukaan, bukan
           otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.
@@ -869,7 +879,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             </a>
           ))}
         </div>
-      </div>
+      </div>}
     </section>
   );
 }

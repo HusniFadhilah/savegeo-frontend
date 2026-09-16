@@ -43,7 +43,9 @@ export const useI18nStore = create<I18nState>((set, get) => ({
   setLanguage: (lang) => {
     localStorage.setItem(STORAGE_KEY, lang);
     if (typeof document !== "undefined") document.documentElement.lang = lang;
-    set({ language: lang });
+    // Recreate the translator reference so components selecting only `t`
+    // also re-render when the locale changes.
+    set({ language: lang, t: (key, params) => translate(key, lang, params) });
   },
   t: (key, params) => translate(key, get().language, params),
 }));

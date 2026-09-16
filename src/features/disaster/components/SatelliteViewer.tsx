@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GeoJSON, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
 import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
@@ -9,6 +9,7 @@ import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { env } from "@/config/env";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import type {
   DisasterAoiRecord,
   DisasterAnalysisEntry,
@@ -17,6 +18,7 @@ import type {
   DisasterSatelliteLayers,
   HotspotRecord,
   SatelliteImageryRecord,
+  FirmsHotspotFeature,
 } from "../types";
 
 type ViewMode = "pre" | "post" | "split" | "swipe";
@@ -50,17 +52,16 @@ function FitToFeature({
   signal,
   maxZoom = DISASTER_FIT_MAX_ZOOM,
 }: {
-  feature: GeoJSON.Feature | GeoJSON.Geometry | null;
+  feature: GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null;
   signal: number;
   maxZoom?: number;
 }) {
   const map = useMap();
   useEffect(() => {
     if (!feature) return;
-    const geom =
-      feature.type === "Feature"
-        ? feature
-        : { type: "Feature" as const, properties: {}, geometry: feature };
+    const geom = feature.type === "Feature" || feature.type === "FeatureCollection"
+      ? feature
+      : { type: "Feature" as const, properties: {}, geometry: feature };
     const bounds = L.geoJSON(geom as GeoJSON.Feature).getBounds();
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,6 +103,66 @@ function ViewerLayerPane() {
   return null;
 }
 
+function firmsColor(label: string | null): string {
+  return label === "high" ? "#ef4444" : label === "nominal" ? "#f97316" : "#facc15";
+}
+
+interface DisplayFirmsHotspot {
+  key: string;
+  latitude: number;
+  longitude: number;
+  count: number;
+  feature: FirmsHotspotFeature;
+}
+
+function FirmsHotspotLayer({ features, showLabels, cluster }: { features: FirmsHotspotFeature[]; showLabels: boolean; cluster: boolean }) {
+  const displayed = useMemo<DisplayFirmsHotspot[]>(() => {
+    if (!cluster) return features.map((feature) => ({ key: String(feature.id), latitude: feature.geometry.coordinates[1], longitude: feature.geometry.coordinates[0], count: 1, feature }));
+    const groups = new Map<string, DisplayFirmsHotspot>();
+    for (const feature of features) {
+      const [longitude, latitude] = feature.geometry.coordinates;
+      const key = `${Math.round(longitude * 20) / 20}:${Math.round(latitude * 20) / 20}`;
+      const existing = groups.get(key);
+      if (existing) existing.count += 1;
+      else groups.set(key, { key, latitude, longitude, count: 1, feature });
+    }
+    return [...groups.values()];
+  }, [cluster, features]);
+  const t = useI18nStore((state) => state.t);
+  return (
+    <>
+      {displayed.map((item) => {
+        const properties = item.feature.properties;
+        const radius = item.count > 1 ? Math.min(18, 6 + Math.log2(item.count) * 3) : Math.min(13, 5 + Math.sqrt(Math.max(0, properties.frp ?? 0)) / 3);
+        const color = firmsColor(properties.confidence_label);
+        return (
+          <CircleMarker key={`firms-${item.key}`} center={[item.latitude, item.longitude]} radius={radius} pathOptions={{ color, fillColor: color, fillOpacity: 0.8, weight: 1.5 }}>
+            {showLabels && <Tooltip permanent direction="top" offset={[0, -radius]}>{item.count > 1 ? `${item.count} ${t("disaster.firms.detections")}` : properties.source_label}</Tooltip>}
+            <Popup>
+              <div className="firms-popup">
+                <strong>{item.count > 1 ? `${item.count} ${t("disaster.firms.detections")}` : t("disaster.firms.title")}</strong>
+                {item.count === 1 ? (
+                  <dl className="small mb-0 mt-2">
+                    <dt>{t("disaster.firms.acquisition")}</dt><dd>{properties.acq_datetime_utc ?? "-"}</dd>
+                    <dt>{t("disaster.firms.satellite")}</dt><dd>{properties.satellite ?? "-"} / {properties.instrument ?? "-"}</dd>
+                    <dt>{t("disaster.firms.confidence")}</dt><dd>{properties.confidence ?? "-"} ({properties.confidence_label ?? "-"})</dd>
+                    <dt>FRP</dt><dd>{properties.frp ?? "-"} MW</dd>
+                    <dt>{t("disaster.firms.brightness")}</dt><dd>{properties.bright_ti4 ?? "-"} / {properties.bright_ti5 ?? "-"} K</dd>
+                    <dt>{t("disaster.firms.dayNight")}</dt><dd>{properties.daynight ?? "-"}</dd>
+                    <dt>{t("disaster.firms.coordinates")}</dt><dd>{properties.latitude.toFixed(5)}, {properties.longitude.toFixed(5)}</dd>
+                    <dt>{t("disaster.firms.source")}</dt><dd>{properties.source}</dd>
+                  </dl>
+                ) : <div className="small mt-2">{t("disaster.firms.clusterPopup")}</div>}
+                <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noreferrer" className="small">{t("disaster.firms.attribution")}</a>
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </>
+  );
+}
+
 interface ViewerLayersProps {
   aoi: DisasterAoiRecord | null;
   showAoi: boolean;
@@ -113,6 +174,9 @@ interface ViewerLayersProps {
   showHotspots: boolean;
   highlightedHotspotId: number | null;
   onHotspotClick?: (hotspotId: number) => void;
+  firmsFeatures: FirmsHotspotFeature[];
+  firmsShowLabels: boolean;
+  firmsCluster: boolean;
 }
 
 function ViewerLayers({
@@ -126,6 +190,9 @@ function ViewerLayers({
   showHotspots,
   highlightedHotspotId,
   onHotspotClick,
+  firmsFeatures,
+  firmsShowLabels,
+  firmsCluster,
 }: ViewerLayersProps) {
   return (
     <>
@@ -156,6 +223,7 @@ function ViewerLayers({
           style={AOI_STYLE}
         />
       )}
+      <FirmsHotspotLayer features={firmsFeatures} showLabels={firmsShowLabels} cluster={firmsCluster} />
       {showHotspots &&
         hotspots.map((hotspot) => (
           <GeoJSON
@@ -186,7 +254,10 @@ interface Props {
   showHotspots?: boolean;
   highlightedHotspotId?: number | null;
   onHotspotClick?: (hotspotId: number) => void;
-  focusFeature?: GeoJSON.Feature | GeoJSON.Geometry | null;
+  firmsFeatures?: FirmsHotspotFeature[];
+  firmsShowLabels?: boolean;
+  firmsCluster?: boolean;
+  focusFeature?: GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null;
   focusSignal?: number;
   showGlobeControl?: boolean;
 }
@@ -213,6 +284,9 @@ export default function SatelliteViewer({
   showHotspots = true,
   highlightedHotspotId = null,
   onHotspotClick,
+  firmsFeatures = [],
+  firmsShowLabels = false,
+  firmsCluster = true,
   focusFeature = null,
   focusSignal = 0,
   showGlobeControl = true,
@@ -368,6 +442,9 @@ export default function SatelliteViewer({
               showHotspots={showHotspots}
               highlightedHotspotId={highlightedHotspotId}
               onHotspotClick={onHotspotClick}
+              firmsFeatures={firmsFeatures}
+              firmsShowLabels={firmsShowLabels}
+              firmsCluster={firmsCluster}
             />
             <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
@@ -407,6 +484,9 @@ export default function SatelliteViewer({
                   showHotspots={showHotspots}
                   highlightedHotspotId={highlightedHotspotId}
                   onHotspotClick={onHotspotClick}
+                  firmsFeatures={firmsFeatures}
+                  firmsShowLabels={firmsShowLabels}
+                  firmsCluster={firmsCluster}
                 />
                 <RasterResolutionNotice layers={[{label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
@@ -446,6 +526,9 @@ export default function SatelliteViewer({
                   showHotspots={showHotspots}
                   highlightedHotspotId={highlightedHotspotId}
                   onHotspotClick={onHotspotClick}
+                  firmsFeatures={firmsFeatures}
+                  firmsShowLabels={firmsShowLabels}
+                  firmsCluster={firmsCluster}
                 />
                 <RasterResolutionNotice layers={[{label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
@@ -497,6 +580,9 @@ export default function SatelliteViewer({
               showHotspots={showHotspots}
               highlightedHotspotId={highlightedHotspotId}
               onHotspotClick={onHotspotClick}
+              firmsFeatures={firmsFeatures}
+              firmsShowLabels={firmsShowLabels}
+              firmsCluster={firmsCluster}
             />
             <FitToAoi aoi={aoi} />
             <FitToFeature feature={focusFeature} signal={focusSignal} />

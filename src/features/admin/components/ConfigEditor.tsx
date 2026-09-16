@@ -5,6 +5,7 @@ import type { AdminConfigCategories, AdminConfigItem } from "../types";
 import AiProviderConfig from "./AiProviderConfig";
 import KeyPool from "./KeyPool";
 import { useAdmin } from "../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 type NumericControl = {
   mode: "range" | "number";
@@ -82,6 +83,7 @@ function ConfigValueControl({
   value: string;
   onChange: (key: string, value: string) => void;
 }) {
+  const t = useI18nStore((state) => state.t);
   const numeric = getNumericControl(item);
   const title = item.description;
   const paletteColors = parsePalette(value);
@@ -92,7 +94,7 @@ function ConfigValueControl({
       <label className="cfg-switch" title={title}>
         <input type="checkbox" checked={checked} onChange={(e) => onChange(item.key, e.target.checked ? "true" : "false")} />
         <span />
-        <strong>{checked ? "Aktif" : "Nonaktif"}</strong>
+        <strong>{checked ? t("admin.active") : t("admin.inactive")}</strong>
       </label>
     );
   }
@@ -191,6 +193,7 @@ function ConfigValueControl({
  * below, matching the legacy page (#cfg-sections + #key-pool-section). */
 export default function ConfigEditor() {
   const { notify } = useAdmin();
+  const t = useI18nStore((state) => state.t);
   const [categories, setCategories] = useState<AdminConfigCategories | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +216,7 @@ export default function ConfigEditor() {
         });
       setValues(initial);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat config");
+      setError(err instanceof Error ? err.message : t("admin.config.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -251,24 +254,24 @@ export default function ConfigEditor() {
         })
         .map((item) => ({ key: item.key, value: values[item.key] ?? "" }));
       const r = await saveConfig(updates);
-      notify(`${r.updated?.length ?? updates.length} konfigurasi disimpan ke DB`, "s");
+      notify(`${r.updated?.length ?? updates.length} ${t("admin.config.saved")}`, "s");
       await load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal menyimpan", "e");
+      notify(err instanceof Error ? err.message : t("admin.saveFailed"), "e");
     } finally {
       setSaving(false);
     }
   };
 
   const handleReset = async () => {
-    if (!confirm("Reset semua konfigurasi ke nilai default?")) return;
+    if (!confirm(t("admin.config.resetConfirm"))) return;
     setResetting(true);
     try {
       await resetAllConfig();
-      notify("Config direset ke default", "s");
+      notify(t("admin.config.resetSuccess"), "s");
       await load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal reset", "e");
+      notify(err instanceof Error ? err.message : t("admin.config.resetFailed"), "e");
     } finally {
       setResetting(false);
     }
@@ -278,7 +281,7 @@ export default function ConfigEditor() {
     <>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginBottom: "0.875rem" }}>
         <button type="button" className="btn-sm" onClick={load} disabled={loading}>
-          <i className="bi bi-arrow-clockwise" /> Reload dari DB
+          <i className="bi bi-arrow-clockwise" /> {t("admin.config.reload")}
         </button>
         <button
           type="button"
@@ -287,14 +290,14 @@ export default function ConfigEditor() {
           disabled={resetting}
           onClick={handleReset}
         >
-          <i className="bi bi-arrow-counterclockwise" /> Reset semua ke default
+          <i className="bi bi-arrow-counterclockwise" /> {t("admin.config.reset")}
         </button>
         <button type="button" className="btn-sm primary" disabled={saving || loading} onClick={handleSave}>
-          <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan semua perubahan"}
+          <i className="bi bi-save" /> {saving ? t("admin.saving") : t("admin.config.saveAll")}
         </button>
       </div>
 
-      {loading && <div className="adm-loading">Memuat config...</div>}
+      {loading && <div className="adm-loading">{t("admin.config.loading")}</div>}
       {!loading && error && <div className="alert alert-danger py-2 px-3 small">{error}</div>}
 
       {!loading &&
@@ -309,7 +312,7 @@ export default function ConfigEditor() {
                 </span>
                 {CAT_LABELS[cat] || cat}
               </span>
-              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{items.length} keys</span>
+              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{items.length} {t("admin.config.keys")}</span>
             </div>
             <div className="card-body-custom">
               {cat === "ai" ? (
