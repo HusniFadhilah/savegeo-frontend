@@ -1572,6 +1572,7 @@ export default function ImageryModule() {
                   </div>
                 )}
                 {selectedScene && <ImageryToolsPanel scene={selectedScene} aoi={aoi} assetKey={cogAssetKey}
+                  activeNasaLayerUrl={nasaTimeLayerUrl} storyMap={storyMap}
                   onNasaLayer={setNasaTimeLayerUrl} onStory={setStoryMap} mapMode={mapMode} onMapMode={setMapMode} />}
                 {storyMap && <a className="btn btn-sm btn-outline-success mt-2" download="story-map.geojson"
                   href={`data:application/geo+json;charset=utf-8,${encodeURIComponent(JSON.stringify(storyMap))}`}>
