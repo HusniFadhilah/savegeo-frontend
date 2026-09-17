@@ -6994,14 +6994,6 @@ html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* Site calibration badge remains explicit: it is informational until an admin activates a local model. */
-.local-calibration-notice { border: 1px solid rgba(13, 139, 97, .35); border-radius: .65rem; padding: .7rem; margin: .8rem 0; background: rgba(13, 139, 97, .07); }
-.local-calibration-notice > .d-flex > i { color: #0d8b61; font-size: 1.05rem; }
-.local-calibration-notice strong, .local-calibration-notice small { display: block; }
-.local-calibration-notice strong { font-size: .82rem; }
-.local-calibration-notice small { font-size: .72rem; line-height: 1.35; }
-.local-calibration-model { margin-top: .45rem; font-size: .75rem; font-weight: 600; color: #0d8b61; }
-
 /* Standalone Karhutla explorer ----------------------------------------- */
 .wildfire-shell { min-height: 100vh; padding: 1.5rem clamp(1rem, 3vw, 3rem) 3rem; background: var(--surface, #f5f7f6); color: var(--text, #17251f); }
 .wildfire-page-header, .wildfire-detail-topbar { max-width: 1480px; margin: 0 auto 1.25rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
