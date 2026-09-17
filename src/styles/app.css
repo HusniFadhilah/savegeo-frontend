@@ -7084,6 +7084,13 @@ html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
 .wildfire-map-legend span { display: flex; gap: .3rem; align-items: center; }
 .legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; }
 .legend-high { background: #ff4d6d; }.legend-nominal { background: #ffd166; }
+.legend-viirs { background: #8b5cf6; }
+.legend-wind { display: inline-block; width: .8rem; height: .8rem; border: 2px solid #0d8b61; border-radius: 50%; }
+.wildfire-wind-arrow-icon { display: grid; place-items: center; border: 0; background: transparent; }
+.wildfire-wind-arrow-icon span { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border: 2px solid #0d8b61; border-radius: 50%; color: #07563f; background: rgba(238, 255, 247, .9); box-shadow: 0 3px 10px rgba(7, 86, 63, .24); font-size: 1.05rem; line-height: 1; transform-origin: center; }
+.wildfire-wind-popup { display: grid; gap: .25rem; min-width: 125px; font-size: .75rem; }
+.wildfire-wind-popup strong { color: #087f5b; }
+.wildfire-wind-popup small { color: #61746d; }
 .wildfire-popup dl { display: grid; grid-template-columns: auto 1fr; gap: .2rem .6rem; margin: .5rem 0 0; font-size: .72rem; }.wildfire-popup dt { color: #68776f; }.wildfire-popup dd { margin: 0; font-weight: 600; }
 .wildfire-timeline-panel { margin-top: 1rem; padding: 1rem; }
 .wildfire-histogram { height: 120px; display: flex; align-items: flex-end; gap: 2px; padding: .5rem .1rem 0; border-bottom: 1px solid rgba(13, 139, 97, .2); }

@@ -47,6 +47,14 @@ export interface FirmsSourcesResponse {
   attribution: string;
 }
 
+export interface WindLayerResponse {
+  source: string;
+  date: string;
+  valid_time_utc: string | null;
+  points: { lat: number; lon: number; speed_kmh: number; direction_deg: number }[];
+  note: string;
+}
+
 export interface FirmsHotspotProperties {
   latitude: number;
   longitude: number;

@@ -7,12 +7,13 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber, localeFor } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchProvinces } from "@/services/analysisService";
-import { fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots } from "@/features/disaster/api";
+import { fetchFirmsFires, fetchFirmsSources, fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots } from "@/features/disaster/api";
 import { FALLBACK_WILDFIRE_EVENTS } from "./data";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type { WildfireEvent, WildfireFilters, WildfireSummary, WildfireTimelinePoint } from "./types";
 import type { FirmsHotspotFeature } from "@/features/disaster/types";
 import type { DisasterEventListItem } from "@/features/disaster/types";
+import WindArrowLayer from "./WindArrowLayer";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels = language === "id"
@@ -117,16 +118,143 @@ export function KarhutlaIndexPage() {
   </div>;
 }
 
-function HotspotMap({ event, features, query, onSelect }: { event: WildfireEvent; features: FirmsHotspotFeature[]; query: WildfireQueryState; onSelect: (feature: FirmsHotspotFeature) => void }) {
+function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event: WildfireEvent; features: FirmsHotspotFeature[]; query: WildfireQueryState; onSelect: (feature: FirmsHotspotFeature) => void; onToggleLayer: (layer: string) => void }) {
   const [boundary, setBoundary] = useState<GeoJSON.GeoJSON | null>(null);
   const [boundaryFailed, setBoundaryFailed] = useState(false);
+  const [viirsFeatures, setViirsFeatures] = useState<FirmsHotspotFeature[]>([]);
+  const [viirsAvailable, setViirsAvailable] = useState<boolean | null>(null);
+  const viirsEnabled = query.layers.includes("viirs");
+  const [west, south, east, north] = event.bbox;
+
   useEffect(() => {
     if (!query.province) return;
-    fetchProvinces().then((provinces) => { const match = provinces.find((item) => item.name === query.province); if (match) return fetchRegionGeometry(match.code).then(setBoundary); throw new Error("missing"); }).catch(() => setBoundaryFailed(true));
+    fetchProvinces()
+      .then((provinces) => {
+        const match = provinces.find((item) => item.name === query.province);
+        if (match) return fetchRegionGeometry(match.code).then(setBoundary);
+        throw new Error("missing");
+      })
+      .catch(() => setBoundaryFailed(true));
   }, [query.province]);
-  return <div className="wildfire-map-wrap"><MapView id="wildfire-detail-map" center={query.lat != null && query.lng != null ? [query.lat, query.lng] : [event.center_lat, event.center_lon]} zoom={query.zoom ?? event.default_zoom} showGlobeControl={false} historicalDate={query.from || event.monitoring_from || event.start_date}><BasemapSwitcher />{boundary && query.layers.includes("boundary") && <GeoJSON data={boundary as GeoJSON.GeoJsonObject} style={{ color: "#43d9b2", weight: 2, fillOpacity: 0.05 }} />}{features.map((feature, index) => { const [lng, lat] = feature.geometry.coordinates; const selected = query.hotspot === String(index); return <CircleMarker key={`${feature.properties.source}-${feature.properties.acq_datetime_utc}-${index}`} center={[lat, lng]} radius={selected ? 9 : 5} pathOptions={{ color: feature.properties.confidence_label === "high" ? "#ff4d6d" : "#ffd166", fillColor: feature.properties.confidence_label === "high" ? "#ff4d6d" : "#ffd166", fillOpacity: 0.9, weight: selected ? 3 : 1 }} eventHandlers={{ click: () => onSelect(feature) }}><Popup closeButton><div className="wildfire-popup"><strong>{feature.properties.confidence_label === "high" ? "High confidence" : "Hotspot"}</strong><dl><dt>Acquisition</dt><dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>{feature.properties.satellite && <><dt>Satellite</dt><dd>{feature.properties.satellite}</dd></>}{feature.properties.instrument && <><dt>Sensor</dt><dd>{feature.properties.instrument}</dd></>}<dt>Coordinates</dt><dd>{lat.toFixed(5)}, {lng.toFixed(5)}</dd>{feature.properties.frp != null && <><dt>FRP</dt><dd>{feature.properties.frp} MW</dd></>}</dl></div></Popup></CircleMarker>; })}</MapView>{boundaryFailed && <div className="wildfire-map-notice" role="status"><i className="bi bi-info-circle" /> Batas wilayah sementara tidak tersedia. Hotspot tetap ditampilkan.</div>}<div className="wildfire-map-legend"><span><i className="legend-dot legend-high" /> {"High confidence"}</span><span><i className="legend-dot legend-nominal" /> {"Nominal / low"}</span></div></div>;
-}
 
+  useEffect(() => {
+    if (!viirsEnabled) {
+      setViirsFeatures([]);
+      setViirsAvailable(null);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchFirmsSources()
+      .then((sourceInfo) => {
+        if (cancelled) return undefined;
+        setViirsAvailable(sourceInfo.configured);
+        if (!sourceInfo.configured) return undefined;
+        return fetchFirmsFires({
+          source: "all",
+          day_range: 7,
+          west,
+          south,
+          east,
+          north,
+          limit: 2000,
+        });
+      })
+      .then((response) => {
+        if (!cancelled && response) {
+          setViirsFeatures(response.features.filter((feature) => feature.properties.instrument?.toUpperCase() === "VIIRS"));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setViirsAvailable(false);
+          setViirsFeatures([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [west, south, east, north, viirsEnabled]);
+
+  const windDate = query.from || event.monitoring_from || event.start_date;
+  return (
+    <div className="wildfire-map-wrap">
+      <MapView
+        id="wildfire-detail-map"
+        center={query.lat != null && query.lng != null ? [query.lat, query.lng] : [event.center_lat, event.center_lon]}
+        zoom={query.zoom ?? event.default_zoom}
+        showGlobeControl={false}
+        historicalDate={windDate}
+      >
+        <BasemapSwitcher
+          extraOptions={[
+            { id: "viirs", name: "VIIRS NASA · 7 hari", active: viirsEnabled, disabled: viirsAvailable === false && !viirsEnabled, onClick: () => onToggleLayer("viirs") },
+            { id: "wind", name: "Arah angin · Open-Meteo", active: query.layers.includes("wind"), onClick: () => onToggleLayer("wind") },
+          ]}
+        />
+        {boundary && query.layers.includes("boundary") && <GeoJSON data={boundary as GeoJSON.GeoJsonObject} style={{ color: "#43d9b2", weight: 2, fillOpacity: 0.05 }} />}
+        {query.layers.includes("wind") && <WindArrowLayer bbox={event.bbox} date={windDate} />}
+        {viirsEnabled && viirsAvailable && viirsFeatures.map((feature) => {
+          const [lng, lat] = feature.geometry.coordinates;
+          return (
+            <CircleMarker
+              key={`viirs-${feature.properties.source}-${feature.properties.acq_datetime_utc}-${lat}-${lng}`}
+              center={[lat, lng]}
+              radius={6}
+              pathOptions={{ color: "#7c3aed", fillColor: "#a78bfa", fillOpacity: 0.78, weight: 1.5 }}
+            >
+              <Popup>
+                <div className="wildfire-popup">
+                  <strong>VIIRS NASA · live 7 hari</strong>
+                  <dl>
+                    <dt>Acquisition</dt>
+                    <dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>
+                    <dt>Coordinates</dt>
+                    <dd>{lat.toFixed(5)}, {lng.toFixed(5)}</dd>
+                    {feature.properties.frp != null && <><dt>FRP</dt><dd>{feature.properties.frp} MW</dd></>}
+                  </dl>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+        {features.map((feature, index) => {
+          const [lng, lat] = feature.geometry.coordinates;
+          const selected = query.hotspot === String(index);
+          const highConfidence = feature.properties.confidence_label === "high";
+          return (
+            <CircleMarker
+              key={`${feature.properties.source}-${feature.properties.acq_datetime_utc}-${index}`}
+              center={[lat, lng]}
+              radius={selected ? 9 : 5}
+              pathOptions={{ color: highConfidence ? "#ff4d6d" : "#ffd166", fillColor: highConfidence ? "#ff4d6d" : "#ffd166", fillOpacity: 0.9, weight: selected ? 3 : 1 }}
+              eventHandlers={{ click: () => onSelect(feature) }}
+            >
+              <Popup closeButton>
+                <div className="wildfire-popup">
+                  <strong>{highConfidence ? "High confidence" : "Hotspot"}</strong>
+                  <dl>
+                    <dt>Acquisition</dt>
+                    <dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>
+                    {feature.properties.satellite && <><dt>Satellite</dt><dd>{feature.properties.satellite}</dd></>}
+                    {feature.properties.instrument && <><dt>Sensor</dt><dd>{feature.properties.instrument}</dd></>}
+                    <dt>Coordinates</dt>
+                    <dd>{lat.toFixed(5)}, {lng.toFixed(5)}</dd>
+                    {feature.properties.frp != null && <><dt>FRP</dt><dd>{feature.properties.frp} MW</dd></>}
+                  </dl>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapView>
+      {boundaryFailed && <div className="wildfire-map-notice" role="status"><i className="bi bi-info-circle" /> Batas wilayah sementara tidak tersedia. Hotspot tetap ditampilkan.</div>}
+      <div className="wildfire-map-legend">
+        <span><i className="legend-dot legend-high" /> High confidence</span>
+        <span><i className="legend-dot legend-nominal" /> Nominal / low</span>
+        {viirsEnabled && <span><i className="legend-dot legend-viirs" /> VIIRS 7 hari</span>}
+        {query.layers.includes("wind") && <span><i className="legend-wind" /> Arah angin</span>}
+      </div>
+    </div>
+  );
+}
 async function fetchRegionGeometry(code: string) {
   return apiClient.get<GeoJSON.GeoJSON>(`/regions/provinces/${encodeURIComponent(code)}/geometry`);
 }
@@ -156,7 +284,7 @@ export function KarhutlaDetailPage() {
   const maxTimeline = Math.max(1, ...timelineData.map((point) => point.count));
   const peakTimeline = Math.max(...timelineData.map((point) => point.count));
   const timelineLabelStep = Math.max(1, Math.ceil(timelineData.length / 8));
-  return <div className="wildfire-shell wildfire-detail-shell"><div className="wildfire-detail-topbar"><div><Link className="wildfire-back-link" to="/pemetaan-bencana/karhutla"><i className="bi bi-arrow-left" /> {t("wildfire.backIndex")}</Link><div className="wildfire-title-row"><h1>{event.title}</h1><WildfireStatusBadge event={event} /></div><p>{event.provinces.join(", ")} · {periodLabel(event, language)} · {t("wildfire.updated")} {event.last_data_at ? formatDate(event.last_data_at, language, true) : "—"}</p></div><div className="wildfire-detail-actions"><button type="button" className="btn btn-outline-secondary" onClick={() => navigator.clipboard?.writeText(window.location.href)}><i className="bi bi-share" /> {t("wildfire.actions.share")}</button><button type="button" className="btn btn-outline-secondary" onClick={() => updateQuery({ panel: "methodology" })}><i className="bi bi-journal-text" /> {t("wildfire.actions.methodology")}</button></div></div><div className="wildfire-filter-toolbar"><label>{t("wildfire.filters.from")}<input type="date" value={query.from || event.monitoring_from} onChange={(e) => updateQuery({ from: e.target.value })} /></label><label>{t("wildfire.filters.to")}<input type="date" value={query.to || event.last_data_at?.slice(0, 10) || ""} onChange={(e) => updateQuery({ to: e.target.value })} /></label><label>{t("wildfire.filters.sensor")}<select value={query.sensor} onChange={(e) => updateQuery({ sensor: e.target.value })}><option value="all">{t("wildfire.filters.allSensors")}</option><option value="viirs">VIIRS</option><option value="modis">MODIS</option><option value="landsat">Landsat</option></select></label><div className="wildfire-confidence-filter"><span>{t("wildfire.filters.confidence")}</span>{(["high", "nominal", "low"] as const).map((confidence) => <label key={confidence} className="wildfire-check"><input type="checkbox" checked={query.confidence.includes(confidence)} onChange={(e) => updateQuery({ confidence: e.target.checked ? [...query.confidence, confidence] : query.confidence.filter((item) => item !== confidence) })} />{confidence === "high" ? t("wildfire.confidence.high") : confidence === "nominal" ? t("wildfire.confidence.nominal") : t("wildfire.confidence.low")}</label>)}</div><button type="button" className="btn btn-sm btn-outline-primary wildfire-mobile-filter" onClick={() => setBoundaryDrawerOpen((open) => !open)}><i className="bi bi-sliders" /> {t("wildfire.actions.filters")}</button></div>{boundaryDrawerOpen && <div className="wildfire-advanced-drawer"><label>{t("wildfire.filters.province")}<input value={query.province} onChange={(e) => updateQuery({ province: e.target.value, city: "" })} placeholder={t("wildfire.filters.provincePlaceholder")} /></label><label>{t("wildfire.filters.city")}<input value={query.city} onChange={(e) => updateQuery({ city: e.target.value })} placeholder={t("wildfire.filters.cityPlaceholder")} /></label></div>}<div className="wildfire-detail-layout"><main className="wildfire-map-first"><div className="wildfire-map-status"><span>{loading ? t("wildfire.loading") : `${formatNumber(activeSummary.total_hotspots, language)} ${t("wildfire.stats.hotspots")}`}</span><span>{activeSummary.latest_acquisition_time ? `${t("wildfire.latestAcquisition")}: ${formatDate(activeSummary.latest_acquisition_time, language, true)}` : ""}</span></div><HotspotMap event={event} features={features} query={query} onSelect={(feature) => { const index = features.indexOf(feature); updateQuery({ hotspot: String(index) }); }} /><div className="wildfire-timeline-panel"><div className="wildfire-panel-heading"><div><h2>{t("wildfire.timeline.title")}</h2><span className="wildfire-timeline-subtitle">{t("wildfire.timeline.alt")}</span></div><div className="wildfire-timeline-total"><strong>{formatNumber(activeSummary.total_hotspots, language)}</strong><span>{t("wildfire.stats.hotspots")}</span></div></div><div className="wildfire-timeline-chart" role="group" aria-label={t("wildfire.timeline.alt")}><div className="wildfire-chart-y-axis" aria-hidden="true"><span>{formatNumber(maxTimeline, language)}</span><span>0</span></div><div className="wildfire-histogram">{timelineData.map((point) => <button type="button" key={point.date} className={point.count === peakTimeline ? "wildfire-histogram-bar is-peak" : "wildfire-histogram-bar"} title={point.date + ": " + point.count} aria-label={point.date + ": " + point.count} style={{ height: String(Math.max(8, point.count / maxTimeline * 100)) + "%" }}><span className="wildfire-histogram-value">{formatNumber(point.count, language)}</span></button>)}</div></div><div className="wildfire-timeline-axis">{timelineData.map((point, index) => <span key={point.date} className={index % timelineLabelStep === 0 || index === timelineData.length - 1 ? "is-visible" : ""}>{point.date.slice(5)}</span>)}</div></div></main><aside className="wildfire-detail-sidebar"><div className="wildfire-stat-grid"><Stat label={t("wildfire.stats.hotspots")} value={formatNumber(activeSummary.total_hotspots, language)} tone="orange" /><Stat label={t("wildfire.stats.highConfidence")} value={formatNumber(activeSummary.high_confidence_hotspots, language)} tone="red" /><Stat label={t("wildfire.stats.regions")} value={formatNumber(activeSummary.affected_regions, language)} tone="teal" /><Stat label={t("wildfire.stats.burnedArea")} value={activeSummary.burned_area_ha == null ? "—" : `${formatNumber(activeSummary.burned_area_ha, language)} ha`} tone="purple" /></div><section className="wildfire-side-card"><h2>{t("wildfire.analysis.title")}</h2><div className="wildfire-confidence-bars"><Bar label={t("wildfire.confidence.high")} count={activeSummary.high_confidence_hotspots} total={activeSummary.total_hotspots} color="high" /><Bar label={t("wildfire.confidence.nominal")} count={activeSummary.nominal_confidence_hotspots} total={activeSummary.total_hotspots} color="nominal" /><Bar label={t("wildfire.confidence.low")} count={activeSummary.low_confidence_hotspots} total={activeSummary.total_hotspots} color="low" /></div></section><section className="wildfire-side-card"><h2>{t("wildfire.sources.title")}</h2><p>{event.source}</p><p className="wildfire-muted">{event.burned_area_ha == null ? t("wildfire.sources.noBurnedArea") : `${t("wildfire.sources.burnedAreaNote")}: ${event.burned_area_source}`}</p><small>{event.methodology}</small></section>{query.panel === "methodology" && <section className="wildfire-side-card"><h2>{t("wildfire.methodology.title")}</h2><p>{event.methodology}</p><ul>{event.limitations.map((item) => <li key={item}>{item}</li>)}</ul></section>}</aside></div></div>;
+  return <div className="wildfire-shell wildfire-detail-shell"><div className="wildfire-detail-topbar"><div><Link className="wildfire-back-link" to="/pemetaan-bencana/karhutla"><i className="bi bi-arrow-left" /> {t("wildfire.backIndex")}</Link><div className="wildfire-title-row"><h1>{event.title}</h1><WildfireStatusBadge event={event} /></div><p>{event.provinces.join(", ")} · {periodLabel(event, language)} · {t("wildfire.updated")} {event.last_data_at ? formatDate(event.last_data_at, language, true) : "—"}</p></div><div className="wildfire-detail-actions"><button type="button" className="btn btn-outline-secondary" onClick={() => navigator.clipboard?.writeText(window.location.href)}><i className="bi bi-share" /> {t("wildfire.actions.share")}</button><button type="button" className="btn btn-outline-secondary" onClick={() => updateQuery({ panel: "methodology" })}><i className="bi bi-journal-text" /> {t("wildfire.actions.methodology")}</button></div></div><div className="wildfire-filter-toolbar"><label>{t("wildfire.filters.from")}<input type="date" value={query.from || event.monitoring_from} onChange={(e) => updateQuery({ from: e.target.value })} /></label><label>{t("wildfire.filters.to")}<input type="date" value={query.to || event.last_data_at?.slice(0, 10) || ""} onChange={(e) => updateQuery({ to: e.target.value })} /></label><label>{t("wildfire.filters.sensor")}<select value={query.sensor} onChange={(e) => updateQuery({ sensor: e.target.value })}><option value="all">{t("wildfire.filters.allSensors")}</option><option value="viirs">VIIRS</option><option value="modis">MODIS</option><option value="landsat">Landsat</option></select></label><div className="wildfire-confidence-filter"><span>{t("wildfire.filters.confidence")}</span>{(["high", "nominal", "low"] as const).map((confidence) => <label key={confidence} className="wildfire-check"><input type="checkbox" checked={query.confidence.includes(confidence)} onChange={(e) => updateQuery({ confidence: e.target.checked ? [...query.confidence, confidence] : query.confidence.filter((item) => item !== confidence) })} />{confidence === "high" ? t("wildfire.confidence.high") : confidence === "nominal" ? t("wildfire.confidence.nominal") : t("wildfire.confidence.low")}</label>)}</div><button type="button" className="btn btn-sm btn-outline-primary wildfire-mobile-filter" onClick={() => setBoundaryDrawerOpen((open) => !open)}><i className="bi bi-sliders" /> {t("wildfire.actions.filters")}</button></div>{boundaryDrawerOpen && <div className="wildfire-advanced-drawer"><label>{t("wildfire.filters.province")}<input value={query.province} onChange={(e) => updateQuery({ province: e.target.value, city: "" })} placeholder={t("wildfire.filters.provincePlaceholder")} /></label><label>{t("wildfire.filters.city")}<input value={query.city} onChange={(e) => updateQuery({ city: e.target.value })} placeholder={t("wildfire.filters.cityPlaceholder")} /></label></div>}<div className="wildfire-detail-layout"><main className="wildfire-map-first"><div className="wildfire-map-status"><span>{loading ? t("wildfire.loading") : `${formatNumber(activeSummary.total_hotspots, language)} ${t("wildfire.stats.hotspots")}`}</span><span>{activeSummary.latest_acquisition_time ? `${t("wildfire.latestAcquisition")}: ${formatDate(activeSummary.latest_acquisition_time, language, true)}` : ""}</span></div><HotspotMap event={event} features={features} query={query} onSelect={(feature) => { const index = features.indexOf(feature); updateQuery({ hotspot: String(index) }); }} onToggleLayer={(layer) => updateQuery({ layers: query.layers.includes(layer) ? query.layers.filter((item) => item !== layer) : [...query.layers, layer] })} /><div className="wildfire-timeline-panel"><div className="wildfire-panel-heading"><div><h2>{t("wildfire.timeline.title")}</h2><span className="wildfire-timeline-subtitle">{t("wildfire.timeline.alt")}</span></div><div className="wildfire-timeline-total"><strong>{formatNumber(activeSummary.total_hotspots, language)}</strong><span>{t("wildfire.stats.hotspots")}</span></div></div><div className="wildfire-timeline-chart" role="group" aria-label={t("wildfire.timeline.alt")}><div className="wildfire-chart-y-axis" aria-hidden="true"><span>{formatNumber(maxTimeline, language)}</span><span>0</span></div><div className="wildfire-histogram">{timelineData.map((point) => <button type="button" key={point.date} className={point.count === peakTimeline ? "wildfire-histogram-bar is-peak" : "wildfire-histogram-bar"} title={point.date + ": " + point.count} aria-label={point.date + ": " + point.count} style={{ height: String(Math.max(8, point.count / maxTimeline * 100)) + "%" }}><span className="wildfire-histogram-value">{formatNumber(point.count, language)}</span></button>)}</div></div><div className="wildfire-timeline-axis">{timelineData.map((point, index) => <span key={point.date} className={index % timelineLabelStep === 0 || index === timelineData.length - 1 ? "is-visible" : ""}>{point.date.slice(5)}</span>)}</div></div></main><aside className="wildfire-detail-sidebar"><div className="wildfire-stat-grid"><Stat label={t("wildfire.stats.hotspots")} value={formatNumber(activeSummary.total_hotspots, language)} tone="orange" /><Stat label={t("wildfire.stats.highConfidence")} value={formatNumber(activeSummary.high_confidence_hotspots, language)} tone="red" /><Stat label={t("wildfire.stats.regions")} value={formatNumber(activeSummary.affected_regions, language)} tone="teal" /><Stat label={t("wildfire.stats.burnedArea")} value={activeSummary.burned_area_ha == null ? "—" : `${formatNumber(activeSummary.burned_area_ha, language)} ha`} tone="purple" /></div><section className="wildfire-side-card"><h2>{t("wildfire.analysis.title")}</h2><div className="wildfire-confidence-bars"><Bar label={t("wildfire.confidence.high")} count={activeSummary.high_confidence_hotspots} total={activeSummary.total_hotspots} color="high" /><Bar label={t("wildfire.confidence.nominal")} count={activeSummary.nominal_confidence_hotspots} total={activeSummary.total_hotspots} color="nominal" /><Bar label={t("wildfire.confidence.low")} count={activeSummary.low_confidence_hotspots} total={activeSummary.total_hotspots} color="low" /></div></section><section className="wildfire-side-card"><h2>{t("wildfire.sources.title")}</h2><p>{event.source}</p><p className="wildfire-muted">{event.burned_area_ha == null ? t("wildfire.sources.noBurnedArea") : `${t("wildfire.sources.burnedAreaNote")}: ${event.burned_area_source}`}</p><small>{event.methodology}</small></section>{query.panel === "methodology" && <section className="wildfire-side-card"><h2>{t("wildfire.methodology.title")}</h2><p>{event.methodology}</p><ul>{event.limitations.map((item) => <li key={item}>{item}</li>)}</ul></section>}</aside></div></div>;
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone: string }) { return <div className={`wildfire-stat wildfire-stat-${tone}`}><span>{label}</span><strong>{value}</strong></div>; }

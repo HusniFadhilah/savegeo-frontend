@@ -19,6 +19,7 @@ import type {
   DisasterSourcesMap,
   DisasterStatisticsResponse,
   FirmsFireResponse,
+  WindLayerResponse,
   FirmsSourceId,
   FirmsSourcesResponse,
 } from "./types";
@@ -70,6 +71,11 @@ export function fetchDisasterSources() {
 
 export function fetchFirmsSources() {
   return userGet<FirmsSourcesResponse>("/disaster/firms/sources");
+}
+
+export function fetchWindLayer(params: { west: number; south: number; east: number; north: number; date?: string }) {
+  const qs = buildQuery(params);
+  return userGet<WindLayerResponse>(`/disaster/wind${qs}`);
 }
 
 export function fetchFirmsFires(params: {

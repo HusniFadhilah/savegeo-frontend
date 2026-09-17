@@ -150,6 +150,7 @@ export const CAT_LABELS: Record<string, string> = {
   year: "Rentang Tahun",
   carbon: "Carbon & Visualisasi",
   app: "Aplikasi",
+  maps: "Peta & Basemap",
   ai: "AI Controller",
 };
 
@@ -158,6 +159,7 @@ export const CAT_COLORS: Record<string, string> = {
   year: "badge-amber",
   carbon: "badge-green",
   app: "badge-gray",
+  maps: "badge-green",
   ai: "badge-purple",
 };
 
