@@ -70,6 +70,7 @@ export interface WildfireEventsResponse {
 export interface WildfireHotspotsResponse {
   features: FirmsHotspotFeature[];
   summary: WildfireSummary;
+  timeline?: WildfireTimelinePoint[];
   metadata: {
     source: string;
     fetched_at: string;
