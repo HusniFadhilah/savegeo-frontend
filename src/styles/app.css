@@ -7356,3 +7356,12 @@ html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-panel,
   .wildfire-map-wrap .map-view-shell > div:first-child,
   .wildfire-map-wrap .leaflet-container { height: 440px; min-height: 440px; }
 }
+
+/* The standalone route owns one map only. During route transitions the
+   legacy dashboard can briefly leave a second map node in the DOM; prevent
+   that stale canvas from painting over the detail surface. */
+body:has(.wildfire-detail-shell) #map,
+body:has(.wildfire-detail-shell) .map-view-shell:not(:has(#wildfire-detail-map)),
+body:has(.wildfire-detail-shell) .leaflet-container:not(#wildfire-detail-map) {
+  display: none !important;
+}
