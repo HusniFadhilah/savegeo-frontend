@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { translations, interpolate, type Language } from "@/i18n/translations";
+import { formatDisplayTemporal } from "@/lib/temporal";
 
 const STORAGE_KEY = "savegeo_language";
 
@@ -42,8 +43,11 @@ export function formatPercent(value: number, language: Language, digits = 1): st
 }
 
 export function formatDate(value: string | number | Date, language: Language, withTime = false): string {
-  return new Intl.DateTimeFormat(localeFor(language), withTime
-    ? { dateStyle: "long", timeStyle: "short" } : { dateStyle: "long" }).format(new Date(value));
+  if (typeof value === "number") {
+    return new Intl.DateTimeFormat(localeFor(language), withTime
+      ? { dateStyle: "long", timeStyle: "short" } : { dateStyle: "long" }).format(new Date(value));
+  }
+  return formatDisplayTemporal(value, language, withTime);
 }
 
 export const useI18nStore = create<I18nState>((set, get) => ({
