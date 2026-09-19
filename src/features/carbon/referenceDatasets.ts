@@ -130,7 +130,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     label: "SoilGrids SOC 0-30cm (2017, 250m)",
     group: "Soil Carbon",
     description:
-      "ISRIC SoilGrids v2.0 soil organic carbon, 0-30cm depth-weighted mean. Sampled point statistics only, no tile rendering.",
+      "ISRIC SoilGrids v2.0 SOC 0-30cm dengan bulk density dan koreksi coarse-fragment (cfvo) untuk stok tanah turunan. Statistik berbasis sampling titik.",
     referenceOnlyCapable: true,
   },
 ];
