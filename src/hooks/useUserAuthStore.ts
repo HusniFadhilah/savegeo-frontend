@@ -10,6 +10,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 function friendlyAuthError(err: unknown, fallbackKey: string): string {
   const raw = err instanceof ApiError ? err.message.toLowerCase() : "";
   const t = useI18nStore.getState().t;
+  if (err instanceof ApiError && err.status === 401) return t("auth.invalidCredentials");
   if (raw.includes("bearer") || raw.includes("unauthorized") || raw.includes("401")) return t("errors.authRequired");
   if (raw.includes("network") || raw.includes("fetch")) return t("errors.serverUnavailable");
   return t(fallbackKey);

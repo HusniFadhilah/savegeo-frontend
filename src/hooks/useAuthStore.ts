@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AdminUser } from "@/types/api";
 import { authService } from "@/services/authService";
-import { setUnauthorizedHandler } from "@/services/apiClient";
+import { ApiError, setUnauthorizedHandler } from "@/services/apiClient";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface AuthState {
@@ -31,7 +31,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       return true;
     } catch (err) {
       const raw = err instanceof Error ? err.message.toLowerCase() : "";
-      const key = raw.includes("bearer") || raw.includes("401") ? "errors.authRequired" : raw.includes("network") || raw.includes("fetch") ? "errors.serverUnavailable" : "auth.loginFailed";
+      const status = err instanceof ApiError ? err.status : 0;
+      const key = status === 401 || raw.includes("invalid username") || raw.includes("invalid credentials") || raw.includes("incorrect username")
+        ? "auth.invalidCredentials"
+        : raw.includes("bearer") || raw.includes("401")
+          ? "errors.authRequired"
+          : raw.includes("network") || raw.includes("fetch")
+            ? "errors.serverUnavailable"
+            : "auth.loginFailed";
       set({ error: useI18nStore.getState().t(key), isLoading: false });
       return false;
     }
