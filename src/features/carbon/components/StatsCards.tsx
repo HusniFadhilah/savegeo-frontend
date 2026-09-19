@@ -75,14 +75,14 @@ export default function StatsCards({ results, processingTimes }: Props) {
       <MetricCard
         key="carbon-total"
         icon="bi-clipboard-data"
-        value={<>{(areaInfo.total_carbon_tons ?? 0).toLocaleString()} <small>ton</small></>}
+        value={<>{areaInfo.total_carbon_tons == null ? "—" : areaInfo.total_carbon_tons.toLocaleString()} <small>ton</small></>}
         label={t("carbon.stats.totalStock")}
         sub={calculationMode === "clipped_aoi" ? t("carbon.stats.clippedToAoi") : t("carbon.stats.boundingBox")}
       />,
       <MetricCard
         key="carbon-co2"
         icon="bi-cloud"
-        value={<>{(areaInfo.carbon_dioxide_equivalent_tons ?? 0).toLocaleString()} <small>ton</small></>}
+        value={<>{areaInfo.carbon_dioxide_equivalent_tons == null ? "—" : areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()} <small>ton</small></>}
         label={t("carbon.stats.co2Equivalent")}
       />,
       hasCV ? (

@@ -215,10 +215,11 @@ export default function CarbonParamsPanel({
         const first = orderedModels[0] || null;
         if (first) {
           onModelSelect(first);
-          onParamsChange({ modelName: first.name });
+          onParamsChange({ modelName: first.name, referenceOnly: false });
         } else {
           onModelSelect(null);
-          onParamsChange({ modelName: null });
+          const meta = datasets.find((d) => d.value === params.referenceDataset);
+          onParamsChange({ modelName: null, referenceOnly: Boolean(meta?.referenceOnlyCapable || (meta?.source === "fallback" && !meta.requiresConfiguration)) });
         }
       })
       .catch(() => {
@@ -231,7 +232,7 @@ export default function CarbonParamsPanel({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.referenceDataset]);
+  }, [params.referenceDataset, datasets]);
 
   useEffect(() => {
     if (!params.modelName) {
@@ -252,6 +253,7 @@ export default function CarbonParamsPanel({
   }, [params.modelName]);
 
   const datasetMeta = datasets.find((d) => d.value === params.referenceDataset);
+  const canReferenceOnly = Boolean(datasetMeta?.referenceOnlyCapable || (datasetMeta?.source === "fallback" && !datasetMeta.requiresConfiguration));
   const grouped = groupByAlgorithm(models);
   const geeCount = models.filter((m) => m.metadata_json?.gee_deployable).length;
 
@@ -343,7 +345,7 @@ export default function CarbonParamsPanel({
           value={params.modelName ?? ""}
           onChange={(v) => {
             const name = v || null;
-            onParamsChange({ modelName: name });
+            onParamsChange({ modelName: name, referenceOnly: false });
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
           options={Object.entries(grouped).flatMap(([algo, list]) =>
@@ -373,7 +375,7 @@ export default function CarbonParamsPanel({
           value={params.modelName ?? ""}
           onChange={(e) => {
             const name = e.target.value || null;
-            onParamsChange({ modelName: name });
+            onParamsChange({ modelName: name, referenceOnly: false });
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
         >
@@ -384,6 +386,21 @@ export default function CarbonParamsPanel({
             </option>
           ))}
         </select>
+        {canReferenceOnly && (
+          <label className="form-check mt-2">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              checked={params.referenceOnly}
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                onParamsChange({ referenceOnly: enabled, modelName: enabled ? null : params.modelName });
+                if (enabled) onModelSelect(null);
+              }}
+            />
+            <span className="form-check-label small">Muat dataset referensi langsung (tanpa model)</span>
+          </label>
+        )}
         <small className="text-muted d-block mt-1">
           {models.length > 0 ? (
             <>

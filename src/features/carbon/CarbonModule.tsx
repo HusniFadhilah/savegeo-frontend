@@ -85,6 +85,7 @@ export default function CarbonModule() {
     referenceDataset: DEFAULT_CARBON_REFERENCE_DATASET,
     datasetYear: CARBON_DATASET_YEARS[0],
     modelName: null,
+    referenceOnly: false,
     showReference: true,
     cloudMaskTechnique: "scl",
   });

@@ -151,8 +151,8 @@ export default function CarbonStatsPanel({ result }: Props) {
             </div>
             <div className="cs-card-body">
               <StatRow label={t("carbon.detail.calcArea")} value={`${fmtInt(calculationAreaHa)} ha`} />
-              <StatRow label={t("carbon.detail.totalCarbon")} value={`${fmtInt(areaInfo.total_carbon_tons ?? 0)} ton`} strong />
-              <StatRow label={t("carbon.detail.co2Equivalent")} value={`${fmtInt(areaInfo.carbon_dioxide_equivalent_tons ?? 0)} ton CO₂e`} strong />
+              <StatRow label={t("carbon.detail.totalCarbon")} value={areaInfo.total_carbon_tons == null ? "—" : `${fmtInt(areaInfo.total_carbon_tons)} ton`} strong />
+              <StatRow label={t("carbon.detail.co2Equivalent")} value={areaInfo.carbon_dioxide_equivalent_tons == null ? "—" : `${fmtInt(areaInfo.carbon_dioxide_equivalent_tons)} ton CO₂e`} strong />
             </div>
             <div className="cs-card-footer">
               <i className="bi bi-info-circle me-1" />

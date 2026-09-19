@@ -74,6 +74,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     year: 2024,
     yearRange: [2005, 2024],
     availableYears: [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
+    referenceOnlyCapable: true,
     description:
       "ESA CCI Biomass v7 forest above-ground biomass from public CEDA GeoTIFF tiles. Missing years 2013-2014 are excluded.",
   },
@@ -86,6 +87,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     availableYears: Array.from({ length: 26 }, (_, index) => 2025 - index),
     description:
       "Annual global CTrees above-ground biomass density at 100m, loaded from public AOI-windowed COG reads.",
+    referenceOnlyCapable: true,
   },
   {
     value: "GLOBAL_MANGROVE_WATCH_AGB",
@@ -106,6 +108,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     yearRange: [2003, 2019],
     description:
       "Annual Chloris above-ground biomass stock. Uses a licensed Chloris raster when configured, otherwise the public Planetary Computer chloris-biomass STAC collection.",
+    referenceOnlyCapable: true,
   },
   {
     value: "HANSEN_TREECOVER_AGB_PROXY",
@@ -113,6 +116,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     group: "Aboveground Biomass Carbon",
     description:
       "Hansen GFC v1.11 treecover2000 band as an AGB carbon proxy - not a calibrated biomass measurement, correlates via Sentinel-2 spectral features.",
+    referenceOnlyCapable: true,
   },
   {
     value: "OPENLANDMAP_SOC",
@@ -127,6 +131,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     group: "Soil Carbon",
     description:
       "ISRIC SoilGrids v2.0 soil organic carbon, 0-30cm depth-weighted mean. Sampled point statistics only, no tile rendering.",
+    referenceOnlyCapable: true,
   },
 ];
 

@@ -28,6 +28,8 @@ interface CarbonDatasetApiItem {
   is_configured?: boolean;
   requires_configuration?: boolean;
   availability_error?: string | null;
+  ingestion_method?: string | null;
+  reference_only_capable?: boolean;
 }
 
 /**
@@ -69,6 +71,8 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       isConfigured: ds.is_configured,
       requiresConfiguration: ds.requires_configuration,
       availabilityError: ds.availability_error,
+      ingestionMethod: ds.ingestion_method,
+      referenceOnlyCapable: ds.reference_only_capable,
       source: "api",
       ...(ds.name || ds.full_name ? { label: `${ds.name || ds.full_name}${yearSuffix}` } : {}),
     };
@@ -159,7 +163,7 @@ export async function analyzeCarbon({
       reference_dataset: params.referenceDataset,
       dataset_year: params.datasetYear,
       model_name: params.modelName || null,
-      reference_only: params.referenceDataset === "CHLORIS_AGB_STOCK" && !params.modelName,
+      reference_only: params.referenceOnly || (!params.modelName && params.referenceDataset === "CHLORIS_AGB_STOCK"),
       cloud_mask_technique: params.cloudMaskTechnique,
       vis_min: visMin,
       vis_max: visMax,
@@ -206,6 +210,22 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
       vis_palette: args.visPalette.length ? args.visPalette : undefined,
     },
     { timeoutMs: CARBON_DELTA_TIMEOUT_MS },
+  );
+}
+
+export interface CarbonDatasetHealth {
+  key: string;
+  status: "healthy" | "unavailable" | "unknown";
+  http_status?: number;
+  latency_ms?: number;
+  checked_at?: string;
+  error?: string | null;
+}
+
+/** Explicit health probe for admin/source diagnostics; results are cached server-side. */
+export function checkCarbonDatasetHealth(refresh = false) {
+  return apiClient.get<{ datasets: CarbonDatasetHealth[]; checked_at: string }>(
+    `/carbon/datasets/health${refresh ? "?refresh=true" : ""}`,
   );
 }
 

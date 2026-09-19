@@ -21,6 +21,8 @@ export interface CarbonReferenceDatasetOption {
   isConfigured?: boolean;
   requiresConfiguration?: boolean;
   availabilityError?: string | null;
+  ingestionMethod?: string | null;
+  referenceOnlyCapable?: boolean;
   source?: "api" | "fallback";
 }
 
@@ -95,6 +97,8 @@ export interface CarbonParams {
   showReference: boolean;
   /** "scl" | "qa60" | "s2cloudless" - see GET /vegetation/cloud-mask-techniques (shared catalog). */
   cloudMaskTechnique: string;
+  /** Run the selected reference directly, without a trained model. */
+  referenceOnly: boolean;
 }
 
 export interface CarbonStats {
