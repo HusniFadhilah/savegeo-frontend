@@ -7,13 +7,14 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber, localeFor } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchProvinces } from "@/services/analysisService";
-import { fetchFirmsFires, fetchFirmsSources, fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots } from "@/features/disaster/api";
+import { fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots } from "@/features/disaster/api";
 import { FALLBACK_WILDFIRE_EVENTS } from "./data";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type { WildfireEvent, WildfireFilters, WildfireSummary, WildfireTimelinePoint } from "./types";
 import type { FirmsHotspotFeature } from "@/features/disaster/types";
 import type { DisasterEventListItem } from "@/features/disaster/types";
 import WindArrowLayer from "./WindArrowLayer";
+import WildfireLayerPanel from "./WildfireLayerPanel";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels = language === "id"
@@ -124,18 +125,36 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
   const [viirsFeatures, setViirsFeatures] = useState<FirmsHotspotFeature[]>([]);
   const [viirsAvailable, setViirsAvailable] = useState<boolean | null>(null);
   const viirsEnabled = query.layers.includes("viirs");
-  const [west, south, east, north] = event.bbox;
+  const boundaryEnabled = query.layers.includes("boundary");
+  const provinceCodeKey = event.province_codes.join(",");
 
   useEffect(() => {
-    if (!query.province) return;
+    if (!boundaryEnabled) {
+      setBoundary(null);
+      setBoundaryFailed(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setBoundaryFailed(false);
     fetchProvinces()
-      .then((provinces) => {
-        const match = provinces.find((item) => item.name === query.province);
-        if (match) return fetchRegionGeometry(match.code).then(setBoundary);
-        throw new Error("missing");
+      .then(async (provinces) => {
+        const selected = query.province ? provinces.find((item) => item.name === query.province) : null;
+        const codes = selected ? [selected.code] : provinceCodeKey.split(",").filter(Boolean);
+        const results = await Promise.allSettled(codes.map((code) => fetchRegionGeometry(code)));
+        const features = results.flatMap((result, index) => {
+          if (result.status !== "fulfilled") return [];
+          const geometry = result.value as GeoJSON.GeoJSON;
+          if (geometry.type === "FeatureCollection") return geometry.features;
+          if (geometry.type === "Feature") return [geometry];
+          return [{ type: "Feature", geometry, properties: { code: codes[index] } } as GeoJSON.Feature];
+        });
+        if (!features.length) throw new Error("missing");
+        return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
       })
-      .catch(() => setBoundaryFailed(true));
-  }, [query.province]);
+      .then((collection) => { if (!cancelled) setBoundary(collection); })
+      .catch(() => { if (!cancelled) { setBoundary(null); setBoundaryFailed(true); } });
+    return () => { cancelled = true; };
+  }, [boundaryEnabled, provinceCodeKey, query.province]);
 
   useEffect(() => {
     if (!viirsEnabled) {
@@ -144,25 +163,13 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
       return undefined;
     }
     let cancelled = false;
-    fetchFirmsSources()
-      .then((sourceInfo) => {
-        if (cancelled) return undefined;
-        setViirsAvailable(sourceInfo.configured);
-        if (!sourceInfo.configured) return undefined;
-        return fetchFirmsFires({
-          source: "all",
-          day_range: 7,
-          west,
-          south,
-          east,
-          north,
-          limit: 2000,
-        });
-      })
+    const from = query.from || event.monitoring_from || event.start_date;
+    const to = query.to || event.last_data_at?.slice(0, 10) || from;
+    fetchWildfireHotspots(event.slug, { from, to, sensor: "viirs", confidence: "low,nominal,high" })
       .then((response) => {
-        if (!cancelled && response) {
-          setViirsFeatures(response.features.filter((feature) => feature.properties.instrument?.toUpperCase() === "VIIRS"));
-        }
+        if (cancelled) return;
+        setViirsAvailable(true);
+        setViirsFeatures(response.features);
       })
       .catch(() => {
         if (!cancelled) {
@@ -171,7 +178,7 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
         }
       });
     return () => { cancelled = true; };
-  }, [west, south, east, north, viirsEnabled]);
+  }, [event.last_data_at, event.monitoring_from, event.slug, event.start_date, query.from, query.to, viirsEnabled]);
 
   const windDate = query.from || event.monitoring_from || event.start_date;
   return (
@@ -183,12 +190,8 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
         showGlobeControl={false}
         historicalDate={windDate}
       >
-        <BasemapSwitcher
-          extraOptions={[
-            { id: "viirs", name: "VIIRS NASA · 7 hari", active: viirsEnabled, disabled: viirsAvailable === false && !viirsEnabled, onClick: () => onToggleLayer("viirs") },
-            { id: "wind", name: "Arah angin · Open-Meteo", active: query.layers.includes("wind"), onClick: () => onToggleLayer("wind") },
-          ]}
-        />
+        <BasemapSwitcher />
+        <WildfireLayerPanel query={query} onToggleLayer={onToggleLayer} viirsAvailable={viirsAvailable} />
         {boundary && query.layers.includes("boundary") && <GeoJSON data={boundary as GeoJSON.GeoJsonObject} style={{ color: "#43d9b2", weight: 2, fillOpacity: 0.05 }} />}
         {query.layers.includes("wind") && <WindArrowLayer bbox={event.bbox} date={windDate} />}
         {viirsEnabled && viirsAvailable && viirsFeatures.map((feature) => {
@@ -202,7 +205,7 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
             >
               <Popup>
                 <div className="wildfire-popup">
-                  <strong>VIIRS NASA · live 7 hari</strong>
+                  <strong>VIIRS / NASA FIRMS · tersimpan</strong>
                   <dl>
                     <dt>Acquisition</dt>
                     <dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>
@@ -249,7 +252,7 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
       <div className="wildfire-map-legend">
         <span><i className="legend-dot legend-high" /> High confidence</span>
         <span><i className="legend-dot legend-nominal" /> Nominal / low</span>
-        {viirsEnabled && <span><i className="legend-dot legend-viirs" /> VIIRS 7 hari</span>}
+        {viirsEnabled && <span><i className="legend-dot legend-viirs" /> VIIRS / DB</span>}
         {query.layers.includes("wind") && <span><i className="legend-wind" /> Arah angin</span>}
       </div>
     </div>

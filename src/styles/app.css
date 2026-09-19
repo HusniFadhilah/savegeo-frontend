@@ -7380,3 +7380,129 @@ body:has(.wildfire-detail-shell) .map-view-shell:not(:has(#wildfire-detail-map))
 body:has(.wildfire-detail-shell) .leaflet-container:not(#wildfire-detail-map) {
   display: none !important;
 }
+
+/* SiPongi-inspired layer control for the wildfire map. */
+.wildfire-layer-control {
+  top: 3.75rem;
+  right: .7rem;
+  z-index: 650;
+  margin: 0;
+}
+.wildfire-layer-panel {
+  width: min(19rem, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid rgba(220, 233, 227, .95);
+  border-radius: .9rem;
+  background: rgba(255, 255, 255, .97);
+  color: #17352b;
+  box-shadow: 0 14px 34px rgba(20, 55, 43, .2);
+  backdrop-filter: blur(12px);
+}
+.wildfire-layer-heading {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .75rem .9rem .55rem;
+  font-size: .95rem;
+}
+.wildfire-layer-heading i { color: #087f5b; font-size: 1.05rem; }
+.wildfire-layer-tabs {
+  display: flex;
+  gap: .2rem;
+  padding: 0 .65rem;
+  border-bottom: 1px solid #e4ede9;
+}
+.wildfire-layer-tabs button {
+  padding: .55rem .65rem .6rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #788881;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wildfire-layer-tabs button:hover,
+.wildfire-layer-tabs button:focus-visible { color: #087f5b; }
+.wildfire-layer-tabs button.is-active { border-bottom-color: #f0a900; color: #d49300; }
+.wildfire-layer-list { display: grid; gap: .05rem; padding: .55rem .65rem .7rem; }
+.wildfire-layer-option {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  min-height: 2.45rem;
+  padding: .46rem .38rem;
+  border-radius: .55rem;
+  cursor: pointer;
+}
+.wildfire-layer-option:hover:not(.is-disabled) { background: #f1f8f5; }
+.wildfire-layer-option input {
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: .05rem 0 0;
+  accent-color: #0d8b61;
+}
+.wildfire-layer-option-copy { display: grid; gap: .12rem; min-width: 0; flex: 1; font-size: .77rem; line-height: 1.25; }
+.wildfire-layer-option-copy small { color: #7b8d85; font-size: .64rem; line-height: 1.25; }
+.wildfire-layer-option.is-disabled { cursor: not-allowed; opacity: .58; }
+.wildfire-layer-status {
+  flex: 0 0 auto;
+  margin-top: .05rem;
+  padding: .15rem .35rem;
+  border-radius: 999px;
+  background: #eef3f1;
+  color: #73847c;
+  font-size: .57rem;
+  font-weight: 700;
+}
+.wildfire-layer-note,
+.wildfire-fdrs-status {
+  display: flex;
+  gap: .45rem;
+  align-items: flex-start;
+  margin: .15rem .35rem 0;
+  padding: .55rem .6rem;
+  border-radius: .6rem;
+  background: #eef8f4;
+  color: #386457;
+  font-size: .65rem;
+  line-height: 1.4;
+}
+.wildfire-layer-note i,
+.wildfire-fdrs-status i { flex: 0 0 auto; color: #0d8b61; }
+.wildfire-fdrs-panel { padding: .65rem .7rem .75rem; }
+.wildfire-fdrs-list { display: grid; gap: .35rem; margin-top: .7rem; }
+.wildfire-fdrs-row {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid #edf2ef;
+  color: #40584e;
+  font-size: .67rem;
+}
+.wildfire-fdrs-row small { color: #899890; white-space: nowrap; }
+.wildfire-layer-source { display: block; margin-top: .7rem; color: #81918a; font-size: .61rem; }
+html[data-theme="dark"] .wildfire-layer-panel,
+.dark-mode .wildfire-layer-panel { border-color: #315245; background: rgba(23, 37, 31, .98); color: #e5f4ed; }
+html[data-theme="dark"] .wildfire-layer-tabs,
+.dark-mode .wildfire-layer-tabs { border-color: #315245; }
+html[data-theme="dark"] .wildfire-layer-tabs button,
+.dark-mode .wildfire-layer-tabs button { color: #a9beb4; }
+html[data-theme="dark"] .wildfire-layer-option:hover:not(.is-disabled),
+.dark-mode .wildfire-layer-option:hover:not(.is-disabled) { background: #203c30; }
+html[data-theme="dark"] .wildfire-layer-option-copy small,
+.dark-mode .wildfire-layer-option-copy small,
+html[data-theme="dark"] .wildfire-fdrs-row,
+.dark-mode .wildfire-fdrs-row { color: #b4c8bf; }
+html[data-theme="dark"] .wildfire-layer-note,
+html[data-theme="dark"] .wildfire-fdrs-status,
+.dark-mode .wildfire-layer-note,
+.dark-mode .wildfire-fdrs-status { background: #1c3a2e; color: #b8d6ca; }
+html[data-theme="dark"] .wildfire-fdrs-row,
+.dark-mode .wildfire-fdrs-row { border-color: #29483c; }
+@media (max-width: 640px) {
+  .wildfire-layer-control { top: 3.45rem; right: .45rem; }
+  .wildfire-layer-panel { width: min(17rem, calc(100vw - 1rem)); }
+}

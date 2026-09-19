@@ -55,7 +55,7 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
     confidence: confidence.length ? [...new Set(confidence)] : DEFAULT_WILDFIRE_QUERY.confidence,
     province: params.get("province") ?? "",
     city: params.get("city") ?? "",
-    layers: layers.filter((layer) => ["hotspot", "boundary", "burned-area", "satellite", "viirs", "wind"].includes(layer)),
+    layers: layers.filter((layer) => ["hotspot", "boundary", "burned-area", "satellite", "viirs", "wind", "clouds", "air-quality", "rain", "units", "suppression", "groundcheck"].includes(layer)),
     basemap: params.get("basemap") ?? "",
     lat: Number.isFinite(lat) && lat >= -11 && lat <= 6 ? lat : null,
     lng: Number.isFinite(lng) && lng >= 95 && lng <= 141 ? lng : null,
