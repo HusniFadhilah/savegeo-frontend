@@ -14,6 +14,9 @@ export interface CarbonReferenceDatasetOption {
   description: string;
   year?: number | string | null;
   yearRange?: number[] | string | null;
+  availableYears?: number[] | null;
+  deprecated?: boolean;
+  replacementKey?: string | null;
   compatibleModelCount?: number;
   isConfigured?: boolean;
   requiresConfiguration?: boolean;

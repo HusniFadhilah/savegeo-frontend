@@ -19,6 +19,9 @@ export interface LandCoverDatasetOption {
   name: string;
   resolution: string;
   description?: string;
+  deprecated?: boolean;
+  replacement_key?: string | null;
+  alias_of?: string | null;
 }
 
 export type LandCoverDatasetCatalog = Record<string, LandCoverDatasetOption>;

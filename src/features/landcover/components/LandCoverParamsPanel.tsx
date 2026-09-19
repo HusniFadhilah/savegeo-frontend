@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
-import type { LandCoverDatasetCatalog, LandCoverParams } from "@/features/landcover/types";
+import type { LandCoverDatasetCatalog, LandCoverDatasetOption, LandCoverParams } from "@/features/landcover/types";
 import SearchableMultiSelect from "@/components/ui/SearchableMultiSelect";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -12,7 +12,7 @@ interface Props {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-const FALLBACK_LULC_DATASETS = [
+const FALLBACK_LULC_DATASETS: LandCoverDatasetOption[] = [
   { key: "Dynamic_World", name: "Dynamic World", resolution: "10m" },
   {
     key: "GeoSave_Copernicus_DynamicWorld",
@@ -34,7 +34,13 @@ const FALLBACK_LULC_DATASETS = [
   { key: "Copernicus_LandCover", name: "Copernicus Global Land Cover", resolution: "100m" },
   { key: "GLC_FCS30D", name: "GLC_FCS30D", resolution: "30m" },
   { key: "C3S_LandCover", name: "C3S Land Cover", resolution: "300m" },
-  { key: "JAXA_FNF", name: "JAXA ALOS Forest/Non-Forest", resolution: "25m" },
+  {
+    key: "JAXA_FNF",
+    name: "JAXA ALOS Forest/Non-Forest",
+    resolution: "25m",
+    deprecated: true,
+    replacement_key: "JAXA_FNF4",
+  },
   { key: "JAXA_FNF4", name: "JAXA PALSAR Forest/Non-Forest 4-class", resolution: "25m" },
   { key: "MapBiomas_Indonesia", name: "MapBiomas Indonesia LANDY", resolution: "30m" },
   {
@@ -48,7 +54,13 @@ const FALLBACK_LULC_DATASETS = [
     resolution: "25m",
   },
   { key: "JRC_TMF", name: "JRC Tropical Moist Forest Annual Changes v1 2022", resolution: "30m" },
-  { key: "FROM_GLC10", name: "Tsinghua FROM-GLC 10m Global Land Cover 2017", resolution: "10m" },
+  {
+    key: "FROM_GLC10",
+    name: "Tsinghua FROM-GLC 10m Global Land Cover 2017",
+    resolution: "10m",
+    deprecated: true,
+    replacement_key: "ESRI_LandCover",
+  },
   {
     key: "GLAD_GLCLUC",
     name: "GLAD Annual Global Land Use/Land Cover (Potapov et al. 2022)",
@@ -108,8 +120,14 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
           onChange={(datasets) => onParamsChange({ datasets })}
           options={datasetOptions.map((ds) => ({
             value: ds.key,
-            label: ds.name,
-            description: ds.resolution ? `Resolusi ${ds.resolution}` : undefined,
+            label: ds.deprecated ? `${ds.name} · legacy` : ds.name,
+            description: ds.deprecated && ds.replacement_key
+              ? `Legacy — gunakan ${ds.replacement_key}`
+              : ds.alias_of
+                ? `Adapter untuk ${ds.alias_of}`
+                : ds.resolution
+                  ? `Resolusi ${ds.resolution}`
+                  : undefined,
           }))}
           placeholder={t("landcover.searchPlaceholder")}
           emptyHint={t("landcover.empty")}

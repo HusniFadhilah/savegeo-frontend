@@ -174,6 +174,12 @@ export default function CarbonParamsPanel({
   const selectedDatasetMeta = datasets.find((d) => d.value === params.referenceDataset);
   const yearOptions = (() => {
     const meta = selectedDatasetMeta;
+    if (meta?.availableYears?.length) {
+      return [...meta.availableYears]
+        .filter((year) => Number.isFinite(Number(year)))
+        .map(Number)
+        .sort((a, b) => b - a);
+    }
     if (meta?.yearRange) {
       if (Array.isArray(meta.yearRange) && meta.yearRange.length === 2) {
         const [start, end] = meta.yearRange;
@@ -272,9 +278,11 @@ export default function CarbonParamsPanel({
           onChange={(v) => onParamsChange({ referenceDataset: v })}
           options={datasets.map((d) => ({
             value: d.value,
-            label: d.label,
+            label: d.deprecated ? `${d.label} · legacy` : d.label,
             description:
-              d.requiresConfiguration && d.isConfigured === false
+              d.deprecated && d.replacementKey
+                ? `Legacy — gunakan ${d.replacementKey}`
+                : d.requiresConfiguration && d.isConfigured === false
                 ? `${d.group} - perlu konfigurasi`
                 : d.compatibleModelCount !== undefined
                   ? `${d.group} - ${d.compatibleModelCount} model compatible`

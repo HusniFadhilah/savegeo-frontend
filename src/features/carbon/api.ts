@@ -20,6 +20,9 @@ interface CarbonDatasetApiItem {
   resolution?: number | string | null;
   year?: number | string | null;
   year_range?: number[] | string | null;
+  available_years?: number[] | null;
+  deprecated?: boolean;
+  replacement_key?: string | null;
   description?: string | null;
   compatible_model_count?: number;
   is_configured?: boolean;
@@ -59,6 +62,9 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       description: ds.description || ds.full_name || ds.provider_type || "",
       year: ds.year,
       yearRange: ds.year_range,
+      availableYears: ds.available_years,
+      deprecated: ds.deprecated,
+      replacementKey: ds.replacement_key,
       compatibleModelCount: ds.compatible_model_count,
       isConfigured: ds.is_configured,
       requiresConfiguration: ds.requires_configuration,

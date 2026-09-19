@@ -6,7 +6,7 @@ import type { CarbonReferenceDatasetOption } from "./types";
  * admin DB overrides and filters to datasets with an active compatible
  * model. This static copy is what renders if that request fails outright;
  * synced against `savegeo/backend/app/registries/carbon_dataset_registry.py`
- * as of writing (9 datasets with an active model). It will not always match
+ * as of writing (including the reference-only Chloris fallback). It will not always match
  * the DB-driven live list exactly - that's expected for a fallback.
  */
 export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] = [
@@ -63,7 +63,49 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     value: "ESA_CCI_SATIO_AGB",
     label: "ESA CCI AGB via sat-io (2010-2020, 100m)",
     group: "Aboveground Biomass Carbon",
+    deprecated: true,
+    replacementKey: "ESA_CCI_BIOMASS_V7_COG",
     description: "ESA CCI AGB via sat-io community asset (100m). 2010-2020 annual maps.",
+  },
+  {
+    value: "ESA_CCI_BIOMASS_V7_COG",
+    label: "ESA CCI Biomass v7 (2005-2024, 100m)",
+    group: "Aboveground Biomass Carbon",
+    year: 2024,
+    yearRange: [2005, 2024],
+    availableYears: [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
+    description:
+      "ESA CCI Biomass v7 forest above-ground biomass from public CEDA GeoTIFF tiles. Missing years 2013-2014 are excluded.",
+  },
+  {
+    value: "CTREES_AGB_100M",
+    label: "CTrees Global AGB (2000-2025, 100m)",
+    group: "Aboveground Biomass Carbon",
+    year: 2025,
+    yearRange: [2000, 2025],
+    availableYears: Array.from({ length: 26 }, (_, index) => 2025 - index),
+    description:
+      "Annual global CTrees above-ground biomass density at 100m, loaded from public AOI-windowed COG reads.",
+  },
+  {
+    value: "GLOBAL_MANGROVE_WATCH_AGB",
+    label: "Global Mangrove Watch extent (mask only)",
+    group: "Mangrove Extent Mask",
+    year: 2020,
+    yearRange: [2020, 2020],
+    deprecated: true,
+    replacementKey: "CTREES_AGB_100M",
+    description:
+      "JAXA Global Mangrove Watch is an extent/change mask, not an AGB carbon raster. Use it only as a mangrove mask.",
+  },
+  {
+    value: "CHLORIS_AGB_STOCK",
+    label: "Chloris AGB Carbon Stock (2003-2019, 4.6km)",
+    group: "Aboveground Biomass Carbon",
+    year: 2019,
+    yearRange: [2003, 2019],
+    description:
+      "Annual Chloris above-ground biomass stock. Uses a licensed Chloris raster when configured, otherwise the public Planetary Computer chloris-biomass STAC collection.",
   },
   {
     value: "HANSEN_TREECOVER_AGB_PROXY",
