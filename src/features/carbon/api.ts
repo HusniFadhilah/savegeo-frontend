@@ -229,6 +229,46 @@ export function checkCarbonDatasetHealth(refresh = false) {
   );
 }
 
+export interface DirectReferenceLayer {
+  dataset: string;
+  dataset_name: string;
+  tile_url: string;
+  year?: number | string | null;
+  requested_year?: number | string | null;
+  resolution?: number | string | null;
+  unit?: string | null;
+  provider_type?: string | null;
+  date_range?: { start?: string; end?: string } | null;
+  legend?: Record<string, { label?: string; color?: string; class_value?: number }>;
+  vis_params?: { min?: number; max?: number; palette?: string[] };
+  direct: boolean;
+  statistics_available: boolean;
+}
+
+export function loadDirectCarbonReferenceLayer(dataset: string, year: number, visMin?: number, visMax?: number) {
+  const query = new URLSearchParams({ year: String(year) });
+  if (visMin != null) query.set("min", String(visMin));
+  if (visMax != null) query.set("max", String(visMax));
+  return apiClient.get<DirectReferenceLayer>(`/carbon/reference-layers/${encodeURIComponent(dataset)}?${query.toString()}`);
+}
+
+export function loadDirectLandCoverReferenceLayer(
+  dataset: string,
+  year: number,
+  options: { startMonth?: number; endMonth?: number; startDate?: string; endDate?: string } = {},
+) {
+  const query = new URLSearchParams({
+    year: String(year),
+    start_month: String(options.startMonth ?? 1),
+    end_month: String(options.endMonth ?? 12),
+  });
+  if (options.startDate && options.endDate) {
+    query.set("start_date", options.startDate);
+    query.set("end_date", options.endDate);
+  }
+  return apiClient.get<DirectReferenceLayer>(`/landcover/reference-layers/${encodeURIComponent(dataset)}?${query.toString()}`);
+}
+
 export function listCompanies() {
   return apiClient.get<{ companies: CompanyBoundary[] }>("/companies");
 }

@@ -3,11 +3,13 @@ import type { CarbonResult } from "@/features/carbon/types";
 import type { VegetationResult } from "@/features/vegetation/types";
 import type { LandCoverResult } from "@/features/landcover/types";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
+import type { DirectReferenceLayer } from "@/features/carbon/api";
 
 export interface AnalysisResultsBundle {
   vegetation?: VegetationResult | null;
   landcover?: LandCoverResult | null;
   carbon?: CarbonResult | null;
+  direct?: DirectReferenceLayer[] | null;
 }
 
 export interface ReportContext {

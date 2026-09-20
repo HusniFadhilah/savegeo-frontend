@@ -19,7 +19,7 @@ import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import { analyzeVegetation, analyzeVegetationTimeSeries } from "@/features/vegetation/api";
 import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
 import { analyzeLandCover } from "@/features/landcover/api";
-import { analyzeCarbon, analyzeCarbonDelta } from "@/features/carbon/api";
+import { analyzeCarbon, analyzeCarbonDelta, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer } from "@/features/carbon/api";
 import CarbonTimeSeriesPanel from "./components/CarbonTimeSeriesPanel";
 import { DEFAULT_VEGETATION_INDICES, VEGETATION_INDICES } from "@/features/vegetation/indices";
 import {
@@ -144,6 +144,7 @@ export default function CarbonModule() {
   const [results, setResults] = useState<AnalysisResultsBundle>({});
   const [processingTimes, setProcessingTimes] = useState<AnalysisProcessingTimes>({});
   const [mapKey, setMapKey] = useState(0);
+  const [directLoadEnabled, setDirectLoadEnabled] = useState(false);
 
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
 
@@ -159,6 +160,7 @@ export default function CarbonModule() {
   }
 
   const hasResults = Object.keys(results).length > 0;
+  const hasDirectResults = Boolean(results.direct?.length);
 
   useEffect(() => {
     window.analysisResults = results as Record<string, unknown>;
@@ -270,6 +272,43 @@ export default function CarbonModule() {
     }
     setDeltaResult(null);
     setVegTsResult(null);
+
+    if (directLoadEnabled) {
+      if (analysisType === "vegetation") {
+        setRunError("Mode pemuatan langsung tersedia untuk LULC dan stok karbon, bukan indeks vegetasi.");
+        return;
+      }
+      setRunning(true);
+      setRunError(null);
+      showLoading("Memuat dataset langsung", "Tanpa AOI dan tanpa model");
+      try {
+        const directLayers = [];
+        if (analysisType === "carbon" || analysisType === "combined") {
+          directLayers.push(await loadDirectCarbonReferenceLayer(carbonParams.referenceDataset, carbonParams.datasetYear, visMin, visMax));
+        }
+        if (analysisType === "landcover" || analysisType === "combined") {
+          const selectedDatasets = lcParams.datasets.length ? lcParams.datasets : ["Dynamic_World"];
+          const loaded = await Promise.all(selectedDatasets.map((dataset) => loadDirectLandCoverReferenceLayer(dataset, year, {
+            startMonth: lcParams.startMonth,
+            endMonth: lcParams.endMonth,
+            startDate: lcParams.dateMode === "date" ? lcParams.startDate : undefined,
+            endDate: lcParams.dateMode === "date" ? lcParams.endDate : undefined,
+          })));
+          directLayers.push(...loaded);
+        }
+        setResults({ direct: directLayers });
+        setProcessingTimes({ total: "direct" });
+        setMapKey((k) => k + 1);
+      } catch (err) {
+        setResults({});
+        setRunError(err instanceof ApiError ? err.message : "Dataset langsung tidak dapat dimuat.");
+      } finally {
+        hideLoading();
+        setRunning(false);
+      }
+      return;
+    }
+
     if (!aoi) {
       setRunError(t("carbon.err.selectAoi"));
       return;
@@ -583,11 +622,34 @@ export default function CarbonModule() {
             />
           )}
 
+          {(analysisType === "carbon" || analysisType === "landcover" || analysisType === "combined") && (
+            <div className="form-check form-switch mb-2">
+              <input
+                id="directDatasetLoad"
+                className="form-check-input"
+                type="checkbox"
+                checked={directLoadEnabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setDirectLoadEnabled(enabled);
+                  if (enabled) {
+                    setDeltaEnabled(false);
+                    setVegTsEnabled(false);
+                  }
+                }}
+              />
+              <label className="form-check-label small" htmlFor="directDatasetLoad">
+                <i className="bi bi-globe2 me-1" /> Muat dataset langsung tanpa AOI/model
+              </label>
+              <small className="text-muted d-block">Menampilkan peta global; statistik baru dihitung setelah AOI dipilih.</small>
+            </div>
+          )}
+
           <button
             id="runAnalysis"
             className="btn btn-primary w-100 mt-3"
             onClick={handleRunAnalysis}
-            disabled={running || deltaRunning || vegTsRunning || !aoi}
+            disabled={running || deltaRunning || vegTsRunning || (!aoi && !directLoadEnabled)}
           >
             {running || deltaRunning || vegTsRunning ? (
               <>
@@ -599,7 +661,7 @@ export default function CarbonModule() {
               </>
             )}
           </button>
-          {!aoi && (
+          {!aoi && !directLoadEnabled && (
             <small className="text-muted d-block mt-2">{t("carbon.sidebar.selectAoiHint")}</small>
           )}
         </div>
@@ -628,7 +690,7 @@ export default function CarbonModule() {
 
         {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}
 
-        {hasResults && aoi && !deltaResult && !vegTsResult && (
+        {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (
           <>
             <ResultsMapPanel
               aoi={aoi}
@@ -643,7 +705,7 @@ export default function CarbonModule() {
           analysisDate={`${year}-12-31`}
         />
 
-            <div className="card">
+            {!hasDirectResults && <div className="card">
               <div className="card-header">
                 <i className="bi bi-bar-chart-fill me-1" /> {t("carbon.results.statsHeader")}
               </div>
@@ -653,7 +715,7 @@ export default function CarbonModule() {
                 {results.landcover && <LandCoverResultTables result={results.landcover} />}
                 {results.carbon && <CarbonStatsPanel result={results.carbon} />}
               </div>
-            </div>
+            </div>}
 
             {reportContext && aoiPayloadForExport && (
               <ExportPanel

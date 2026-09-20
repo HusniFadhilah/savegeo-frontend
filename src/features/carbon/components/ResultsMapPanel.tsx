@@ -11,6 +11,7 @@ import { registerMap } from "@/features/chatbot/mapActions";
 import type { AoiState } from "@/features/carbon/types";
 import type { CarbonLayerResult } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
+import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 import type { MapLegendEntry } from "@/types/map";
 
@@ -31,7 +32,7 @@ function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
 }
 
 interface Props {
-  aoi: AoiState;
+  aoi: AoiState | null;
   zoom: number;
   results: AnalysisResultsBundle;
   visMin: number;
@@ -88,6 +89,16 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     }
   }
 
+  for (const layer of results.direct ?? []) {
+    tabs.push({
+      key: `direct:${layer.dataset}`,
+      label: layer.dataset_name,
+      icon: layer.legend ? "bi-map" : "bi-tree",
+      tileUrl: layer.tile_url,
+      resolutionM: Number.parseFloat(String(layer.resolution)) || undefined,
+    });
+  }
+
   return tabs;
 }
 
@@ -124,6 +135,28 @@ function buildLegend(
     });
     const unit = layer?.unit || "Mg/ha";
     return { title: `Densitas Karbon (${unit})`, entries };
+  }
+
+  if (activeKey.startsWith("direct:")) {
+    const dataset = activeKey.slice("direct:".length);
+    const layer = (results.direct ?? []).find((item) => item.dataset === dataset) as DirectReferenceLayer | undefined;
+    if (layer?.legend) {
+      return {
+        title: layer.dataset_name,
+        entries: Object.values(layer.legend).map((item) => ({
+          color: item.color || "#2e7d32",
+          label: item.label || "Kelas",
+        })),
+      };
+    }
+    const palette = layer?.vis_params?.palette || [];
+    return {
+      title: `${layer?.dataset_name || "Dataset"}${layer?.unit ? ` (${layer.unit})` : ""}`,
+      entries: buildLegendColors(palette.length ? palette : ["#440154", "#fde725"], Math.min(Math.max(palette.length, 2), 8)).map((color, i) => ({
+        color,
+        label: `Kelas ${i + 1}`,
+      })),
+    };
   }
 
   const lcVal = results.landcover?.[activeKey];
@@ -237,7 +270,7 @@ export default function ResultsMapPanel({
 
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
   const legend = buildLegend(activeKey, results, visMin, visMax, visPalette, legendBins);
-  const center: [number, number] = aoi.bounds
+  const center: [number, number] = aoi?.bounds
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
 
@@ -321,13 +354,13 @@ export default function ResultsMapPanel({
               zoom={zoom}
               opacity={opacity}
               historicalDate={analysisDate}
-              bounds={aoi.bounds ?? undefined}
-              clipGeometry={aoi.feature}
+              bounds={aoi?.bounds ?? undefined}
+              clipGeometry={aoi?.feature}
             >
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
-              <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
-              <CompareAoiView aoi={aoi} zoom={zoom} />
+              {aoi?.feature && <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
+              {aoi && <CompareAoiView aoi={aoi} zoom={zoom} />}
             </SwipeCompareMap>
             <div className="row g-2 mt-1">
               {legend.entries.length > 0 && (
@@ -354,7 +387,7 @@ export default function ResultsMapPanel({
               onMapReady={(map) => registerMap("results", map)}
             >
               <BasemapSwitcher />
-              <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />
+              {aoi?.feature && <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
               {activeTab?.tileUrl && (
                 <>
                   <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} resolutionM={activeTab.resolutionM} opacity={opacity} />
