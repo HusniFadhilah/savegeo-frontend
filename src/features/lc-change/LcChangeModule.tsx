@@ -20,6 +20,7 @@ import SummaryPanel from "./components/SummaryPanel";
 import BeforeAfterMaps from "./components/BeforeAfterMaps";
 import HotspotPanel from "./components/HotspotPanel";
 import { parseQuery, updateUrlFromState } from "./lib/lcChangeQueryState";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 
 type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
 
@@ -401,6 +402,55 @@ export default function LcChangeModule() {
     setPeriodToYear(successYears[successYears.length - 1]);
     setTab("matrix");
   };
+
+  useEffect(() => registerUiCommands("lc_change", {
+    read: () => ({
+      dataset,
+      availableDatasets: datasetOptions.map((item) => item.value),
+      fromYear: years[0] ?? null,
+      toYear: years[years.length - 1] ?? null,
+      startMonth,
+      endMonth,
+      aoiExists: Boolean(aoi),
+      running,
+      error: runError,
+      hasResult: activeYears.length >= 2,
+    }),
+    execute: async ({ action, target, parameters }) => {
+      const value = parameters?.value;
+      if (action === "run_analysis" && target === "lc_change.analysis") {
+        if (!aoi) throw new Error("AOI diperlukan sebelum analisis perubahan tutupan lahan.");
+        if (running) throw new Error("Analisis masih berjalan.");
+        if (years.length < 2 || years[0] >= years[years.length - 1]) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+        await runAnalysis();
+        return;
+      }
+      if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul perubahan tutupan lahan.`);
+      if (target === "lc_change.dataset") {
+        if (typeof value !== "string" || !datasetOptions.some((item) => item.value === value)) throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
+        setDataset(value);
+      } else if (target === "lc_change.fromYear" || target === "lc_change.toYear") {
+        if (!Number.isInteger(value) || (value as number) < minYear || (value as number) > maxYear) throw new Error("Tahun di luar rentang yang tersedia.");
+        const from = target === "lc_change.fromYear" ? value as number : years[0];
+        const to = target === "lc_change.toYear" ? value as number : years[years.length - 1];
+        if (from >= to) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+        const doc = datasetDocs[dataset];
+        if (doc && ((doc.year_min && from < doc.year_min) || (doc.year_max && to > doc.year_max))) throw new Error("Tahun tidak tersedia pada dataset yang dipilih.");
+        setYears([from, to]);
+      } else if (target === "lc_change.startMonth" || target === "lc_change.endMonth") {
+        if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 12) throw new Error("Bulan harus 1 sampai 12.");
+        const from = target === "lc_change.startMonth" ? value as number : startMonth;
+        const to = target === "lc_change.endMonth" ? value as number : endMonth;
+        if (from > to) throw new Error("Bulan awal harus sebelum bulan akhir.");
+        if (!isDynamicWorldCompatible) throw new Error("Rentang bulan hanya tersedia untuk Dynamic World.");
+        setDateMode("month");
+        if (target === "lc_change.startMonth") setStartMonth(from);
+        else setEndMonth(to);
+      } else {
+        throw new Error(`Target ${target} tidak didukung oleh modul perubahan tutupan lahan.`);
+      }
+    },
+  }), [dataset, years, startMonth, endMonth, aoi, running, runError, activeYears, datasetOptions, datasetDocs, minYear, maxYear, isDynamicWorldCompatible, runAnalysis]);
 
   const downloadData = () => {
     const payload = {

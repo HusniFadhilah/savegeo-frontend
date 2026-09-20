@@ -16,7 +16,12 @@ export interface QuickAction {
  * reads.
  */
 export interface ChatAction {
-  type: string;
+  type?: string;
+  /** Typed UI command emitted by the grounded assistant. */
+  action?: string;
+  parameters?: Record<string, unknown>;
+  reason?: string;
+  expected_state?: Record<string, unknown>;
   module?: string;
   target?: string;
   value?: string | number | boolean | string[];
@@ -133,14 +138,20 @@ export interface GeoAiContext {
   landcover_dataset: string | null;
   results: {
     carbon?: Record<string, unknown> | null;
+    direct?: Array<Record<string, unknown>> | null;
     vegetation?: Record<string, unknown> | null;
     landcover?: Record<string, unknown> | null;
     landcover_transition?: Record<string, unknown> | null;
+    crop?: Record<string, unknown> | null;
+    disaster?: Record<string, unknown> | null;
   };
 }
 
 /** Page-state snapshot sent alongside every chat message for AI context. */
 export interface ChatPageState {
+  route?: string;
+  map?: { center: number[] | null; zoom: number | null };
+  ui?: { carbon: Record<string, unknown> | null; lc_change: Record<string, unknown> | null; results: Record<string, unknown> | null; scenes: Record<string, unknown> | null; crop: Record<string, unknown> | null; disaster: Record<string, unknown> | null };
   current_module: string;
   has_aoi: boolean;
   aoi_name: string | null;

@@ -4,6 +4,7 @@ import { zoomToLocation, zoomToFeature, highlightPolygon } from "./mapActions";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 import type { ChatAction, QuickAction } from "./types";
+import { executeUiCommand } from "./uiCommandBus";
 
 /**
  * Executes AI-issued actions against the rest of the app. Ported 1:1 from
@@ -93,12 +94,28 @@ export async function runActions(
   for (let i = 0; i < queue.length; i++) {
     const action = queue[i];
     onStep?.(action, i, queue.length);
-    await dispatchAction(action, ctx);
+    try {
+      await dispatchAction(action, ctx);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Kesalahan tidak diketahui.";
+      ctx.addAssistantMessage(`Tindakan ${action.action || action.type || "UI"} gagal: ${reason}`);
+      throw error;
+    }
     await delay(350);
   }
 }
 
 async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promise<void> {
+  if (action.action) {
+    await executeUiCommand({
+      action: action.action,
+      target: action.target || "",
+      parameters: action.parameters,
+      reason: action.reason,
+      expected_state: action.expected_state,
+    });
+    return;
+  }
   switch (action.type) {
     case "switch_module":
       return switchModule(action.module, ctx);

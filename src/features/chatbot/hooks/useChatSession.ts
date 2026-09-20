@@ -591,7 +591,13 @@ export function useChatSession() {
 
   async function narrateResults(analysisTypes: string[]) {
     const typeLabel = analysisTypes.join(", ") || "analisis";
-    const sysMsg =
+    const directGlobal = getPageState().ui?.carbon?.directGlobal === true;
+    const isSceneSearch = analysisTypes.includes("scenes.searchRequest");
+    const sysMsg = isSceneSearch
+      ? "Pencarian scene selesai. Baca jumlah scene, provider, halaman, dan status truncated dari get_current_context. Jelaskan jika hasil hanya sebagian dari katalog provider; jangan mengarang tanggal akuisisi atau jumlah total."
+      : directGlobal
+      ? "Layer dataset referensi langsung telah dimuat tanpa AOI atau model. Jelaskan hanya metadata dataset yang benar-benar tersedia (sumber, tahun efektif, resolusi, dan keterbatasan). Jangan menyebutnya prediksi atau mengarang statistik AOI."
+      :
       `Analisis ${typeLabel} telah selesai dijalankan. Tolong ringkas dan jelaskan hasil analisis yang ` +
       "sudah tersedia: angka estimasi utama, satuan, interpretasi kondisi area, keterbatasan dataset yang " +
       "dipakai, dan rekomendasi tindak lanjut.";
@@ -601,6 +607,8 @@ export function useChatSession() {
       const resp = await chatbotApi.sendAgentControl({
         message: sysMsg,
         pageState: getPageState(),
+        mode: "geoai",
+        context: buildGeoAiContext(),
         sessionId: sessionIdRef.current,
       });
       removeEntry(loadingId);
@@ -615,8 +623,9 @@ export function useChatSession() {
   }
 
   async function executeActionQueue(actions: ChatAction[], cardEntryId?: string) {
-    const hadAnalysis = actions.some((a) => a.type === "run_analysis");
-    const analysisTypes = actions.filter((a) => a.type === "run_analysis").map((a) => a.analysis || "");
+    const hadAnalysis = actions.some((a) => a.type === "run_analysis" || a.action === "run_analysis");
+    const analysisTypes = actions.filter((a) => a.type === "run_analysis" || a.action === "run_analysis").map((a) => a.analysis || a.target || "");
+    const searchedScenes = actions.some((a) => a.action === "search_scenes");
 
     if (cardEntryId) updateConfirmCard(cardEntryId, { status: "running" });
 
@@ -647,10 +656,17 @@ export function useChatSession() {
       getHotspotGeometry: (hotspotId) => hotspotGeometriesRef.current[hotspotId] || null,
     };
 
-    await runActions(actions, ctx, (_action, i, total) => {
-      setStatus(`Menjalankan ${i + 1}/${total}...`);
-      if (cardEntryId) updateConfirmCard(cardEntryId, { runningStepIndex: i });
-    });
+    try {
+      await runActions(actions, ctx, (_action, i, total) => {
+        setStatus(`Menjalankan ${i + 1}/${total}...`);
+        if (cardEntryId) updateConfirmCard(cardEntryId, { runningStepIndex: i });
+      });
+    } catch {
+      setStatus(DEFAULT_STATUS);
+      if (cardEntryId) updateConfirmCard(cardEntryId, { status: "done" });
+      setQuickActionsVisible(true);
+      return;
+    }
 
     setStatus(DEFAULT_STATUS);
     if (cardEntryId) updateConfirmCard(cardEntryId, { status: "done" });
@@ -658,6 +674,8 @@ export function useChatSession() {
 
     if (hadAnalysis) {
       await narrateResults(analysisTypes);
+    } else if (searchedScenes) {
+      await narrateResults(["scenes.searchRequest"]);
     } else if (!cardEntryId) {
       appendMessage("assistant", "Tindakan berhasil dijalankan.");
     }

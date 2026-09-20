@@ -930,8 +930,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.compareWith": "with",
     "carbon.resultsMap.densityLegend": "Carbon Density",
     "carbon.resultsMap.opacity": "Opacity",
-    "carbon.resultsMap.noTileHint":
-      "Statistics are available, but no tile map is available for this layer (e.g. a server-side/non-GEE inference model).",
+    "carbon.resultsMap.noTileHint": "Statistics are available, but no tile map is available for this layer (e.g. a server-side/non-GEE inference model).",
     "carbon.resultsMap.carbonStock": "Carbon Stock",
     "carbon.resultsMap.referenceCarbon": "Original Reference Map",
     "disaster.firms.title": "FIRMS Hotspots",

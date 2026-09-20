@@ -21,6 +21,8 @@ interface CarbonDatasetApiItem {
   year?: number | string | null;
   year_range?: number[] | string | null;
   available_years?: number[] | null;
+  selection_year?: number | null;
+  year_selectable?: boolean;
   deprecated?: boolean;
   replacement_key?: string | null;
   description?: string | null;
@@ -65,6 +67,8 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       year: ds.year,
       yearRange: ds.year_range,
       availableYears: ds.available_years,
+      selectionYear: ds.selection_year,
+      yearSelectable: ds.year_selectable,
       deprecated: ds.deprecated,
       replacementKey: ds.replacement_key,
       compatibleModelCount: ds.compatible_model_count,
@@ -215,18 +219,23 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
 
 export interface CarbonDatasetHealth {
   key: string;
+  check_scope?: "reachability_only";
   status: "healthy" | "unavailable" | "unknown";
   http_status?: number;
   latency_ms?: number;
   checked_at?: string;
+  stale?: boolean;
   error?: string | null;
 }
 
 /** Explicit health probe for admin/source diagnostics; results are cached server-side. */
 export function checkCarbonDatasetHealth(refresh = false) {
-  return apiClient.get<{ datasets: CarbonDatasetHealth[]; checked_at: string }>(
-    `/carbon/datasets/health${refresh ? "?refresh=true" : ""}`,
-  );
+  if (refresh) {
+    return apiClient.post<{ datasets: CarbonDatasetHealth[]; checked_at: string }>(
+      "/carbon/datasets/health/refresh",
+    );
+  }
+  return apiClient.get<{ datasets: CarbonDatasetHealth[]; checked_at: string }>("/carbon/datasets/health");
 }
 
 export interface DirectReferenceLayer {
@@ -235,8 +244,11 @@ export interface DirectReferenceLayer {
   tile_url: string;
   year?: number | string | null;
   requested_year?: number | string | null;
+  effective_year?: number | string | null;
+  available_years?: number[] | null;
   resolution?: number | string | null;
   unit?: string | null;
+  target_pool?: string | null;
   provider_type?: string | null;
   date_range?: { start?: string; end?: string } | null;
   legend?: Record<string, { label?: string; color?: string; class_value?: number }>;

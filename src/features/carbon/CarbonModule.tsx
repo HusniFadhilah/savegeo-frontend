@@ -16,15 +16,16 @@ import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
 import LandCoverResultTables from "@/features/landcover/components/LandCoverResultTables";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
-import { analyzeVegetation, analyzeVegetationTimeSeries } from "@/features/vegetation/api";
+import { analyzeVegetation, analyzeVegetationTimeSeries, getVegetationSatellites } from "@/features/vegetation/api";
 import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
-import { analyzeLandCover } from "@/features/landcover/api";
-import { analyzeCarbon, analyzeCarbonDelta, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer } from "@/features/carbon/api";
+import { analyzeLandCover, fetchLandCoverDatasets } from "@/features/landcover/api";
+import { analyzeCarbon, analyzeCarbonDelta, listCarbonDatasets, listCarbonModels, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer } from "@/features/carbon/api";
 import CarbonTimeSeriesPanel from "./components/CarbonTimeSeriesPanel";
 import { DEFAULT_VEGETATION_INDICES, VEGETATION_INDICES } from "@/features/vegetation/indices";
 import {
   DEFAULT_CARBON_REFERENCE_DATASET,
   CARBON_DATASET_YEARS,
+  carbonDatasetYearOptions,
 } from "@/features/carbon/referenceDatasets";
 import { boundsToPayload } from "@/features/carbon/lib/geo";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
@@ -38,6 +39,7 @@ import type {
 import type { VegetationParams, VegetationTimeSeriesResponse } from "@/features/vegetation/types";
 import type { LandCoverParams } from "@/features/landcover/types";
 import { parseCarbonQuery, serializeCarbonQuery } from "./lib/carbonQueryState";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
@@ -395,6 +397,122 @@ export default function CarbonModule() {
     window._onSaveGeoAnalysisDone?.();
   }
 
+  useEffect(() => registerUiCommands("carbon", {
+    read: () => ({
+      analysisType,
+      analysisYear: year,
+      referenceDataset: carbonPartial.referenceDataset,
+      datasetYear: carbonPartial.datasetYear,
+      referenceOnly: carbonPartial.referenceOnly,
+      directGlobal: directLoadEnabled,
+      modelName: selectedModel?.name ?? null,
+      startMonth: carbonPartial.startMonth,
+      endMonth: carbonPartial.endMonth,
+      cloudThreshold: carbonPartial.cloudThreshold,
+      clipMode: carbonPartial.clipMode,
+      showReference: carbonPartial.showReference,
+      vegetationIndices: vegParams.indices,
+      vegetationSensor: vegParams.satellite,
+      landcoverDatasets: lcParams.datasets,
+      includeImprobableClasses: lcParams.includeImprobableClasses,
+      aoiExists: Boolean(aoi),
+      running,
+      error: runError,
+      hasResult: Object.keys(results).length > 0,
+    }),
+    execute: async ({ action, target, parameters }) => {
+      const value = parameters?.value;
+      if (action === "set_analysis_type" && target === "carbon.analysisType") {
+        if (!["carbon", "vegetation", "landcover", "combined"].includes(String(value))) throw new Error("Jenis analisis tidak tersedia.");
+        setAnalysisType(value as AnalysisType);
+        return;
+      }
+      if (action === "run_analysis" && target === "carbon.analysis") {
+        if (!aoi && !directLoadEnabled) throw new Error("AOI diperlukan sebelum menjalankan analisis.");
+        if (running) throw new Error("Analisis masih berjalan.");
+        await handleRunAnalysis();
+        return;
+      }
+      if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul karbon.`);
+      if (target === "carbon.analysisYear") {
+        if (!Number.isInteger(value) || (value as number) < yearMin || (value as number) > yearMax) throw new Error("Tahun analisis di luar rentang yang tersedia.");
+        setYear(value as number);
+      } else if (target === "carbon.referenceDataset") {
+        if (typeof value !== "string" || !value.trim()) throw new Error("Dataset karbon wajib dipilih dari katalog.");
+        const available = await listCarbonDatasets();
+        if (!available.some((item) => item.value === value && item.isConfigured !== false)) throw new Error("Dataset karbon tidak tersedia atau belum dikonfigurasi.");
+        patchCarbon({ referenceDataset: value });
+        setSelectedModel(null);
+      } else if (target === "carbon.modelName") {
+        if (value === null) {
+          setSelectedModel(null);
+          patchCarbon({ modelName: null });
+          return;
+        }
+        if (typeof value !== "string") throw new Error("Nama model karbon tidak valid.");
+        const models = await listCarbonModels(carbonPartial.referenceDataset);
+        const model = models.find((item) => item.name === value);
+        if (!model) throw new Error("Model tidak tersedia atau tidak kompatibel dengan dataset karbon.");
+        setSelectedModel(model);
+        patchCarbon({ modelName: model.name });
+      } else if (target === "carbon.datasetYear") {
+        if (!Number.isInteger(value)) throw new Error("Tahun dataset harus berupa bilangan bulat.");
+        const available = await listCarbonDatasets();
+        const selected = available.find((item) => item.value === carbonPartial.referenceDataset);
+        if (!selected || !carbonDatasetYearOptions(selected).includes(value as number)) throw new Error("Tahun tidak tersedia pada dataset karbon yang dipilih.");
+        patchCarbon({ datasetYear: value as number });
+      } else if (target === "carbon.referenceOnly") {
+        if (typeof value !== "boolean") throw new Error("Mode referensi harus true atau false.");
+        patchCarbon({ referenceOnly: value });
+        if (value) setDirectLoadEnabled(false);
+      } else if (target === "carbon.directGlobal") {
+        if (typeof value !== "boolean") throw new Error("Mode dataset langsung harus true atau false.");
+        setDirectLoadEnabled(value);
+        if (value) {
+          patchCarbon({ referenceOnly: false });
+          setDeltaEnabled(false);
+          setVegTsEnabled(false);
+        }
+      } else if (target === "carbon.showReference") {
+        if (typeof value !== "boolean") throw new Error("Visibilitas referensi harus true atau false.");
+        patchCarbon({ showReference: value });
+      } else if (target === "carbon.clipMode") {
+        if (value !== "clipped" && value !== "full") throw new Error("Mode clip tidak valid.");
+        patchCarbon({ clipMode: value });
+      } else if (["carbon.startMonth", "carbon.endMonth", "carbon.cloudThreshold"].includes(target)) {
+        if (!Number.isInteger(value)) throw new Error("Parameter harus berupa bilangan bulat.");
+        const number = value as number;
+        if (target === "carbon.cloudThreshold") {
+          if (number < 0 || number > 100) throw new Error("Ambang awan harus 0 sampai 100 persen.");
+          patchCarbon({ cloudThreshold: number });
+        } else {
+          if (number < 1 || number > 12) throw new Error("Bulan harus 1 sampai 12.");
+          if (target === "carbon.startMonth" && number > carbonPartial.endMonth) throw new Error("Bulan awal harus sebelum bulan akhir.");
+          if (target === "carbon.endMonth" && number < carbonPartial.startMonth) throw new Error("Bulan akhir harus setelah bulan awal.");
+          patchCarbon(target === "carbon.startMonth" ? { startMonth: number } : { endMonth: number });
+        }
+      } else if (target === "carbon.vegetationIndices") {
+        if (!Array.isArray(value) || !value.length || !value.every((item) => typeof item === "string" && VEGETATION_INDICES.some((idx) => idx.code === item))) throw new Error("Indeks vegetasi tidak tersedia.");
+        setVegParams((prev) => ({ ...prev, indices: value as string[] }));
+      } else if (target === "carbon.vegetationSensor") {
+        if (typeof value !== "string") throw new Error("Sensor vegetasi tidak valid.");
+        const catalog = await getVegetationSatellites();
+        if (!catalog?.satellites?.[value]) throw new Error("Sensor vegetasi tidak tersedia.");
+        setVegParams((prev) => ({ ...prev, satellite: value }));
+      } else if (target === "carbon.landcoverDatasets") {
+        if (!Array.isArray(value) || !value.length || !value.every((item) => typeof item === "string")) throw new Error("Pilih minimal satu dataset land cover.");
+        const catalog = await fetchLandCoverDatasets();
+        if (!catalog || !(value as string[]).every((item) => Boolean(catalog[item]))) throw new Error("Dataset land cover tidak tersedia pada katalog.");
+        setLcParams((prev) => ({ ...prev, datasets: value as string[] }));
+      } else if (target === "carbon.includeImprobableClasses") {
+        if (typeof value !== "boolean") throw new Error("Filter kelas harus true atau false.");
+        setLcParams((prev) => ({ ...prev, includeImprobableClasses: value }));
+      } else {
+        throw new Error(`Target ${target} tidak didukung oleh modul karbon.`);
+      }
+    },
+  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, handleRunAnalysis]);
+
   const reportContext: ReportContext | null = aoi
     ? {
         aoi,
@@ -704,6 +822,16 @@ export default function CarbonModule() {
 
         {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (
           <>
+            {hasDirectResults && <div className="alert alert-info small" role="status">
+              {(results.direct ?? []).map((layer) => <div key={layer.dataset}>
+                {layer.dataset_name}: tahun dataset referensi <strong>{layer.effective_year ?? layer.year ?? "tidak diketahui"}</strong>
+                {layer.requested_year != null && layer.requested_year !== (layer.effective_year ?? layer.year)
+                  ? ` (tahun yang diminta ${layer.requested_year})` : ""}.
+                {layer.target_pool === "aboveground_belowground_biomass_carbon" && " Pool: karbon biomassa atas dan bawah tanah."}
+                {layer.target_pool === "soil_organic_carbon" && " Pool: karbon organik tanah."}
+              </div>)}
+              Statistik dan total karbon memerlukan AOI.
+            </div>}
             <ResultsMapPanel
               aoi={aoi}
               zoom={zoom}

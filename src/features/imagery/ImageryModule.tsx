@@ -21,6 +21,7 @@ import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import { getImageryAdvancedCapabilities, getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
 import type { AdvancedImageryCapabilities, DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, type WaybackScene } from "./wayback";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
 import ImageryToolsPanel from "./ImageryToolsPanel";
@@ -801,6 +802,80 @@ export default function ImageryModule() {
   }, [sceneSearch, sortedScenes]);
   const scenePageCount = Math.max(1, Math.ceil(filteredScenes.length / scenePageSize));
   const visibleScenes = useMemo(() => filteredScenes.slice((scenePage - 1) * scenePageSize, scenePage * scenePageSize), [filteredScenes, scenePage, scenePageSize]);
+  useEffect(() => registerUiCommands("scenes", {
+    read: () => ({
+      provider: satellite,
+      availableProviders: Object.keys(imageryProviders),
+      startDate,
+      endDate,
+      cloudMax: cloudFilterEnabled ? maxCloudCover : null,
+      page: scenePage,
+      pageSize: scenePageSize,
+      pageCount: scenePageCount,
+      search: sceneSearch,
+      resultsOpen: sceneResultsOpen,
+      sceneCount: scenes.length,
+      truncated,
+      selectedSceneId,
+      sceneVisible: Boolean(tileUrl),
+      availableSceneIds: scenes.map((scene) => scene.id),
+      error: searchError || tileError,
+    }),
+    execute: async ({ action, target, parameters }) => {
+      const value = parameters?.value;
+      if (action === "set_provider" && target === "scenes.provider") {
+        if (typeof value !== "string" || !imageryProviders[value]) throw new Error("Provider scene tidak tersedia.");
+        setSatellite(value);
+      } else if (action === "set_date_range" && target === "scenes.dateRange") {
+        const start = parameters?.start;
+        const end = parameters?.end;
+        const validDate = (date: unknown) => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date));
+        if (!validDate(start) || !validDate(end) || (start as string) > (end as string)) throw new Error("Rentang tanggal scene tidak valid.");
+        setStartDate(start as string);
+        setEndDate(end as string);
+      } else if (action === "set_parameter" && target === "scenes.cloudMax") {
+        if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > 100) throw new Error("Ambang awan harus 0 sampai 100 persen.");
+        setCloudFilterEnabled(true);
+        setMaxCloudCover(value as number);
+      } else if (action === "set_parameter" && target === "scenes.search") {
+        if (typeof value !== "string" || value.length > 200) throw new Error("Teks pencarian scene tidak valid.");
+        setSceneSearch(value);
+      } else if (action === "set_parameter" && target === "scenes.pageSize") {
+        if (![25, 50, 100].includes(value as number)) throw new Error("Ukuran halaman harus 25, 50, atau 100.");
+        setScenePageSize(value as number);
+        setScenePage(1);
+      } else if (action === "set_parameter" && target === "scenes.page") {
+        if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > scenePageCount) throw new Error("Halaman scene di luar hasil yang telah dimuat.");
+        setScenePage(value as number);
+      } else if (action === "search_scenes" && target === "scenes.searchRequest") {
+        if (!aoi) throw new Error("AOI diperlukan sebelum mencari scene.");
+        if (searching) throw new Error("Pencarian scene masih berjalan.");
+        await searchScenes();
+      } else if (action === "show_scene" && target === "scenes.scene") {
+        const sceneId = parameters?.scene_id;
+        const visible = parameters?.visible;
+        if (typeof visible !== "boolean") throw new Error("Visibilitas scene harus true atau false.");
+        if (!visible) {
+          ++tileRequestRef.current;
+          setTileUrl(null);
+          setSelectedSceneId(null);
+          return;
+        }
+        const scene = scenes.find((item) => item.id === sceneId);
+        if (!scene) throw new Error("Scene tidak ada dalam hasil pencarian saat ini.");
+        await loadSceneTile(scene, scene.default_asset_key || "visual");
+      } else if (action === "clear_scenes" && target === "scenes.layers") {
+        ++tileRequestRef.current;
+        setTileUrl(null);
+        setSelectedSceneId(null);
+      } else if (action === "accordion" && target === "scenes.results") {
+        if (typeof parameters?.open !== "boolean") throw new Error("Status panel harus true atau false.");
+        setSceneResultsOpen(parameters.open);
+      } else {
+        throw new Error(`Perintah ${action} untuk ${target} tidak didukung.`);
+      }
+    },
+  }));
   useEffect(() => { setScenePage(1); }, [sceneSearch, scenes]);
   useEffect(() => { setScenePage((page) => Math.min(page, scenePageCount)); }, [scenePageCount]);
   const selectedScene = useMemo(

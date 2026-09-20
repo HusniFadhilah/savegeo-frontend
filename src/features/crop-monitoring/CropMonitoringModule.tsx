@@ -8,6 +8,7 @@ import { getCropMonitoringCommodities, getWeatherProviders, runCropMonitoring } 
 import { DEFAULT_SUB_ANALYSES, type Commodity, type CropMonitoringPeriodInput, type CropMonitoringPeriodMode, type CropMonitoringResult, type FloodResult, type SubAnalysisKey, type TimeseriesResult, type WeatherProvider } from "./types";
 import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE, RISK_LEVEL_STYLE, WATER_STRESS_STYLE } from "./utils";
 import { parseQuery, updateUrlFromState } from "./lib/cropMonitoringQueryState";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 
 import FieldPanel from "./components/FieldPanel";
 import CropInfoPanel from "./components/CropInfoPanel";
@@ -137,6 +138,46 @@ export default function CropMonitoringModule() {
       setRunning(false);
     }
   }
+
+  useEffect(() => registerUiCommands("crop", {
+    read: () => ({
+      fieldId: selectedField?.id ?? null,
+      commodity: selectedField?.commodity ?? null,
+      periodMode,
+      startDate: customStart || null,
+      endDate: customEnd || null,
+      index: timeseriesIndex,
+      availableIndices: ["NDVI", "EVI", "SAVI", "NDMI", "NDRE", "GNDVI"],
+      running,
+      hasResult: Boolean(result),
+      result,
+      error: runError,
+    }),
+    execute: async ({ action, target, parameters }) => {
+      const value = parameters?.value;
+      if (action === "set_parameter" && target === "crop.index") {
+        if (typeof value !== "string" || !["NDVI", "EVI", "SAVI", "NDMI", "NDRE", "GNDVI"].includes(value)) throw new Error("Indeks tanaman tidak tersedia.");
+        setTimeseriesIndex(value);
+      } else if (action === "set_parameter" && target === "crop.periodMode") {
+        if (!["current_season", "30d", "90d", "custom"].includes(String(value))) throw new Error("Mode periode tanaman tidak valid.");
+        setPeriodMode(value as CropMonitoringPeriodMode);
+      } else if (action === "set_date_range" && target === "crop.dateRange") {
+        const start = parameters?.start;
+        const end = parameters?.end;
+        const validDate = (date: unknown) => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date));
+        if (!validDate(start) || !validDate(end) || (start as string) > (end as string)) throw new Error("Rentang tanggal tanaman tidak valid.");
+        setCustomStart(start as string);
+        setCustomEnd(end as string);
+        setPeriodMode("custom");
+      } else if (action === "run_analysis" && target === "crop.analysis") {
+        if (!selectedField) throw new Error("Pilih field tanaman sebelum menjalankan analisis.");
+        if (running) throw new Error("Analisis tanaman masih berjalan.");
+        await handleRun();
+      } else {
+        throw new Error(`Perintah ${action} untuk ${target} tidak didukung.`);
+      }
+    },
+  }));
 
   function handleTimeseriesResult(index: string, timeseries: TimeseriesResult) {
     setTimeseriesIndex(index);

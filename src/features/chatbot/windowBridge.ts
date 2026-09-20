@@ -22,6 +22,8 @@
 import L from "leaflet";
 import { useUiStore } from "@/hooks/useUiStore";
 import type { GeoAiContext } from "./types";
+import { readUiCommandState } from "./uiCommandBus";
+import { getActiveMap } from "./mapActions";
 
 /** Minimal structural subset of a Leaflet map/tileLayer, enough for addMapLayer/flyTo fallbacks. */
 interface LeafletLikeMap {
@@ -168,19 +170,37 @@ export function getPageState() {
     (carbonData.statistics as Record<string, unknown>) || (carbonData.stats as Record<string, unknown>) || {};
   const vegStats =
     (vegData.statistics as Record<string, unknown>) || (vegData.stats as Record<string, unknown>) || {};
+  const carbonUi = readUiCommandState("carbon");
+  const changeUi = readUiCommandState("lc_change");
+  const resultsUi = readUiCommandState("results");
+  const scenesUi = readUiCommandState("scenes");
+  const cropUi = readUiCommandState("crop");
+  const disasterUi = readUiCommandState("disaster");
+  const cropSummaryUi = cropUi ? Object.fromEntries(Object.entries(cropUi).filter(([key]) => key !== "result")) : null;
+  const disasterSummaryUi = disasterUi ? Object.fromEntries(Object.entries(disasterUi).filter(([key]) => key !== "result")) : null;
+  const map = getActiveMap();
+  const center = map?.getCenter();
 
   return {
+    route: window.location.pathname,
     current_module: currentModule,
+    map: {
+      center: center ? [center.lat, center.lng] : null,
+      zoom: map?.getZoom() ?? null,
+    },
+    ui: { carbon: carbonUi, lc_change: changeUi, results: resultsUi, scenes: scenesUi, crop: cropSummaryUi, disaster: disasterSummaryUi },
     has_aoi: !!SaveGeoContext.getActiveAOI(),
     aoi_name: SaveGeoContext.getActiveAOIName(),
-    selected_year: SaveGeoContext.getCurrentYear(),
+    selected_year: typeof carbonUi?.analysisYear === "number" ? carbonUi.analysisYear : SaveGeoContext.getCurrentYear(),
     selected_carbon_dataset:
+      (typeof carbonUi?.referenceDataset === "string" ? carbonUi.referenceDataset : null) ||
       (document.getElementById("carbonReferenceDataset") as HTMLSelectElement | null)?.value || null,
     selected_carbon_model:
       (document.getElementById("carbonModelSelect") as HTMLSelectElement | null)?.value || null,
     available_carbon_datasets: optionValues("carbonReferenceDataset"),
     available_carbon_models: optionValues("carbonModelSelect"),
-    available_landcover_datasets: optionValues("landcoverDatasetSelect"),
+    available_landcover_datasets: Array.isArray(changeUi?.availableDatasets)
+      ? changeUi.availableDatasets as string[] : optionValues("landcoverDatasetSelect"),
     analysis_results: {
       carbon: hasCarbon,
       landcover: hasLandcover,
@@ -243,6 +263,7 @@ export function buildGeoAiContext(): GeoAiContext {
   const areaKm2 = !preferLc ? carbonAoi?.areaKm2 ?? null : null;
 
   const ar = getAppValue("analysisResults") || {};
+  const disasterResult = readUiCommandState("disaster")?.result as Record<string, unknown> | undefined;
   const period = preferLc && lcState?.from_year && lcState?.to_year
     ? `${lcState.from_year}-${lcState.to_year}`
     : String(SaveGeoContext.getCurrentYear());
@@ -260,9 +281,12 @@ export function buildGeoAiContext(): GeoAiContext {
     landcover_dataset: lcState?.dataset || null,
     results: {
       carbon: (ar.carbon as Record<string, unknown>) || null,
+      direct: (ar.direct as Array<Record<string, unknown>>) || null,
       vegetation: (ar.vegetation as Record<string, unknown>) || null,
       landcover: (ar.landcover as Record<string, unknown>) || null,
       landcover_transition: lcState?.transition || null,
+      crop: (readUiCommandState("crop")?.result as Record<string, unknown>) || null,
+      disaster: disasterResult && Object.values(disasterResult).some(Boolean) ? disasterResult : null,
     },
   };
 }

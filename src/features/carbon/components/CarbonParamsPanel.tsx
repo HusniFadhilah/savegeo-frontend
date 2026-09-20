@@ -3,7 +3,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechnique, CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { FALLBACK_CARBON_REFERENCE_DATASETS, CARBON_DATASET_YEARS } from "@/features/carbon/referenceDatasets";
+import { FALLBACK_CARBON_REFERENCE_DATASETS, carbonDatasetYearOptions } from "@/features/carbon/referenceDatasets";
 import type {
   CarbonModelInfo,
   CarbonModelListItem,
@@ -172,29 +172,7 @@ export default function CarbonParamsPanel({
   // 2019-2023) over the flat CARBON_DATASET_YEARS fallback, which offered
   // the same year list regardless of which dataset was picked.
   const selectedDatasetMeta = datasets.find((d) => d.value === params.referenceDataset);
-  const yearOptions = (() => {
-    const meta = selectedDatasetMeta;
-    if (meta?.availableYears?.length) {
-      return [...meta.availableYears]
-        .filter((year) => Number.isFinite(Number(year)))
-        .map(Number)
-        .sort((a, b) => b - a);
-    }
-    if (meta?.yearRange) {
-      if (Array.isArray(meta.yearRange) && meta.yearRange.length === 2) {
-        const [start, end] = meta.yearRange;
-        if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
-          const years: number[] = [];
-          for (let y = end; y >= start; y--) years.push(y);
-          return years;
-        }
-      }
-    }
-    if (meta?.year != null && Number.isFinite(Number(meta.year))) {
-      return [Number(meta.year)];
-    }
-    return CARBON_DATASET_YEARS;
-  })();
+  const yearOptions = carbonDatasetYearOptions(selectedDatasetMeta);
 
   useEffect(() => {
     if (!yearOptions.length) return;

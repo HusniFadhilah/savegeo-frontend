@@ -11,6 +11,7 @@ import { RESULT_PANE } from "@/config/mapPanes";
 import { analyzeDemSlope, fetchBmkgAlerts, fetchDisasterSources } from "./api";
 import type { BmkgAlert, DemSlopeResult, DisasterSourcesMap } from "./types";
 import { toAoiPayload } from "./utils";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import AoiStatusCard from "./components/AoiStatusCard";
 import SourceStatusPanel from "./components/SourceStatusPanel";
 import BmkgAlerts from "./components/BmkgAlerts";
@@ -111,6 +112,33 @@ export default function DisasterModule() {
       setDemLoading(false);
     }
   }
+
+  useEffect(() => registerUiCommands("disaster", {
+    read: () => ({
+      aoiExists: Boolean(aoi),
+      sourcesLoaded: Boolean(sources),
+      alertsLoaded: Boolean(alerts),
+      hasResult: Boolean(demResult),
+      running: sourcesLoading || alertsLoading || demLoading,
+      error: sourcesError || alertsError || demError,
+      result: { sources, alerts, dem: demResult },
+    }),
+    execute: async ({ action, target }) => {
+      if (action === "load_disaster_sources" && target === "disaster.sources") {
+        if (sourcesLoading) throw new Error("Sumber bencana masih dimuat.");
+        await handleLoadSources();
+      } else if (action === "load_disaster_alerts" && target === "disaster.alerts") {
+        if (alertsLoading) throw new Error("Peringatan BMKG masih dimuat.");
+        await handleLoadBmkg();
+      } else if (action === "run_analysis" && target === "disaster.dem") {
+        if (!aoi) throw new Error("AOI diperlukan untuk analisis DEM dan kemiringan.");
+        if (demLoading) throw new Error("Analisis DEM masih berjalan.");
+        await handleLoadDem();
+      } else {
+        throw new Error(`Perintah ${action} untuk ${target} tidak didukung.`);
+      }
+    },
+  }));
 
   const anyLoading = sourcesLoading || alertsLoading || demLoading;
   const configuredSources = sources ? Object.values(sources).filter((item) => item.configured).length : 0;

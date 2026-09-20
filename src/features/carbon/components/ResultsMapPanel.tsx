@@ -8,6 +8,7 @@ import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { registerMap } from "@/features/chatbot/mapActions";
+import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { AoiState } from "@/features/carbon/types";
 import type { CarbonLayerResult } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
@@ -90,9 +91,10 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
   }
 
   for (const layer of results.direct ?? []) {
+    const datasetYear = layer.effective_year ?? layer.year;
     tabs.push({
       key: `direct:${layer.dataset}`,
-      label: layer.dataset_name,
+      label: `${layer.dataset_name}${datasetYear != null ? ` · Tahun dataset ${datasetYear}` : ""}`,
       icon: layer.legend ? "bi-map" : "bi-tree",
       tileUrl: layer.tile_url,
       resolutionM: Number.parseFloat(String(layer.resolution)) || undefined,
@@ -142,7 +144,7 @@ function buildLegend(
     const layer = (results.direct ?? []).find((item) => item.dataset === dataset) as DirectReferenceLayer | undefined;
     if (layer?.legend) {
       return {
-        title: layer.dataset_name,
+        title: `${layer.dataset_name}${layer.effective_year ?? layer.year ? ` · Tahun dataset ${layer.effective_year ?? layer.year}` : ""}`,
         entries: Object.values(layer.legend).map((item) => ({
           color: item.color || "#2e7d32",
           label: item.label || "Kelas",
@@ -151,7 +153,7 @@ function buildLegend(
     }
     const palette = layer?.vis_params?.palette || [];
     return {
-      title: `${layer?.dataset_name || "Dataset"}${layer?.unit ? ` (${layer.unit})` : ""}`,
+      title: `${layer?.dataset_name || "Dataset"}${layer?.unit ? ` (${layer.unit})` : ""}${layer?.effective_year ?? layer?.year ? ` · Tahun dataset ${layer.effective_year ?? layer.year}` : ""}`,
       entries: buildLegendColors(palette.length ? palette : ["#440154", "#fde725"], Math.min(Math.max(palette.length, 2), 8)).map((color, i) => ({
         color,
         label: `Kelas ${i + 1}`,
@@ -267,6 +269,23 @@ export default function ResultsMapPanel({
       delete window.switchResultLayer;
     };
   }, [activeKey, tabs]);
+
+  useEffect(() => registerUiCommands("results", {
+    read: () => ({ activeLayer: activeKey, availableLayers: tabs.map((tab) => tab.key), visible: activeKey !== null }),
+    execute: ({ action, target, parameters }) => {
+      if (action !== "toggle_layer" || target !== "results.layer") throw new Error("Perintah layer tidak dikenal.");
+      const visible = parameters?.visible;
+      const value = parameters?.value;
+      if (typeof visible !== "boolean") throw new Error("Visibilitas layer harus true atau false.");
+      if (!visible) {
+        setCompareOn(false);
+        setActiveKey(null);
+        return;
+      }
+      if (typeof value !== "string" || !tabs.some((tab) => tab.key === value)) throw new Error("Layer hasil belum tersedia.");
+      setActiveKey(value);
+    },
+  }), [activeKey, tabs]);
 
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
   const legend = buildLegend(activeKey, results, visMin, visMax, visPalette, legendBins);

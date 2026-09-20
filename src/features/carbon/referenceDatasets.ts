@@ -13,13 +13,15 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "WCMC",
     label: "WCMC Carbon Density (2010, 300m)",
-    group: "Aboveground Biomass Carbon",
+    year: 2010,
+    group: "Above and Belowground Biomass Carbon",
     description:
-      "Global carbon density map (300m) from UN World Conservation Monitoring Centre. Based on 2010 data.",
+      "Combined above- and belowground biomass carbon density (300m) from UN WCMC, circa 2010. Not directly comparable with AGB-only products.",
   },
   {
     value: "GEDI",
     label: "GEDI L4B Biomass (2019-2023, 1km)",
+    year: 2020,
     group: "Aboveground Biomass Carbon",
     description:
       "NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest areas, 2019-2023.",
@@ -27,6 +29,9 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "GEDI_L4A_MONTHLY",
     label: "GEDI L4A Monthly AGBD (2019-2023, 25m)",
+    year: 2020,
+    yearRange: [2019, 2023],
+    yearSelectable: true,
     group: "Aboveground Biomass Carbon",
     description:
       "NASA GEDI L4A monthly aboveground biomass density composite at 25m, converted to carbon with x0.47.",
@@ -34,6 +39,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "GEDI_L4B_STACK",
     label: "GEDI L4B + Predictor Stack (2019-2023, 1km)",
+    year: 2020,
     group: "Aboveground Biomass Carbon",
     description:
       "GEDI L4B gridded biomass (1km) combined with Sentinel-2 predictor stack. Enhanced spatial coverage.",
@@ -41,6 +47,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "GEDI_L4D",
     label: "GEDI L4D Imputed AGBD (2023, 30m)",
+    year: 2023,
     group: "Aboveground Biomass Carbon",
     description:
       "NASA GEDI L4D imputed aboveground biomass density at 30m, converted to carbon with x0.47.",
@@ -55,13 +62,16 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "ORNL_AGB_BGB",
     label: "ORNL AGB+BGB Carbon (2010, 300m)",
-    group: "Aboveground Biomass Carbon",
+    year: 2010,
+    group: "Above and Belowground Biomass Carbon",
     description:
       "ORNL DAAC aboveground + belowground biomass carbon (300m). Includes root biomass. 2010 baseline.",
   },
   {
     value: "ESA_CCI_SATIO_AGB",
     label: "ESA CCI AGB via sat-io (2010-2020, 100m)",
+    year: 2020,
+    availableYears: [2010, 2017, 2018, 2019, 2020],
     group: "Aboveground Biomass Carbon",
     deprecated: true,
     replacementKey: "ESA_CCI_BIOMASS_V7_COG",
@@ -113,6 +123,9 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   {
     value: "HANSEN_TREECOVER_AGB_PROXY",
     label: "Hansen Treecover AGB Proxy (2000-2023, 30m)",
+    year: 2023,
+    yearRange: [2000, 2023],
+    yearSelectable: true,
     group: "Aboveground Biomass Carbon",
     description:
       "Hansen GFC v1.11 treecover2000 band as an AGB carbon proxy - not a calibrated biomass measurement, correlates via Sentinel-2 spectral features.",
@@ -145,3 +158,22 @@ export const DEFAULT_CARBON_REFERENCE_DATASET = "WCMC";
  * across the registry (2010/2017-2020/2019-2023 for various datasets).
  */
 export const CARBON_DATASET_YEARS = [2023, 2020, 2019, 2018, 2017, 2010];
+
+export function carbonDatasetYearOptions(meta?: CarbonReferenceDatasetOption): number[] {
+  if (meta?.availableYears?.length) {
+    return [...meta.availableYears].filter((year) => Number.isFinite(Number(year))).map(Number).sort((a, b) => b - a);
+  }
+  if (meta?.yearSelectable && Array.isArray(meta.yearRange) && meta.yearRange.length === 2) {
+    const [start, end] = meta.yearRange;
+    if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+      return Array.from({ length: end - start + 1 }, (_, index) => end - index);
+    }
+  }
+  if (meta?.selectionYear != null && Number.isFinite(Number(meta.selectionYear))) {
+    return [Number(meta.selectionYear)];
+  }
+  if (meta?.year != null && Number.isFinite(Number(meta.year))) {
+    return [Number(meta.year)];
+  }
+  return CARBON_DATASET_YEARS;
+}

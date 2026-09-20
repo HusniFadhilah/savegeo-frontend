@@ -1068,7 +1068,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
       "Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi AOI dan tetap bisa diedit/dihapus lewat toolbar peta.",
     "carbon.aoi.selectedLabel": "AOI",
     "carbon.aoi.sizeWarning":
-      "AOI besar ({area} km€š²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.",
+      "AOI besar ({area} km²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.",
     "carbon.aoi.fromChatbot": "AOI dari chatbot",
     "carbon.aoi.fromFile": "AOI dari file",
     "carbon.aoi.customPolygon": "Poligon Kustom",
@@ -2386,7 +2386,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
       "Draw a polygon or rectangle directly on the map below. The shape automatically becomes the AOI and stays editable/deletable via the map toolbar.",
     "carbon.aoi.selectedLabel": "AOI",
     "carbon.aoi.sizeWarning":
-      "Large AOI ({area} km€š²) - GEE processing (cloud mosaicking, feature extraction, model prediction) may be slow or time out. Consider narrowing the area or increasing the pixel resolution.",
+      "Large AOI ({area} km²) - GEE processing (cloud mosaicking, feature extraction, model prediction) may be slow or time out. Consider narrowing the area or increasing the pixel resolution.",
     "carbon.aoi.fromChatbot": "AOI from chatbot",
     "carbon.aoi.fromFile": "AOI from file",
     "carbon.aoi.customPolygon": "Custom Polygon",
