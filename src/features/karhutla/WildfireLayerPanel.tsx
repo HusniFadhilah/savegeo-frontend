@@ -95,9 +95,11 @@ export default function WildfireLayerPanel({ query, onToggleLayer, viirsAvailabl
 
         {tab === "hotspot" && (
           <div className="wildfire-layer-list" role="tabpanel">
-            <LayerCheckbox option={{ id: "hotspot", label: "Hotspot terpilih", description: "NASA FIRMS · tersimpan di database", available: true }} checked={query.layers.includes("hotspot")} onChange={() => onToggleLayer("hotspot")} />
+            <LayerCheckbox option={{ id: "hotspot", label: "Hotspot tersimpan", description: "NASA FIRMS - titik tersimpan di database", available: true }} checked={query.layers.includes("hotspot")} onChange={() => onToggleLayer("hotspot")} />
             <LayerCheckbox option={viirsOption} checked={query.layers.includes("viirs")} onChange={() => onToggleLayer("viirs")} />
-            <div className="wildfire-layer-note"><i className="bi bi-database-check" aria-hidden="true" /> Sumber eksternal hanya dipanggil saat sinkronisasi.</div>
+            <button type="button" className="wildfire-layer-sync" onClick={onSync} disabled={syncing}><i className={syncing ? "bi bi-arrow-repeat wildfire-spin" : "bi bi-cloud-arrow-down"} aria-hidden="true" /> {syncing ? "Memperbarui data..." : "Perbarui dari NASA FIRMS"}</button>
+            {syncError && <div className="wildfire-layer-error" role="alert"><i className="bi bi-exclamation-triangle" /> {syncError}</div>}
+            <div className="wildfire-layer-note"><i className="bi bi-database-check" aria-hidden="true" /> Tampilan membaca database. NASA dipanggil saat sinkronisasi.</div>
           </div>
         )}
 

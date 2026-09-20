@@ -7,7 +7,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber, localeFor } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchProvinces } from "@/services/analysisService";
-import { fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots } from "@/features/disaster/api";
+import { fetchWildfireEvent, fetchWildfireEvents, fetchWildfireHotspots, syncWildfireHotspots } from "@/features/disaster/api";
 import { FALLBACK_WILDFIRE_EVENTS } from "./data";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type { WildfireEvent, WildfireFilters, WildfireSummary, WildfireTimelinePoint } from "./types";
@@ -119,12 +119,25 @@ export function KarhutlaIndexPage() {
   </div>;
 }
 
-function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event: WildfireEvent; features: FirmsHotspotFeature[]; query: WildfireQueryState; onSelect: (feature: FirmsHotspotFeature) => void; onToggleLayer: (layer: string) => void }) {
+interface HotspotMapProps {
+  event: WildfireEvent;
+  features: FirmsHotspotFeature[];
+  query: WildfireQueryState;
+  onSelect: (feature: FirmsHotspotFeature) => void;
+  onToggleLayer: (layer: string) => void;
+  onSync: () => void;
+  syncing: boolean;
+  syncError: string | null;
+  dataRevision: number;
+}
+
+function HotspotMap({ event, features, query, onSelect, onToggleLayer, onSync, syncing, syncError, dataRevision }: HotspotMapProps) {
   const [boundary, setBoundary] = useState<GeoJSON.GeoJSON | null>(null);
   const [boundaryFailed, setBoundaryFailed] = useState(false);
   const [viirsFeatures, setViirsFeatures] = useState<FirmsHotspotFeature[]>([]);
   const [viirsAvailable, setViirsAvailable] = useState<boolean | null>(null);
   const viirsEnabled = query.layers.includes("viirs");
+  const hotspotEnabled = query.layers.includes("hotspot");
   const boundaryEnabled = query.layers.includes("boundary");
   const provinceCodeKey = event.province_codes.join(",");
 
@@ -178,7 +191,7 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
         }
       });
     return () => { cancelled = true; };
-  }, [event.last_data_at, event.monitoring_from, event.slug, event.start_date, query.from, query.to, viirsEnabled]);
+  }, [dataRevision, event.last_data_at, event.monitoring_from, event.slug, event.start_date, query.from, query.to, viirsEnabled]);
 
   const windDate = query.from || event.monitoring_from || event.start_date;
   return (
@@ -189,9 +202,10 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
         zoom={query.zoom ?? event.default_zoom}
         showGlobeControl={false}
         historicalDate={windDate}
+        preferCanvas
       >
         <BasemapSwitcher />
-        <WildfireLayerPanel query={query} onToggleLayer={onToggleLayer} viirsAvailable={viirsAvailable} />
+        <WildfireLayerPanel query={query} onToggleLayer={onToggleLayer} viirsAvailable={viirsAvailable} onSync={onSync} syncing={syncing} syncError={syncError} />
         {boundary && query.layers.includes("boundary") && <GeoJSON data={boundary as GeoJSON.GeoJsonObject} style={{ color: "#43d9b2", weight: 2, fillOpacity: 0.05 }} />}
         {query.layers.includes("wind") && <WindArrowLayer bbox={event.bbox} date={windDate} />}
         {viirsEnabled && viirsAvailable && viirsFeatures.map((feature) => {
@@ -218,7 +232,7 @@ function HotspotMap({ event, features, query, onSelect, onToggleLayer }: { event
             </CircleMarker>
           );
         })}
-        {features.map((feature, index) => {
+        {hotspotEnabled && features.map((feature, index) => {
           const [lng, lat] = feature.geometry.coordinates;
           const selected = query.hotspot === String(index);
           const highConfidence = feature.properties.confidence_label === "high";
