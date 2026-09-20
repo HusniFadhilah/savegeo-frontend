@@ -215,7 +215,10 @@ export default function CarbonParamsPanel({
         const first = orderedModels[0] || null;
         if (first) {
           onModelSelect(first);
-          onParamsChange({ modelName: first.name, referenceOnly: false });
+          // Changing the dataset must not silently turn off direct
+          // reference-only mode; the selected model is merely kept ready if
+          // the user switches back to model inference.
+          onParamsChange({ modelName: first.name, referenceOnly: params.referenceOnly });
         } else {
           onModelSelect(null);
           const meta = datasets.find((d) => d.value === params.referenceDataset);
@@ -270,6 +273,27 @@ export default function CarbonParamsPanel({
           {t("carbon.params.intro")}
         </small>
       </div>
+
+      {canReferenceOnly && (
+        <label className="form-check mb-2">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            checked={params.referenceOnly}
+            onChange={(event) => {
+              const enabled = event.target.checked;
+              onParamsChange({ referenceOnly: enabled, modelName: enabled ? null : params.modelName });
+              if (enabled) onModelSelect(null);
+            }}
+          />
+          <span className="form-check-label small">Hitung dataset referensi langsung pada AOI (tanpa model)</span>
+        </label>
+      )}
+      {params.referenceOnly && (
+        <div className="alert alert-info py-2 mb-2">
+          <small><i className="bi bi-info-circle me-1" />Model terlatih disembunyikan karena hasil akan dihitung langsung dari dataset referensi.</small>
+        </div>
+      )}
 
       <div className="mb-3">
         <label className="form-label">
@@ -331,7 +355,7 @@ export default function CarbonParamsPanel({
         )}
       </div>
 
-      <div className="mb-3">
+      <div className="mb-3" style={params.referenceOnly ? { display: "none" } : undefined}>
         <label className="form-label">
           <i className="bi bi-cpu me-1" /> {t("carbon.params.trainedModel")}
         </label>
@@ -386,21 +410,6 @@ export default function CarbonParamsPanel({
             </option>
           ))}
         </select>
-        {canReferenceOnly && (
-          <label className="form-check mt-2">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              checked={params.referenceOnly}
-              onChange={(event) => {
-                const enabled = event.target.checked;
-                onParamsChange({ referenceOnly: enabled, modelName: enabled ? null : params.modelName });
-                if (enabled) onModelSelect(null);
-              }}
-            />
-            <span className="form-check-label small">Muat dataset referensi langsung (tanpa model)</span>
-          </label>
-        )}
         <small className="text-muted d-block mt-1">
           {models.length > 0 ? (
             <>
@@ -511,7 +520,7 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">{t("carbon.params.datasetYear")}</label>
+        <label className="form-label">{params.referenceOnly ? "Tahun dataset referensi" : t("carbon.params.datasetYear")}</label>
         <select
           className="form-select"
           id="carbonDatasetYear"
@@ -526,71 +535,83 @@ export default function CarbonParamsPanel({
         </select>
       </div>
 
-      <div className="mb-3">
-        <label className="form-label">{t("carbon.params.dateRange")}</label>
-        <div className="d-flex gap-2 align-items-center">
-          <select
-            className="form-select"
-            id="carbonStartMonth"
-            value={params.startMonth}
-            onChange={(e) => onParamsChange({ startMonth: Number(e.target.value) })}
-          >
-            {MONTHS.map((_m, i) => (
-              <option key={i + 1} value={i + 1}>
-                {t(`carbon.params.months.${i + 1}`)}
-              </option>
-            ))}
-          </select>
-          <span className="text-muted">{t("carbon.params.dateRangeSep")}</span>
-          <select
-            className="form-select"
-            id="carbonEndMonth"
-            value={params.endMonth}
-            onChange={(e) => onParamsChange({ endMonth: Number(e.target.value) })}
-          >
-            {MONTHS.map((_m, i) => (
-              <option key={i + 1} value={i + 1}>
-                {t(`carbon.params.months.${i + 1}`)}
-              </option>
-            ))}
-          </select>
+      {params.referenceOnly ? (
+        <div className="alert alert-success py-2 mb-3">
+          <small>
+            <i className="bi bi-check-circle me-1" />
+            Dataset <strong>{datasetMeta?.label || params.referenceDataset}</strong> akan dihitung langsung pada AOI
+            menggunakan tahun <strong>{params.datasetYear}</strong>.
+          </small>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="mb-3">
+            <label className="form-label">{t("carbon.params.dateRange")}</label>
+            <div className="d-flex gap-2 align-items-center">
+              <select
+                className="form-select"
+                id="carbonStartMonth"
+                value={params.startMonth}
+                onChange={(e) => onParamsChange({ startMonth: Number(e.target.value) })}
+              >
+                {MONTHS.map((_m, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {t(`carbon.params.months.${i + 1}`)}
+                  </option>
+                ))}
+              </select>
+              <span className="text-muted">{t("carbon.params.dateRangeSep")}</span>
+              <select
+                className="form-select"
+                id="carbonEndMonth"
+                value={params.endMonth}
+                onChange={(e) => onParamsChange({ endMonth: Number(e.target.value) })}
+              >
+                {MONTHS.map((_m, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {t(`carbon.params.months.${i + 1}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      <div className="mb-3">
-        <label className="form-label">{t("carbon.params.cloudThreshold")}</label>
-        <input
-          id="carbonCloudSlider"
-          type="range"
-          className="form-range"
-          min={0}
-          max={30}
-          value={params.cloudThreshold}
-          onChange={(e) => onParamsChange({ cloudThreshold: Number(e.target.value) })}
-        />
-        <div className="text-center">
-          <strong>{params.cloudThreshold}</strong>%
-        </div>
-      </div>
+          <div className="mb-3">
+            <label className="form-label">{t("carbon.params.cloudThreshold")}</label>
+            <input
+              id="carbonCloudSlider"
+              type="range"
+              className="form-range"
+              min={0}
+              max={30}
+              value={params.cloudThreshold}
+              onChange={(e) => onParamsChange({ cloudThreshold: Number(e.target.value) })}
+            />
+            <div className="text-center">
+              <strong>{params.cloudThreshold}</strong>%
+            </div>
+          </div>
 
-      <div className="mb-3">
-        <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
-        <select
-          className="form-select"
-          value={params.cloudMaskTechnique}
-          onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
-          disabled={Object.keys(techniques).length === 0}
-        >
-          {Object.entries(techniques).map(([key, info]) => (
-            <option key={key} value={key}>
-              {info.label}
-            </option>
-          ))}
-        </select>
-        {techniques[params.cloudMaskTechnique] && (
-          <small className="text-muted d-block mt-1">{techniques[params.cloudMaskTechnique].description}</small>
-        )}
-      </div>
+          <div className="mb-3">
+            <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
+            <select
+              className="form-select"
+              value={params.cloudMaskTechnique}
+              onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
+              disabled={Object.keys(techniques).length === 0}
+            >
+              {Object.entries(techniques).map(([key, info]) => (
+                <option key={key} value={key}>
+                  {info.label}
+                </option>
+              ))}
+            </select>
+            {techniques[params.cloudMaskTechnique] && (
+              <small className="text-muted d-block mt-1">{techniques[params.cloudMaskTechnique].description}</small>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="mb-3">
         <label className="form-label">

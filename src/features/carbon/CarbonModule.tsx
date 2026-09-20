@@ -149,6 +149,10 @@ export default function CarbonModule() {
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
 
   useEffect(() => {
+    if (carbonParams.referenceOnly || directLoadEnabled) setDeltaEnabled(false);
+  }, [carbonParams.referenceOnly, directLoadEnabled]);
+
+  useEffect(() => {
     window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name, areaKm2: aoi.areaKm2 } : null;
     return () => {
       window.currentAOI = null;
@@ -413,7 +417,11 @@ export default function CarbonModule() {
         : null
     : null;
   const analysisTypeLabel = t(`carbon.statusChip.${analysisType}`);
-  const carbonPeriodLabel = deltaEnabled && analysisType === "carbon" ? `${deltaStartYear}-${deltaEndYear}` : String(year);
+  const carbonPeriodLabel = deltaEnabled && analysisType === "carbon"
+    ? `${deltaStartYear}-${deltaEndYear}`
+    : analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled)
+      ? `dataset ${carbonParams.datasetYear}`
+      : String(year);
 
   return (
     <div className="analysis-page analysis-page-carbon">
@@ -473,6 +481,7 @@ export default function CarbonModule() {
                 className="form-check-input"
                 type="checkbox"
                 checked={deltaEnabled}
+                disabled={carbonParams.referenceOnly || directLoadEnabled}
                 onChange={(e) => setDeltaEnabled(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="enableCarbonDelta">
@@ -534,7 +543,7 @@ export default function CarbonModule() {
               </div>
               {deltaError && <div className="alert alert-danger py-1 px-2 mt-2 small">{deltaError}</div>}
             </div>
-          ) : (
+          ) : !(analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled)) ? (
             <div className="mb-3">
               <label className="form-label">{t("carbon.sidebar.year")}</label>
               <input
@@ -553,7 +562,7 @@ export default function CarbonModule() {
                 </span>
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="mb-3">
             <label className="form-label">{t("carbon.sidebar.zoom")}</label>
@@ -635,13 +644,16 @@ export default function CarbonModule() {
                   if (enabled) {
                     setDeltaEnabled(false);
                     setVegTsEnabled(false);
+                    // Global loading is independent of AOI reference-only
+                    // analysis; keeping both toggles on would be ambiguous.
+                    patchCarbon({ referenceOnly: false });
                   }
                 }}
               />
               <label className="form-check-label small" htmlFor="directDatasetLoad">
-                <i className="bi bi-globe2 me-1" /> Muat dataset langsung tanpa AOI/model
+                <i className="bi bi-globe2 me-1" /> Tampilkan dataset global tanpa AOI/model
               </label>
-              <small className="text-muted d-block">Menampilkan peta global; statistik baru dihitung setelah AOI dipilih.</small>
+              <small className="text-muted d-block">Tahun mengikuti dataset yang dipilih; statistik baru dihitung setelah AOI dipilih.</small>
             </div>
           )}
 
