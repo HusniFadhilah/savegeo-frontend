@@ -7506,3 +7506,144 @@ html[data-theme="dark"] .wildfire-fdrs-row,
   .wildfire-layer-control { top: 3.45rem; right: .45rem; }
   .wildfire-layer-panel { width: min(17rem, calc(100vw - 1rem)); }
 }
+
+/* Compact controls keep the map usable while the layer card remains optional. */
+.wildfire-layer-trigger {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid rgba(220, 233, 227, .95);
+  border-radius: .7rem;
+  background: #fff;
+  color: #087f5b;
+  box-shadow: 0 8px 20px rgba(16, 42, 36, .16);
+  cursor: pointer;
+}
+.wildfire-layer-trigger:hover,
+.wildfire-layer-trigger:focus-visible,
+.wildfire-layer-trigger.is-active { background: #087f5b; color: #fff; }
+.wildfire-layer-trigger i { font-size: 1.25rem; }
+.wildfire-layer-heading { justify-content: space-between; }
+.wildfire-layer-heading > div { display: flex; align-items: center; gap: .7rem; }
+.wildfire-layer-close {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 0;
+  border-radius: .45rem;
+  background: transparent;
+  color: #6f8078;
+  cursor: pointer;
+}
+.wildfire-layer-close:hover,
+.wildfire-layer-close:focus-visible { background: #eef8f4; color: #087f5b; }
+.wildfire-layer-sync {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: .45rem;
+  margin-top: .25rem;
+  padding: .55rem .6rem;
+  border: 1px solid rgba(13, 139, 97, .22);
+  border-radius: .55rem;
+  background: #eef8f4;
+  color: #087f5b;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wildfire-layer-sync:disabled { opacity: .65; cursor: wait; }
+.wildfire-layer-error,
+.wildfire-data-error {
+  display: flex;
+  align-items: flex-start;
+  gap: .45rem;
+  padding: .55rem .65rem;
+  border: 1px solid rgba(178, 63, 51, .16);
+  border-radius: .6rem;
+  background: #fff0ed;
+  color: #a03a30;
+  font-size: .68rem;
+  line-height: 1.4;
+}
+.wildfire-layer-error { margin: .45rem .35rem 0; }
+.wildfire-data-error { margin: 0 0 .55rem; }
+.wildfire-map-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: .4rem;
+  margin: 0 0 .55rem;
+  color: var(--wildfire-muted-ink, #66756d);
+  font-size: .68rem;
+  line-height: 1.4;
+}
+.wildfire-map-hint i { flex: 0 0 auto; color: #0d8b61; }
+.wildfire-spin { animation: wildfire-spin 1s linear infinite; }
+@keyframes wildfire-spin { to { transform: rotate(360deg); } }
+
+.wildfire-detail-shell { min-width: 0; overflow-x: hidden; }
+.wildfire-detail-shell .wildfire-detail-layout,
+.wildfire-detail-shell .wildfire-map-first,
+.wildfire-detail-shell .wildfire-detail-sidebar { min-width: 0; }
+.wildfire-detail-shell .wildfire-map-wrap { width: 100%; max-width: 100%; }
+
+@media (max-width: 900px) {
+  .wildfire-detail-shell .wildfire-detail-layout { grid-template-columns: minmax(0, 1fr); }
+  .wildfire-detail-shell .wildfire-detail-sidebar { order: 0; }
+  .wildfire-detail-shell .wildfire-map-wrap,
+  .wildfire-detail-shell .wildfire-map-wrap .map-view-shell,
+  .wildfire-detail-shell .wildfire-map-wrap .map-view-shell > div:first-child,
+  .wildfire-detail-shell .wildfire-map-wrap .leaflet-container {
+    min-height: 420px;
+    height: clamp(420px, 70vh, 600px);
+  }
+}
+
+@media (max-width: 640px) {
+  .wildfire-detail-shell { padding: .65rem .55rem 1.5rem; }
+  .wildfire-detail-topbar { padding: 1rem; }
+  .wildfire-detail-topbar h1 { font-size: 1.35rem; line-height: 1.1; }
+  .wildfire-detail-topbar p { font-size: .72rem; line-height: 1.45; }
+  .wildfire-detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
+  .wildfire-detail-actions .btn { min-width: 0; padding: .5rem .4rem; font-size: .7rem; }
+  .wildfire-detail-shell .wildfire-filter-toolbar { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; gap: .5rem; }
+  .wildfire-detail-shell .wildfire-filter-toolbar > label { min-width: 0; }
+  .wildfire-detail-shell .wildfire-filter-toolbar label > input,
+  .wildfire-detail-shell .wildfire-filter-toolbar label > select { width: 100%; min-width: 0; font-size: .75rem; }
+  .wildfire-confidence-filter { grid-column: 1 / -1; display: flex; justify-content: flex-start; gap: .5rem; flex-wrap: wrap; }
+  .wildfire-mobile-filter { grid-column: 1 / -1; width: 100%; justify-content: center; }
+  .wildfire-advanced-drawer { grid-template-columns: 1fr; }
+  .wildfire-detail-shell .wildfire-map-wrap,
+  .wildfire-detail-shell .wildfire-map-wrap .map-view-shell,
+  .wildfire-detail-shell .wildfire-map-wrap .map-view-shell > div:first-child,
+  .wildfire-detail-shell .wildfire-map-wrap .leaflet-container { height: 430px; min-height: 430px; }
+  .wildfire-map-status { display: flex; flex-direction: column; gap: .15rem; font-size: .68rem; }
+  .wildfire-map-legend { left: .55rem; right: .55rem; bottom: .55rem; justify-content: center; flex-wrap: wrap; font-size: .6rem; }
+  .wildfire-layer-control { top: .55rem; right: .55rem; }
+  .wildfire-layer-panel { width: min(18rem, calc(100vw - 1.1rem)); max-height: calc(100% - 1rem); overflow: auto; }
+  .wildfire-layer-option { min-height: 2.2rem; }
+  .wildfire-stat-grid { grid-template-columns: 1fr 1fr; }
+  .wildfire-stat { min-width: 0; padding: .8rem; }
+  .wildfire-stat strong { overflow-wrap: anywhere; font-size: 1.25rem; }
+  .wildfire-side-card, .wildfire-timeline-panel { padding: .9rem; }
+  .wildfire-timeline-panel .wildfire-histogram { height: 135px; gap: .18rem; }
+  .wildfire-timeline-panel .wildfire-timeline-axis { margin-left: 2.7rem; }
+}
+
+html[data-theme="dark"] .wildfire-layer-trigger,
+.dark-mode .wildfire-layer-trigger { border-color: #315245; background: #17251f; color: #a9e0c8; }
+html[data-theme="dark"] .wildfire-layer-trigger:hover,
+html[data-theme="dark"] .wildfire-layer-trigger:focus-visible,
+html[data-theme="dark"] .wildfire-layer-trigger.is-active,
+.dark-mode .wildfire-layer-trigger:hover,
+.dark-mode .wildfire-layer-trigger:focus-visible,
+.dark-mode .wildfire-layer-trigger.is-active { background: #087f5b; color: #fff; }
+html[data-theme="dark"] .wildfire-layer-sync,
+.dark-mode .wildfire-layer-sync { border-color: #315245; background: #1c3a2e; color: #b8d6ca; }
+html[data-theme="dark"] .wildfire-layer-error,
+html[data-theme="dark"] .wildfire-data-error,
+.dark-mode .wildfire-layer-error,
+.dark-mode .wildfire-data-error { border-color: #6f3b35; background: #3b2421; color: #ffc8bf; }

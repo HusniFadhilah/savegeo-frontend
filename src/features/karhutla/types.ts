@@ -76,6 +76,9 @@ export interface WildfireHotspotsResponse {
     storage?: "database" | "curated" | string;
     fetched_at: string;
     last_synced_at?: string | null;
+    total_features?: number;
+    returned_features?: number;
+    truncated_for_map?: boolean;
     stale: boolean;
     attribution: string;
     disclaimer: string;

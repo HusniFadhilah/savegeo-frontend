@@ -33,7 +33,12 @@ export const DEFAULT_WILDFIRE_QUERY: WildfireQueryState = {
 
 const SENSOR_VALUES = new Set(["all", "viirs", "modis", "landsat"]);
 const CONFIDENCE_VALUES = new Set<WildfireConfidence>(["low", "nominal", "high"]);
-const PANELS = new Set<WildfireQueryState["panel"]>(["overview", "timeline", "table", "methodology"]);
+const PANELS = new Set<WildfireQueryState["panel"]>([
+  "overview",
+  "timeline",
+  "table",
+  "methodology",
+]);
 
 function validDate(value: string | null): string {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
@@ -43,7 +48,9 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
   const params = new URLSearchParams(search);
   const confidence = (params.get("confidence") ?? "")
     .split(",")
-    .filter((value): value is WildfireConfidence => CONFIDENCE_VALUES.has(value as WildfireConfidence));
+    .filter((value): value is WildfireConfidence =>
+      CONFIDENCE_VALUES.has(value as WildfireConfidence),
+    );
   const lat = Number(params.get("lat"));
   const lng = Number(params.get("lng"));
   const zoom = Number(params.get("zoom"));
@@ -51,11 +58,27 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
   return {
     from: validDate(params.get("from")),
     to: validDate(params.get("to")),
-    sensor: SENSOR_VALUES.has(params.get("sensor") ?? "") ? params.get("sensor") ?? "all" : "all",
+    sensor: SENSOR_VALUES.has(params.get("sensor") ?? "") ? (params.get("sensor") ?? "all") : "all",
     confidence: confidence.length ? [...new Set(confidence)] : DEFAULT_WILDFIRE_QUERY.confidence,
     province: params.get("province") ?? "",
     city: params.get("city") ?? "",
-    layers: layers.filter((layer) => ["hotspot", "boundary", "burned-area", "satellite", "viirs", "wind", "clouds", "air-quality", "rain", "units", "suppression", "groundcheck"].includes(layer)),
+    layers: layers.filter((layer) =>
+      [
+        "hotspot",
+        "boundary",
+        "burned-area",
+        "satellite",
+        "viirs",
+        "wind",
+        "clouds",
+        "air-quality",
+        "rain",
+        "units",
+        "suppression",
+        "groundcheck",
+        "peat-water",
+      ].includes(layer),
+    ),
     basemap: params.get("basemap") ?? "",
     lat: Number.isFinite(lat) && lat >= -11 && lat <= 6 ? lat : null,
     lng: Number.isFinite(lng) && lng >= 95 && lng <= 141 ? lng : null,
@@ -67,7 +90,10 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
   };
 }
 
-export function writeWildfireQuery(params: URLSearchParams, state: WildfireQueryState): URLSearchParams {
+export function writeWildfireQuery(
+  params: URLSearchParams,
+  state: WildfireQueryState,
+): URLSearchParams {
   const next = new URLSearchParams(params);
   const values: Record<string, string | null> = {
     from: state.from || null,
@@ -84,6 +110,8 @@ export function writeWildfireQuery(params: URLSearchParams, state: WildfireQuery
     hotspot: state.hotspot || null,
     panel: state.panel === "overview" ? null : state.panel,
   };
-  Object.entries(values).forEach(([key, value]) => (value == null ? next.delete(key) : next.set(key, value)));
+  Object.entries(values).forEach(([key, value]) =>
+    value == null ? next.delete(key) : next.set(key, value),
+  );
   return next;
 }
