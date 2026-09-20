@@ -192,7 +192,7 @@ export default function BeforeAfterMaps({
 
       {changeMapLoading && (
         <div className="alert alert-info py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          <i className="fas fa-spinner fa-spin" /> Memuat peta perubahan {yearA} â†’ {yearB}...
+          <i className="fas fa-spinner fa-spin" /> Memuat peta perubahan {yearA} - {yearB}...
         </div>
       )}
       {changeMapError && (

@@ -101,6 +101,8 @@ export interface CarbonParams {
   cloudMaskTechnique: string;
   /** Run the selected reference directly, without a trained model. */
   referenceOnly: boolean;
+  /** Load the selected reference layer only; skip statistics, area, and model inference. */
+  loadOnly: boolean;
 }
 
 export interface CarbonStats {
@@ -112,7 +114,7 @@ export interface CarbonStats {
 
 export interface CarbonLayerResult {
   tile_url?: string;
-  statistics?: CarbonStats;
+  statistics?: CarbonStats | null;
   unit?: string;
   vis_params?: {
     min?: number;
@@ -135,11 +137,11 @@ export interface CarbonReferenceInfo {
 }
 
 export interface CarbonAreaInfo {
-  area_ha?: number;
-  calculation_area_ha?: number;
-  filtering_area_ha?: number;
-  total_carbon_tons?: number;
-  carbon_dioxide_equivalent_tons?: number;
+  area_ha?: number | null;
+  calculation_area_ha?: number | null;
+  filtering_area_ha?: number | null;
+  total_carbon_tons?: number | null;
+  carbon_dioxide_equivalent_tons?: number | null;
   description?: string;
 }
 
@@ -150,6 +152,8 @@ export interface CarbonModelRunInfo {
   reference_dataset?: string;
   reference_dataset_year?: number | string;
   model_name?: string;
+  load_only?: boolean;
+  statistics_available?: boolean;
   model_version?: string | null;
   target_pool?: string;
   cv_metrics?: CarbonModelCvMetrics;

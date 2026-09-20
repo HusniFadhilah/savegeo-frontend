@@ -196,11 +196,15 @@ export default function CarbonParamsPanel({
           // Changing the dataset must not silently turn off direct
           // reference-only mode; the selected model is merely kept ready if
           // the user switches back to model inference.
-          onParamsChange({ modelName: first.name, referenceOnly: params.referenceOnly });
+          onParamsChange({ modelName: first.name, referenceOnly: params.referenceOnly, loadOnly: params.loadOnly });
         } else {
           onModelSelect(null);
           const meta = datasets.find((d) => d.value === params.referenceDataset);
-          onParamsChange({ modelName: null, referenceOnly: Boolean(meta?.referenceOnlyCapable || (meta?.source === "fallback" && !meta.requiresConfiguration)) });
+          onParamsChange({
+            modelName: null,
+            referenceOnly: Boolean(meta?.referenceOnlyCapable || (meta?.source === "fallback" && !meta.requiresConfiguration)),
+            loadOnly: false,
+          });
         }
       })
       .catch(() => {
@@ -260,7 +264,7 @@ export default function CarbonParamsPanel({
             checked={params.referenceOnly}
             onChange={(event) => {
               const enabled = event.target.checked;
-              onParamsChange({ referenceOnly: enabled, modelName: enabled ? null : params.modelName });
+              onParamsChange({ referenceOnly: enabled, loadOnly: enabled ? params.loadOnly : false, modelName: enabled ? null : params.modelName });
               if (enabled) onModelSelect(null);
             }}
           />
@@ -268,9 +272,21 @@ export default function CarbonParamsPanel({
         </label>
       )}
       {params.referenceOnly && (
-        <div className="alert alert-info py-2 mb-2">
-          <small><i className="bi bi-info-circle me-1" />Model terlatih disembunyikan karena hasil akan dihitung langsung dari dataset referensi.</small>
-        </div>
+        <>
+          <div className="alert alert-info py-2 mb-2">
+            <small><i className="bi bi-info-circle me-1" />Model terlatih disembunyikan karena hasil akan dihitung langsung dari dataset referensi.</small>
+          </div>
+          <label className="form-check mb-3">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              checked={params.loadOnly}
+              onChange={(event) => onParamsChange({ loadOnly: event.target.checked })}
+            />
+            <span className="form-check-label small">Hanya muat layer, tanpa statistik dan total</span>
+            <small className="text-muted d-block ms-4">Menghindari reduceRegion dan perhitungan luas untuk AOI besar.</small>
+          </label>
+        </>
       )}
 
       <div className="mb-3">
@@ -347,7 +363,7 @@ export default function CarbonParamsPanel({
           value={params.modelName ?? ""}
           onChange={(v) => {
             const name = v || null;
-            onParamsChange({ modelName: name, referenceOnly: false });
+            onParamsChange({ modelName: name, referenceOnly: false, loadOnly: false });
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
           options={Object.entries(grouped).flatMap(([algo, list]) =>
@@ -377,7 +393,7 @@ export default function CarbonParamsPanel({
           value={params.modelName ?? ""}
           onChange={(e) => {
             const name = e.target.value || null;
-            onParamsChange({ modelName: name, referenceOnly: false });
+            onParamsChange({ modelName: name, referenceOnly: false, loadOnly: false });
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
         >

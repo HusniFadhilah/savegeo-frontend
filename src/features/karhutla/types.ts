@@ -73,7 +73,9 @@ export interface WildfireHotspotsResponse {
   timeline?: WildfireTimelinePoint[];
   metadata: {
     source: string;
+    storage?: "database" | "curated" | string;
     fetched_at: string;
+    last_synced_at?: string | null;
     stale: boolean;
     attribution: string;
     disclaimer: string;

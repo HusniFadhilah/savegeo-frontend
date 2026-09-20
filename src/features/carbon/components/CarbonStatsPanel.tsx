@@ -38,6 +38,17 @@ export default function CarbonStatsPanel({ result }: Props) {
     ? { r2_score: cv.r2_mean, rmse: cv.rmse_mean, rmse_std: cv.rmse_std, cv_folds: cv.n_folds ?? cv.cv_folds }
     : undefined;
 
+  if (modelInfo.load_only || modelInfo.statistics_available === false) {
+    return (
+      <div className="alert alert-info mt-4" role="status">
+        <i className="bi bi-layers me-1" />
+        {modelInfo.load_only
+          ? "Layer dataset referensi sudah dimuat. Statistik, luas AOI, dan total stok dilewati pada mode load-only."
+          : "Layer estimasi berhasil dimuat, tetapi statistik AOI tidak tersedia karena Earth Engine membatasi agregasi untuk AOI ini."}
+      </div>
+    );
+  }
+
   const calculationAreaHa = areaInfo.calculation_area_ha ?? areaInfo.area_ha ?? 0;
   const isClipped = modelInfo.calculation_mode === "clipped_aoi";
 

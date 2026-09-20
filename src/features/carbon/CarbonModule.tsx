@@ -88,6 +88,7 @@ export default function CarbonModule() {
     datasetYear: CARBON_DATASET_YEARS[0],
     modelName: null,
     referenceOnly: false,
+    loadOnly: false,
     showReference: true,
     cloudMaskTechnique: "scl",
   });
@@ -404,6 +405,7 @@ export default function CarbonModule() {
       referenceDataset: carbonPartial.referenceDataset,
       datasetYear: carbonPartial.datasetYear,
       referenceOnly: carbonPartial.referenceOnly,
+      loadOnly: carbonPartial.loadOnly,
       directGlobal: directLoadEnabled,
       modelName: selectedModel?.name ?? null,
       startMonth: carbonPartial.startMonth,
@@ -463,13 +465,20 @@ export default function CarbonModule() {
         patchCarbon({ datasetYear: value as number });
       } else if (target === "carbon.referenceOnly") {
         if (typeof value !== "boolean") throw new Error("Mode referensi harus true atau false.");
-        patchCarbon({ referenceOnly: value });
+        patchCarbon({ referenceOnly: value, loadOnly: value ? carbonPartial.loadOnly : false });
         if (value) setDirectLoadEnabled(false);
+      } else if (target === "carbon.loadOnly") {
+        if (typeof value !== "boolean") throw new Error("Mode muat layer harus true atau false.");
+        patchCarbon({ loadOnly: value, referenceOnly: value || carbonPartial.referenceOnly, modelName: value ? null : carbonPartial.modelName });
+        if (value) {
+          setSelectedModel(null);
+          setDirectLoadEnabled(false);
+        }
       } else if (target === "carbon.directGlobal") {
         if (typeof value !== "boolean") throw new Error("Mode dataset langsung harus true atau false.");
         setDirectLoadEnabled(value);
         if (value) {
-          patchCarbon({ referenceOnly: false });
+          patchCarbon({ referenceOnly: false, loadOnly: false });
           setDeltaEnabled(false);
           setVegTsEnabled(false);
         }
@@ -764,7 +773,7 @@ export default function CarbonModule() {
                     setVegTsEnabled(false);
                     // Global loading is independent of AOI reference-only
                     // analysis; keeping both toggles on would be ambiguous.
-                    patchCarbon({ referenceOnly: false });
+                    patchCarbon({ referenceOnly: false, loadOnly: false });
                   }
                 }}
               />
@@ -829,6 +838,7 @@ export default function CarbonModule() {
                   ? ` (tahun yang diminta ${layer.requested_year})` : ""}.
                 {layer.target_pool === "aboveground_belowground_biomass_carbon" && " Pool: karbon biomassa atas dan bawah tanah."}
                 {layer.target_pool === "soil_organic_carbon" && " Pool: karbon organik tanah."}
+                {layer.load_note ? ` ${layer.load_note}` : ""}
               </div>)}
               Statistik dan total karbon memerlukan AOI.
             </div>}

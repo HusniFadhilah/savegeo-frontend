@@ -226,6 +226,14 @@ export function fetchWildfireHotspots(slug: string, query: Record<string, string
   );
 }
 
+export function syncWildfireHotspots(slug: string, payload: { from_date?: string; to_date?: string } = {}) {
+  return apiClient.post<{ stored: number; fetched: number; from: string; to: string; errors: { source: string; message: string; status: number }[] }>(
+    `/admin/disasters/wildfires/${encodeURIComponent(slug)}/sync`,
+    payload,
+    { auth: "admin", timeoutMs: 180_000 },
+  );
+}
+
 export function fetchWildfireTimeline(slug: string, query: Record<string, string | undefined> = {}) {
   return userGet<{ timeline: { date: string; count: number }[] }>(
     `/disasters/wildfires/events/${encodeURIComponent(slug)}/timeline${buildQuery(query)}`,

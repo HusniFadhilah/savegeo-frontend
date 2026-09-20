@@ -49,7 +49,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
     );
   }
 
-  if (results.carbon) {
+  if (results.carbon && !results.carbon.model_info?.load_only && results.carbon.model_info?.statistics_available !== false) {
     const c = results.carbon;
     const stats = c.carbon_estimated?.statistics || {};
     const areaInfo = c.area_info || {};

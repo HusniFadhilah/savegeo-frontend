@@ -129,7 +129,7 @@ export async function analyzeCarbon({
 }: AnalyzeCarbonArgs): Promise<CarbonResult> {
   const meta = selectedModel?.metadata_json;
 
-  if (selectedModel && isNonGeeModel(meta)) {
+  if (selectedModel && isNonGeeModel(meta) && !params.loadOnly) {
     const pad = (n: number) => String(n).padStart(2, "0");
     // /analyze/carbon-local forwards these straight into a STAC API `datetime`
     // interval query (app/providers/stac_provider.py: `f"{start}/{end}"`),
@@ -168,6 +168,7 @@ export async function analyzeCarbon({
       dataset_year: params.datasetYear,
       model_name: params.modelName || null,
       reference_only: params.referenceOnly || (!params.modelName && params.referenceDataset === "CHLORIS_AGB_STOCK"),
+      load_only: params.loadOnly,
       cloud_mask_technique: params.cloudMaskTechnique,
       vis_min: visMin,
       vis_max: visMax,
@@ -241,7 +242,7 @@ export function checkCarbonDatasetHealth(refresh = false) {
 export interface DirectReferenceLayer {
   dataset: string;
   dataset_name: string;
-  tile_url: string;
+  tile_url?: string | null;
   year?: number | string | null;
   requested_year?: number | string | null;
   effective_year?: number | string | null;
@@ -255,6 +256,7 @@ export interface DirectReferenceLayer {
   vis_params?: { min?: number; max?: number; palette?: string[] };
   direct: boolean;
   statistics_available: boolean;
+  load_note?: string | null;
 }
 
 export function loadDirectCarbonReferenceLayer(dataset: string, year: number, visMin?: number, visMax?: number) {

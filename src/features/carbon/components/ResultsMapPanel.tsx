@@ -96,7 +96,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
       key: `direct:${layer.dataset}`,
       label: `${layer.dataset_name}${datasetYear != null ? ` · Tahun dataset ${datasetYear}` : ""}`,
       icon: layer.legend ? "bi-map" : "bi-tree",
-      tileUrl: layer.tile_url,
+      tileUrl: layer.tile_url ?? undefined,
       resolutionM: Number.parseFloat(String(layer.resolution)) || undefined,
     });
   }

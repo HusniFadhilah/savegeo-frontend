@@ -41,6 +41,8 @@ interface Props {
   historicalDate?: string;
   /** Optional AOI used to clip the historical basemap to the selected area. */
   historicalAoi?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
+  /** Use Leaflet's canvas renderer for dense point layers such as hotspots. */
+  preferCanvas?: boolean;
 }
 
 function InvalidateOnResize() {
@@ -92,7 +94,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate, historicalAoi }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false }: Props) {
   const t = useI18nStore((state) => state.t);
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
@@ -122,6 +124,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         center={center ?? INDONESIA_CENTER}
         zoom={zoom ?? INDONESIA_ZOOM}
         maxZoom={effectiveMaxZoom}
+        preferCanvas={preferCanvas}
         className={className ?? "savegeo-map"}
       >
         <Pane name={BASEMAP_REFERENCE_PANE} style={{ zIndex: BASEMAP_REFERENCE_PANE_Z_INDEX, pointerEvents: "none" }} />

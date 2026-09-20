@@ -21,6 +21,7 @@
 
 import L from "leaflet";
 import { useUiStore } from "@/hooks/useUiStore";
+import { useAoiStore } from "@/hooks/useAoiStore";
 import type { GeoAiContext } from "./types";
 import { readUiCommandState } from "./uiCommandBus";
 import { getActiveMap } from "./mapActions";
@@ -106,11 +107,13 @@ export const SaveGeoContext = {
       const fc = drawn.toGeoJSON();
       if (fc && fc.features && fc.features.length > 0) return fc;
     }
+    const shared = useAoiStore.getState().aoi;
+    if (shared?.feature) return shared.feature;
     return null;
   },
   getActiveAOIName(): string | null {
     const aoi = getAppValue("currentAOI");
-    return (aoi && aoi.name) || null;
+    return (aoi && aoi.name) || useAoiStore.getState().aoi?.name || null;
   },
   getCurrentYear(): number {
     const sp = document.getElementById("yearValue");
@@ -256,11 +259,12 @@ export function buildGeoAiContext(): GeoAiContext {
   const activeModule = useUiStore.getState().activeModule;
   const carbonAoi = getAppValue("currentAOI") || null;
   const lcState = getAppValue("lcChangeState") || null;
+  const sharedAoi = useAoiStore.getState().aoi;
 
   const preferLc = activeModule === "lc-change" && !!lcState?.aoi;
-  const aoi = preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || null;
-  const aoiName = preferLc ? "AOI (LC-Change)" : carbonAoi?.name || null;
-  const areaKm2 = !preferLc ? carbonAoi?.areaKm2 ?? null : null;
+  const aoi = preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || sharedAoi?.feature || null;
+  const aoiName = preferLc ? "AOI (LC-Change)" : carbonAoi?.name || sharedAoi?.name || null;
+  const areaKm2 = !preferLc ? carbonAoi?.areaKm2 ?? sharedAoi?.areaKm2 ?? null : null;
 
   const ar = getAppValue("analysisResults") || {};
   const disasterResult = readUiCommandState("disaster")?.result as Record<string, unknown> | undefined;

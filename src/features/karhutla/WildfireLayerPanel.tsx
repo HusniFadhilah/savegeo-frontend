@@ -7,6 +7,9 @@ interface Props {
   query: WildfireQueryState;
   onToggleLayer: (layer: string) => void;
   viirsAvailable: boolean | null;
+  onSync: () => void;
+  syncing: boolean;
+  syncError: string | null;
 }
 
 interface LayerOption {
@@ -56,19 +59,23 @@ function LayerCheckbox({ option, checked, onChange }: { option: LayerOption; che
   );
 }
 
-export default function WildfireLayerPanel({ query, onToggleLayer, viirsAvailable }: Props) {
+export default function WildfireLayerPanel({ query, onToggleLayer, viirsAvailable, onSync, syncing, syncError }: Props) {
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<LayerTab>("overlays");
   const viirsOption: LayerOption = {
     id: "viirs",
     label: "VIIRS / NASA FIRMS",
-    description: viirsAvailable === false ? "Belum ada data pada periode ini" : "Data hotspot tersimpan",
-    available: viirsAvailable !== false,
+    description: viirsAvailable === false ? "Tidak ada data pada periode ini" : "Data hotspot tersimpan",
+    available: true,
   };
 
   return (
     <div className="leaflet-top leaflet-right wildfire-layer-control">
-      <div className="wildfire-layer-panel leaflet-control" role="dialog" aria-label="Layer karhutla">
-        <div className="wildfire-layer-heading"><i className="bi bi-layers" aria-hidden="true" /><strong>Layer</strong></div>
+      <button type="button" className={`wildfire-layer-trigger leaflet-control ${open ? "is-active" : ""}`} title="Tampilkan layer" aria-label="Tampilkan layer" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <i className="bi bi-layers" aria-hidden="true" />
+      </button>
+      {open && <div className="wildfire-layer-panel leaflet-control" role="dialog" aria-label="Layer karhutla">
+        <div className="wildfire-layer-heading"><div><i className="bi bi-layers" aria-hidden="true" /><strong>Layer</strong></div><button type="button" className="wildfire-layer-close" aria-label="Tutup layer" onClick={() => setOpen(false)}><i className="bi bi-x-lg" /></button></div>
         <div className="wildfire-layer-tabs" role="tablist" aria-label="Jenis layer">
           {([[
             "hotspot", "Hotspot",
@@ -111,7 +118,7 @@ export default function WildfireLayerPanel({ query, onToggleLayer, viirsAvailabl
             <small className="wildfire-layer-source">Sumber target: Spartan BMKG / SiPongi+</small>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
