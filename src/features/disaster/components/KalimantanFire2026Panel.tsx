@@ -141,7 +141,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
   const [beforeStart, setBeforeStart] = useState("2026-07-01");
   const [beforeEnd, setBeforeEnd] = useState("2026-07-31");
   const [afterStart, setAfterStart] = useState("2026-08-01");
-  const [afterEnd, setAfterEnd] = useState("2026-08-31");
+  const [afterEnd, setAfterEnd] = useState("2026-09-20");
   const [showBefore, setShowBefore] = useState(false);
   const [showAfter, setShowAfter] = useState(true);
   const [showBurned, setShowBurned] = useState(true);
@@ -375,511 +375,523 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
           aria-controls="kalimantanFireBriefContent"
           onClick={() => setIsExpanded((expanded) => !expanded)}
         >
-        <div>
-          <span className="disaster-eyebrow">Analisis cepat · 2026</span>
-          <h2 id="kalimantanFireBriefTitle">Karhutla Kalimantan 2026</h2>
-          <p>
-            Ringkasan situasi berbasis rilis resmi dan batas administrasi BIG untuk membantu memilih
-            event kebakaran hutan/lahan yang relevan.
-          </p>
-        </div>
-          <i className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
+          <div>
+            <span className="disaster-eyebrow">Analisis cepat · 2026</span>
+            <h2 id="kalimantanFireBriefTitle">Karhutla Kalimantan 2026</h2>
+            <p>
+              Ringkasan situasi berbasis rilis resmi dan batas administrasi BIG untuk membantu
+              memilih event kebakaran hutan/lahan yang relevan.
+            </p>
+          </div>
+          <i
+            className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
+            aria-hidden="true"
+          />
         </button>
         <button type="button" className="btn btn-sm btn-primary" onClick={onApplyFilter}>
           <i className="bi bi-funnel-fill" /> Tampilkan event 2026
         </button>
       </div>
 
-      {isExpanded && <div id="kalimantanFireBriefContent" className="disaster-kalimantan-brief-grid">
-        <div className="disaster-kalimantan-map-wrap">
-          <MapView id="kalimantanFire2026Map" center={[-1.5, 114.5]} zoom={5} maxZoom={14}>
-            <BasemapSwitcher />
-            {fireLayers.result?.sources
-              .filter(
-                (source) => source.status === "ok" && fireLayers.visibleSources.includes(source.id),
-              )
-              .map((source) =>
-                source.kind === "burned_area" && source.tile_url ? (
-                  <TileLayer
-                    key={source.tile_url}
-                    url={source.tile_url}
-                    opacity={0.65}
-                    attribution={source.source}
-                    pane={RESULT_PANE}
-                  />
-                ) : source.kind === "hazard" && source.wms_url ? (
-                  <WMSTileLayer
-                    key={source.id}
-                    url={source.wms_url}
-                    layers={source.wms_layers ?? "0"}
-                    format="image/png"
-                    transparent
-                    opacity={0.25}
-                    attribution="BNPB InaRISK · indeks bahaya (bukan kejadian)"
-                    pane={RESULT_PANE}
-                  />
-                ) : source.kind === "footprints" && source.features ? (
-                  <GeoJSON
-                    key={`${source.id}-${fireLayers.result?.generated_at}`}
-                    data={
-                      {
-                        type: "FeatureCollection",
-                        features: source.features,
-                      } as GeoJSON.FeatureCollection
-                    }
-                    style={{ color: "#0284c7", weight: 1, fillOpacity: 0.01, dashArray: "5 4" }}
-                    onEachFeature={observationTooltip}
-                  />
-                ) : null,
+      {isExpanded && (
+        <div id="kalimantanFireBriefContent" className="disaster-kalimantan-brief-grid">
+          <div className="disaster-kalimantan-map-wrap">
+            <MapView id="kalimantanFire2026Map" center={[-1.5, 114.5]} zoom={5} maxZoom={14}>
+              <BasemapSwitcher />
+              {fireLayers.result?.sources
+                .filter(
+                  (source) =>
+                    source.status === "ok" && fireLayers.visibleSources.includes(source.id),
+                )
+                .map((source) =>
+                  source.kind === "burned_area" && source.tile_url ? (
+                    <TileLayer
+                      key={source.tile_url}
+                      url={source.tile_url}
+                      opacity={0.65}
+                      attribution={source.source}
+                      pane={RESULT_PANE}
+                    />
+                  ) : source.kind === "hazard" && source.wms_url ? (
+                    <WMSTileLayer
+                      key={source.id}
+                      url={source.wms_url}
+                      layers={source.wms_layers ?? "0"}
+                      format="image/png"
+                      transparent
+                      opacity={0.25}
+                      attribution="BNPB InaRISK · indeks bahaya (bukan kejadian)"
+                      pane={RESULT_PANE}
+                    />
+                  ) : source.kind === "footprints" && source.features ? (
+                    <GeoJSON
+                      key={`${source.id}-${fireLayers.result?.generated_at}`}
+                      data={
+                        {
+                          type: "FeatureCollection",
+                          features: source.features,
+                        } as GeoJSON.FeatureCollection
+                      }
+                      style={{ color: "#0284c7", weight: 1, fillOpacity: 0.01, dashArray: "5 4" }}
+                      onEachFeature={observationTooltip}
+                    />
+                  ) : null,
+                )}
+              {multiPoints.features.length > 0 && (
+                <GeoJSON
+                  key={`multi-${fireLayers.result?.generated_at}-${fireLayers.visibleSources.join(",")}-${fireLayers.showMerged}`}
+                  data={multiPoints}
+                  pointToLayer={(feature, latlng) =>
+                    L.circleMarker(latlng, {
+                      radius: 5,
+                      color: "#7f1d1d",
+                      weight: 1,
+                      fillColor: feature.properties?.source_id === "bmkg" ? "#f59e0b" : "#ef4444",
+                      fillOpacity: 0.85,
+                    })
+                  }
+                  onEachFeature={observationTooltip}
+                />
               )}
-            {multiPoints.features.length > 0 && (
-              <GeoJSON
-                key={`multi-${fireLayers.result?.generated_at}-${fireLayers.visibleSources.join(",")}-${fireLayers.showMerged}`}
-                data={multiPoints}
-                pointToLayer={(feature, latlng) =>
-                  L.circleMarker(latlng, {
-                    radius: 5,
-                    color: "#7f1d1d",
-                    weight: 1,
-                    fillColor: feature.properties?.source_id === "bmkg" ? "#f59e0b" : "#ef4444",
-                    fillOpacity: 0.85,
-                  })
-                }
-                onEachFeature={observationTooltip}
-              />
-            )}
-            {fireLayers.showImport && fireLayers.imported && (
-              <GeoJSON
-                key={`import-${fireLayers.imported.features[0]?.properties?.import_batch_id}`}
-                data={fireLayers.imported}
-                style={{ color: "#be185d", weight: 2, fillOpacity: 0.15 }}
-                pointToLayer={(_feature, latlng) =>
-                  L.circleMarker(latlng, { radius: 5, color: "#be185d" })
-                }
-                onEachFeature={observationTooltip}
-              />
-            )}
-            {showBefore && analysis?.before_tile_url && (
-              <TileLayer
-                key={`fire-before-${analysis.before_tile_url}`}
-                url={analysis.before_tile_url}
-                opacity={0.58}
-                attribution="Sentinel-2 SR Harmonized · sebelum"
-                pane={RESULT_PANE}
-              />
-            )}
-            {showAfter && analysis?.after_tile_url && (
-              <TileLayer
-                key={`fire-after-${analysis.after_tile_url}`}
-                url={analysis.after_tile_url}
-                opacity={0.58}
-                attribution="Sentinel-2 SR Harmonized · sesudah"
-                pane={RESULT_PANE}
-              />
-            )}
-            {showBurned && analysis?.tile_url && (
-              <TileLayer
-                key={`fire-result-${analysis.tile_url}`}
-                url={analysis.tile_url}
-                opacity={0.82}
-                attribution="SAVEGEO · dNBR Sentinel-2"
-                pane={RESULT_PANE}
-              />
-            )}
-            {showHotspots && !fireLayers.result && hotspotFeatures.length > 0 && (
-              <GeoJSON
-                key={`fire-hotspots-${hotspotFeatures.length}`}
-                data={
-                  {
-                    type: "FeatureCollection",
-                    features: hotspotFeatures,
-                  } as GeoJSON.FeatureCollection
-                }
-                pointToLayer={(_feature, latlng) =>
-                  L.circleMarker(latlng, {
-                    radius: 5,
-                    color: "#991b1b",
-                    weight: 1,
-                    fillColor: "#ef4444",
-                    fillOpacity: 0.85,
-                  })
-                }
-                onEachFeature={(feature, layer) => {
-                  const confidence = feature.properties?.fire_confidence;
-                  layer.bindTooltip(
-                    `${feature.properties?.name ?? "Hotspot MODIS"}${confidence ? ` · confidence ${confidence}` : ""}`,
-                  );
-                }}
-              />
-            )}
-            {showSam && samResult && (
-              <GeoJSON
-                key={`fire-sam-${samResult.features.length}`}
-                data={samResult}
-                style={{ color: "#7c3aed", weight: 2, fillColor: "#a855f7", fillOpacity: 0.2 }}
-                onEachFeature={(_feature, layer) =>
-                  layer.bindTooltip("Kandidat area terbakar · MODIS-seeded SAM")
-                }
-              />
-            )}
-            {!selectedBoundary && boundary && (
-              <GeoJSON
-                key="kalimantan-admin-boundary-2026"
-                data={boundary}
-                style={provinceStyle}
-                onEachFeature={(feature, layer) => {
-                  layer.bindTooltip(provinceName(feature), { sticky: true });
-                }}
-              />
-            )}
-            {selectedBoundary && (
-              <GeoJSON
-                key={`selected-fire-boundary-${provinceCode}-${cityCode}`}
-                data={selectedBoundary}
-                style={selectedBoundaryStyle}
-                onEachFeature={observationTooltip}
-              />
-            )}
-            {cityBoundaries && (
-              <GeoJSON
-                key={`fire-city-boundaries-${provinceCode}`}
-                data={cityBoundaries}
-                style={childBoundaryStyle}
-                onEachFeature={observationTooltip}
-              />
-            )}
-            <FitBoundary data={mapBoundary} />
-          </MapView>
-          {boundaryError && <div className="small text-warning mt-2">{boundaryError}</div>}
-          {!boundary && !boundaryError && (
-            <div className="small text-muted mt-2">
-              <span className="spinner-border spinner-border-sm me-1" /> Memuat batas provinsi dari
-              BIG…
-            </div>
-          )}
-          <div className="small text-muted mt-2">
-            Layer:{" "}
-            <a href={KALIMANTAN_FIRE_2026.boundarySource} target="_blank" rel="noreferrer">
-              BIG · 34 Provinsi
-            </a>
-          </div>
-          <div className="disaster-kalimantan-region-controls">
-            <div className="disaster-kalimantan-controls-title">
-              <span>
-                <i className="bi bi-diagram-3" /> Muat layer wilayah
-              </span>
-              <small>{regionLoading ? "Memuat geometri…" : `AOI: ${selectedRegionName}`}</small>
-            </div>
-            <div className="disaster-kalimantan-region-grid">
-              <label>
-                Provinsi
-                <select
-                  value={provinceCode}
-                  onChange={(event) => void handleProvinceChange(event.target.value)}
-                  disabled={regionLoading}
-                >
-                  <option value="">Seluruh Kalimantan</option>
-                  {provinces.map((province) => (
-                    <option key={province.code} value={province.code}>
-                      {province.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Kabupaten/kota
-                <select
-                  value={cityCode}
-                  onChange={(event) => void handleCityChange(event.target.value)}
-                  disabled={!provinceCode || regionLoading}
-                >
-                  <option value="">Semua kabupaten/kota di provinsi</option>
-                  {cities.map((city) => (
-                    <option key={city.code} value={city.code}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {regionError && <div className="small text-warning mt-2">{regionError}</div>}
-            <div className="small text-muted mt-2">
-              Pilih provinsi untuk memuat batas kabupaten/kota. Analisis citra memakai wilayah yang
-              dipilih.
-            </div>
-          </div>
-          <div className="disaster-kalimantan-controls">
-            <div className="disaster-kalimantan-controls-title">
-              <span>
-                <i className="bi bi-camera-reels" /> Jalankan analisis citra
-              </span>
-              {analysis && <small>{analysis.source}</small>}
-            </div>
-            <div className="disaster-kalimantan-date-grid">
-              <label>
-                Pre mulai
-                <input
-                  type="date"
-                  value={beforeStart}
-                  onChange={(event) => setBeforeStart(event.target.value)}
+              {fireLayers.showImport && fireLayers.imported && (
+                <GeoJSON
+                  key={`import-${fireLayers.imported.features[0]?.properties?.import_batch_id}`}
+                  data={fireLayers.imported}
+                  style={{ color: "#be185d", weight: 2, fillOpacity: 0.15 }}
+                  pointToLayer={(_feature, latlng) =>
+                    L.circleMarker(latlng, { radius: 5, color: "#be185d" })
+                  }
+                  onEachFeature={observationTooltip}
                 />
-              </label>
-              <label>
-                Pre akhir
-                <input
-                  type="date"
-                  value={beforeEnd}
-                  onChange={(event) => setBeforeEnd(event.target.value)}
-                />
-              </label>
-              <label>
-                Post mulai
-                <input
-                  type="date"
-                  value={afterStart}
-                  onChange={(event) => setAfterStart(event.target.value)}
-                />
-              </label>
-              <label>
-                Post akhir
-                <input
-                  type="date"
-                  value={afterEnd}
-                  onChange={(event) => setAfterEnd(event.target.value)}
-                />
-              </label>
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm btn-danger"
-              onClick={runFireAnalysis}
-              disabled={!mapBoundary || regionLoading || !!regionError || analysisLoading}
-            >
-              {analysisLoading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-1" /> Memproses
-                  Sentinel-2/MODIS…
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-play-fill" /> Hitung area terdampak
-                </>
               )}
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary ms-2"
-              onClick={runSamAnalysis}
-              disabled={!mapBoundary || regionLoading || !!regionError || samLoading}
-            >
-              {samLoading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-1" /> Segmentasi SAM…
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-bounding-box" /> Alternatif SAM
-                </>
+              {showBefore && analysis?.before_tile_url && (
+                <TileLayer
+                  key={`fire-before-${analysis.before_tile_url}`}
+                  url={analysis.before_tile_url}
+                  opacity={0.58}
+                  attribution="Sentinel-2 SR Harmonized · sebelum"
+                  pane={RESULT_PANE}
+                />
               )}
-            </button>
-            {analysisError && (
-              <div className="alert alert-warning py-2 mt-2 mb-0">{analysisError}</div>
-            )}
-            {samError && <div className="alert alert-warning py-2 mt-2 mb-0">{samError}</div>}
-            {samResult && (
+              {showAfter && analysis?.after_tile_url && (
+                <TileLayer
+                  key={`fire-after-${analysis.after_tile_url}`}
+                  url={analysis.after_tile_url}
+                  opacity={0.58}
+                  attribution="Sentinel-2 SR Harmonized · sesudah"
+                  pane={RESULT_PANE}
+                />
+              )}
+              {showBurned && analysis?.tile_url && (
+                <TileLayer
+                  key={`fire-result-${analysis.tile_url}`}
+                  url={analysis.tile_url}
+                  opacity={0.82}
+                  attribution="SAVEGEO · dNBR Sentinel-2"
+                  pane={RESULT_PANE}
+                />
+              )}
+              {showHotspots && !fireLayers.result && hotspotFeatures.length > 0 && (
+                <GeoJSON
+                  key={`fire-hotspots-${hotspotFeatures.length}`}
+                  data={
+                    {
+                      type: "FeatureCollection",
+                      features: hotspotFeatures,
+                    } as GeoJSON.FeatureCollection
+                  }
+                  pointToLayer={(_feature, latlng) =>
+                    L.circleMarker(latlng, {
+                      radius: 5,
+                      color: "#991b1b",
+                      weight: 1,
+                      fillColor: "#ef4444",
+                      fillOpacity: 0.85,
+                    })
+                  }
+                  onEachFeature={(feature, layer) => {
+                    const confidence = feature.properties?.fire_confidence;
+                    layer.bindTooltip(
+                      `${feature.properties?.name ?? "Hotspot MODIS"}${confidence ? ` · confidence ${confidence}` : ""}`,
+                    );
+                  }}
+                />
+              )}
+              {showSam && samResult && (
+                <GeoJSON
+                  key={`fire-sam-${samResult.features.length}`}
+                  data={samResult}
+                  style={{ color: "#7c3aed", weight: 2, fillColor: "#a855f7", fillOpacity: 0.2 }}
+                  onEachFeature={(_feature, layer) =>
+                    layer.bindTooltip("Kandidat area terbakar · MODIS-seeded SAM")
+                  }
+                />
+              )}
+              {!selectedBoundary && boundary && (
+                <GeoJSON
+                  key="kalimantan-admin-boundary-2026"
+                  data={boundary}
+                  style={provinceStyle}
+                  onEachFeature={(feature, layer) => {
+                    layer.bindTooltip(provinceName(feature), { sticky: true });
+                  }}
+                />
+              )}
+              {selectedBoundary && (
+                <GeoJSON
+                  key={`selected-fire-boundary-${provinceCode}-${cityCode}`}
+                  data={selectedBoundary}
+                  style={selectedBoundaryStyle}
+                  onEachFeature={observationTooltip}
+                />
+              )}
+              {cityBoundaries && (
+                <GeoJSON
+                  key={`fire-city-boundaries-${provinceCode}`}
+                  data={cityBoundaries}
+                  style={childBoundaryStyle}
+                  onEachFeature={observationTooltip}
+                />
+              )}
+              <FitBoundary data={mapBoundary} />
+            </MapView>
+            {boundaryError && <div className="small text-warning mt-2">{boundaryError}</div>}
+            {!boundary && !boundaryError && (
               <div className="small text-muted mt-2">
-                SAM mempertahankan {samResult.features.length.toLocaleString("id-ID")} poligon yang
-                berdekatan dengan seed hotspot MODIS.
+                <span className="spinner-border spinner-border-sm me-1" /> Memuat batas provinsi
+                dari BIG…
               </div>
             )}
-            {(analysis || samResult) && (
-              <div className="disaster-kalimantan-layer-switches">
-                {analysis && (
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showBefore}
-                      onChange={(event) => setShowBefore(event.target.checked)}
-                    />{" "}
-                    Citra pre
-                  </label>
-                )}
-                {analysis && (
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showAfter}
-                      onChange={(event) => setShowAfter(event.target.checked)}
-                    />{" "}
-                    Citra post
-                  </label>
-                )}
-                {analysis && (
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showBurned}
-                      onChange={(event) => setShowBurned(event.target.checked)}
-                    />{" "}
-                    Area terbakar
-                  </label>
-                )}
-                {analysis && (
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showHotspots}
-                      onChange={(event) => setShowHotspots(event.target.checked)}
-                    />{" "}
-                    Titik hotspot
-                  </label>
-                )}
-                {samResult && (
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showSam}
-                      onChange={(event) => setShowSam(event.target.checked)}
-                    />{" "}
-                    Poligon SAM
-                  </label>
-                )}
+            <div className="small text-muted mt-2">
+              Layer:{" "}
+              <a href={KALIMANTAN_FIRE_2026.boundarySource} target="_blank" rel="noreferrer">
+                BIG · 34 Provinsi
+              </a>
+            </div>
+            <div className="disaster-kalimantan-region-controls">
+              <div className="disaster-kalimantan-controls-title">
+                <span>
+                  <i className="bi bi-diagram-3" /> Muat layer wilayah
+                </span>
+                <small>{regionLoading ? "Memuat geometri…" : `AOI: ${selectedRegionName}`}</small>
               </div>
-            )}
-          </div>
-          <FireMultiSourcePanel
-            key={`${provinceCode}-${cityCode}-${beforeStart}-${beforeEnd}-${afterStart}-${afterEnd}`}
-            aoi={regionLoading || regionError ? null : mapBoundary}
-            boundaries={cityBoundaries ?? boundary}
-            region={selectedRegionName}
-            startDate={afterStart}
-            endDate={afterEnd}
-            onChange={setFireLayers}
-          />
-        </div>
-
-        <div className="disaster-kalimantan-facts">
-          <div className="disaster-kalimantan-stat-grid">
-            <div>
-              <span>Hotspot high confidence</span>
-              <strong>{metricTotalLabel}</strong>
-              <small>
-                high confidence · {KALIMANTAN_FIRE_TOTAL_MEDIUM_CONFIDENCE.toLocaleString("id-ID")}{" "}
-                medium confidence
-              </small>
+              <div className="disaster-kalimantan-region-grid">
+                <label>
+                  Provinsi
+                  <select
+                    value={provinceCode}
+                    onChange={(event) => void handleProvinceChange(event.target.value)}
+                    disabled={regionLoading}
+                  >
+                    <option value="">Seluruh Kalimantan</option>
+                    {provinces.map((province) => (
+                      <option key={province.code} value={province.code}>
+                        {province.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Kabupaten/kota
+                  <select
+                    value={cityCode}
+                    onChange={(event) => void handleCityChange(event.target.value)}
+                    disabled={!provinceCode || regionLoading}
+                  >
+                    <option value="">Semua kabupaten/kota di provinsi</option>
+                    {cities.map((city) => (
+                      <option key={city.code} value={city.code}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {regionError && <div className="small text-warning mt-2">{regionError}</div>}
+              <div className="small text-muted mt-2">
+                Pilih provinsi untuk memuat batas kabupaten/kota. Analisis citra memakai wilayah
+                yang dipilih.
+              </div>
             </div>
-            <div>
-              <span>Luas terbakar tercatat</span>
-              <strong>
-                {KALIMANTAN_FIRE_KNOWN_BURNED_AREA_HA.toLocaleString("id-ID", {
-                  maximumFractionDigits: 2,
-                })}{" "}
-                ha
-              </strong>
-              <small>angka provinsi Jan–Jun yang tersedia pada rilis</small>
+            <div className="disaster-kalimantan-controls">
+              <div className="disaster-kalimantan-controls-title">
+                <span>
+                  <i className="bi bi-camera-reels" /> Jalankan analisis citra
+                </span>
+                {analysis && <small>{analysis.source}</small>}
+              </div>
+              <div className="disaster-kalimantan-date-grid">
+                <label>
+                  Pre mulai
+                  <input
+                    type="date"
+                    value={beforeStart}
+                    onChange={(event) => setBeforeStart(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Pre akhir
+                  <input
+                    type="date"
+                    value={beforeEnd}
+                    onChange={(event) => setBeforeEnd(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Post mulai
+                  <input
+                    type="date"
+                    value={afterStart}
+                    onChange={(event) => setAfterStart(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Post akhir
+                  <input
+                    type="date"
+                    value={afterEnd}
+                    onChange={(event) => setAfterEnd(event.target.value)}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                onClick={runFireAnalysis}
+                disabled={!mapBoundary || regionLoading || !!regionError || analysisLoading}
+              >
+                {analysisLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-1" /> Memproses
+                    Sentinel-2/MODIS…
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-play-fill" /> Hitung area terdampak
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary ms-2"
+                onClick={runSamAnalysis}
+                disabled={!mapBoundary || regionLoading || !!regionError || samLoading}
+              >
+                {samLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-1" /> Segmentasi SAM…
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-bounding-box" /> Alternatif SAM
+                  </>
+                )}
+              </button>
+              {analysisError && (
+                <div className="alert alert-warning py-2 mt-2 mb-0">{analysisError}</div>
+              )}
+              {samError && <div className="alert alert-warning py-2 mt-2 mb-0">{samError}</div>}
+              {samResult && (
+                <div className="small text-muted mt-2">
+                  SAM mempertahankan {samResult.features.length.toLocaleString("id-ID")} poligon
+                  yang berdekatan dengan seed hotspot MODIS.
+                </div>
+              )}
+              {(analysis || samResult) && (
+                <div className="disaster-kalimantan-layer-switches">
+                  {analysis && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showBefore}
+                        onChange={(event) => setShowBefore(event.target.checked)}
+                      />{" "}
+                      Citra pre
+                    </label>
+                  )}
+                  {analysis && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showAfter}
+                        onChange={(event) => setShowAfter(event.target.checked)}
+                      />{" "}
+                      Citra post
+                    </label>
+                  )}
+                  {analysis && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showBurned}
+                        onChange={(event) => setShowBurned(event.target.checked)}
+                      />{" "}
+                      Area terbakar
+                    </label>
+                  )}
+                  {analysis && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showHotspots}
+                        onChange={(event) => setShowHotspots(event.target.checked)}
+                      />{" "}
+                      Titik hotspot
+                    </label>
+                  )}
+                  {samResult && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showSam}
+                        onChange={(event) => setShowSam(event.target.checked)}
+                      />{" "}
+                      Poligon SAM
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
+            <FireMultiSourcePanel
+              key={`${provinceCode}-${cityCode}-${beforeStart}-${beforeEnd}-${afterStart}-${afterEnd}`}
+              aoi={regionLoading || regionError ? null : mapBoundary}
+              boundaries={cityBoundaries ?? boundary}
+              region={selectedRegionName}
+              startDate={afterStart}
+              endDate={afterEnd}
+              onChange={setFireLayers}
+            />
           </div>
 
-          <div className="disaster-kalimantan-province-list">
-            {KALIMANTAN_FIRE_2026.metrics.map((metric) => (
-              <div key={metric.province}>
-                <div>
-                  <strong>{metric.province}</strong>
+          <div className="disaster-kalimantan-facts">
+            <p className="small text-muted mb-2">Periode pemantauan: {KALIMANTAN_FIRE_2026.observationWindow}</p>
+            <div className="disaster-kalimantan-stat-grid">
+              <div>
+                <span>Snapshot rilis · hotspot high confidence</span>
+                <strong>{metricTotalLabel}</strong>
+                <small>
+                  high confidence ·{" "}
+                  {KALIMANTAN_FIRE_TOTAL_MEDIUM_CONFIDENCE.toLocaleString("id-ID")} medium
+                  confidence
+                </small>
+              </div>
+              <div>
+                <span>Luas terbakar tercatat</span>
+                <strong>
+                  {KALIMANTAN_FIRE_KNOWN_BURNED_AREA_HA.toLocaleString("id-ID", {
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  ha
+                </strong>
+                <small>angka provinsi Jan–Jun yang tersedia pada rilis</small>
+              </div>
+            </div>
+
+            <div className="disaster-kalimantan-province-list">
+              {KALIMANTAN_FIRE_2026.metrics.map((metric) => (
+                <div key={metric.province}>
+                  <div>
+                    <strong>{metric.province}</strong>
+                    <span>
+                      {metric.highConfidence == null
+                        ? "Data hotspot tidak dirinci"
+                        : `${metric.highConfidence.toLocaleString("id-ID")} hotspot`}
+                    </span>
+                  </div>
+                  <small>{metric.note}</small>
+                </div>
+              ))}
+            </div>
+
+            {analysis && (
+              <div className="disaster-kalimantan-live-result">
+                <div className="disaster-kalimantan-live-result-heading">
+                  <strong>Hasil analisis spasial</strong>
                   <span>
-                    {metric.highConfidence == null
-                      ? "Data hotspot tidak dirinci"
-                      : `${metric.highConfidence.toLocaleString("id-ID")} hotspot`}
+                    {analysis.before_period.start} → {analysis.after_period.end}
                   </span>
                 </div>
-                <small>{metric.note}</small>
+                <div className="disaster-kalimantan-live-kpis">
+                  <div>
+                    <span>Area terdampak</span>
+                    <strong>
+                      {analysis.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Titik MODIS</span>
+                    <strong>{analysis.hotspots?.count.toLocaleString("id-ID") ?? "0"}</strong>
+                  </div>
+                  <div>
+                    <span>Scene pre/post</span>
+                    <strong>
+                      {analysis.before_scene_count ?? 0}/{analysis.after_scene_count ?? 0}
+                    </strong>
+                  </div>
+                </div>
+                {severity && (
+                  <div className="disaster-kalimantan-severity-list">
+                    <span>Rincian kelas dNBR</span>
+                    <div>
+                      <em className="severity-low" /> Rendah{" "}
+                      <strong>
+                        {severity.low_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
+                      </strong>
+                    </div>
+                    <div>
+                      <em className="severity-moderate" /> Sedang{" "}
+                      <strong>
+                        {severity.moderate_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })}{" "}
+                        ha
+                      </strong>
+                    </div>
+                    <div>
+                      <em className="severity-high" /> Tinggi{" "}
+                      <strong>
+                        {severity.high_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
+                      </strong>
+                    </div>
+                    <div>
+                      <em className="severity-very-high" /> Sangat tinggi{" "}
+                      <strong>
+                        {severity.very_high_ha.toLocaleString("id-ID", {
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        ha
+                      </strong>
+                    </div>
+                  </div>
+                )}
+                <small className="text-muted d-block mt-2">
+                  {analysis.method_note} {analysis.hotspots?.note}
+                </small>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isExpanded && (
+        <div className="disaster-kalimantan-brief-footer">
+          <div>
+            <i className="bi bi-info-circle" /> Hotspot adalah indikasi anomali suhu permukaan,
+            bukan otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.
+          </div>
+          <div className="disaster-kalimantan-sources">
+            {KALIMANTAN_FIRE_2026.sources.map((source) => (
+              <a
+                key={source.url}
+                href={source.url}
+                target="_blank"
+                rel="noreferrer"
+                title={source.summary}
+              >
+                {source.publisher} · {source.date}
+              </a>
             ))}
           </div>
-
-          {analysis && (
-            <div className="disaster-kalimantan-live-result">
-              <div className="disaster-kalimantan-live-result-heading">
-                <strong>Hasil analisis spasial</strong>
-                <span>
-                  {analysis.before_period.start} → {analysis.after_period.end}
-                </span>
-              </div>
-              <div className="disaster-kalimantan-live-kpis">
-                <div>
-                  <span>Area terdampak</span>
-                  <strong>
-                    {analysis.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
-                  </strong>
-                </div>
-                <div>
-                  <span>Titik MODIS</span>
-                  <strong>{analysis.hotspots?.count.toLocaleString("id-ID") ?? "0"}</strong>
-                </div>
-                <div>
-                  <span>Scene pre/post</span>
-                  <strong>
-                    {analysis.before_scene_count ?? 0}/{analysis.after_scene_count ?? 0}
-                  </strong>
-                </div>
-              </div>
-              {severity && (
-                <div className="disaster-kalimantan-severity-list">
-                  <span>Rincian kelas dNBR</span>
-                  <div>
-                    <em className="severity-low" /> Rendah{" "}
-                    <strong>
-                      {severity.low_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
-                    </strong>
-                  </div>
-                  <div>
-                    <em className="severity-moderate" /> Sedang{" "}
-                    <strong>
-                      {severity.moderate_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })}{" "}
-                      ha
-                    </strong>
-                  </div>
-                  <div>
-                    <em className="severity-high" /> Tinggi{" "}
-                    <strong>
-                      {severity.high_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
-                    </strong>
-                  </div>
-                  <div>
-                    <em className="severity-very-high" /> Sangat tinggi{" "}
-                    <strong>
-                      {severity.very_high_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })}{" "}
-                      ha
-                    </strong>
-                  </div>
-                </div>
-              )}
-              <small className="text-muted d-block mt-2">
-                {analysis.method_note} {analysis.hotspots?.note}
-              </small>
-            </div>
-          )}
         </div>
-      </div>}
-
-      {isExpanded && <div className="disaster-kalimantan-brief-footer">
-        <div>
-          <i className="bi bi-info-circle" /> Hotspot adalah indikasi anomali suhu permukaan, bukan
-          otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.
-        </div>
-        <div className="disaster-kalimantan-sources">
-          {KALIMANTAN_FIRE_2026.sources.map((source) => (
-            <a
-              key={source.url}
-              href={source.url}
-              target="_blank"
-              rel="noreferrer"
-              title={source.summary}
-            >
-              {source.publisher} · {source.date}
-            </a>
-          ))}
-        </div>
-      </div>}
+      )}
     </section>
   );
 }

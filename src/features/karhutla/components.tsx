@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { useI18nStore } from "@/hooks/useI18nStore";
-import { formatDate, formatNumber, localeFor } from "@/hooks/useI18nStore";
+import { formatDate, formatNumber } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchProvinces } from "@/services/analysisService";
 import {
@@ -13,7 +13,7 @@ import {
   fetchWildfireHotspots,
   syncWildfireHotspots,
 } from "@/features/disaster/api";
-import { FALLBACK_WILDFIRE_EVENTS } from "./data";
+import { FALLBACK_KALIMANTAN_TIMELINE, FALLBACK_WILDFIRE_EVENTS } from "./data";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type {
   WildfireEvent,
@@ -59,11 +59,32 @@ function LanguageToggle() {
 }
 
 function periodLabel(event: WildfireEvent, language: "id" | "en") {
-  const start = new Intl.DateTimeFormat(localeFor(language), {
-    month: "short",
-    year: "numeric",
-  }).format(new Date(event.start_date));
-  return `${start} – ${event.end_date ? new Intl.DateTimeFormat(localeFor(language), { month: "short", year: "numeric" }).format(new Date(event.end_date)) : language === "id" ? "sekarang" : "present"}`;
+  const start = formatDate(event.monitoring_from || event.start_date, language);
+  const endValue = event.monitoring_to || event.end_date || event.last_data_at;
+  const end = endValue
+    ? formatDate(endValue, language)
+    : language === "id"
+      ? "sekarang"
+      : "present";
+  return `${start} – ${end}`;
+}
+
+function completeTimeline(
+  points: WildfireTimelinePoint[],
+  startDate: string,
+  endDate: string,
+): WildfireTimelinePoint[] {
+  if (!startDate || !endDate) return points;
+  const counts = new Map(points.map((point) => [point.date, point.count]));
+  const cursor = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const result: WildfireTimelinePoint[] = [];
+  while (cursor <= end && result.length < 366) {
+    const date = cursor.toISOString().slice(0, 10);
+    result.push({ date, count: counts.get(date) ?? 0 });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return result;
 }
 
 function summaryFromEvent(event: WildfireEvent): WildfireSummary {
@@ -721,7 +742,11 @@ export function KarhutlaDetailPage() {
     try {
       await syncWildfireHotspots(slug, {
         from_date: query.from || event?.monitoring_from,
-        to_date: query.to || event?.last_data_at?.slice(0, 10),
+        to_date:
+          query.to ||
+          event?.monitoring_to ||
+          event?.end_date ||
+          new Date().toISOString().slice(0, 10),
       });
       const refreshed = await fetchWildfireEvent(slug);
       setEvent(adaptLegacyEvent(refreshed.event));
@@ -748,9 +773,21 @@ export function KarhutlaDetailPage() {
   // When the API has no daily timeline yet, the fallback histogram contains
   // the event total. Include that total in the scale so its inline height
   // stays within 0–100% instead of becoming 697000% for 6,970 hotspots.
-  const timelineData = timeline.length
+  const timelineStart = query.from || event.monitoring_from || event.start_date;
+  const timelineEnd =
+    query.to ||
+    event.monitoring_to ||
+    event.end_date ||
+    event.last_data_at?.slice(0, 10) ||
+    timelineStart;
+  const sourceTimeline = timeline.length
     ? timeline
-    : [{ date: event.monitoring_from, count: activeSummary.total_hotspots }];
+    : dataError && event.slug === "kalimantan-2026"
+      ? FALLBACK_KALIMANTAN_TIMELINE
+      : activeSummary.total_hotspots > 0
+        ? [{ date: timelineStart, count: activeSummary.total_hotspots }]
+        : [];
+  const timelineData = completeTimeline(sourceTimeline, timelineStart, timelineEnd);
   const maxTimeline = Math.max(1, ...timelineData.map((point) => point.count));
   const peakTimeline = Math.max(...timelineData.map((point) => point.count));
   const timelineLabelStep = Math.max(1, Math.ceil(timelineData.length / 8));
@@ -884,7 +921,11 @@ export function KarhutlaDetailPage() {
               <span>{dataError}</span>
             </div>
           )}
-          {mapNotice && <div className="wildfire-map-hint"><i className="bi bi-info-circle" aria-hidden="true" /> {mapNotice}</div>}
+          {mapNotice && (
+            <div className="wildfire-map-hint">
+              <i className="bi bi-info-circle" aria-hidden="true" /> {mapNotice}
+            </div>
+          )}
           <HotspotMap
             event={event}
             features={features}
@@ -937,7 +978,12 @@ export function KarhutlaDetailPage() {
                     }
                     title={point.date + ": " + point.count}
                     aria-label={point.date + ": " + point.count}
-                    style={{ height: String(Math.max(8, (point.count / maxTimeline) * 100)) + "%" }}
+                    style={{
+                      height:
+                        point.count === 0
+                          ? "2px"
+                          : `${Math.max(8, (point.count / maxTimeline) * 100)}%`,
+                    }}
                   >
                     <span className="wildfire-histogram-value">
                       {formatNumber(point.count, language)}

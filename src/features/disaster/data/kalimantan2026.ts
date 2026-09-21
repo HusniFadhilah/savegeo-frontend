@@ -21,7 +21,8 @@ export interface KalimantanFireSource {
  */
 export const KALIMANTAN_FIRE_2026 = {
   title: "Karhutla Kalimantan 2026",
-  observationWindow: "27 Agustus 2026 (rilis 28 Agustus)",
+  observationWindow:
+    "Hotspot tersimpan 20 Agustus–20 September 2026; snapshot rilis resmi 27 Agustus 2026",
   boundaryUrl:
     "https://geoservices.big.go.id/gis/rest/services/PTRA/Atlas_250K_PerkembanganWilayahAdministrasi/MapServer/25/query?where=PROVINSI%20in%20(%27KALIMANTAN%20BARAT%27,%27KALIMANTAN%20TENGAH%27,%27KALIMANTAN%20SELATAN%27,%27KALIMANTAN%20TIMUR%27,%27KALIMANTAN%20UTARA%27)&outFields=PROVINSI&returnGeometry=true&outSR=4326&f=geojson",
   boundarySource:
@@ -92,8 +93,7 @@ export const KALIMANTAN_FIRE_2026 = {
       publisher: "Badan Informasi Geospasial",
       date: "Layer aktif",
       url: "https://geoservices.big.go.id/gis/rest/services/PTRA/Atlas_250K_PerkembanganWilayahAdministrasi/MapServer/25",
-      summary:
-        "Wilayah Administrasi Indonesia 34 Prov; geometry polygon dalam WGS84/EPSG:4326.",
+      summary: "Wilayah Administrasi Indonesia 34 Prov; geometry polygon dalam WGS84/EPSG:4326.",
     },
   ] satisfies KalimantanFireSource[],
 } as const;
