@@ -6690,6 +6690,10 @@ html[data-theme="dark"] .aoi-rectangle-control__button i {
   stroke: currentColor !important;
 }
 
+.leaflet-touch .leaflet-control-layers, .leaflet-touch .leaflet-bar {
+  border:none;
+}
+
 html[data-theme="dark"] .map-flat-controls .location-panel {
   border-color: #475569 !important;
   background: #111827 !important;
@@ -7072,7 +7076,7 @@ html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
 .wildfire-map-wrap { position: relative; overflow: hidden; min-height: 590px; }
 .wildfire-map-wrap .map-view-shell, .wildfire-map-wrap .leaflet-container { min-height: 590px; height: 100%; }
 .wildfire-map-notice { position: absolute; z-index: 500; top: .75rem; left: 3rem; max-width: 340px; padding: .55rem .7rem; border-radius: .6rem; color: #7a5300; background: #fff5d6; font-size: .73rem; box-shadow: 0 5px 18px rgba(0,0,0,.12); }
-.wildfire-map-legend { position: absolute; z-index: 500; right: .75rem; bottom: 1.5rem; display: flex; gap: .65rem; padding: .5rem .65rem; border-radius: .6rem; background: rgba(255,255,255,.92); font-size: .7rem; }
+.wildfire-map-legend { position: absolute; z-index: 500; right: .5rem; bottom: 1.5rem; display: flex; gap: .65rem; padding: .5rem .65rem; border-radius: .6rem; background: rgba(255,255,255,.92); font-size: .7rem; }
 .wildfire-map-legend span { display: flex; gap: .3rem; align-items: center; }
 .legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; }
 .legend-high { background: #ff4d6d; }.legend-nominal { background: #ffd166; }
@@ -7261,8 +7265,8 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 }
 .wildfire-map-wrap .leaflet-container { border-radius: 1.15rem; }
 .wildfire-map-legend {
-  right: 1rem;
-  bottom: 1rem;
+  right: 0.5rem;
+  bottom: 1.5rem;
   gap: .8rem;
   padding: .65rem .8rem;
   border: 1px solid rgba(255, 255, 255, .7);
@@ -7285,6 +7289,31 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 }
 .wildfire-stat span { font-size: .72rem; font-weight: 650; }
 .wildfire-stat strong { margin-top: .12rem; color: var(--wildfire-ink); font-size: clamp(1.35rem, 2.1vw, 1.7rem); letter-spacing: -.04em; }
+.wildfire-stat-label { display: flex; align-items: center; gap: .45rem; color: var(--wildfire-muted-ink); }
+.wildfire-stat-icon {
+  display: inline-grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: .6rem;
+  background: rgba(13, 139, 97, .1);
+  color: var(--wildfire-green);
+  font-size: .9rem !important;
+}
+.wildfire-stat-orange .wildfire-stat-icon { background: rgba(255, 140, 66, .13); color: #e66f25; }
+.wildfire-stat-red .wildfire-stat-icon { background: rgba(255, 77, 109, .13); color: #e13d5d; }
+.wildfire-stat-purple .wildfire-stat-icon { background: rgba(139, 92, 246, .13); color: #7444dc; }
+.wildfire-stat-value-skeleton {
+  display: block;
+  width: min(7rem, 70%);
+  height: 1.8rem;
+  margin-top: .32rem;
+  border-radius: .45rem;
+  background: linear-gradient(100deg, #e8efec 20%, #f8fbf9 45%, #e8efec 70%);
+  background-size: 220% 100%;
+  animation: wildfire-shimmer 1.25s ease-in-out infinite;
+}
 .wildfire-side-card,
 .wildfire-timeline-panel {
   border: 1px solid var(--wildfire-border);
@@ -7369,6 +7398,15 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 .wildfire-chart-area { fill: rgba(13, 139, 97, .16); stroke: none; }
 .wildfire-chart-point { fill: #fff; stroke: #0d8b61; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .wildfire-timeline-chart > .wildfire-timeline-axis { margin: .45rem 0 0 3.4rem; }
+.wildfire-timeline-chart > .wildfire-timeline-axis { justify-content: space-between; }
+.wildfire-timeline-chart > .wildfire-timeline-axis span,
+.wildfire-timeline-chart > .wildfire-timeline-axis span.is-visible {
+  flex: 0 0 auto;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  opacity: 1;
+}
 .wildfire-timeline-axis-caption {
   display: flex;
   justify-content: space-between;
@@ -7413,6 +7451,7 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 }
 .wildfire-timeline-loading-overlay .wildfire-loading-spinner { width: 1.8rem; height: 1.8rem; border-width: 3px; }
 @keyframes wildfire-spin { to { transform: rotate(360deg); } }
+@keyframes wildfire-shimmer { to { background-position: -220% 0; } }
 
 html[data-theme="dark"] .wildfire-detail-shell,
 .dark-mode .wildfire-detail-shell {
@@ -7444,6 +7483,11 @@ html[data-theme="dark"] .wildfire-detail-shell .wildfire-filter-loading,
 .dark-mode .wildfire-detail-shell .wildfire-filter-loading { border-color: #315245; background: rgba(28, 58, 46, .92); color: #b8d6ca; }
 html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-loading-overlay,
 .dark-mode .wildfire-detail-shell .wildfire-timeline-loading-overlay { background: rgba(16, 26, 22, .62); }
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-stat-value-skeleton,
+.dark-mode .wildfire-detail-shell .wildfire-stat-value-skeleton {
+  background: linear-gradient(100deg, #253a31 20%, #385548 45%, #253a31 70%);
+  background-size: 220% 100%;
+}
 
 @media (max-width: 1080px) {
   .wildfire-detail-shell .wildfire-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -7487,7 +7531,6 @@ body:has(.wildfire-detail-shell) .leaflet-container:not(#wildfire-detail-map) {
 /* SiPongi-inspired layer control for the wildfire map. */
 .wildfire-layer-control {
   top: 3.25rem;
-  right: 10px;
   z-index: 650;
   margin: 0;
 }

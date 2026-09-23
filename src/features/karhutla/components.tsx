@@ -123,6 +123,9 @@ function TimelineChart({
   const maxValue = Math.max(1, ...data.map((point) => point.count));
   const peakValue = Math.max(0, ...data.map((point) => point.count));
   const labelStep = Math.max(1, Math.ceil(data.length / 8));
+  const axisPoints = data.filter(
+    (_, index) => index % labelStep === 0 || index === data.length - 1,
+  );
   const plotWidth = 1000;
   const plotHeight = 220;
   const xPadding = 18;
@@ -221,13 +224,11 @@ function TimelineChart({
         )}
       </div>
       <div className="wildfire-timeline-axis" aria-hidden="true">
-        {data.map((point, index) => (
+        {axisPoints.map((point) => (
           <span
             key={point.date}
-            className={
-              index % labelStep === 0 || index === data.length - 1 ? "is-visible" : ""
-            }
-            title={point.date}
+            className="is-visible"
+            title={formatDate(point.date, language)}
           >
             {timelineTickLabel(point.date, language)}
           </span>
@@ -1253,16 +1254,22 @@ export function KarhutlaDetailPage() {
               label={t("wildfire.stats.hotspots")}
               value={formatNumber(activeSummary.total_hotspots, language)}
               tone="orange"
+              icon="bi-fire"
+              loading={loading && summary == null}
             />
             <Stat
               label={t("wildfire.stats.highConfidence")}
               value={formatNumber(activeSummary.high_confidence_hotspots, language)}
               tone="red"
+              icon="bi-shield-check"
+              loading={loading && summary == null}
             />
             <Stat
               label={t("wildfire.stats.regions")}
               value={formatNumber(activeSummary.affected_regions, language)}
               tone="teal"
+              icon="bi-geo-alt"
+              loading={loading && summary == null}
             />
             <Stat
               label={t("wildfire.stats.burnedArea")}
@@ -1272,6 +1279,8 @@ export function KarhutlaDetailPage() {
                   : `${formatNumber(activeSummary.burned_area_ha, language)} ha`
               }
               tone="purple"
+              icon="bi-rulers"
+              loading={loading && summary == null}
             />
           </div>
           <section className="wildfire-side-card">
@@ -1324,11 +1333,35 @@ export function KarhutlaDetailPage() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
+function Stat({
+  label,
+  value,
+  tone,
+  icon,
+  loading = false,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  icon: string;
+  loading?: boolean;
+}) {
   return (
-    <div className={`wildfire-stat wildfire-stat-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div
+      className={`wildfire-stat wildfire-stat-${tone}${loading ? " is-loading" : ""}`}
+      aria-busy={loading}
+    >
+      <div className="wildfire-stat-label">
+        <span className="wildfire-stat-icon" aria-hidden="true">
+          <i className={`bi ${icon}`} />
+        </span>
+        <span>{label}</span>
+      </div>
+      {loading ? (
+        <span className="wildfire-stat-value-skeleton" aria-label={label} role="status" />
+      ) : (
+        <strong>{value}</strong>
+      )}
     </div>
   );
 }
