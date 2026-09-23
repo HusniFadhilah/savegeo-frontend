@@ -7320,6 +7320,99 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 .wildfire-timeline-panel .wildfire-timeline-axis { display: flex; gap: .35rem; margin: .45rem 0 0 3.4rem; padding-top: 0; }
 .wildfire-timeline-panel .wildfire-timeline-axis span { flex: 1; min-width: 0; overflow: hidden; color: var(--wildfire-muted-ink); font-size: .62rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; opacity: 0; }
 .wildfire-timeline-panel .wildfire-timeline-axis span.is-visible { opacity: 1; }
+.wildfire-timeline-panel { position: relative; overflow: hidden; }
+.wildfire-timeline-controls {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.15fr) repeat(2, minmax(135px, .9fr)) repeat(2, minmax(145px, 1fr));
+  gap: .6rem;
+  margin-top: 1rem;
+  padding: .7rem;
+  border: 1px solid rgba(13, 139, 97, .12);
+  border-radius: .8rem;
+  background: rgba(242, 248, 245, .78);
+}
+.wildfire-timeline-controls label { display: grid; gap: .28rem; color: var(--wildfire-muted-ink); font-size: .66rem; font-weight: 700; }
+.wildfire-timeline-controls input,
+.wildfire-timeline-controls select {
+  min-width: 0;
+  min-height: 2.25rem;
+  border: 1px solid #d4e4dc;
+  border-radius: .55rem;
+  padding: .3rem .55rem;
+  background: #fff;
+  color: var(--wildfire-ink);
+  font-size: .74rem;
+}
+.wildfire-timeline-controls input:focus,
+.wildfire-timeline-controls select:focus { border-color: var(--wildfire-green); box-shadow: 0 0 0 3px rgba(8, 127, 91, .12); outline: 0; }
+.wildfire-timeline-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  margin: .8rem .15rem .05rem;
+  color: var(--wildfire-muted-ink);
+  font-size: .68rem;
+}
+.wildfire-timeline-summary span { display: inline-flex; align-items: center; gap: .32rem; }
+.wildfire-timeline-chart { display: block; margin-top: .8rem; }
+.wildfire-timeline-plot-shell { display: grid; grid-template-columns: 2.8rem minmax(0, 1fr); gap: .6rem; }
+.wildfire-timeline-plot-shell .wildfire-chart-y-axis { padding: .65rem 0 .1rem; }
+.wildfire-line-chart {
+  height: 168px;
+  min-width: 0;
+  border-radius: .65rem;
+  background: repeating-linear-gradient(to bottom, rgba(13, 139, 97, .08) 0, rgba(13, 139, 97, .08) 1px, transparent 1px, transparent 25%);
+}
+.wildfire-line-chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.wildfire-chart-grid-line { stroke: rgba(13, 139, 97, .1); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.wildfire-chart-line { fill: none; stroke: #0d8b61; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.wildfire-chart-area { fill: rgba(13, 139, 97, .16); stroke: none; }
+.wildfire-chart-point { fill: #fff; stroke: #0d8b61; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.wildfire-timeline-chart > .wildfire-timeline-axis { margin: .45rem 0 0 3.4rem; }
+.wildfire-timeline-axis-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  margin: .32rem 0 0 3.4rem;
+  color: var(--wildfire-muted-ink);
+  font-size: .61rem;
+  letter-spacing: .02em;
+}
+.wildfire-filter-loading {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  max-width: 1480px;
+  margin: -.45rem auto .8rem;
+  padding: .6rem .8rem;
+  border: 1px solid rgba(13, 139, 97, .2);
+  border-radius: .7rem;
+  background: rgba(232, 248, 240, .92);
+  color: var(--wildfire-green-dark);
+  font-size: .73rem;
+  font-weight: 700;
+}
+.wildfire-loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid rgba(13, 139, 97, .2);
+  border-top-color: var(--wildfire-green);
+  border-radius: 50%;
+  animation: wildfire-spin .75s linear infinite;
+}
+.wildfire-timeline-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  background: rgba(255, 255, 255, .58);
+  backdrop-filter: blur(2px);
+}
+.wildfire-timeline-loading-overlay .wildfire-loading-spinner { width: 1.8rem; height: 1.8rem; border-width: 3px; }
+@keyframes wildfire-spin { to { transform: rotate(360deg); } }
 
 html[data-theme="dark"] .wildfire-detail-shell,
 .dark-mode .wildfire-detail-shell {
@@ -7341,6 +7434,16 @@ html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-panel,
 .dark-mode .wildfire-detail-shell .wildfire-side-card,
 .dark-mode .wildfire-detail-shell .wildfire-stat,
 .dark-mode .wildfire-detail-shell .wildfire-timeline-panel { background: var(--wildfire-card); }
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-controls,
+.dark-mode .wildfire-detail-shell .wildfire-timeline-controls { border-color: #315245; background: rgba(20, 35, 29, .9); }
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-controls input,
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-controls select,
+.dark-mode .wildfire-detail-shell .wildfire-timeline-controls input,
+.dark-mode .wildfire-detail-shell .wildfire-timeline-controls select { border-color: #355548; background: #14231d; color: #e5f4ed; }
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-filter-loading,
+.dark-mode .wildfire-detail-shell .wildfire-filter-loading { border-color: #315245; background: rgba(28, 58, 46, .92); color: #b8d6ca; }
+html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-loading-overlay,
+.dark-mode .wildfire-detail-shell .wildfire-timeline-loading-overlay { background: rgba(16, 26, 22, .62); }
 
 @media (max-width: 1080px) {
   .wildfire-detail-shell .wildfire-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -7630,6 +7733,12 @@ html[data-theme="dark"] .wildfire-fdrs-row,
   .wildfire-stat { min-width: 0; padding: .8rem; }
   .wildfire-stat strong { overflow-wrap: anywhere; font-size: 1.25rem; }
   .wildfire-side-card, .wildfire-timeline-panel { padding: .9rem; }
+  .wildfire-timeline-controls { grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .wildfire-timeline-controls label:first-child { grid-column: 1 / -1; }
+  .wildfire-timeline-summary { align-items: flex-start; flex-direction: column; gap: .25rem; }
+  .wildfire-timeline-panel .wildfire-timeline-plot-shell { grid-template-columns: 2.3rem minmax(0, 1fr); gap: .4rem; }
+  .wildfire-timeline-panel .wildfire-timeline-chart > .wildfire-timeline-axis { margin-left: 2.7rem; }
+  .wildfire-timeline-axis-caption { margin-left: 2.7rem; font-size: .56rem; }
   .wildfire-timeline-panel .wildfire-histogram { height: 135px; gap: .18rem; }
   .wildfire-timeline-panel .wildfire-timeline-axis { margin-left: 2.7rem; }
 }

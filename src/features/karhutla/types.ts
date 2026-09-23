@@ -61,6 +61,9 @@ export interface WildfireTimelinePoint {
   count: number;
 }
 
+export type WildfireTimelineChart = "bar" | "line" | "area";
+export type WildfireTimelineSort = "date-asc" | "date-desc" | "count-desc" | "count-asc";
+
 export interface WildfireEventsResponse {
   events: WildfireEvent[];
   updated_at: string | null;

@@ -19,7 +19,9 @@ import type {
   WildfireEvent,
   WildfireFilters,
   WildfireSummary,
+  WildfireTimelineChart,
   WildfireTimelinePoint,
+  WildfireTimelineSort,
 } from "./types";
 import type { FirmsHotspotFeature } from "@/features/disaster/types";
 import type { DisasterEventListItem } from "@/features/disaster/types";
@@ -85,6 +87,158 @@ function completeTimeline(
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return result;
+}
+
+type TimelinePreset = "all" | "today" | "7d" | "30d" | "date" | "range";
+
+function isoDate(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function shiftIsoDate(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return isoDate(date);
+}
+
+function timelineTickLabel(value: string, language: "id" | "en") {
+  return new Intl.DateTimeFormat(language === "id" ? "id-ID" : "en-US", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function TimelineChart({
+  data,
+  chartType,
+  sort,
+  language,
+}: {
+  data: WildfireTimelinePoint[];
+  chartType: WildfireTimelineChart;
+  sort: WildfireTimelineSort;
+  language: "id" | "en";
+}) {
+  const maxValue = Math.max(1, ...data.map((point) => point.count));
+  const peakValue = Math.max(0, ...data.map((point) => point.count));
+  const labelStep = Math.max(1, Math.ceil(data.length / 8));
+  const plotWidth = 1000;
+  const plotHeight = 220;
+  const xPadding = 18;
+  const yPadding = 14;
+  const baseline = plotHeight - yPadding;
+  const points = data.map((point, index) => ({
+    ...point,
+    x:
+      data.length === 1
+        ? plotWidth / 2
+        : xPadding + (index / (data.length - 1)) * (plotWidth - xPadding * 2),
+    y: baseline - (point.count / maxValue) * (baseline - yPadding),
+  }));
+  const pointString = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const areaString = points.length
+    ? `${points[0].x},${baseline} ${pointString} ${points[points.length - 1].x},${baseline}`
+    : "";
+  const sortLabel =
+    sort === "date-desc"
+      ? language === "id"
+        ? "tanggal terbaru ke terlama"
+        : "newest to oldest"
+      : sort === "count-desc"
+        ? language === "id"
+          ? "jumlah terbanyak ke tersedikit"
+          : "highest to lowest count"
+        : sort === "count-asc"
+          ? language === "id"
+            ? "jumlah tersedikit ke terbanyak"
+            : "lowest to highest count"
+          : language === "id"
+            ? "tanggal terlama ke terbaru"
+            : "oldest to newest";
+
+  return (
+    <>
+      <div className="wildfire-timeline-plot-shell">
+        <div className="wildfire-chart-y-axis" aria-hidden="true">
+          <span>{formatNumber(maxValue, language)}</span>
+          <span>{formatNumber(Math.round(maxValue / 2), language)}</span>
+          <span>0</span>
+        </div>
+        {chartType === "bar" ? (
+          <div className="wildfire-histogram" role="group" aria-label={sortLabel}>
+            {data.map((point) => (
+              <button
+                type="button"
+                key={point.date}
+                className={
+                  point.count === peakValue
+                    ? "wildfire-histogram-bar is-peak"
+                    : "wildfire-histogram-bar"
+                }
+                title={`${timelineTickLabel(point.date, language)}: ${formatNumber(point.count, language)} hotspot`}
+                aria-label={`${point.date}: ${formatNumber(point.count, language)} hotspot`}
+                style={{
+                  height:
+                    point.count === 0
+                      ? "3px"
+                      : `${Math.max(5, (point.count / maxValue) * 100)}%`,
+                }}
+              >
+                <span className="wildfire-histogram-value">
+                  {formatNumber(point.count, language)}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="wildfire-line-chart" role="img" aria-label={sortLabel}>
+            <svg viewBox={`0 0 ${plotWidth} ${plotHeight}`} preserveAspectRatio="none">
+              <title>{sortLabel}</title>
+              {[0, 0.5, 1].map((ratio) => (
+                <line
+                  key={ratio}
+                  x1={0}
+                  x2={plotWidth}
+                  y1={yPadding + (baseline - yPadding) * ratio}
+                  y2={yPadding + (baseline - yPadding) * ratio}
+                  className="wildfire-chart-grid-line"
+                />
+              ))}
+              {chartType === "area" && areaString && (
+                <polygon points={areaString} className="wildfire-chart-area" />
+              )}
+              {pointString && <polyline points={pointString} className="wildfire-chart-line" />}
+              {points.map((point) => (
+                <circle key={point.date} cx={point.x} cy={point.y} r="4" className="wildfire-chart-point">
+                  <title>
+                    {timelineTickLabel(point.date, language)}: {formatNumber(point.count, language)} hotspot
+                  </title>
+                </circle>
+              ))}
+            </svg>
+          </div>
+        )}
+      </div>
+      <div className="wildfire-timeline-axis" aria-hidden="true">
+        {data.map((point, index) => (
+          <span
+            key={point.date}
+            className={
+              index % labelStep === 0 || index === data.length - 1 ? "is-visible" : ""
+            }
+            title={point.date}
+          >
+            {timelineTickLabel(point.date, language)}
+          </span>
+        ))}
+      </div>
+      <div className="wildfire-timeline-axis-caption">
+        <span>{language === "id" ? "Tanggal akuisisi (UTC)" : "Acquisition date (UTC)"}</span>
+        <span>{sortLabel}</span>
+      </div>
+    </>
+  );
 }
 
 function summaryFromEvent(event: WildfireEvent): WildfireSummary {
@@ -687,6 +841,11 @@ export function KarhutlaDetailPage() {
   const [dataRevision, setDataRevision] = useState(0);
   const [dataError, setDataError] = useState<string | null>(null);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
+  const [timelinePreset, setTimelinePreset] = useState<TimelinePreset>(() =>
+    query.from && query.from === query.to ? "date" : query.from || query.to ? "range" : "all",
+  );
+  const [timelineChart, setTimelineChart] = useState<WildfireTimelineChart>("bar");
+  const [timelineSort, setTimelineSort] = useState<WildfireTimelineSort>("date-asc");
   const confidenceKey = query.confidence.join(",");
 
   useEffect(() => {
@@ -788,9 +947,35 @@ export function KarhutlaDetailPage() {
         ? [{ date: timelineStart, count: activeSummary.total_hotspots }]
         : [];
   const timelineData = completeTimeline(sourceTimeline, timelineStart, timelineEnd);
-  const maxTimeline = Math.max(1, ...timelineData.map((point) => point.count));
-  const peakTimeline = Math.max(...timelineData.map((point) => point.count));
-  const timelineLabelStep = Math.max(1, Math.ceil(timelineData.length / 8));
+  const sortedTimelineData = [...timelineData].sort((a, b) => {
+    if (timelineSort === "date-desc") return b.date.localeCompare(a.date);
+    if (timelineSort === "count-desc") return b.count - a.count || a.date.localeCompare(b.date);
+    if (timelineSort === "count-asc") return a.count - b.count || a.date.localeCompare(b.date);
+    return a.date.localeCompare(b.date);
+  });
+  const datasetEnd =
+    event.last_data_at?.slice(0, 10) || event.monitoring_to || event.end_date || isoDate(new Date());
+  const timelineFromValue = query.from || timelineStart;
+  const timelineToValue = query.to || timelineEnd;
+  const applyTimelinePreset = (preset: TimelinePreset) => {
+    setTimelinePreset(preset);
+    if (preset === "all") {
+      updateQuery({ from: "", to: "" });
+      return;
+    }
+    if (preset === "today" || preset === "date") {
+      updateQuery({ from: datasetEnd, to: datasetEnd });
+      return;
+    }
+    if (preset === "7d") {
+      updateQuery({ from: shiftIsoDate(datasetEnd, -6), to: datasetEnd });
+      return;
+    }
+    if (preset === "30d") {
+      updateQuery({ from: shiftIsoDate(datasetEnd, -29), to: datasetEnd });
+    }
+  };
+  const timelineTotal = timelineData.reduce((total, point) => total + point.count, 0);
   return (
     <div className="wildfire-shell wildfire-detail-shell">
       <div className="wildfire-detail-topbar">
@@ -901,6 +1086,12 @@ export function KarhutlaDetailPage() {
           </label>
         </div>
       )}
+      {loading && (
+        <div className="wildfire-filter-loading" role="status" aria-live="polite">
+          <span className="wildfire-loading-spinner" aria-hidden="true" />
+          {t("wildfire.timeline.loading")}
+        </div>
+      )}
       <div className="wildfire-detail-layout">
         <main className="wildfire-map-first">
           <div className="wildfire-map-status">
@@ -946,66 +1137,114 @@ export function KarhutlaDetailPage() {
             syncError={syncError}
             dataRevision={dataRevision}
           />
-          <div className="wildfire-timeline-panel">
+          <div className={`wildfire-timeline-panel${loading ? " is-loading" : ""}`} aria-busy={loading}>
             <div className="wildfire-panel-heading">
               <div>
                 <h2>{t("wildfire.timeline.title")}</h2>
                 <span className="wildfire-timeline-subtitle">{t("wildfire.timeline.alt")}</span>
               </div>
               <div className="wildfire-timeline-total">
-                <strong>{formatNumber(activeSummary.total_hotspots, language)}</strong>
+                <strong>{formatNumber(timelineTotal, language)}</strong>
                 <span>{t("wildfire.stats.hotspots")}</span>
               </div>
+            </div>
+            <div className="wildfire-timeline-controls" aria-label={t("wildfire.timeline.filters")}>
+              <label>
+                {t("wildfire.timeline.period")}
+                <select
+                  value={timelinePreset}
+                  onChange={(event) => applyTimelinePreset(event.target.value as TimelinePreset)}
+                >
+                  <option value="all">{t("wildfire.timeline.periodAll")}</option>
+                  <option value="today">{t("wildfire.timeline.periodToday")}</option>
+                  <option value="7d">{t("wildfire.timeline.period7d")}</option>
+                  <option value="30d">{t("wildfire.timeline.period30d")}</option>
+                  <option value="date">{t("wildfire.timeline.periodDate")}</option>
+                  <option value="range">{t("wildfire.timeline.periodRange")}</option>
+                </select>
+              </label>
+              {timelinePreset === "date" && (
+                <label>
+                  {t("wildfire.timeline.date")}
+                  <input
+                    type="date"
+                    value={query.from || datasetEnd}
+                    onChange={(event) => {
+                      setTimelinePreset("date");
+                      updateQuery({ from: event.target.value, to: event.target.value });
+                    }}
+                  />
+                </label>
+              )}
+              {timelinePreset === "range" && (
+                <>
+                  <label>
+                    {t("wildfire.filters.from")}
+                    <input
+                      type="date"
+                      value={timelineFromValue}
+                      onChange={(event) => updateQuery({ from: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t("wildfire.filters.to")}
+                    <input
+                      type="date"
+                      value={timelineToValue}
+                      onChange={(event) => updateQuery({ to: event.target.value })}
+                    />
+                  </label>
+                </>
+              )}
+              <label>
+                {t("wildfire.timeline.sort")}
+                <select
+                  value={timelineSort}
+                  onChange={(event) => setTimelineSort(event.target.value as WildfireTimelineSort)}
+                >
+                  <option value="date-asc">{t("wildfire.timeline.sortDateAsc")}</option>
+                  <option value="date-desc">{t("wildfire.timeline.sortDateDesc")}</option>
+                  <option value="count-desc">{t("wildfire.timeline.sortCountDesc")}</option>
+                  <option value="count-asc">{t("wildfire.timeline.sortCountAsc")}</option>
+                </select>
+              </label>
+              <label>
+                {t("wildfire.timeline.chart")}
+                <select
+                  value={timelineChart}
+                  onChange={(event) => setTimelineChart(event.target.value as WildfireTimelineChart)}
+                >
+                  <option value="bar">{t("wildfire.timeline.chartBar")}</option>
+                  <option value="line">{t("wildfire.timeline.chartLine")}</option>
+                  <option value="area">{t("wildfire.timeline.chartArea")}</option>
+                </select>
+              </label>
+            </div>
+            <div className="wildfire-timeline-summary">
+              <span>
+                <i className="bi bi-calendar3" aria-hidden="true" /> {formatDate(timelineStart, language)} – {formatDate(timelineEnd, language)}
+              </span>
+              <span>
+                {formatNumber(timelineData.length, language)} {t("wildfire.timeline.days")}
+              </span>
             </div>
             <div
               className="wildfire-timeline-chart"
               role="group"
               aria-label={t("wildfire.timeline.alt")}
             >
-              <div className="wildfire-chart-y-axis" aria-hidden="true">
-                <span>{formatNumber(maxTimeline, language)}</span>
-                <span>0</span>
-              </div>
-              <div className="wildfire-histogram">
-                {timelineData.map((point) => (
-                  <button
-                    type="button"
-                    key={point.date}
-                    className={
-                      point.count === peakTimeline
-                        ? "wildfire-histogram-bar is-peak"
-                        : "wildfire-histogram-bar"
-                    }
-                    title={point.date + ": " + point.count}
-                    aria-label={point.date + ": " + point.count}
-                    style={{
-                      height:
-                        point.count === 0
-                          ? "2px"
-                          : `${Math.max(8, (point.count / maxTimeline) * 100)}%`,
-                    }}
-                  >
-                    <span className="wildfire-histogram-value">
-                      {formatNumber(point.count, language)}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <TimelineChart
+                data={sortedTimelineData}
+                chartType={timelineChart}
+                sort={timelineSort}
+                language={language}
+              />
             </div>
-            <div className="wildfire-timeline-axis">
-              {timelineData.map((point, index) => (
-                <span
-                  key={point.date}
-                  className={
-                    index % timelineLabelStep === 0 || index === timelineData.length - 1
-                      ? "is-visible"
-                      : ""
-                  }
-                >
-                  {point.date.slice(5)}
-                </span>
-              ))}
-            </div>
+            {loading && (
+              <div className="wildfire-timeline-loading-overlay" aria-hidden="true">
+                <span className="wildfire-loading-spinner" />
+              </div>
+            )}
           </div>
         </main>
         <aside className="wildfire-detail-sidebar">
