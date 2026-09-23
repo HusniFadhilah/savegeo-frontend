@@ -8,6 +8,7 @@ import { useBasemapContext } from "./BasemapContext";
 import "./map-tools.css";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
+const CURRENT_SCENE_ID = "current";
 
 function dateFromQuery(): string | undefined {
   const query = new URLSearchParams(window.location.search);
@@ -94,13 +95,16 @@ export default function HistoricalImageryControl({
     retry: 1,
   });
   // The final stop is the live basemap, never an invented Wayback release.
-  const entries = [...scenes, { id: "current", release_label: today, tile_url: "" }];
+  const entries = [...scenes, { id: CURRENT_SCENE_ID, release_label: today, tile_url: "" }];
   const autoScene = analysisDate ? selectEsriWaybackScene(scenes as WaybackScene[], analysisDate) : null;
-  const effectiveSelectedId = selectedId ?? autoScene?.id ?? "current";
+  // `null` means no manual choice and therefore follows the analysis date.
+  // Keep an explicit `current` sentinel for the reset action. Clearing the
+  // state here would immediately re-select `autoScene` on the next render.
+  const effectiveSelectedId = selectedId ?? autoScene?.id ?? CURRENT_SCENE_ID;
   const foundIndex = entries.findIndex(scene => scene.id === effectiveSelectedId);
   const index = foundIndex >= 0 ? foundIndex : entries.length - 1;
   const selected = entries[index] ?? entries[entries.length - 1];
-  const isCurrent = selected.id === "current";
+  const isCurrent = selected.id === CURRENT_SCENE_ID;
 
   useEffect(() => {
     const sync = () => setQueryDate(dateFromQuery());
@@ -192,9 +196,9 @@ export default function HistoricalImageryControl({
       <>
         <div className="map-history-body">
           <div className="map-history-date">
-            <select aria-label="Tahun tampilan" value={date.slice(0, 4)} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year}>{year}</option>)}</select>
-            <select aria-label="Bulan tampilan" value={date.slice(5, 7)} onChange={event => choosePrefix(`${date.slice(0, 4)}-${event.target.value}`)}>{months.map(month => <option key={month} value={month}>{MONTHS[Number(month) - 1]}</option>)}</select>
-            <select aria-label="Hari tampilan" value={selected.id} onChange={event => setSelectedId(event.target.value)}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === "current" ? " - Terkini" : ""}</option>)}</select>
+            <select aria-label="Tahun tampilan" value={date.slice(0, 4)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select>
+            <select aria-label="Bulan tampilan" value={date.slice(5, 7)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(`${date.slice(0, 4)}-${event.target.value}`)}>{months.map(month => <option key={month} value={month}>{MONTHS[Number(month) - 1]}</option>)}</select>
+            <select aria-label="Hari tampilan" value={selected.id} disabled={isFetching || !days.length} onChange={event => setSelectedId(event.target.value)}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === CURRENT_SCENE_ID ? " - Terkini" : ""}</option>)}</select>
           </div>
           <div className="map-history-slider">
             <div className="map-history-track"><button type="button" aria-label="Rilis sebelumnya" disabled={index === 0} onClick={() => choose(index - 1)}>‹</button>
@@ -206,7 +210,7 @@ export default function HistoricalImageryControl({
         <p className="map-history-note">{isCurrent
           ? `Diakses ${today}. Basemap terbaru yang tersedia; bukan tanggal perekaman citra.`
           : "Tanggal rilis arsip; tanggal perekaman citra berbeda menurut lokasi."}
-          {!isCurrent && <> <button type="button" onClick={() => setSelectedId(null)}>Kembali ke terkini</button></>}
+          {!isCurrent && <> <button type="button" onClick={() => { setSelectedId(CURRENT_SCENE_ID); setTileError(false); }}>Kembali ke terkini</button></>}
         </p>
         {tileError && <p role="alert">Sebagian citra gagal dimuat. Coba rilis lain atau perkecil zoom.</p>}
       </>
