@@ -216,6 +216,15 @@ function ViewerLayers({
             pane={DISASTER_ANALYSIS_PANE}
           />
         ))}
+      {analyses
+        .filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.features?.features?.length)
+        .map((entry) => (
+          <GeoJSON
+            key={`analysis-features-${entry.model_id}`}
+            data={entry.result!.features!}
+            style={{ color: entry.result_semantics === "candidate_object" ? "#7c3aed" : "#f97316", weight: 2, fillOpacity: 0.22 }}
+          />
+        ))}
       {showAoi && aoi?.geojson && (
         <GeoJSON
           key={`aoi-${aoi.id}`}

@@ -420,14 +420,14 @@ export interface AnalysisRunRecord {
   created_at: string | null;
 }
 
-/** `AnalysisResult.to_dict()` (`include_features` never requested by User
- * routes - features are always null/empty for the 3 MVP models anyway, see
- * contract doc's "MVP scope reality check"). */
+/** `AnalysisResult.to_dict()`. FeatureCollection outputs are included for
+ * compatible persisted candidate/observation products. */
 export interface AnalysisResultRecord {
   comparison?: import("@/features/disaster/components/SegmentationComparison").SegmentationResult | null;
   id: number;
   run_id: number;
   tile_url: string | null;
+  features?: GeoJSON.FeatureCollection | null;
   statistics: Record<string, number | string | null> | null;
   legend: MapLegendEntry[];
   confidence_summary: Record<string, number | string | null> | null;

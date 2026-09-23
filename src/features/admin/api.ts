@@ -412,7 +412,7 @@ export const listDisasterModels = (eventId?: number) =>
 
 export const createAnalysisRun = (
   id: number,
-  payload: { model_id: string; aoi_id: number; pre_imagery_id?: number; post_imagery_id?: number },
+  payload: { model_id: string; aoi_id: number; pre_imagery_id?: number; post_imagery_id?: number; parameters?: Record<string, unknown> },
 ) => apiClient.post<AnalysisRun>(`/admin/disasters/${id}/analyses`, payload, { auth: true });
 
 export const listAnalysisRuns = (id: number) =>

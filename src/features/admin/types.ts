@@ -303,6 +303,7 @@ export interface AnalysisRun {
   aoi_id: number;
   pre_imagery_id?: number | null;
   post_imagery_id?: number | null;
+  parameters?: Record<string, unknown>;
   status: AnalysisRunStatus | string;
   started_at?: string | null;
   completed_at?: string | null;
@@ -352,6 +353,7 @@ export interface DisasterModelRegistryEntry {
   satellite?: string | null;
   description: string;
   enabled: boolean;
+  requires_earth_engine?: boolean;
 }
 
 export type HotspotImpactLevel = "low" | "medium" | "high" | "critical";
