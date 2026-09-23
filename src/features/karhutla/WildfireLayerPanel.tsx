@@ -125,7 +125,7 @@ export default function WildfireLayerPanel({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <i className="bi bi-layers" aria-hidden="true" />
+        <i className="bi bi-gear" aria-hidden="true" />
       </button>
       {open && (
         <div
