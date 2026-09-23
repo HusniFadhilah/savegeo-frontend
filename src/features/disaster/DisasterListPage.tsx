@@ -214,6 +214,7 @@ export default function DisasterListPage() {
 
       <KarhutlaOverviewCard
         event={featuredWildfire ? adaptLegacyEvent(featuredWildfire) : FALLBACK_WILDFIRE_EVENTS[0]}
+        loading={loading}
       />
 
       <form className="disaster-filter-panel" onSubmit={applyFilters}>

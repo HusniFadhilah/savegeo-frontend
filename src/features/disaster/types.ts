@@ -335,6 +335,11 @@ export interface DisasterEventRecord {
 /** `GET /disasters` list item - event fields + published-analysis count. */
 export interface DisasterEventListItem extends DisasterEventRecord {
   available_analysis_count: number;
+  /** Persisted wildfire metrics added for forest-fire event cards. */
+  hotspot_count?: number;
+  high_confidence_count?: number;
+  burned_area_ha?: number | null;
+  burned_area_source?: string | null;
 }
 
 export interface DisasterEventListParams {

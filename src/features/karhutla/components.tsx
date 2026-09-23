@@ -268,10 +268,20 @@ export function WildfireStatusBadge({ event }: { event: WildfireEvent }) {
   );
 }
 
-export function KarhutlaOverviewCard({ event }: { event: WildfireEvent }) {
+export function KarhutlaOverviewCard({
+  event,
+  loading = false,
+}: {
+  event: WildfireEvent;
+  loading?: boolean;
+}) {
   const { t, language } = useI18nStore();
   return (
-    <section className="wildfire-overview-card" aria-labelledby="wildfire-overview-title">
+    <section
+      className={`wildfire-overview-card${loading ? " is-loading" : ""}`}
+      aria-labelledby="wildfire-overview-title"
+      aria-busy={loading}
+    >
       <div
         className="wildfire-overview-visual"
         role="img"
@@ -292,19 +302,31 @@ export function KarhutlaOverviewCard({ event }: { event: WildfireEvent }) {
         <p className="wildfire-muted">{event.description}</p>
         <div className="wildfire-overview-metrics">
           <div>
-            <strong>{formatNumber(event.hotspot_count, language)}</strong>
+            {loading ? (
+              <OverviewValueSkeleton label={t("wildfire.stats.hotspots")} loadingLabel={t("wildfire.loading")} />
+            ) : (
+              <strong>{formatNumber(event.hotspot_count, language)}</strong>
+            )}
             <span>{t("wildfire.stats.hotspots")}</span>
           </div>
           <div>
-            <strong>{formatNumber(event.high_confidence_count, language)}</strong>
+            {loading ? (
+              <OverviewValueSkeleton label={t("wildfire.stats.highConfidence")} loadingLabel={t("wildfire.loading")} />
+            ) : (
+              <strong>{formatNumber(event.high_confidence_count, language)}</strong>
+            )}
             <span>{t("wildfire.stats.highConfidence")}</span>
           </div>
           <div>
-            <strong>
-              {event.burned_area_ha == null
-                ? "—"
-                : `${formatNumber(event.burned_area_ha, language, { maximumFractionDigits: 0 })} ha`}
-            </strong>
+            {loading ? (
+              <OverviewValueSkeleton label={t("wildfire.stats.burnedArea")} loadingLabel={t("wildfire.loading")} />
+            ) : (
+              <strong>
+                {event.burned_area_ha == null
+                  ? "—"
+                  : `${formatNumber(event.burned_area_ha, language, { maximumFractionDigits: 0 })} ha`}
+              </strong>
+            )}
             <span>{t("wildfire.stats.burnedArea")}</span>
           </div>
         </div>
@@ -327,6 +349,16 @@ export function KarhutlaOverviewCard({ event }: { event: WildfireEvent }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function OverviewValueSkeleton({ label, loadingLabel }: { label: string; loadingLabel: string }) {
+  return (
+    <span
+      className="wildfire-overview-value-skeleton"
+      role="status"
+      aria-label={`${label}: ${loadingLabel}`}
+    />
   );
 }
 

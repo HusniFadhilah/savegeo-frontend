@@ -7054,6 +7054,15 @@ html[data-theme="dark"] .aoi-modal-footer .btn-outline-secondary:hover {
 .wildfire-overview-metrics { display: flex; gap: clamp(1rem, 5vw, 4rem); margin: .65rem 0; }
 .wildfire-overview-metrics div { display: grid; gap: .12rem; }
 .wildfire-overview-metrics strong { font-size: 1.3rem; }
+.wildfire-overview-value-skeleton {
+  display: block;
+  width: 3.4rem;
+  height: 1.55rem;
+  border-radius: .35rem;
+  background: linear-gradient(100deg, #e8efec 20%, #f8fbf9 45%, #e8efec 70%);
+  background-size: 220% 100%;
+  animation: wildfire-shimmer 1.25s ease-in-out infinite;
+}
 .wildfire-overview-metrics span, .wildfire-card-meta { color: var(--text-muted, #66756d); font-size: .72rem; }
 .wildfire-card-meta { display: flex; flex-wrap: wrap; gap: 1rem; }
 .wildfire-card-actions { display: flex; align-items: center; gap: 1rem; margin-top: .85rem; }
@@ -7485,6 +7494,11 @@ html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-loading-overla
 .dark-mode .wildfire-detail-shell .wildfire-timeline-loading-overlay { background: rgba(16, 26, 22, .62); }
 html[data-theme="dark"] .wildfire-detail-shell .wildfire-stat-value-skeleton,
 .dark-mode .wildfire-detail-shell .wildfire-stat-value-skeleton {
+  background: linear-gradient(100deg, #253a31 20%, #385548 45%, #253a31 70%);
+  background-size: 220% 100%;
+}
+html[data-theme="dark"] .wildfire-overview-value-skeleton,
+.dark-mode .wildfire-overview-value-skeleton {
   background: linear-gradient(100deg, #253a31 20%, #385548 45%, #253a31 70%);
   background-size: 220% 100%;
 }
