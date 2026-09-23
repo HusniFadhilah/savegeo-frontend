@@ -33,7 +33,7 @@
 .raster-resolution-notice {
   position: absolute;
   top: 12px;
-  right: 12px;
+  right: 50px;
   z-index: 800;
   max-width: 150px;
   padding: 5px 8px;

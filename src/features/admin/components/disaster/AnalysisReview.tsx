@@ -15,6 +15,7 @@ const RUN_STATUS_LABEL: Record<string, string> = {
   failed: "Failed",
   review_required: "Review Required",
   published: "Published",
+  stale: "Stale - perlu dihitung ulang",
 };
 
 function renderValue(v: unknown): string {
@@ -258,6 +259,23 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
               <span className={`stat-badge ${qc.ready_to_publish ? "badge-green" : "badge-amber"}`}>
                 {qc.ready_to_publish ? "Siap dipublikasikan" : "Belum siap dipublikasikan"}
               </span>
+              {qc.readiness && (
+                <div style={{ overflowX: "auto", marginTop: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 6 }}>Readiness matrix</div>
+                  <table className="tbl tbl-wide">
+                    <thead><tr><th>Komponen</th><th>Status</th><th>Alasan</th></tr></thead>
+                    <tbody>
+                      {Object.entries(qc.readiness).map(([key, item]) => (
+                        <tr key={key}>
+                          <td>{key.split("_").join(" ")}</td>
+                          <td><span className={`stat-badge ${item.status === "ready" || item.status === "passed" || item.status === "allowed" ? "badge-green" : "badge-amber"}`}>{item.status}</span></td>
+                          <td>{item.reasons.length ? item.reasons.join("; ") : "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
         </div>

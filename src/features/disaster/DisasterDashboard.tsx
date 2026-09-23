@@ -408,6 +408,12 @@ export default function DisasterDashboard() {
       </section>
 
       {layersError && <div className="alert alert-warning py-2 mb-3">{layersError}</div>}
+      {analyses.some((entry) => !entry.available) && (
+        <div className="alert alert-secondary py-2 mb-3 small">
+          <i className="bi bi-info-circle me-1" />
+          Analisis yang belum kompatibel atau belum tersedia tidak ditampilkan sebagai layer valid. {analyses.filter((entry) => !entry.available && entry.availability_reason?.length).map((entry) => `${entry.user_label}: ${entry.availability_reason?.join("; ")}`).join(" | ")}
+        </div>
+      )}
 
       <section className="disaster-workspace">
         {/* Layer panel and the single satellite viewer share this row. */}

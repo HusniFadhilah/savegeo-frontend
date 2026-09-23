@@ -10,6 +10,7 @@ const RUN_STATUS_LABEL: Record<string, string> = {
   failed: "Failed",
   review_required: "Review Required",
   published: "Published",
+  stale: "Stale - perlu dihitung ulang",
 };
 const RUN_STATUS_BADGE: Record<string, string> = {
   queued: "badge-gray",
@@ -18,6 +19,7 @@ const RUN_STATUS_BADGE: Record<string, string> = {
   failed: "badge-red",
   review_required: "badge-amber",
   published: "badge-purple",
+  stale: "badge-red",
 };
 
 interface Props {
@@ -174,11 +176,13 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                         <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{model.description} {model.reliability} {model.availability_reason}</div>
                         <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
                           <span className="badge-label">{model.category}</span>
+                          {model.capability_status && <span className={`stat-badge ${model.capability_status === "indicator_only" ? "badge-amber" : "badge-gray"}`}>{model.capability_status}</span>}
+                          {model.damage_model === false && <span className="stat-badge badge-amber">Indikator, bukan damage model</span>}
                           {!model.enabled && <span className="stat-badge badge-gray">Not Available</span>}
                         </div>
                       </div>
                       {model.enabled && (
-                        <button type="button" className="btn-sm" disabled={!aoi || model.configured === false} onClick={() => openConfig(model.model_id)}>
+                        <button type="button" className="btn-sm" disabled={!aoi || model.configured === false || model.inputs_ready === false} onClick={() => openConfig(model.model_id)}>
                           <i className="bi bi-plus-lg" /> Konfigurasi Analisis Baru
                         </button>
                       )}
@@ -241,6 +245,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                                 Run #{run.id} • dibuat {run.created_at ? new Date(run.created_at).toLocaleString("id-ID") : "—"}
                               </span>
                               {result?.is_published && <span className="stat-badge badge-purple">Published</span>}
+                              {result?.validation_status === "indicator_only" && <span className="stat-badge badge-amber">Indicator only</span>}
                               {run.error_message && <span style={{ color: "#b91c1c" }}>{run.error_message}</span>}
                             </div>
                             <button

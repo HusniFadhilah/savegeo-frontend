@@ -286,13 +286,14 @@ export interface SatelliteImagery {
   resolution_m?: number | null;
   cloud_coverage_pct?: number | null;
   data_source?: string | null;
+  scene_id?: string | null;
   is_primary: boolean;
   preview_tile_url?: string | null;
   source_kind?: "gee" | "local_upload" | string;
   created_at?: string | null;
 }
 
-export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published";
+export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published" | "stale";
 
 export interface AnalysisRun {
   id: number;
@@ -319,6 +320,10 @@ export interface AnalysisResult {
   features?: GeoJSON.FeatureCollection | null;
   legend: { label: string; color: string }[];
   confidence_summary?: Record<string, unknown> | null;
+  provenance?: Record<string, unknown> | null;
+  validation_status?: string | null;
+  limitations?: string[];
+  stale_reason?: string | null;
   is_published: boolean;
   published_at?: string | null;
   publication_version: number;
@@ -333,6 +338,9 @@ export interface AnalysisRunWithResult {
 /** One entry from `app/registries/disaster_model_registry.py::list_models()`. */
 export interface DisasterModelRegistryEntry {
   configured?: boolean; recommended?: boolean; availability_reason?: string; reliability?: string;
+  capability_status?: string; result_semantics?: string; damage_model?: boolean;
+  accepted_source_kind?: string[]; accepted_sensors?: string[]; required_bands?: string[];
+  supports_local_upload?: boolean; limitations?: string[]; publication_requirements?: string[];
   inputs_ready?: boolean; default_pre_imagery_id?: number; default_post_imagery_id?: number;
   model_id: string;
   backend_label: string;
@@ -386,4 +394,5 @@ export interface DisasterQcStatus {
   post_imagery_available: boolean;
   analyses: { model_id: string; status: string; has_statistics: boolean; has_legend: boolean; has_confidence: boolean }[];
   ready_to_publish: boolean;
+  readiness?: Record<string, { status: string; reasons: string[] }>;
 }

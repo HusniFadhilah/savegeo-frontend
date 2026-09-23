@@ -377,6 +377,7 @@ export interface SatelliteImageryRecord {
   resolution_m: number | null;
   cloud_coverage_pct: number | null;
   data_source: string | null;
+  scene_id?: string | null;
   is_primary: boolean;
   preview_tile_url: string | null;
   source_kind?: "gee" | "local_upload" | string;
@@ -401,7 +402,7 @@ export interface DisasterEventDetailResponse {
   primary_imagery: DisasterPrimaryImagery;
 }
 
-export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published";
+export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed" | "review_required" | "published" | "stale";
 
 /** `AnalysisRun.to_dict()`. */
 export interface AnalysisRunRecord {
@@ -430,6 +431,10 @@ export interface AnalysisResultRecord {
   statistics: Record<string, number | string | null> | null;
   legend: MapLegendEntry[];
   confidence_summary: Record<string, number | string | null> | null;
+  provenance?: Record<string, unknown> | null;
+  validation_status?: string | null;
+  limitations?: string[];
+  stale_reason?: string | null;
   is_published: boolean;
   published_at: string | null;
   publication_version: number;
@@ -446,6 +451,8 @@ export interface DisasterAnalysisEntry {
   damage_model?: boolean;
   validation_status?: string | null;
   limitations?: string[];
+  capability_status?: string | null;
+  availability_reason?: string[];
   available: boolean;
   run: AnalysisRunRecord | null;
   result: AnalysisResultRecord | null;
@@ -506,5 +513,5 @@ export interface DisasterHotspotsResponse {
  * "MVP scope reality check" (no feature-level filter/click UI for now). */
 export interface DisasterFeaturesResponse {
   features: GeoJSON.FeatureCollection;
-  note: string;
+  note: string | null;
 }
