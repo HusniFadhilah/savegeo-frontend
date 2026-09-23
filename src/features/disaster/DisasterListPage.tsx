@@ -261,7 +261,7 @@ export default function DisasterListPage() {
               emptyHint={t("disaster.list.noProvinceEvents")}
               allowCustomValue={false}
               variant="plain"
-              className="disaster-province-select form-select-sm"
+              className="disaster-province-select"
               onChange={(value) =>
                 setPendingFilters((f) => ({ ...f, province: value || undefined }))
               }
