@@ -4578,6 +4578,70 @@
   gap: 10px;
 }
 
+.imagery-map-card-header {
+  padding: 0 !important;
+  border-bottom: 0;
+  background: linear-gradient(135deg, #2e7d32, #256d58) !important;
+}
+
+.imagery-map-accordion-trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  text-align: left;
+}
+
+.imagery-map-accordion-trigger:hover,
+.imagery-map-accordion-trigger:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.imagery-map-accordion-trigger:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: -3px;
+}
+
+.imagery-map-accordion-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #fff;
+  font-weight: 600;
+}
+
+.imagery-map-accordion-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imagery-map-accordion-title i,
+.imagery-map-accordion-chevron {
+  color: #fff;
+}
+
+.imagery-map-accordion-scene {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.imagery-map-accordion-chevron {
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+}
+
 .savegeo-globe {
   position: relative;
   min-height: 560px;

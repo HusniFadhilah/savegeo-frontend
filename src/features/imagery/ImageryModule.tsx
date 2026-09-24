@@ -1550,22 +1550,24 @@ export default function ImageryModule() {
             )}
 
             <div className="card">
-              <div className="card-header py-2">
+              <div className="card-header imagery-map-card-header">
                 <button
                   type="button"
-                  className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                  className="imagery-map-accordion-trigger"
                   aria-expanded={mapOpen}
                   aria-controls="imageryMapBody"
                   onClick={() => setMapOpen((open) => !open)}
                 >
-                  <i className="bi bi-map" /> <span>Peta</span>
-                  <i className={`bi bi-chevron-${mapOpen ? "up" : "down"}`} aria-hidden="true" />
-                </button>
-                {selectedSceneId && (
-                  <span className="text-white small ms-2">
-                    - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
+                  <span className="imagery-map-accordion-copy">
+                    <span className="imagery-map-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>Peta</span></span>
+                    {selectedSceneId && (
+                      <span className="imagery-map-accordion-scene">
+                        - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
+                      </span>
+                    )}
                   </span>
-                )}
+                  <i className={`bi bi-chevron-${mapOpen ? "up" : "down"} imagery-map-accordion-chevron`} aria-hidden="true" />
+                </button>
               </div>
               <div id="imageryMapBody" className="card-body p-2" hidden={!mapOpen}>
                 {mapMode === "globe" ? (
