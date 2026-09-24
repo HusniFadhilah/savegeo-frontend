@@ -157,6 +157,10 @@ export interface GetSceneTileParams {
   aoi?: AoiPayload;
   /** Automatically mosaic Sentinel-2 when the AOI exceeds the selected granule footprint. */
   autoMosaic?: boolean;
+  /** Explicitly select the Sentinel-2 AOI mosaic group from the scene table. */
+  forceMosaic?: boolean;
+  /** Keep a scene-row click on the exact granule, even when the AOI is larger. */
+  forceScene?: boolean;
   /** Date range and scene-level cloud filter used by the automatic Sentinel-2 mosaic. */
   startDate?: string;
   endDate?: string;

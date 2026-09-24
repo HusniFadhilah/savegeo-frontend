@@ -56,6 +56,8 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
     scene_id: params.sceneId,
     aoi: params.aoi,
     auto_mosaic: params.autoMosaic,
+    force_mosaic: params.forceMosaic,
+    force_scene: params.forceScene,
     start_date: params.startDate,
     end_date: params.endDate,
     max_cloud_cover: params.maxCloudCover,

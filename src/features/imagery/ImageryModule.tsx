@@ -394,6 +394,7 @@ export default function ImageryModule() {
   const [tileUrl, setTileUrl] = useState<string | null>(null);
   const [tileRenderMode, setTileRenderMode] = useState<"scene" | "mosaic">("scene");
   const [tileSceneCount, setTileSceneCount] = useState(1);
+  const [mosaicRequested, setMosaicRequested] = useState(false);
   const [tileOpacity, setTileOpacity] = useState(query.opacity ?? 1);
   const [gpuTileStatus, setGpuTileStatus] = useState<"processing" | "active" | "fallback_original" | "error">("processing");
 
@@ -437,6 +438,15 @@ export default function ImageryModule() {
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
   const renderOptionsKeyRef = useRef("");
+  const mosaicRequestedRef = useRef(false);
+  const sceneRequestedRef = useRef(false);
+  const setMosaicRequestedMode = (value: boolean) => {
+    mosaicRequestedRef.current = value;
+    setMosaicRequested(value);
+  };
+  const setSceneRequestedMode = (value: boolean) => {
+    sceneRequestedRef.current = value;
+  };
   const mosaicQueryRef = useRef({ startDate, endDate, maxCloudCover });
   useEffect(() => {
     mosaicQueryRef.current = { startDate, endDate, maxCloudCover };
@@ -532,6 +542,8 @@ export default function ImageryModule() {
     setTileUrl(null);
     setTileRenderMode("scene");
     setTileSceneCount(1);
+    setMosaicRequestedMode(false);
+    setSceneRequestedMode(false);
     setTileError(null);
     setTileLoading(false);
     setCompareSceneAId(null);
@@ -585,7 +597,7 @@ export default function ImageryModule() {
   }, [imageryProviders]);
 
   const loadSceneTile = useCallback(
-    async (scene: ImageryScene, assetKeyOverride?: string) => {
+    async (scene: ImageryScene, assetKeyOverride?: string, forceMosaicOverride?: boolean) => {
       const requestId = ++tileRequestRef.current;
       renderOptionsKeyRef.current = renderOptionsKey;
       const effectiveCogAssetKey = assetKeyOverride
@@ -615,6 +627,8 @@ export default function ImageryModule() {
           sceneId: scene.id,
           aoi: aoi ? { geojson: aoi } : undefined,
           autoMosaic: isSentinel2 && Boolean(aoi),
+          forceMosaic: isSentinel2 && Boolean(aoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
+          forceScene: isSentinel2 && Boolean(aoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
           startDate: isSentinel2 && aoi ? mosaicQuery.startDate : undefined,
           endDate: isSentinel2 && aoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
           maxCloudCover: isSentinel2 && aoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
@@ -676,14 +690,16 @@ export default function ImageryModule() {
       setTileUrl(null);
       setTileRenderMode("scene");
       setTileSceneCount(1);
-    setTileError(null);
-    setTileLoading(false);
-    setSceneTilesById({});
-    setCompareSceneAId(null);
-    setCompareSceneBId(null);
-    setCompareTileA(null);
-    setCompareTileB(null);
-    setCompareError(null);
+      setMosaicRequestedMode(false);
+      setSceneRequestedMode(false);
+      setTileError(null);
+      setTileLoading(false);
+      setSceneTilesById({});
+      setCompareSceneAId(null);
+      setCompareSceneBId(null);
+      setCompareTileA(null);
+      setCompareTileB(null);
+      setCompareError(null);
     try {
       const res = isEsriWayback
         ? {
@@ -733,7 +749,19 @@ export default function ImageryModule() {
   const selectScene = (scene: ImageryScene) => {
     const nextAssetKey = scene.default_asset_key || cogAssetKey || "visual";
     if (isCogProvider) setCogAssetKey(nextAssetKey);
+    setMosaicRequestedMode(false);
+    setSceneRequestedMode(true);
     void loadSceneTile(scene, nextAssetKey);
+  };
+
+  const loadMosaicTile = () => {
+    if (!isSentinel2 || !aoi || scenes.length === 0) return;
+    const anchorScene = [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1))[0];
+    if (!anchorScene) return;
+    setMosaicRequestedMode(true);
+    setSceneRequestedMode(false);
+    setViewMode("single");
+    void loadSceneTile(anchorScene, anchorScene.default_asset_key || "visual", true);
   };
 
   const loadCompare = async () => {
@@ -888,6 +916,8 @@ export default function ImageryModule() {
         }
         const scene = scenes.find((item) => item.id === sceneId);
         if (!scene) throw new Error("Scene tidak ada dalam hasil pencarian saat ini.");
+        setMosaicRequestedMode(false);
+        setSceneRequestedMode(true);
         await loadSceneTile(scene, scene.default_asset_key || "visual");
       } else if (action === "clear_scenes" && target === "scenes.layers") {
         ++tileRequestRef.current;
@@ -1463,6 +1493,30 @@ export default function ImageryModule() {
                       </tr>
                     </thead>
                     <tbody>
+                      {isSentinel2 && (
+                        <tr className={tileRenderMode === "mosaic" || mosaicRequested ? "table-success" : "table-light"}>
+                          <td colSpan={3}>
+                            <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                              <div>
+                                <strong><i className="bi bi-grid-3x3-gap me-1" /> Grup Mosaik AOI</strong>
+                                <small className="text-muted d-block">
+                                  Gabungkan scene Sentinel-2 yang ditemukan untuk mengisi AOI.
+                                  {tileRenderMode === "mosaic" ? ` Aktif: ${tileSceneCount} scene.` : ""}
+                                </small>
+                              </div>
+                              <button
+                                type="button"
+                                className={`btn btn-sm ${tileRenderMode === "mosaic" || mosaicRequested ? "btn-success" : "btn-outline-success"}`}
+                                onClick={loadMosaicTile}
+                                disabled={!aoi || tileLoading}
+                              >
+                                {tileLoading && mosaicRequested ? <i className="fas fa-spinner fa-spin me-1" /> : <i className="bi bi-layers me-1" />}
+                                Tampilkan Mosaik AOI
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                       {visibleScenes.map((scene) => (
                         <tr
                           key={scene.id}
