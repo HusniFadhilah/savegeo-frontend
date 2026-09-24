@@ -1356,23 +1356,36 @@ export default function ImageryModule() {
 
         {searched && (
           <div className="card mb-3">
-            <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
+            <div
+              className="card-header imagery-accordion-card-header imagery-scene-results-header"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                setSceneResultsOpen((open) => !open);
+              }}
+            >
               <button
                 type="button"
-                className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                className="imagery-accordion-trigger"
                 aria-expanded={sceneResultsOpen}
                 aria-controls="imagerySceneResultsBody"
-                onClick={() => setSceneResultsOpen((open) => !open)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSceneResultsOpen((open) => !open);
+                }}
               >
-                <i className="bi bi-list-ul" /> {t("imagery.search.found")}
-                <i className={`bi bi-chevron-${sceneResultsOpen ? "up" : "down"}`} aria-hidden="true" />
-              </button>
-              <span className="badge bg-secondary">{scenes.length}</span>
-              {truncated && (
-                <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
-                  batas provider
+                <span className="imagery-accordion-copy">
+                  <span className="imagery-accordion-title">
+                    <i className="bi bi-list-ul" aria-hidden="true" /> <span>{t("imagery.search.found")}</span>
+                    <span className="badge bg-secondary">{scenes.length}</span>
+                    {truncated && (
+                      <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
+                        batas provider
+                      </span>
+                    )}
+                  </span>
                 </span>
-              )}
+                <i className={`bi bi-chevron-${sceneResultsOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
+              </button>
               <div className="btn-group btn-group-sm ms-auto" role="group" aria-label="Mode tampilan">
                 <button
                   type="button"
@@ -1502,19 +1515,29 @@ export default function ImageryModule() {
 
         {selectedScene && satelliteMeta && (
           <div className="card mb-3" aria-label="Data provenance scene terpilih">
-            <div className="card-header py-2 d-flex align-items-center gap-2">
+            <div
+              className="card-header imagery-accordion-card-header"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                setProvenanceOpen((open) => !open);
+              }}
+            >
               <button
                 type="button"
-                className="btn btn-link p-0 text-decoration-none text-body d-flex align-items-center gap-2 fw-semibold"
+                className="imagery-accordion-trigger"
                 aria-expanded={provenanceOpen}
                 aria-controls="imageryProvenanceBody"
-                onClick={() => setProvenanceOpen((open) => !open)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setProvenanceOpen((open) => !open);
+                }}
               >
-                <i className="bi bi-info-circle" />
-                <span>Data Provenance</span>
-                <i className={`bi bi-chevron-${provenanceOpen ? "up" : "down"}`} aria-hidden="true" />
+                <span className="imagery-accordion-copy">
+                  <span className="imagery-accordion-title"><i className="bi bi-info-circle" aria-hidden="true" /> <span>Data Provenance</span></span>
+                </span>
+                <i className={`bi bi-chevron-${provenanceOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
               </button>
-              <span className="badge bg-light text-dark ms-auto">
+              <span className="imagery-accordion-meta badge bg-light text-dark">
                 {satelliteMeta.capabilities?.commercial ? "Commercial" : satelliteMeta.capabilities?.open_data ? "Open data" : "Provider access"}
               </span>
             </div>
@@ -1550,23 +1573,23 @@ export default function ImageryModule() {
             )}
 
             <div className="card">
-              <div className="card-header imagery-map-card-header">
+              <div className="card-header imagery-accordion-card-header">
                 <button
                   type="button"
-                  className="imagery-map-accordion-trigger"
+                  className="imagery-accordion-trigger"
                   aria-expanded={mapOpen}
                   aria-controls="imageryMapBody"
                   onClick={() => setMapOpen((open) => !open)}
                 >
-                  <span className="imagery-map-accordion-copy">
-                    <span className="imagery-map-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>Peta</span></span>
+                  <span className="imagery-accordion-copy">
+                    <span className="imagery-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>Peta</span></span>
                     {selectedSceneId && (
-                      <span className="imagery-map-accordion-scene">
+                      <span className="imagery-accordion-scene">
                         - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
                       </span>
                     )}
                   </span>
-                  <i className={`bi bi-chevron-${mapOpen ? "up" : "down"} imagery-map-accordion-chevron`} aria-hidden="true" />
+                  <i className={`bi bi-chevron-${mapOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
                 </button>
               </div>
               <div id="imageryMapBody" className="card-body p-2" hidden={!mapOpen}>
