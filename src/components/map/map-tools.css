@@ -1,3 +1,6 @@
+.leaflet-top .leaflet-control {
+    margin-top: 0px;
+}
 .aoi-tools-control { position: relative; }
 /* One aligned toolbar, including Leaflet's native zoom/fullscreen controls. */
 .map-view-shell .leaflet-top.leaflet-left > .leaflet-control {
