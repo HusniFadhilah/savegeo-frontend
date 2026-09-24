@@ -121,6 +121,11 @@ export interface ImagerySceneTileResponse {
   tile_url: string;
   satellite: ImageryProvider;
   super_resolution?: ImagerySuperResolutionResult | null;
+  /** "mosaic" when a large Sentinel-2 AOI was filled from the date range. */
+  render_mode?: "scene" | "mosaic";
+  scene_count?: number;
+  aoi_larger_than_scene?: boolean;
+  cloud_mask_technique?: string | null;
 }
 
 export interface ListScenesParams {
@@ -150,6 +155,12 @@ export interface GetSceneTileParams {
   satellite: string;
   sceneId: string;
   aoi?: AoiPayload;
+  /** Automatically mosaic Sentinel-2 when the AOI exceeds the selected granule footprint. */
+  autoMosaic?: boolean;
+  /** Date range and scene-level cloud filter used by the automatic Sentinel-2 mosaic. */
+  startDate?: string;
+  endDate?: string;
+  maxCloudCover?: number;
   /** Sentinel-1 only - "grayscale" (single VV band) or "composite" (VV/VH/VV-VH false color). Ignored by other providers. */
   sarMode?: SarMode;
   /** Sentinel-2 only (L2A/L1C) - "scl" | "qa60" | "s2cloudless", opt-in per-pixel cloud mask on top of the default raw/unmasked view. Ignored (and silently remapped if unsupported, e.g. "scl" on L1C) by the backend for providers without cloud_mask_techniques. */

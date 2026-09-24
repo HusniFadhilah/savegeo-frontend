@@ -49,12 +49,16 @@ export function listImageryScenes(params: ListScenesParams) {
   }, { auth: "app" });
 }
 
-/** POST /imagery/scene-tile - tile for exactly one scene (no compositing), visualized per its sensor type (RGB/SAR/gas colormap). */
+/** POST /imagery/scene-tile - one scene tile, with automatic Sentinel-2 AOI mosaic when requested. */
 export function getImagerySceneTile(params: GetSceneTileParams) {
   return apiClient.post<ImagerySceneTileResponse>("/imagery/scene-tile", {
     satellite: params.satellite,
     scene_id: params.sceneId,
     aoi: params.aoi,
+    auto_mosaic: params.autoMosaic,
+    start_date: params.startDate,
+    end_date: params.endDate,
+    max_cloud_cover: params.maxCloudCover,
     sar_mode: params.sarMode,
     cloud_mask_technique: params.cloudMaskTechnique,
     super_resolution: params.superResolution,

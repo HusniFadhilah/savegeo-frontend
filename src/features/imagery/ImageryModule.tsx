@@ -293,7 +293,9 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
 
 /**
  * Raw satellite imagery browser - pick an exact scene by its real acquisition
- * date+time (not a composite over a range) and view it as true-color RGB.
+ * date+time and view it as true-color RGB. Large Sentinel-2 AOIs are filled
+ * automatically with a date-range mosaic while the selected scene remains
+ * the provenance anchor.
  * Answers the user's direct request: "bagaimana bisa melihat citra satelit
  * utk tanggal beserta jam tertentu, tanpa harus land cover?" - every other
  * module (Vegetation/Carbon/LC-Change) always composites over a date range
@@ -390,6 +392,8 @@ export default function ImageryModule() {
   const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
   const [tileUrl, setTileUrl] = useState<string | null>(null);
+  const [tileRenderMode, setTileRenderMode] = useState<"scene" | "mosaic">("scene");
+  const [tileSceneCount, setTileSceneCount] = useState(1);
   const [tileOpacity, setTileOpacity] = useState(query.opacity ?? 1);
   const [gpuTileStatus, setGpuTileStatus] = useState<"processing" | "active" | "fallback_original" | "error">("processing");
 
@@ -433,6 +437,10 @@ export default function ImageryModule() {
   const searchRequestRef = useRef(0);
   const tileRequestRef = useRef(0);
   const renderOptionsKeyRef = useRef("");
+  const mosaicQueryRef = useRef({ startDate, endDate, maxCloudCover });
+  useEffect(() => {
+    mosaicQueryRef.current = { startDate, endDate, maxCloudCover };
+  }, [endDate, maxCloudCover, startDate]);
 
   // "Bandingkan 2 Waktu" (user request) - swipe/compare slider between two
   // individual scenes (not composites), reusing the same SwipeCompareMap
@@ -460,6 +468,7 @@ export default function ImageryModule() {
   );
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
+  const isSentinel2 = satellite === "sentinel2" || satellite === "sentinel2_l1c";
   const isCogProvider = Boolean(
     satelliteMeta?.source_kind &&
       ["maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac"].includes(satelliteMeta.source_kind),
@@ -521,6 +530,8 @@ export default function ImageryModule() {
     setFocusSceneId(null);
     setFocusNonce((value) => value + 1);
     setTileUrl(null);
+    setTileRenderMode("scene");
+    setTileSceneCount(1);
     setTileError(null);
     setTileLoading(false);
     setCompareSceneAId(null);
@@ -586,6 +597,8 @@ export default function ImageryModule() {
       setTileLoading(true);
       setTileError(null);
       setTileUrl(null);
+      setTileRenderMode("scene");
+      setTileSceneCount(1);
       try {
         if (isEsriWayback) {
           const waybackTile = sceneTilesById[scene.id] ?? (scene as WaybackScene).tile_url;
@@ -594,19 +607,28 @@ export default function ImageryModule() {
           setTileUrl(waybackTile);
           return;
         }
+        const mosaicQuery = mosaicQueryRef.current;
+        const mosaicEndDate = new Date(`${mosaicQuery.endDate}T00:00:00Z`);
+        mosaicEndDate.setUTCDate(mosaicEndDate.getUTCDate() + 1);
         const res = await getImagerySceneTile({
           satellite,
           sceneId: scene.id,
           aoi: aoi ? { geojson: aoi } : undefined,
+          autoMosaic: isSentinel2 && Boolean(aoi),
+          startDate: isSentinel2 && aoi ? mosaicQuery.startDate : undefined,
+          endDate: isSentinel2 && aoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
+          maxCloudCover: isSentinel2 && aoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
-      superResolution: tileSuperResolution,
+          superResolution: tileSuperResolution,
           cogAssetKey: isCogProvider ? effectiveCogAssetKey : undefined,
           cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
           cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
         });
         if (requestId !== tileRequestRef.current) return;
         setTileUrl(res.tile_url);
+        setTileRenderMode(res.render_mode ?? "scene");
+        setTileSceneCount(res.scene_count ?? 1);
       } catch (err) {
         if (requestId !== tileRequestRef.current) return;
         setTileError(err instanceof Error ? err.message : "Gagal memuat citra scene ini.");
@@ -626,6 +648,7 @@ export default function ImageryModule() {
       cogRescale,
       isCogProvider,
       isEsriWayback,
+      isSentinel2,
       renderOptionsKey,
       sarMode,
       satellite,
@@ -651,6 +674,8 @@ export default function ImageryModule() {
       setFocusSceneId(null);
       setFocusNonce((value) => value + 1);
       setTileUrl(null);
+      setTileRenderMode("scene");
+      setTileSceneCount(1);
     setTileError(null);
     setTileLoading(false);
     setSceneTilesById({});
@@ -1558,7 +1583,7 @@ export default function ImageryModule() {
         {viewMode === "single" && (
           <>
             {tileError && <div className="alert alert-danger py-2 mb-3">{tileError}</div>}
-            {selectedScene?.cloud_cover_pct != null && selectedScene.cloud_cover_pct > 60 && (
+            {tileRenderMode !== "mosaic" && selectedScene?.cloud_cover_pct != null && selectedScene.cloud_cover_pct > 60 && (
               <div className="alert alert-warning py-2 mb-3 small">
                 <i className="bi bi-cloud-haze2 me-1" />
                 Scene ini sangat berawan ({selectedScene.cloud_cover_pct}%). Tampilan abu-abu/pudar berasal dari citra
@@ -1569,6 +1594,13 @@ export default function ImageryModule() {
             {tileLoading && (
               <div className="alert alert-info py-2 mb-3">
                 <i className="fas fa-spinner fa-spin" /> Memuat citra scene...
+              </div>
+            )}
+            {!tileLoading && tileUrl && tileRenderMode === "mosaic" && (
+              <div className="alert alert-info py-2 mb-3 small">
+                <i className="bi bi-grid-3x3-gap me-1" />
+                AOI lebih besar dari satu scene Sentinel-2. Menampilkan mosaik {tileSceneCount} scene
+                pada rentang tanggal dan filter awan yang dipilih.
               </div>
             )}
 
@@ -1585,7 +1617,9 @@ export default function ImageryModule() {
                     <span className="imagery-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>Peta</span></span>
                     {selectedSceneId && (
                       <span className="imagery-accordion-scene">
-                        - menampilkan scene {formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}
+                        {tileRenderMode === "mosaic"
+                          ? `- mosaik ${tileSceneCount} scene pada rentang tanggal`
+                          : `- menampilkan scene ${formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}`}
                       </span>
                     )}
                   </span>
@@ -1663,7 +1697,7 @@ export default function ImageryModule() {
                             onStatus={setGpuTileStatus}
                           />
                         )}
-                        <RasterResolutionNotice layers={[{label: satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
+                        <RasterResolutionNotice layers={[{label: tileRenderMode === "mosaic" ? `${satelliteMeta?.name ?? "Sentinel-2"} · Mosaik` : satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
                         <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
                         {effectiveVisualEnhancement && <div className="small text-muted mt-1">GPU tile status: {gpuTileStatus}. Data analitik tetap memakai citra native.</div>}
                       </>
