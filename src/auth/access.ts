@@ -22,6 +22,7 @@ export const ADMIN_SECTION_PERMISSIONS: Record<string, string> = {
   ge: "credential.read",
   ag: "credential.read",
   ml: "model.read",
+  cc: "calibration.read",
   cf: "config.read",
   us: "users.read",
   sp: "satellite.read",

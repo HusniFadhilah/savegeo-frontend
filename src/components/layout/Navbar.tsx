@@ -91,7 +91,7 @@ export default function Navbar() {
                       <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
                     </Link>
                   </li>
-                  {isAuthenticated && !isViewer && isUserAuthenticated && (
+                  {isAuthenticated && !isViewer && (
                     <li>
                       <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
                       <i className="bi bi-shield-lock me-2" /> {t("auth.adminDashboard")}
