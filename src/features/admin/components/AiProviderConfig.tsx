@@ -123,9 +123,21 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                   options={isOR ? orOptions : []}
                   groupOrder={isOR ? GROUP_ORDER : undefined}
                   loading={isOR && orLoading}
-                  placeholder={isOR ? "Cari atau ketik nama model..." : "Kosong = default provider"}
+                  placeholder={
+                    isOR
+                      ? "Cari atau ketik nama model..."
+                      : currentProvider === "ollama"
+                        ? "Contoh: qwen3:8b (sesuai ollama list)"
+                        : "Kosong = default provider"
+                  }
                   allowCustomValue
                 />
+                {currentProvider === "ollama" && (
+                  <small className="text-muted d-block mt-1">
+                    Isi nama model yang terpasang di server GPU (`ollama list`). URL Ollama diatur pada baris
+                    <code>ollama_base_url</code>.
+                  </small>
+                )}
               </div>
               <span className="cfg-type" />
             </div>
