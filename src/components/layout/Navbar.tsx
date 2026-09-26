@@ -21,9 +21,21 @@ export default function Navbar() {
   const [statusOpen, setStatusOpen] = useState(false);
 
   const statusLabel =
-    state === "online" ? ` ${t("status.online")}` : state === "offline" ? ` ${t("status.offline")}` : ` ${t("status.connecting")}`;
+    state === "online"
+      ? ` ${t("status.online")}`
+      : state === "degraded"
+        ? ` ${t("status.degraded")}`
+        : state === "offline"
+          ? ` ${t("status.offline")}`
+          : ` ${t("status.connecting")}`;
   const statusBadgeClass =
-    state === "online" ? "bg-success-subtle text-success" : state === "offline" ? "bg-danger-subtle text-danger" : "bg-light text-dark";
+    state === "online"
+      ? "bg-success-subtle text-success"
+      : state === "degraded"
+        ? "bg-warning-subtle text-warning-emphasis"
+        : state === "offline"
+          ? "bg-danger-subtle text-danger"
+          : "bg-light text-dark";
 
   const activeIsAdmin = isAuthenticated;
   const activeUser = activeIsAdmin ? user : appUser;
