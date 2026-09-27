@@ -125,37 +125,51 @@ export default function CarbonCalibration() {
     finally { setBusy(false); }
   }
 
+  const totalPlots = datasets.reduce((sum, dataset) => sum + Number(dataset.manifest.plot_count ?? 0), 0);
+  const selectedStatus = selected?.status ?? "Not configured";
+  const statusClass = selected?.status === "validated" || selected?.status === "ready" ? "is-ready" : "is-draft";
+
   return (
     <section className="calibration-admin">
-      <div className="calibration-header">
+      <div className="calibration-header calibration-hero">
         <div>
           <div className="calibration-eyebrow">PT DAHANA · SUBANG · 2026</div>
-          <h2>{t("admin.calibration.title")}</h2>
+          <h2>{t("admin.calibration.title")} <span>Field reference workspace</span></h2>
           <p>{t("admin.calibration.subtitle")}</p>
+          <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Managed storage</span><span><i className="bi bi-diagram-3" /> Reproducible provenance</span><span><i className="bi bi-lock" /> Restricted dataset</span></div>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => void createDataset()} disabled={busy}>
+        <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> Workspace ready</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
           <i className="bi bi-plus-lg" /> {t("admin.calibration.create")}
-        </button>
+        </button></div>
       </div>
-      <div className="alert alert-warning d-flex gap-2 align-items-start">
+      <div className="calibration-metrics" aria-label="Calibration workspace summary">
+        <div className="calibration-metric"><span className="calibration-metric-icon green"><i className="bi bi-database" /></span><div><small>Datasets</small><strong>{datasets.length}</strong><span>registered sources</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon blue"><i className="bi bi-folder2-open" /></span><div><small>Files in view</small><strong>{files.length}</strong><span>{selected ? "selected dataset" : "select a dataset"}</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon amber"><i className="bi bi-geo-alt" /></span><div><small>Field plots</small><strong>{totalPlots}</strong><span>independent units</span></div></div>
+        <div className="calibration-metric"><span className={`calibration-metric-icon ${statusClass === "is-ready" ? "green" : "purple"}`}><i className="bi bi-activity" /></span><div><small>Active status</small><strong className="metric-status">{selectedStatus}</strong><span>{selected ? selected.dataset_id : "no active dataset"}</span></div></div>
+      </div>
+      <div className="calibration-notice">
+        <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Protected source workflow</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">READ-ONLY SOURCES</span>
+      </div>
+      <div className="alert alert-warning d-flex gap-2 align-items-start calibration-legacy-warning">
         <i className="bi bi-shield-exclamation" />
         <span>{t("admin.calibration.warning")}</span>
       </div>
-      <div className="admin-card calibration-import-wizard">
+      <div className="admin-card calibration-import-wizard calibration-surface-card">
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
         <div className="calibration-import-fields">
-          <label><span>{t("admin.calibration.revisedWorkbook")}</span><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /></label>
-          <label><span>{t("admin.calibration.previousWorkbook")}</span><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /></label>
-          <label><span>{t("admin.calibration.dem")}</span><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /></label>
+          <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? "Required · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? "Optional · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? "Optional · .tif / .tiff"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
         </div>
       </div>
       <div className="calibration-grid">
-        <div className="admin-card calibration-dataset-list">
+        <div className="admin-card calibration-dataset-list calibration-surface-card">
           <div className="admin-card-head"><h3>{t("admin.calibration.datasets")}</h3><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void reload()}><i className="bi bi-arrow-clockwise" /></button></div>
           {!datasets.length && <div className="empty-state">{t("admin.calibration.empty")}</div>}
           {datasets.map((dataset) => <button type="button" key={dataset.dataset_id} className={`calibration-dataset-row ${selected?.dataset_id === dataset.dataset_id ? "active" : ""}`} onClick={() => void selectDataset(dataset)}><strong>{dataset.name}</strong><span>{dataset.dataset_id} · {dataset.status}</span></button>)}
         </div>
-        <div className="admin-card calibration-detail">
+        <div className="admin-card calibration-detail calibration-surface-card">
           {!selected ? <div className="empty-state"><i className="bi bi-database-gear" /><p>{t("admin.calibration.selectHint")}</p></div> : <>
             <div className="admin-card-head"><div><h3>{selected.name}</h3><span className="stat-badge badge-amber">{selected.access}</span></div><span className="calibration-status">{selected.status}</span></div>
             <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{t("admin.calibration.allometric")}</strong></div></div>
