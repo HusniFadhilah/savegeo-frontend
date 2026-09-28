@@ -4578,6 +4578,17 @@
   gap: 10px;
 }
 
+.sg-mssel-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sg-mssel-option-row > i {
+  color: var(--primary-color, #2e7d32);
+  font-size: 0.9rem;
+}
+
 .imagery-accordion-card-header {
   display: flex;
   align-items: center;

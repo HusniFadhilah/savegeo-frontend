@@ -15,6 +15,7 @@ import { ApiError } from "@/services/apiClient";
 import type { RegionOption } from "@/types/api";
 import type { AoiFeature, AoiGeometry } from "@/types/map";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import MultiSearchableSelect from "@/components/ui/MultiSearchableSelect";
 import AsyncLocationSelect from "@/components/ui/AsyncLocationSelect";
 
 interface Props {
@@ -101,13 +102,13 @@ export default function AoiRegionTab({ onApply }: Props) {
   const [islandCode, setIslandCode] = useState("");
 
   const [provinces, setProvinces] = useState<RegionOption[]>([]);
-  const [provinceCode, setProvinceCode] = useState("");
+  const [provinceCodes, setProvinceCodes] = useState<string[]>([]);
   const [cities, setCities] = useState<RegionOption[]>([]);
-  const [cityCode, setCityCode] = useState("");
+  const [cityCodes, setCityCodes] = useState<string[]>([]);
   const [districts, setDistricts] = useState<RegionOption[]>([]);
-  const [districtCode, setDistrictCode] = useState("");
+  const [districtCodes, setDistrictCodes] = useState<string[]>([]);
   const [villages, setVillages] = useState<RegionOption[]>([]);
-  const [villageCode, setVillageCode] = useState("");
+  const [villageCodes, setVillageCodes] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,46 +129,46 @@ export default function AoiRegionTab({ onApply }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleProvinceChange(code: string) {
-    setProvinceCode(code);
-    setCityCode("");
-    setDistrictCode("");
-    setVillageCode("");
+  async function handleProvinceChange(codes: string[]) {
+    setProvinceCodes(codes);
+    setCityCodes([]);
+    setDistrictCodes([]);
+    setVillageCodes([]);
     setCities([]);
     setDistricts([]);
     setVillages([]);
-    if (!code) return;
+    if (!codes.length) return;
     try {
-      const r = await fetchCities(code);
-      setCities(r ?? []);
+      const results = await Promise.all(codes.map((code) => fetchCities(code)));
+      setCities(uniqueOptions(results.flat()));
     } catch {
       setError(t("carbon.aoiRegion.err.cities"));
     }
   }
 
-  async function handleCityChange(code: string) {
-    setCityCode(code);
-    setDistrictCode("");
-    setVillageCode("");
+  async function handleCityChange(codes: string[]) {
+    setCityCodes(codes);
+    setDistrictCodes([]);
+    setVillageCodes([]);
     setDistricts([]);
     setVillages([]);
-    if (!code) return;
+    if (!codes.length) return;
     try {
-      const r = await fetchDistricts(code);
-      setDistricts(r ?? []);
+      const results = await Promise.all(codes.map((code) => fetchDistricts(code)));
+      setDistricts(uniqueOptions(results.flat()));
     } catch {
       setError(t("carbon.aoiRegion.err.districts"));
     }
   }
 
-  async function handleDistrictChange(code: string) {
-    setDistrictCode(code);
-    setVillageCode("");
+  async function handleDistrictChange(codes: string[]) {
+    setDistrictCodes(codes);
+    setVillageCodes([]);
     setVillages([]);
-    if (!code) return;
+    if (!codes.length) return;
     try {
-      const r = await fetchVillages(code);
-      setVillages(r ?? []);
+      const results = await Promise.all(codes.map((code) => fetchVillages(code)));
+      setVillages(uniqueOptions(results.flat()));
     } catch {
       setError(t("carbon.aoiRegion.err.villages"));
     }
@@ -207,35 +208,46 @@ export default function AoiRegionTab({ onApply }: Props) {
 
       // admin drill-down: deepest selected level wins
       let endpoint: "province" | "city" | "district" | "village" = "province";
-      let code = provinceCode;
-      let name = provinces.find((p) => p.code === provinceCode)?.name || "";
-      if (!provinceCode) {
+      let codes = provinceCodes;
+      let selectedOptions = provinces;
+      if (!provinceCodes.length) {
         setError(t("carbon.aoiRegion.err.selectProvince"));
         return;
       }
-      if (cityCode) {
+      if (cityCodes.length) {
         endpoint = "city";
-        code = cityCode;
-        name = cities.find((c) => c.code === cityCode)?.name || name;
+        codes = cityCodes;
+        selectedOptions = cities;
       }
-      if (districtCode) {
+      if (districtCodes.length) {
         endpoint = "district";
-        code = districtCode;
-        name = districts.find((d) => d.code === districtCode)?.name || name;
+        codes = districtCodes;
+        selectedOptions = districts;
       }
-      if (villageCode) {
+      if (villageCodes.length) {
         endpoint = "village";
-        code = villageCode;
-        name = villages.find((v) => v.code === villageCode)?.name || name;
+        codes = villageCodes;
+        selectedOptions = villages;
       }
-      const geometry = await fetchRegionGeometry(endpoint, code);
-      if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
-      onApply(toFeature(geometry), name);
+      const geometries = await Promise.all(codes.map((code) => fetchRegionGeometry(endpoint, code)));
+      const features = geometries.filter(Boolean).map(toFeature);
+      if (!features.length) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
+      const feature: AoiFeature = features.length === 1
+        ? features[0]
+        : { type: "Feature", geometry: mergeToMultiPolygon(features.map((item) => item.geometry)), properties: {} };
+      const name = codes
+        .map((code) => selectedOptions.find((option) => option.code === code)?.name || code)
+        .join(", ");
+      onApply(feature, name);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("carbon.aoiRegion.err.loadRegionFailed"));
     } finally {
       setLoading(false);
     }
+  }
+
+  function uniqueOptions(options: RegionOption[]): RegionOption[] {
+    return Array.from(new Map(options.map((option) => [option.code, option])).values());
   }
 
   const SCOPES: { key: Scope; label: string }[] = [
@@ -263,8 +275,8 @@ export default function AoiRegionTab({ onApply }: Props) {
         <div className="row">
           <div className="col-md-6 mb-3">
             <label className="form-label">{t("carbon.aoiRegion.province")}</label>
-            <SearchableSelect
-              value={provinceCode}
+            <MultiSearchableSelect
+              value={provinceCodes}
               onChange={handleProvinceChange}
               options={provinces.map((p) => ({ value: p.code, label: p.name }))}
               placeholder={t("carbon.aoiRegion.provincePlaceholder")}
@@ -273,34 +285,34 @@ export default function AoiRegionTab({ onApply }: Props) {
           </div>
           <div className="col-md-6 mb-3">
             <label className="form-label">{t("carbon.aoiRegion.city")}</label>
-            <SearchableSelect
-              value={cityCode}
+            <MultiSearchableSelect
+              value={cityCodes}
               onChange={handleCityChange}
               options={cities.map((c) => ({ value: c.code, label: c.name }))}
               placeholder={t("carbon.aoiRegion.cityPlaceholder")}
-              disabled={!provinceCode}
+              disabled={!provinceCodes.length}
               clearable
             />
           </div>
           <div className="col-md-6 mb-3">
             <label className="form-label">{t("carbon.aoiRegion.district")}</label>
-            <SearchableSelect
-              value={districtCode}
+            <MultiSearchableSelect
+              value={districtCodes}
               onChange={handleDistrictChange}
               options={districts.map((d) => ({ value: d.code, label: d.name }))}
               placeholder={t("carbon.aoiRegion.districtPlaceholder")}
-              disabled={!cityCode}
+              disabled={!cityCodes.length}
               clearable
             />
           </div>
           <div className="col-md-6 mb-3">
             <label className="form-label">{t("carbon.aoiRegion.village")}</label>
-            <SearchableSelect
-              value={villageCode}
-              onChange={setVillageCode}
+            <MultiSearchableSelect
+              value={villageCodes}
+              onChange={setVillageCodes}
               options={villages.map((v) => ({ value: v.code, label: v.name }))}
               placeholder={t("carbon.aoiRegion.villagePlaceholder")}
-              disabled={!districtCode}
+              disabled={!districtCodes.length}
               clearable
             />
           </div>

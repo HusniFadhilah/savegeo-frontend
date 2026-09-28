@@ -67,6 +67,7 @@ export default function CarbonModule() {
 
   const yearMin = getInt("year.min", 2015);
   const yearMax = getInt("year.max", new Date().getFullYear());
+  const currentMonth = new Date().getMonth() + 1;
   const visMin = getInt("carbon.vis_min", 0);
   const visMax = getInt("carbon.vis_max", 200);
   const visPalette = getArray("carbon.vis_palette");
@@ -136,8 +137,8 @@ export default function CarbonModule() {
     includeImprobableClasses: false,
     dateMode: "year",
     startMonth: 1,
-    endMonth: 6,
-    selectedMonth: 7,
+    endMonth: currentMonth,
+    selectedMonth: currentMonth,
     startDate: `${yearMax}-01-01`,
     endDate: `${yearMax}-12-31`,
   });
