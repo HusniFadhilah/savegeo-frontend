@@ -733,7 +733,17 @@ export default function ImageryModule() {
       if (scenesByNewest[0]) {
         const defaultAssetKey = scenesByNewest[0].default_asset_key || "visual";
         setCogAssetKey(defaultAssetKey);
-        await loadSceneTile(scenesByNewest[0], defaultAssetKey);
+        // Prefer the AOI mosaic for the first Sentinel-2 render whenever the
+        // search returned multiple matching granules. This avoids briefly
+        // showing only the newest granule for an AOI that spans scene
+        // footprints. A single returned granule still goes through the
+        // backend's AOI-footprint check via autoMosaic.
+        const initialMosaicAvailable = isSentinel2 && Boolean(aoi) && scenesByNewest.length > 1;
+        if (initialMosaicAvailable) {
+          setMosaicRequestedMode(true);
+          setSceneRequestedMode(false);
+        }
+        await loadSceneTile(scenesByNewest[0], defaultAssetKey, initialMosaicAvailable ? true : undefined);
       }
     } catch (err) {
       if (requestId !== searchRequestRef.current) return;
