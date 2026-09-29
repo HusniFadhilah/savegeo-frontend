@@ -144,13 +144,27 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
     try {
       const results = await Promise.allSettled(selectedIds.map((id) => updateDisasterEvent(id, payload)));
       const failed = results.filter((result) => result.status === "rejected").length;
-      setSelectedIds([]);
+      const failedIds = selectedIds.filter((_, index) => results[index]?.status === "rejected");
+      const failureDetails = results.flatMap((result, index) => {
+        if (result.status !== "rejected") return [];
+        const event = events.find((item) => item.id === selectedIds[index]);
+        const reason = result.reason instanceof Error ? result.reason.message : "Gagal memperbarui";
+        return [`${event?.name || `ID ${selectedIds[index]}`}: ${reason}`];
+      });
+      setSelectedIds(failedIds);
       setBulkEditOpen(false);
       setQuickStatus("");
       setBulkEditStatus("");
       setBulkEditType("");
       setBulkEditSeverity("");
-      notify(failed ? `${results.length - failed} diperbarui, ${failed} gagal` : `${results.length} kejadian ${message}`, failed ? "e" : "s");
+      const details = failureDetails.slice(0, 2).join(" | ");
+      const suffix = failureDetails.length > 2 ? ` | +${failureDetails.length - 2} lainnya` : "";
+      notify(
+        failed
+          ? `${results.length - failed} diperbarui, ${failed} gagal. ${details}${suffix}`
+          : `${results.length} kejadian ${message}`,
+        failed ? "e" : "s",
+      );
       await load();
     } finally {
       setBulkBusy(false);

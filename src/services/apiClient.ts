@@ -38,6 +38,36 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+function formatErrorValue(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value;
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const message = formatErrorValue(record.message) ?? formatErrorValue(record.error);
+  const reasons = Array.isArray(record.reasons)
+    ? record.reasons.map((reason) => formatErrorValue(reason) ?? String(reason)).filter(Boolean)
+    : [];
+  if (message && reasons.length) return `${message}: ${reasons.join("; ")}`;
+  if (message) return message;
+  if (reasons.length) return reasons.join("; ");
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+
+function formatApiErrorMessage(payload: unknown, status: number): string {
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    for (const key of ["message", "error", "detail"]) {
+      const message = formatErrorValue(record[key]);
+      if (message) return message;
+    }
+  }
+  return `Request failed with status ${status}`;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, auth = false, timeoutMs = DEFAULT_TIMEOUT_MS, isFormData, headers, ...rest } =
     options;
@@ -82,17 +112,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     : await res.text().catch(() => null);
 
   if (!res.ok) {
-    const message =
-      (parsed && typeof parsed === "object" && "message" in parsed
-        ? String((parsed as Record<string, unknown>).message)
-        : null) ||
-      (parsed && typeof parsed === "object" && "error" in parsed
-        ? String((parsed as Record<string, unknown>).error)
-        : null) ||
-      (parsed && typeof parsed === "object" && "detail" in parsed
-        ? String((parsed as Record<string, unknown>).detail)
-        : null) ||
-      `Request failed with status ${res.status}`;
+    const message = formatApiErrorMessage(parsed, res.status);
     throw new ApiError(message, res.status, parsed);
   }
 
