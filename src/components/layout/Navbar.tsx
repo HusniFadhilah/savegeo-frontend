@@ -40,6 +40,10 @@ export default function Navbar() {
   const activeIsAdmin = isAuthenticated;
   const activeUser = activeIsAdmin ? user : appUser;
   const isViewer = activeIsAdmin && isViewerRole(user?.role);
+  // A non-viewer admin is routed to the admin workspace by /dashboard, so
+  // showing both dashboard links would expose two menu items for the same
+  // destination. Viewer/admin-less sessions still need the regular app link.
+  const showRegularDashboard = !isAuthenticated || isViewer;
 
   const handleLogout = () => {
     if (isAuthenticated) logout();
@@ -98,11 +102,13 @@ export default function Navbar() {
                       <i className="bi bi-person-circle" /> {activeUser?.username}
                     </h6>
                   </li>
-                  <li>
-                    <Link className="dropdown-item" to="/dashboard" onClick={() => setMenuOpen(false)}>
-                      <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
-                    </Link>
-                  </li>
+                  {showRegularDashboard && (
+                    <li>
+                      <Link className="dropdown-item" to="/dashboard" onClick={() => setMenuOpen(false)}>
+                        <i className="bi bi-speedometer2 me-2" /> {t("auth.dashboard")}
+                      </Link>
+                    </li>
+                  )}
                   {isAuthenticated && !isViewer && (
                     <li>
                       <Link className="dropdown-item" to="/admin" onClick={() => setMenuOpen(false)}>
