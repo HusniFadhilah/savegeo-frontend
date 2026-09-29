@@ -122,8 +122,11 @@ function buildLegend(
     const statsMax = Number(layer?.statistics?.max);
     const visParamMin = Number(layer?.vis_params?.min);
     const visParamMax = Number(layer?.vis_params?.max);
-    const legendMin = Number.isFinite(statsMin) ? statsMin : Number.isFinite(visParamMin) ? visParamMin : visMin;
-    const legendMax = Number.isFinite(statsMax) ? statsMax : Number.isFinite(visParamMax) ? visParamMax : visMax;
+    // Labels describe the colors used by the tile. Prefer its visualization
+    // range over raw statistics, which may include values outside the rendered
+    // stretch (or use a different range after auto visualization).
+    const legendMin = Number.isFinite(visParamMin) ? visParamMin : Number.isFinite(statsMin) ? statsMin : visMin;
+    const legendMax = Number.isFinite(visParamMax) ? visParamMax : Number.isFinite(statsMax) ? statsMax : visMax;
     const safeMax = legendMax > legendMin ? legendMax : legendMin + 1;
     const n = colors.length;
     const fmt = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toString() : Number(v.toFixed(2)).toString());

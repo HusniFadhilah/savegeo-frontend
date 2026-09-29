@@ -148,7 +148,10 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   },
 ];
 
-export const DEFAULT_CARBON_REFERENCE_DATASET = "WCMC";
+// GEDI L4A is the default reference for carbon-stock estimation. Keep this
+// value separate from the fallback list so the live API catalog can still
+// provide labels, compatibility counts, and admin overrides.
+export const DEFAULT_CARBON_REFERENCE_DATASET = "GEDI_L4A_MONTHLY";
 
 /**
  * Fallback only - CarbonParamsPanel.tsx prefers each dataset's own

@@ -3,7 +3,11 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechnique, CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { FALLBACK_CARBON_REFERENCE_DATASETS, carbonDatasetYearOptions } from "@/features/carbon/referenceDatasets";
+import {
+  DEFAULT_CARBON_REFERENCE_DATASET,
+  FALLBACK_CARBON_REFERENCE_DATASETS,
+  carbonDatasetYearOptions,
+} from "@/features/carbon/referenceDatasets";
 import type {
   CarbonModelInfo,
   CarbonModelListItem,
@@ -84,6 +88,15 @@ function compareModels(a: CarbonModelListItem, b: CarbonModelListItem): number {
   return a.name.localeCompare(b.name);
 }
 
+function pickDefaultModel(models: CarbonModelListItem[], referenceDataset: string): CarbonModelListItem | null {
+  if (!models.length) return null;
+  if (referenceDataset === DEFAULT_CARBON_REFERENCE_DATASET) {
+    const gediL4aModel = models.find((model) => /gedi[._-]?l4a/i.test(model.name));
+    if (gediL4aModel) return gediL4aModel;
+  }
+  return models[0];
+}
+
 type CompatibilityTone = "green" | "gray" | "orange";
 
 function compatibilityInfo(
@@ -150,7 +163,8 @@ export default function CarbonParamsPanel({
         if (cancelled) return;
         setDatasets(list);
         if (list.length > 0 && !list.some((d) => d.value === params.referenceDataset)) {
-          onParamsChange({ referenceDataset: list[0].value });
+          const preferred = list.find((d) => d.value === DEFAULT_CARBON_REFERENCE_DATASET);
+          onParamsChange({ referenceDataset: preferred?.value ?? list[0].value });
         }
       })
       .catch(() => {
@@ -190,7 +204,7 @@ export default function CarbonParamsPanel({
         if (cancelled) return;
         const orderedModels = [...list].sort(compareModels);
         setModels(orderedModels);
-        const first = orderedModels[0] || null;
+        const first = pickDefaultModel(orderedModels, params.referenceDataset);
         if (first) {
           onModelSelect(first);
           // Changing the dataset must not silently turn off direct

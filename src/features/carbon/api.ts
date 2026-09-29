@@ -173,6 +173,10 @@ export async function analyzeCarbon({
       vis_min: visMin,
       vis_max: visMax,
       vis_palette: visPalette.length ? visPalette : undefined,
+      // The map should use the AOI's observed density range for its color
+      // stretch. This keeps the tile and legend useful for small AOIs whose
+      // values occupy only a fraction of the global 0-200 configuration.
+      auto_vis: true,
     },
     { timeoutMs: CARBON_TIMEOUT_MS },
   );
@@ -213,6 +217,7 @@ export function analyzeCarbonDelta(args: AnalyzeCarbonDeltaArgs): Promise<Carbon
       vis_min: args.visMin,
       vis_max: args.visMax,
       vis_palette: args.visPalette.length ? args.visPalette : undefined,
+      auto_vis: true,
     },
     { timeoutMs: CARBON_DELTA_TIMEOUT_MS },
   );
