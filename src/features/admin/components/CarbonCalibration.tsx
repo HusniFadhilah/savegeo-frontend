@@ -151,10 +151,6 @@ export default function CarbonCalibration() {
       <div className="calibration-notice">
         <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Alur sumber terlindungi</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">SUMBER HANYA BACA</span>
       </div>
-      <div className="alert alert-warning d-flex gap-2 align-items-start calibration-legacy-warning">
-        <i className="bi bi-shield-exclamation" />
-        <span>{t("admin.calibration.warning")}</span>
-      </div>
       <div className="admin-card calibration-import-wizard calibration-surface-card">
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
         <div className="calibration-import-fields">
