@@ -3,6 +3,7 @@ import { listSatelliteProvidersAdmin, resetSatelliteProvider, saveSatelliteProvi
 import type { SatelliteProviderRow } from "../types";
 import { useAdmin } from "../AdminContext";
 import TablePagination from "@/components/ui/TablePagination";
+import BulkTableToolbar from "./BulkTableToolbar";
 
 const PAGE_SIZE = 10;
 
@@ -48,6 +49,8 @@ export default function SatelliteProviders() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -76,6 +79,20 @@ export default function SatelliteProviders() {
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const pageRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const selectableRows = pageRows.filter((row) => row.has_override);
+  const allPageSelected = selectableRows.length > 0 && selectableRows.every((row) => selectedKeys.includes(row.key));
+  const toggleSelected = (key: string) => setSelectedKeys((keys) => (keys.includes(key) ? keys.filter((value) => value !== key) : [...keys, key]));
+  const toggleAllPage = () => setSelectedKeys((keys) => (allPageSelected ? keys.filter((key) => !selectableRows.some((row) => row.key === key)) : Array.from(new Set([...keys, ...selectableRows.map((row) => row.key)]))));
+  const handleBulkReset = async () => {
+    if (!selectedKeys.length || !confirm(`Hapus override pada ${selectedKeys.length} provider terpilih?`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedKeys.map((key) => resetSatelliteProvider(key)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setSelectedKeys([]);
+    notify(failed ? `${results.length - failed} override direset, ${failed} gagal` : `${results.length} override direset`, failed ? "e" : "s");
+    load();
+    setBulkBusy(false);
+  };
 
   const startEdit = (row: SatelliteProviderRow) => {
     setEditingKey(row.key);
@@ -147,9 +164,16 @@ export default function SatelliteProviders() {
           </div>
         )}
 
+        <BulkTableToolbar selectedCount={selectedKeys.length} onClear={() => setSelectedKeys([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkReset}>
+            <i className="bi bi-arrow-counterclockwise" /> {bulkBusy ? "Mereset..." : "Reset override terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
+              <col style={{ width: "3.5rem" }} />
               <col style={{ width: "10%" }} />
               <col style={{ width: "16%" }} />
               <col style={{ width: "12%" }} />
@@ -161,6 +185,7 @@ export default function SatelliteProviders() {
             </colgroup>
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua provider dengan override di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>Key</th>
                 <th>Nama</th>
                 <th>Provider</th>
@@ -174,14 +199,14 @@ export default function SatelliteProviders() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {search ? "Tidak ada provider yang cocok." : "Belum ada provider satelit."}
                   </td>
                 </tr>
@@ -191,6 +216,7 @@ export default function SatelliteProviders() {
                   const isEditing = editingKey === row.key;
                   return (
                     <tr key={row.key}>
+                      <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih provider ${row.key}`} checked={selectedKeys.includes(row.key)} disabled={!row.has_override} onChange={() => toggleSelected(row.key)} /></td>
                       <td>
                         <code>{row.key}</code>
                       </td>

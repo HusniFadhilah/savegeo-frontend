@@ -7906,3 +7906,19 @@ html[data-theme="dark"] .wildfire-layer-error,
 html[data-theme="dark"] .wildfire-data-error,
 .dark-mode .wildfire-layer-error,
 .dark-mode .wildfire-data-error { border-color: #6f3b35; background: #3b2421; color: #ffc8bf; }
+
+.admin-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin: 0 0 .7rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: .45rem;
+  background: var(--surface-muted, rgba(148, 163, 184, .08));
+  color: var(--text);
+  font-size: .78rem;
+}
+.admin-bulk-toolbar-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.admin-table-check { width: 1rem; height: 1rem; accent-color: var(--primary, #238636); cursor: pointer; }

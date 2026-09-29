@@ -7,6 +7,7 @@ import type { AdminRole, AdminUserRow } from "../types";
 import PasswordChange from "./PasswordChange";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { hasAdminPermission } from "@/auth/access";
+import BulkTableToolbar from "./BulkTableToolbar";
 
 interface FormState {
   id: number | null;
@@ -51,6 +52,8 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const canAssignFullAccess = hasAdminPermission(me, "secret.write");
 
   useEffect(() => {
@@ -63,6 +66,20 @@ export default function AdminUsers() {
   }, []);
 
   const reload = () => setReloadKey((k) => k + 1);
+  const selectableRows = me ? rows.filter((u) => me.id !== u.id && (!me.role || Boolean(u.role))) : [];
+  const allPageSelected = selectableRows.length > 0 && selectableRows.every((u) => selectedIds.includes(u.id));
+  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !selectableRows.some((u) => u.id === id)) : Array.from(new Set([...ids, ...selectableRows.map((u) => u.id)]))));
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} pengguna terpilih?`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedIds.map((id) => deleteAdminUser(id)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setSelectedIds([]);
+    notify(failed ? `${results.length - failed} pengguna dihapus, ${failed} gagal` : `${results.length} pengguna dihapus`, failed ? "e" : "s");
+    reload();
+    setBulkBusy(false);
+  };
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -221,10 +238,17 @@ export default function AdminUsers() {
           </div>
         )}
 
+        <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
+            <i className="bi bi-trash3" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua pengguna di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>{t("admin.users.user")}</th>
                 <th>{t("admin.users.role")}</th>
                 <th>{t("admin.status")}</th>
@@ -236,21 +260,21 @@ export default function AdminUsers() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {t("admin.loading")}
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {t("admin.users.empty")}
                   </td>
                 </tr>
@@ -259,6 +283,7 @@ export default function AdminUsers() {
                 !error &&
                 rows.map((u) => (
                   <tr key={u.id}>
+                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
                     <td>
                       <strong>{u.username}</strong>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
@@ -279,7 +304,7 @@ export default function AdminUsers() {
                           className="btn-xs danger"
                           title={t("admin.delete")}
                           aria-label={t("admin.delete")}
-                          disabled={busyId === u.id || me?.id === u.id}
+                          disabled={busyId === u.id || me?.id === u.id || bulkBusy}
                           onClick={() => handleDelete(u)}
                         >
                           <i className="bi bi-trash3" />

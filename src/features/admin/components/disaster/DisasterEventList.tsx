@@ -3,6 +3,7 @@ import TablePagination from "@/components/ui/TablePagination";
 import { deleteDisasterEvent, listDisasterEvents } from "../../api";
 import type { DisasterEvent } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import BulkTableToolbar from "../BulkTableToolbar";
 
 const DISASTER_TYPE_LABEL: Record<string, string> = {
   flood: "Banjir",
@@ -71,6 +72,8 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -106,10 +109,26 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
 
   useEffect(() => {
     setPage(0);
+    setSelectedIds([]);
   }, [statusFilter, typeFilter, severityFilter, yearFilter, search]);
 
   const pageCount = Math.max(1, Math.ceil(events.length / PAGE_SIZE));
   const pageRows = events.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const pageIds = pageRows.map((ev) => ev.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !pageIds.includes(id)) : Array.from(new Set([...ids, ...pageIds]))));
+
+  const doBulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} kejadian bencana terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedIds.map((id) => deleteDisasterEvent(id)));
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setSelectedIds([]);
+    notify(failed ? `${results.length - failed} dihapus, ${failed} gagal` : `${results.length} kejadian dihapus`, failed ? "e" : "s");
+    await load();
+    setBulkBusy(false);
+  };
 
   const doDelete = async (ev: DisasterEvent) => {
     if (!confirm(`Hapus kejadian bencana "${ev.name}"? Tindakan ini tidak bisa dibatalkan.`)) return;
@@ -182,10 +201,17 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && `${events.length} entri`}</span>
         </div>
 
+        <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={doBulkDelete}>
+            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
+              <col style={{ width: "3.5rem" }} />
               <col style={{ width: "24%" }} />
               <col style={{ width: "14%" }} />
               <col style={{ width: "11%" }} />
@@ -196,6 +222,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
             </colgroup>
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua kejadian di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>Nama</th>
                 <th>Jenis</th>
                 <th>Tanggal</th>
@@ -208,21 +235,21 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada kejadian bencana. Buat kejadian baru untuk memulai.
                   </td>
                 </tr>
@@ -231,6 +258,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
                 !error &&
                 pageRows.map((ev) => (
                   <tr key={ev.id}>
+                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${ev.name}`} checked={selectedIds.includes(ev.id)} onChange={() => toggleSelected(ev.id)} /></td>
                     <td title={ev.name}>{ev.name}</td>
                     <td>
                       <span className="badge-label">{DISASTER_TYPE_LABEL[ev.disaster_type] || ev.disaster_type}</span>
@@ -272,7 +300,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
                         type="button"
                         className="btn-sm danger"
                         style={{ padding: "2px 6px", fontSize: 10, marginLeft: 3 }}
-                        disabled={busyId === ev.id}
+                        disabled={busyId === ev.id || bulkBusy}
                         onClick={() => doDelete(ev)}
                       >
                         Hapus

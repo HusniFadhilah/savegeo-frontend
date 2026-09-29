@@ -5,6 +5,7 @@ import { useAdmin } from "../AdminContext";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import BulkTableToolbar from "./BulkTableToolbar";
 
 const ALGOS = ["Ridge", "Lasso", "Linear", "ElasticNet", "RandomForest", "XGBoost"];
 const TYPES = ["carbon", "vegetation", "landcover"];
@@ -74,6 +75,8 @@ export default function ModelRegistry() {
     nextPage, prevPage, reload,
   } = useServerTable<MlModel>("/admin/models");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState("");
@@ -198,6 +201,20 @@ export default function ModelRegistry() {
     }
   };
 
+  const allPageSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !rows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...rows.map((row) => row.id)]))));
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} model terpilih?`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedIds.map((id) => deleteModel(id)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setSelectedIds([]);
+    notify(failed ? `${results.length - failed} model dihapus, ${failed} gagal` : `${results.length} model dihapus`, failed ? "e" : "s");
+    await reload();
+    setBulkBusy(false);
+  };
+
   return (
     <div className="card">
       <div className="card-header-custom">
@@ -300,9 +317,16 @@ export default function ModelRegistry() {
           </div>
         </div>
 
+        <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
+            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
+              <col style={{ width: "3.5rem" }} />
               <col style={{ width: "20%" }} />
               <col style={{ width: "9%" }} />
               <col style={{ width: "10%" }} />
@@ -313,6 +337,7 @@ export default function ModelRegistry() {
             </colgroup>
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua model di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>Model</th>
                 <th>Tipe</th>
                 <th>Algoritma</th>
@@ -325,21 +350,21 @@ export default function ModelRegistry() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada model. Upload model ML terlebih dahulu.
                   </td>
                 </tr>
@@ -352,6 +377,7 @@ export default function ModelRegistry() {
                   const updatedAt = m.updated_at ? new Date(m.updated_at).toLocaleDateString("id-ID") : "—";
                   return (
                     <tr key={m.id}>
+                      <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${m.name}`} checked={selectedIds.includes(m.id)} onChange={() => toggleSelected(m.id)} /></td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{m.name || "—"}</div>
                         <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
@@ -378,14 +404,14 @@ export default function ModelRegistry() {
                       </td>
                       <td>
                         {!m.is_default && (
-                          <button type="button" className="btn-sm" disabled={busyId === m.id} onClick={() => doSetDefault(m.id)}>
+                          <button type="button" className="btn-sm" disabled={busyId === m.id || bulkBusy} onClick={() => doSetDefault(m.id)}>
                             Set default
                           </button>
                         )}
                         <button
                           type="button"
                           className="btn-sm"
-                          disabled={busyId === m.id}
+                          disabled={busyId === m.id || bulkBusy}
                           onClick={() => doToggleActive(m.id, m.is_active)}
                         >
                           {m.is_active ? "Nonaktifkan" : "Aktifkan"}
@@ -394,7 +420,7 @@ export default function ModelRegistry() {
                           type="button"
                           className="btn-sm danger"
                           style={{ marginLeft: 3 }}
-                          disabled={busyId === m.id}
+                          disabled={busyId === m.id || bulkBusy}
                           onClick={() => doDelete(m.id)}
                         >
                           Hapus

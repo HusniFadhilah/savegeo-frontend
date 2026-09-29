@@ -11,6 +11,7 @@ import {
 import { INDUSTRY_LABEL, INDUSTRY_OPTIONS, SOURCE_LABEL } from "../types";
 import type { CompanyBoundaryFull } from "../types";
 import { useAdmin } from "../AdminContext";
+import BulkTableToolbar from "./BulkTableToolbar";
 
 const GEOJSON_TYPES = new Set([
   "Feature",
@@ -58,6 +59,8 @@ export default function CompanyBoundaries() {
     extraParams: industryFilter ? { industry_type: industryFilter } : {},
   });
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // manual add form
   const [formOpen, setFormOpen] = useState(false);
@@ -200,6 +203,20 @@ export default function CompanyBoundaries() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const allPageSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !rows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...rows.map((row) => row.id)]))));
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} batas perusahaan terpilih?`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedIds.map((id) => deleteCompany(id)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setSelectedIds([]);
+    notify(failed ? `${results.length - failed} dihapus, ${failed} gagal` : `${results.length} batas perusahaan dihapus`, failed ? "e" : "s");
+    await reload();
+    setBulkBusy(false);
   };
 
   const doImportOSM = async () => {
@@ -449,10 +466,17 @@ export default function CompanyBoundaries() {
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && `${recordsFiltered} entri`}</span>
         </div>
 
+        <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
+            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
+              <col style={{ width: "3.5rem" }} />
               <col style={{ width: "22%" }} />
               <col style={{ width: "18%" }} />
               <col style={{ width: "11%" }} />
@@ -464,6 +488,7 @@ export default function CompanyBoundaries() {
             </colgroup>
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua batas perusahaan di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>Nama Konsesi</th>
                 <th>Perusahaan</th>
                 <th>Tipe</th>
@@ -477,21 +502,21 @@ export default function CompanyBoundaries() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada data. Tambah manual atau import dari open data.
                   </td>
                 </tr>
@@ -500,6 +525,7 @@ export default function CompanyBoundaries() {
                 !error &&
                 rows.map((c) => (
                   <tr key={c.id}>
+                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${c.name}`} checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} /></td>
                     <td title={c.name}>{c.name.length > 30 ? `${c.name.slice(0, 28)}…` : c.name}</td>
                     <td>{c.company_name || "—"}</td>
                     <td>
@@ -515,7 +541,7 @@ export default function CompanyBoundaries() {
                         className="btn-sm"
                         style={{ padding: "2px 6px", fontSize: 10 }}
                         title={c.is_active ? "Nonaktifkan" : "Aktifkan"}
-                        disabled={busyId === c.id}
+                        disabled={busyId === c.id || bulkBusy}
                         onClick={() => doToggleActive(c.id, c.is_active)}
                       >
                         <i className={`bi ${c.is_active ? "bi-eye" : "bi-eye-slash"}`} />
@@ -524,7 +550,7 @@ export default function CompanyBoundaries() {
                         type="button"
                         className="btn-sm danger"
                         style={{ padding: "2px 6px", fontSize: 10 }}
-                        disabled={busyId === c.id}
+                        disabled={busyId === c.id || bulkBusy}
                         onClick={() => doDelete(c.id, c.name)}
                       >
                         <i className="bi bi-trash" />

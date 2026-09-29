@@ -4,6 +4,7 @@ import type { GeeCredential } from "../types";
 import { useAdmin } from "../AdminContext";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
+import BulkTableToolbar from "./BulkTableToolbar";
 
 const MAX_FILE_BYTES = 1 * 1024 * 1024; // 1 MB — service-account JSON keys are tiny
 
@@ -26,6 +27,8 @@ export default function GeeCredentials() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const validateFile = (f: File): string | null => {
     if (!f.name.toLowerCase().endsWith(".json")) return "File harus berformat .json";
@@ -96,6 +99,21 @@ export default function GeeCredentials() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const selectableRows = rows.filter((row) => !row.is_active);
+  const allPageSelected = selectableRows.length > 0 && selectableRows.every((row) => selectedIds.includes(row.id));
+  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !selectableRows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...selectableRows.map((row) => row.id)]))));
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} credential nonaktif terpilih?`)) return;
+    setBulkBusy(true);
+    const results = await Promise.allSettled(selectedIds.map((id) => deleteGeeCredential(id)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setSelectedIds([]);
+    notify(failed ? `${results.length - failed} credential dihapus, ${failed} gagal` : `${results.length} credential dihapus`, failed ? "e" : "s");
+    await reload();
+    setBulkBusy(false);
   };
 
   return (
@@ -180,9 +198,16 @@ export default function GeeCredentials() {
           </div>
         </div>
 
+        <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
+            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+          </button>
+        </BulkTableToolbar>
+
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
+              <col style={{ width: "3.5rem" }} />
               <col style={{ width: "15%" }} />
               <col style={{ width: "14%" }} />
               <col style={{ width: "25%" }} />
@@ -192,6 +217,7 @@ export default function GeeCredentials() {
             </colgroup>
             <thead>
               <tr>
+                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua credential nonaktif di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <th>Label</th>
                 <th>Project ID</th>
                 <th>Email</th>
@@ -203,21 +229,21 @@ export default function GeeCredentials() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada credential. Upload service account JSON.
                   </td>
                 </tr>
@@ -226,6 +252,7 @@ export default function GeeCredentials() {
                 !error &&
                 rows.map((c) => (
                   <tr key={c.id}>
+                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih credential ${c.label}`} checked={selectedIds.includes(c.id)} disabled={c.is_active} onChange={() => toggleSelected(c.id)} /></td>
                     <td title={c.label}>{c.label}</td>
                     <td className="tbl-mono" title={c.project_id}>
                       {c.project_id}
@@ -247,7 +274,7 @@ export default function GeeCredentials() {
                           <button
                             type="button"
                             className="btn-sm success"
-                            disabled={busyId === c.id}
+                            disabled={busyId === c.id || bulkBusy}
                             onClick={() => handleActivate(c.id)}
                           >
                             Aktifkan
@@ -256,7 +283,7 @@ export default function GeeCredentials() {
                             type="button"
                             className="btn-sm danger"
                             style={{ marginLeft: 3 }}
-                            disabled={busyId === c.id}
+                            disabled={busyId === c.id || bulkBusy}
                             onClick={() => handleDelete(c.id)}
                           >
                             Hapus
