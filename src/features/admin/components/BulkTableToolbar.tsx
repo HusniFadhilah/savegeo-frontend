@@ -13,7 +13,7 @@ export default function BulkTableToolbar({ selectedCount, onClear, children }: B
     <div className="admin-bulk-toolbar" role="toolbar" aria-label="Aksi massal">
       <strong>{selectedCount} dipilih</strong>
       <div className="admin-bulk-toolbar-actions">{children}</div>
-      <button type="button" className="btn-sm" onClick={onClear}>Batal pilih</button>
+      <button type="button" className="btn-sm" onClick={onClear}>Batalkan pilihan</button>
     </div>
   );
 }

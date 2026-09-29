@@ -166,7 +166,7 @@ export default function CompanyBoundaries() {
         geojsonText: text,
       });
       if ((r as { error?: string }).error) throw new Error((r as { error?: string }).error);
-      notify("Company boundary berhasil disimpan", "s");
+      notify("Batas perusahaan berhasil disimpan", "s");
       setFormOpen(false);
       resetForm();
       await reload();
@@ -196,7 +196,7 @@ export default function CompanyBoundaries() {
     setBusyId(id);
     try {
       await deleteCompany(id);
-      notify("Dihapus", "s");
+      notify("Batas perusahaan berhasil dihapus", "s");
       await reload();
     } catch {
       notify("Gagal menghapus", "e");
@@ -228,13 +228,13 @@ export default function CompanyBoundaries() {
       return;
     }
     setImporting(true);
-    setImportLog("Memuat dari OpenStreetMap... (bisa 30–180 detik)");
+    setImportLog("Mengambil data dari OpenStreetMap... (dapat berlangsung 30–180 detik)");
     try {
       const r = await importCompaniesFromOSM(types);
       setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
       await reload();
     } catch (err) {
-      setImportLog(`Error: ${err instanceof Error ? err.message : "Gagal import OSM"}`);
+      setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data OSM"}`);
     } finally {
       setImporting(false);
     }
@@ -242,13 +242,13 @@ export default function CompanyBoundaries() {
 
   const doImportGFW = async (dataset: string) => {
     setImporting(true);
-    setImportLog(`Memuat dataset GFW: ${dataset}...`);
+    setImportLog(`Mengambil dataset GFW: ${dataset}...`);
     try {
       const r = await importCompaniesFromGFW(dataset);
       setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
       await reload();
     } catch (err) {
-      setImportLog(`Error: ${err instanceof Error ? err.message : "Gagal import GFW"}`);
+      setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data GFW"}`);
     } finally {
       setImporting(false);
     }
@@ -260,10 +260,10 @@ export default function CompanyBoundaries() {
         <span>Batas Perusahaan</span>
         <div style={{ display: "flex", gap: 6 }}>
           <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-            <i className="bi bi-plus-lg" /> Tambah Manual
+          <i className="bi bi-plus-lg" /> Tambah Manual
           </button>
           <button type="button" className="btn-sm" onClick={() => setImportOpen((o) => !o)}>
-            <i className="bi bi-cloud-arrow-down" /> Import Open Data
+            <i className="bi bi-cloud-arrow-down" /> Impor Data Terbuka
           </button>
         </div>
       </div>
@@ -275,7 +275,7 @@ export default function CompanyBoundaries() {
               <label className="form-label">Nama Konsesi / IUP *</label>
               <input
                 className="form-input"
-                placeholder="cth: PT Tambang Jaya - IUP Batubara"
+                placeholder="Contoh: PT Tambang Jaya - IUP Batubara"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -284,7 +284,7 @@ export default function CompanyBoundaries() {
               <label className="form-label">Nama Perusahaan</label>
               <input
                 className="form-input"
-                placeholder="cth: PT Tambang Jaya"
+                placeholder="Contoh: PT Tambang Jaya"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
               />
@@ -305,7 +305,7 @@ export default function CompanyBoundaries() {
               <label className="form-label">Sub-tipe / Jenis Izin</label>
               <input
                 className="form-input"
-                placeholder="cth: IUP, HPH, HGU, PLTU ..."
+                placeholder="Contoh: IUP, HPH, HGU, PLTU ..."
                 value={subType}
                 onChange={(e) => setSubType(e.target.value)}
               />
@@ -316,7 +316,7 @@ export default function CompanyBoundaries() {
               <label className="form-label">Provinsi</label>
               <input
                 className="form-input"
-                placeholder="cth: Kalimantan Timur"
+                placeholder="Contoh: Kalimantan Timur"
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
               />
@@ -325,7 +325,7 @@ export default function CompanyBoundaries() {
               <label className="form-label">Kabupaten/Kota</label>
               <input
                 className="form-input"
-                placeholder="cth: Kutai Kartanegara"
+                placeholder="Contoh: Kutai Kartanegara"
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
               />
@@ -358,7 +358,7 @@ export default function CompanyBoundaries() {
             >
               <i className="bi bi-map" style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }} />
               <div style={{ fontSize: 12, color: "#64748b" }}>
-                Klik atau drag &amp; drop file <strong>.geojson / .json</strong>
+                Pilih atau seret dan letakkan file <strong>.geojson / .json</strong>
               </div>
               {geojsonFile && <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>{geojsonFile.name}</div>}
             </div>
@@ -371,7 +371,7 @@ export default function CompanyBoundaries() {
             />
             <div style={{ marginTop: 6 }}>
               <label className="form-label" style={{ fontSize: 10, color: "var(--text-muted)" }}>
-                atau paste GeoJSON langsung:
+                atau tempel GeoJSON secara langsung:
               </label>
               <textarea
                 className="form-input"
@@ -400,7 +400,7 @@ export default function CompanyBoundaries() {
         {/* Import open data form */}
         <div className={`collapse-form ${importOpen ? "open" : ""}`}>
           <div style={{ marginBottom: "0.75rem", fontSize: 12, color: "var(--text-muted)" }}>
-            Fetch otomatis data konsesi dari sumber terbuka. Proses bisa memakan waktu 30–180 detik.
+            Data konsesi akan diambil secara otomatis dari sumber terbuka. Proses dapat berlangsung selama 30–180 detik.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "0.75rem" }}>
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>OpenStreetMap (Overpass API)</div>
@@ -417,7 +417,7 @@ export default function CompanyBoundaries() {
               ))}
             </div>
             <button type="button" className="btn-sm primary" disabled={importing} onClick={doImportOSM}>
-              <i className="bi bi-geo-alt" /> Import dari OSM
+              <i className="bi bi-geo-alt" /> Impor dari OSM
             </button>
             <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>Global Forest Watch (GFW)</div>
@@ -517,7 +517,7 @@ export default function CompanyBoundaries() {
               {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada data. Tambah manual atau import dari open data.
+                    Belum ada data. Tambahkan secara manual atau impor dari sumber data terbuka.
                   </td>
                 </tr>
               )}

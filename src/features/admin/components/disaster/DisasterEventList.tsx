@@ -195,7 +195,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
       <div className="card-header-custom">
         <span>Daftar Kejadian Bencana</span>
         <button type="button" className="btn-sm primary" onClick={onCreateNew}>
-          <i className="bi bi-plus-lg" /> Kejadian Baru
+          <i className="bi bi-plus-lg" /> Tambah Kejadian
         </button>
       </div>
       <div className="card-body-custom">
@@ -259,7 +259,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
             onChange={(e) => setQuickStatus(e.target.value)}
             aria-label="Status baru untuk kejadian terpilih"
           >
-            <option value="">Pilih status baru...</option>
+            <option value="">Pilih status baru…</option>
             {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
           <button type="button" className="btn-sm primary" disabled={!quickStatus || bulkBusy} onClick={applyQuickStatus}>
@@ -381,7 +381,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
                         style={{ padding: "2px 6px", fontSize: 10, marginLeft: 3 }}
                         onClick={() => onOpen(ev)}
                       >
-                        Buka
+                        Lihat
                       </button>
                       <button
                         type="button"

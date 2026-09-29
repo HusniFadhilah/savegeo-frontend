@@ -25,10 +25,10 @@ function toEditable(row: SatelliteProviderRow): EditableFields {
 }
 
 /**
- * Admin editor for the satellite_providers DB overlay (app/db/models/
+ * Admin editor for the satellite_providers database overlay (app/db/models/
  * satellite_provider_entry.py) on top of app/registries/
  * satellite_provider_registry.py's static defaults - closes the last gap
- * from the "jangan hardcode, simpan ke DB" request: until now this table
+ * from the request to store provider configuration in the database: until now this table
  * was only editable via direct SQL. `gee_collection` here is the same field
  * that actually drives which GEE ImageCollection gets queried (verified
  * live) - editing it changes real analysis behavior, not just display text.
@@ -56,7 +56,7 @@ export default function SatelliteProviders() {
     setLoading(true);
     listSatelliteProvidersAdmin()
       .then((res) => setRows((res.satellites ?? []).sort((a, b) => a.display_order - b.display_order)))
-      .catch(() => notify("Gagal memuat daftar provider satelit", "e"))
+      .catch(() => notify("Gagal memuat daftar penyedia satelit", "e"))
       .finally(() => setLoading(false));
   };
 
@@ -109,7 +109,7 @@ export default function SatelliteProviders() {
     setSaving(true);
     try {
       await saveSatelliteProvider(key, draft);
-      notify(`Provider "${key}" disimpan`, "s");
+      notify(`Konfigurasi penyedia "${key}" berhasil disimpan`, "s");
       cancelEdit();
       load();
     } catch (err) {
@@ -121,13 +121,13 @@ export default function SatelliteProviders() {
 
   const resetOverride = async (row: SatelliteProviderRow) => {
     if (!row.has_override) return;
-    if (!confirm(`Hapus override "${row.key}" dan kembali ke default registry?`)) return;
+    if (!confirm(`Hapus penimpaan konfigurasi "${row.key}" dan gunakan kembali katalog bawaan?`)) return;
     try {
       await resetSatelliteProvider(row.key);
-      notify(`Override "${row.key}" dihapus`, "s");
+      notify(`Penimpaan konfigurasi "${row.key}" berhasil dihapus`, "s");
       load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal reset", "e");
+      notify(err instanceof Error ? err.message : "Gagal memulihkan konfigurasi", "e");
     }
   };
 
@@ -136,20 +136,21 @@ export default function SatelliteProviders() {
       await saveSatelliteProvider(row.key, { is_active: !row.is_active });
       load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal ubah status", "e");
+      notify(err instanceof Error ? err.message : "Gagal mengubah status", "e");
     }
   };
 
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Satellite Providers</span>
+        <span>Penyedia Satelit</span>
       </div>
       <div className="card-body-custom">
         <p className="text-muted mb-3" style={{ fontSize: ".85rem" }}>
           <i className="bi bi-info-circle me-1" />
-          Overlay database di atas katalog statis (registry tetap jadi fallback kalau tidak ada baris DB). Mengubah{" "}
-          <code>GEE Collection</code> beneran mengganti sumber citra yang dipakai analisis vegetasi - hati-hati.
+          Konfigurasi basis data menjadi lapisan pengaturan di atas katalog statis. Jika konfigurasi basis data tidak tersedia,
+          sistem menggunakan nilai bawaan dari katalog tersebut. Perubahan pada <code>GEE Collection</code> akan mengubah sumber
+          citra yang digunakan dalam analisis vegetasi. Pastikan nilai yang dimasukkan sudah benar.
         </p>
 
         {editingKey && (
@@ -166,7 +167,7 @@ export default function SatelliteProviders() {
 
         <BulkTableToolbar selectedCount={selectedKeys.length} onClear={() => setSelectedKeys([])}>
           <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkReset}>
-            <i className="bi bi-arrow-counterclockwise" /> {bulkBusy ? "Mereset..." : "Reset override terpilih"}
+            <i className="bi bi-arrow-counterclockwise" /> {bulkBusy ? "Memulihkan..." : "Pulihkan konfigurasi terpilih"}
           </button>
         </BulkTableToolbar>
 
@@ -190,9 +191,9 @@ export default function SatelliteProviders() {
                 <th>Nama</th>
                 <th>Provider</th>
                 <th>Resolusi</th>
-                <th>GEE Collection</th>
+                <th>Koleksi GEE</th>
                 <th>Aktif</th>
-                <th>Override?</th>
+                <th>Penimpaan konfigurasi</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -277,9 +278,9 @@ export default function SatelliteProviders() {
                       </td>
                       <td>
                         {row.has_override ? (
-                          <span className="badge bg-warning text-dark">DB override</span>
+                          <span className="badge bg-warning text-dark">Basis data</span>
                         ) : (
-                          <span className="badge bg-secondary">default registry</span>
+                          <span className="badge bg-secondary">Katalog bawaan</span>
                         )}
                       </td>
                       <td style={{ whiteSpace: "nowrap" }}>
@@ -300,7 +301,7 @@ export default function SatelliteProviders() {
                             {row.has_override && (
                               <button
                                 className="btn-sm danger"
-                                title="Hapus override, kembali ke default"
+                                title="Hapus penimpaan dan gunakan katalog bawaan"
                                 onClick={() => resetOverride(row)}
                               >
                                 <i className="bi bi-arrow-counterclockwise" />

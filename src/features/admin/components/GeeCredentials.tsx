@@ -56,7 +56,7 @@ export default function GeeCredentials() {
     setFormError(null);
     try {
       await uploadGeeCredential(file, label, notes, activateOnUpload);
-      notify("Credential berhasil diupload", "s");
+      notify("Kredensial berhasil diunggah", "s");
       setFormOpen(false);
       setFile(null);
       setLabel("");
@@ -65,7 +65,7 @@ export default function GeeCredentials() {
       await reload();
       refreshHealth();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal upload";
+      const msg = err instanceof Error ? err.message : "Gagal mengunggah kredensial";
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -81,21 +81,21 @@ export default function GeeCredentials() {
       await reload();
       refreshHealth();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal aktivasi", "e");
+      notify(err instanceof Error ? err.message : "Gagal mengaktifkan kredensial", "e");
     } finally {
       setBusyId(null);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus credential ini?")) return;
+    if (!confirm("Hapus kredensial ini?")) return;
     setBusyId(id);
     try {
       await deleteGeeCredential(id);
       notify("Credential dihapus", "s");
       await reload();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal hapus", "e");
+      notify(err instanceof Error ? err.message : "Gagal menghapus kredensial", "e");
     } finally {
       setBusyId(null);
     }
@@ -119,9 +119,9 @@ export default function GeeCredentials() {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Service account credentials</span>
+        <span>Kredensial akun layanan</span>
         <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-          <i className="bi bi-plus-lg" /> Upload credential
+          <i className="bi bi-plus-lg" /> Unggah kredensial
         </button>
       </div>
       <div className="card-body-custom">
@@ -131,7 +131,7 @@ export default function GeeCredentials() {
               <label className="form-label">Label / nama deskriptif</label>
               <input
                 className="form-input"
-                placeholder="cth: Production SA 2025"
+                placeholder="Contoh: Akun layanan produksi 2025"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
               />
@@ -147,7 +147,7 @@ export default function GeeCredentials() {
             </div>
           </div>
           <div className="form-field">
-            <label className="form-label">File JSON service account</label>
+            <label className="form-label">File JSON akun layanan</label>
             <div
               className={`upload-zone ${dragOver ? "dragover" : ""}`}
               onClick={() => fileInputRef.current?.click()}
@@ -164,7 +164,7 @@ export default function GeeCredentials() {
             >
               <i className="bi bi-filetype-json" style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }} />
               <div style={{ fontSize: 12, color: "#64748b" }}>
-                Klik atau drag &amp; drop file <strong>.json</strong> service account di sini
+                Pilih atau seret dan letakkan file <strong>.json</strong> akun layanan di sini
               </div>
               {file && <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>✓ {file.name}</div>}
             </div>
@@ -184,13 +184,13 @@ export default function GeeCredentials() {
               onChange={(e) => setActivateOnUpload(e.target.checked)}
             />
             <label htmlFor="gee-activate" style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Langsung aktifkan setelah upload
+              Aktifkan setelah unggah
             </label>
           </div>
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn-sm primary" disabled={uploading} onClick={handleUpload}>
-              <i className="bi bi-upload" /> {uploading ? "Mengupload..." : "Upload"}
+              <i className="bi bi-upload" /> {uploading ? "Mengunggah..." : "Unggah"}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
               Batal
@@ -222,7 +222,7 @@ export default function GeeCredentials() {
                 <th>Project ID</th>
                 <th>Email</th>
                 <th>Status</th>
-                <th>Diupload</th>
+                <th>Tanggal unggah</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -244,7 +244,7 @@ export default function GeeCredentials() {
               {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada credential. Upload service account JSON.
+                    Belum ada kredensial. Unggah file JSON akun layanan.
                   </td>
                 </tr>
               )}
@@ -290,7 +290,7 @@ export default function GeeCredentials() {
                           </button>
                         </>
                       ) : (
-                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>aktif</span>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Aktif</span>
                       )}
                     </td>
                   </tr>

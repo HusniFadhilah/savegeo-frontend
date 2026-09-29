@@ -141,7 +141,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
             </div>
             <div className="form-field">
               <label className="form-label">Sensor</label>
-              <input className="form-input" placeholder="cth: MSI, C-SAR" value={sensor} onChange={(e) => setSensor(e.target.value)} />
+                        <input className="form-input" placeholder="Contoh: MSI, C-SAR" value={sensor} onChange={(e) => setSensor(e.target.value)} />
             </div>
             <div className="form-field">
               <label className="form-label">Resolusi (m)</label>
@@ -172,13 +172,13 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
               <label className="form-label">Sumber Data</label>
               <input
                 className="form-input"
-                placeholder="cth: Copernicus Hub"
+                        placeholder="Contoh: Copernicus Hub"
                 value={dataSource}
                 onChange={(e) => setDataSource(e.target.value)}
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Upload GeoTIFF / ZIP</label>
+              <label className="form-label">Unggah GeoTIFF / ZIP</label>
               <input
                 className="form-input"
                 type="file"

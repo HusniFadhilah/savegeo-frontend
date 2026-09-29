@@ -227,11 +227,11 @@ export default function ModelRegistry() {
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="three-col" style={{ marginBottom: "0.5rem" }}>
             <div className="form-field">
-              <label className="form-label">Name (slug) *</label>
+              <label className="form-label">Nama (slug) *</label>
               <input className="form-input" placeholder="carbon_ridge_v3" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="form-field">
-              <label className="form-label">Display name</label>
+              <label className="form-label">Nama tampilan</label>
               <input className="form-input" placeholder="Carbon Ridge v3" value={dispName} onChange={(e) => setDispName(e.target.value)} />
             </div>
             <div className="form-field">
@@ -259,7 +259,7 @@ export default function ModelRegistry() {
               <input className="form-input" placeholder="1.0.0" value={version} onChange={(e) => setVersion(e.target.value)} />
             </div>
             <div className="form-field">
-              <label className="form-label">Metrics JSON</label>
+              <label className="form-label">Metrik JSON</label>
               <input
                 className="form-input"
                 placeholder='{"r2":0.85,"rmse":19.2}'
@@ -285,7 +285,7 @@ export default function ModelRegistry() {
               }}
             >
               <i className="bi bi-box-seam" style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }} />
-              <div style={{ fontSize: 12, color: "#64748b" }}>Klik atau drag &amp; drop file model</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>Pilih file atau seret dan letakkan file model</div>
               {file && (
                 <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>
                   ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
@@ -309,7 +309,7 @@ export default function ModelRegistry() {
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn-sm primary" disabled={uploading} onClick={handleUpload}>
-              <i className="bi bi-upload" /> {uploading ? "Mengupload..." : "Upload"}
+              <i className="bi bi-upload" /> {uploading ? "Mengunggah..." : "Unggah"}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
               Batal
@@ -365,7 +365,7 @@ export default function ModelRegistry() {
               {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada model. Upload model ML terlebih dahulu.
+                    Belum ada model. Unggah model ML terlebih dahulu.
                   </td>
                 </tr>
               )}
@@ -405,7 +405,7 @@ export default function ModelRegistry() {
                       <td>
                         {!m.is_default && (
                           <button type="button" className="btn-sm" disabled={busyId === m.id || bulkBusy} onClick={() => doSetDefault(m.id)}>
-                            Set default
+                            Jadikan default
                           </button>
                         )}
                         <button

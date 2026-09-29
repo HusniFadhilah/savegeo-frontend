@@ -134,22 +134,22 @@ export default function CarbonCalibration() {
       <div className="calibration-header calibration-hero">
         <div>
           <div className="calibration-eyebrow">PT DAHANA · SUBANG · 2026</div>
-          <h2>{t("admin.calibration.title")} <span>Field reference workspace</span></h2>
+          <h2>{t("admin.calibration.title")} <span>Ruang kerja referensi lapangan</span></h2>
           <p>{t("admin.calibration.subtitle")}</p>
-          <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Managed storage</span><span><i className="bi bi-diagram-3" /> Reproducible provenance</span><span><i className="bi bi-lock" /> Restricted dataset</span></div>
+          <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Penyimpanan terkelola</span><span><i className="bi bi-diagram-3" /> Provenans yang dapat direproduksi</span><span><i className="bi bi-lock" /> Dataset terbatas</span></div>
         </div>
-        <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> Workspace ready</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
+        <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> Ruang kerja siap</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
           <i className="bi bi-plus-lg" /> {t("admin.calibration.create")}
         </button></div>
       </div>
-      <div className="calibration-metrics" aria-label="Calibration workspace summary">
-        <div className="calibration-metric"><span className="calibration-metric-icon green"><i className="bi bi-database" /></span><div><small>Datasets</small><strong>{datasets.length}</strong><span>registered sources</span></div></div>
-        <div className="calibration-metric"><span className="calibration-metric-icon blue"><i className="bi bi-folder2-open" /></span><div><small>Files in view</small><strong>{files.length}</strong><span>{selected ? "selected dataset" : "select a dataset"}</span></div></div>
-        <div className="calibration-metric"><span className="calibration-metric-icon amber"><i className="bi bi-geo-alt" /></span><div><small>Field plots</small><strong>{totalPlots}</strong><span>independent units</span></div></div>
-        <div className="calibration-metric"><span className={`calibration-metric-icon ${statusClass === "is-ready" ? "green" : "purple"}`}><i className="bi bi-activity" /></span><div><small>Active status</small><strong className="metric-status">{selectedStatus}</strong><span>{selected ? selected.dataset_id : "no active dataset"}</span></div></div>
+      <div className="calibration-metrics" aria-label="Ringkasan ruang kerja kalibrasi">
+        <div className="calibration-metric"><span className="calibration-metric-icon green"><i className="bi bi-database" /></span><div><small>Dataset</small><strong>{datasets.length}</strong><span>sumber terdaftar</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon blue"><i className="bi bi-folder2-open" /></span><div><small>File yang ditampilkan</small><strong>{files.length}</strong><span>{selected ? "dataset terpilih" : "pilih dataset"}</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon amber"><i className="bi bi-geo-alt" /></span><div><small>Plot lapangan</small><strong>{totalPlots}</strong><span>unit independen</span></div></div>
+        <div className="calibration-metric"><span className={`calibration-metric-icon ${statusClass === "is-ready" ? "green" : "purple"}`}><i className="bi bi-activity" /></span><div><small>Status aktif</small><strong className="metric-status">{selectedStatus}</strong><span>{selected ? selected.dataset_id : "tidak ada dataset aktif"}</span></div></div>
       </div>
       <div className="calibration-notice">
-        <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Protected source workflow</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">READ-ONLY SOURCES</span>
+        <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Alur sumber terlindungi</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">SUMBER HANYA BACA</span>
       </div>
       <div className="alert alert-warning d-flex gap-2 align-items-start calibration-legacy-warning">
         <i className="bi bi-shield-exclamation" />
@@ -158,9 +158,9 @@ export default function CarbonCalibration() {
       <div className="admin-card calibration-import-wizard calibration-surface-card">
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
         <div className="calibration-import-fields">
-          <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? "Required · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
-          <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? "Optional · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
-          <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? "Optional · .tif / .tiff"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? "Wajib · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? "Opsional · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? "Opsional · .tif / .tiff"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
         </div>
       </div>
       <div className="calibration-grid">

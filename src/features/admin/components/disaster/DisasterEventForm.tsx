@@ -129,7 +129,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <label className="form-label">Nama Kejadian *</label>
             <input
               className="form-input"
-              placeholder="cth: Banjir Bandang Kalimantan Selatan Jan 2026"
+              placeholder="Contoh: Banjir Bandang Kalimantan Selatan Jan 2026"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -151,7 +151,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <label className="form-label">Nama Lokasi</label>
             <input
               className="form-input"
-              placeholder="cth: Kabupaten Banjar"
+              placeholder="Contoh: Kabupaten Banjar"
               value={locationName}
               onChange={(e) => setLocationName(e.target.value)}
             />
@@ -174,7 +174,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <label className="form-label">Provinsi (pisahkan koma)</label>
             <input
               className="form-input"
-              placeholder="cth: Kalimantan Selatan"
+              placeholder="Contoh: Kalimantan Selatan"
               value={province}
               onChange={(e) => setProvince(e.target.value)}
             />
@@ -183,7 +183,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <label className="form-label">Kabupaten/Kota (pisahkan koma)</label>
             <input
               className="form-input"
-              placeholder="cth: Banjar, Tanah Laut"
+              placeholder="Contoh: Banjar, Tanah Laut"
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
             />
@@ -240,7 +240,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
             <label className="form-label">Sumber</label>
             <input
               className="form-input"
-              placeholder="cth: BNPB, BMKG"
+              placeholder="Contoh: BNPB, BMKG"
               value={source}
               onChange={(e) => setSource(e.target.value)}
             />

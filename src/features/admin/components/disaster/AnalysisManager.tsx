@@ -138,12 +138,12 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Analysis Manager</span>
+        <span>Manajemen Analisis</span>
       </div>
       <div className="card-body-custom">
         {!aoi && (
           <div className="alert alert-danger py-1 px-2 small" style={{ marginBottom: "0.75rem" }}>
-            AOI belum dikonfigurasi - buka tab AOI terlebih dahulu sebelum menjalankan analisis.
+            AOI belum dikonfigurasi. Buka tab AOI terlebih dahulu untuk menjalankan analisis.
           </div>
         )}
         {loadingModels && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Memuat daftar model...</div>}
@@ -177,8 +177,8 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                         <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
                           <span className="badge-label">{model.category}</span>
                           {model.capability_status && <span className={`stat-badge ${model.capability_status === "indicator_only" ? "badge-amber" : "badge-gray"}`}>{model.capability_status}</span>}
-                          {model.damage_model === false && <span className="stat-badge badge-amber">Indikator, bukan damage model</span>}
-                          {!model.enabled && <span className="stat-badge badge-gray">Not Available</span>}
+                          {model.damage_model === false && <span className="stat-badge badge-amber">Indikator, bukan model kerusakan</span>}
+                          {!model.enabled && <span className="stat-badge badge-gray">Tidak tersedia</span>}
                         </div>
                       </div>
                       {model.enabled && (
@@ -242,10 +242,10 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                                 {RUN_STATUS_LABEL[run.status] || run.status}
                               </span>
                               <span style={{ color: "var(--text-muted)" }}>
-                                Run #{run.id} • dibuat {run.created_at ? new Date(run.created_at).toLocaleString("id-ID") : "—"}
+                                Proses #{run.id} • dibuat {run.created_at ? new Date(run.created_at).toLocaleString("id-ID") : "—"}
                               </span>
                               {result?.is_published && <span className="stat-badge badge-purple">Published</span>}
-                              {result?.validation_status === "indicator_only" && <span className="stat-badge badge-amber">Indicator only</span>}
+                              {result?.validation_status === "indicator_only" && <span className="stat-badge badge-amber">Hanya indikator</span>}
                               {run.error_message && <span style={{ color: "#b91c1c" }}>{run.error_message}</span>}
                             </div>
                             <button
@@ -255,7 +255,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                               disabled={busyRunId === run.id || run.status === "processing"}
                               onClick={() => handleRun(run.id)}
                             >
-                              {busyRunId === run.id ? "Menjalankan..." : run.status === "failed" ? "Coba Lagi" : "Run"}
+                              {busyRunId === run.id ? "Menjalankan..." : run.status === "failed" ? "Jalankan ulang" : "Jalankan"}
                             </button>
                           </div>
                         ))}

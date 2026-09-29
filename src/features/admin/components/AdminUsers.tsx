@@ -182,7 +182,7 @@ export default function AdminUsers() {
                 <label className="form-label">{t("admin.users.username")} {form.id === null && "*"}</label>
                 <input
                   className="form-input"
-                  placeholder="cth: budi_admin"
+                  placeholder="Contoh: budi_admin"
                   value={form.username}
                   disabled={form.id !== null}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
