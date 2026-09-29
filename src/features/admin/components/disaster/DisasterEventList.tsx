@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import TablePagination from "@/components/ui/TablePagination";
-import { deleteDisasterEvent, listDisasterEvents } from "../../api";
+import { deleteDisasterEvent, listDisasterEvents, updateDisasterEvent } from "../../api";
 import type { DisasterEvent } from "../../types";
 import { useAdmin } from "../../AdminContext";
 import BulkTableToolbar from "../BulkTableToolbar";
@@ -74,6 +74,11 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
   const [busyId, setBusyId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditStatus, setBulkEditStatus] = useState("");
+  const [bulkEditType, setBulkEditType] = useState("");
+  const [bulkEditSeverity, setBulkEditSeverity] = useState("");
+  const [quickStatus, setQuickStatus] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -122,12 +127,53 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
   const doBulkDelete = async () => {
     if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} kejadian bencana terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
     setBulkBusy(true);
-    const results = await Promise.allSettled(selectedIds.map((id) => deleteDisasterEvent(id)));
-    const failed = results.filter((result) => result.status === "rejected").length;
-    setSelectedIds([]);
-    notify(failed ? `${results.length - failed} dihapus, ${failed} gagal` : `${results.length} kejadian dihapus`, failed ? "e" : "s");
-    await load();
-    setBulkBusy(false);
+    try {
+      const results = await Promise.allSettled(selectedIds.map((id) => deleteDisasterEvent(id)));
+      const failed = results.filter((result) => result.status === "rejected").length;
+      setSelectedIds([]);
+      notify(failed ? `${results.length - failed} dihapus, ${failed} gagal` : `${results.length} kejadian dihapus`, failed ? "e" : "s");
+      await load();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const doBulkUpdate = async (payload: Parameters<typeof updateDisasterEvent>[1], message: string) => {
+    if (!selectedIds.length) return;
+    setBulkBusy(true);
+    try {
+      const results = await Promise.allSettled(selectedIds.map((id) => updateDisasterEvent(id, payload)));
+      const failed = results.filter((result) => result.status === "rejected").length;
+      setSelectedIds([]);
+      setBulkEditOpen(false);
+      setQuickStatus("");
+      setBulkEditStatus("");
+      setBulkEditType("");
+      setBulkEditSeverity("");
+      notify(failed ? `${results.length - failed} diperbarui, ${failed} gagal` : `${results.length} kejadian ${message}`, failed ? "e" : "s");
+      await load();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const applyQuickStatus = async () => {
+    if (!quickStatus) return;
+    if (!confirm(`Ubah status ${selectedIds.length} kejadian menjadi "${STATUS_LABEL[quickStatus]}"?`)) return;
+    await doBulkUpdate({ status: quickStatus }, "berhasil diubah");
+  };
+
+  const applyBulkEdit = async () => {
+    const payload: Parameters<typeof updateDisasterEvent>[1] = {};
+    if (bulkEditStatus) payload.status = bulkEditStatus;
+    if (bulkEditType) payload.disaster_type = bulkEditType;
+    if (bulkEditSeverity) payload.severity = bulkEditSeverity;
+    if (!Object.keys(payload).length) {
+      notify("Pilih minimal satu field yang akan diubah", "e");
+      return;
+    }
+    if (!confirm(`Terapkan perubahan ke ${selectedIds.length} kejadian terpilih?`)) return;
+    await doBulkUpdate(payload, "berhasil diperbarui");
   };
 
   const doDelete = async (ev: DisasterEvent) => {
@@ -202,10 +248,51 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
         </div>
 
         <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <button type="button" className="btn-sm" disabled={bulkBusy} onClick={() => setBulkEditOpen((open) => !open)}>
+            <i className="bi bi-pencil-square" /> {bulkEditOpen ? "Tutup edit" : "Edit terpilih"}
+          </button>
+          <select
+            className="form-input"
+            style={{ width: 170, minHeight: 30, padding: "3px 8px", fontSize: 12 }}
+            value={quickStatus}
+            disabled={bulkBusy}
+            onChange={(e) => setQuickStatus(e.target.value)}
+            aria-label="Status baru untuk kejadian terpilih"
+          >
+            <option value="">Pilih status baru...</option>
+            {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <button type="button" className="btn-sm primary" disabled={!quickStatus || bulkBusy} onClick={applyQuickStatus}>
+            Terapkan status
+          </button>
           <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={doBulkDelete}>
             <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
           </button>
         </BulkTableToolbar>
+
+        {selectedIds.length > 0 && bulkEditOpen && (
+          <div className="admin-bulk-editor" role="region" aria-label="Edit beberapa kejadian bencana">
+            <div>
+              <strong>Edit {selectedIds.length} kejadian</strong>
+              <div className="admin-bulk-editor-hint">Field yang tetap “Tidak diubah” tidak akan disentuh.</div>
+            </div>
+            <select className="form-input" value={bulkEditStatus} onChange={(e) => setBulkEditStatus(e.target.value)} aria-label="Status massal">
+              <option value="">Status: Tidak diubah</option>
+              {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <select className="form-input" value={bulkEditType} onChange={(e) => setBulkEditType(e.target.value)} aria-label="Jenis bencana massal">
+              <option value="">Jenis: Tidak diubah</option>
+              {DISASTER_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <select className="form-input" value={bulkEditSeverity} onChange={(e) => setBulkEditSeverity(e.target.value)} aria-label="Tingkat keparahan massal">
+              <option value="">Tingkat: Tidak diubah</option>
+              {SEVERITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <button type="button" className="btn-sm primary" disabled={bulkBusy} onClick={applyBulkEdit}>
+              <i className="bi bi-check2" /> {bulkBusy ? "Menyimpan..." : "Terapkan perubahan"}
+            </button>
+          </div>
+        )}
 
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
