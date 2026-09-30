@@ -292,6 +292,8 @@ interface Props {
   afterUrl: string | null;
   beforeLabel?: string;
   afterLabel?: string;
+  beforeAttribution?: string;
+  afterAttribution?: string;
   orientation: SwipeOrientation;
   onOrientationChange?: (o: SwipeOrientation) => void;
   center?: [number, number];
@@ -333,6 +335,8 @@ export default function SwipeCompareMap({
   afterUrl,
   beforeLabel = "Sebelum",
   afterLabel = "Sesudah",
+  beforeAttribution = "Google Earth Engine",
+  afterAttribution = "Google Earth Engine",
   orientation,
   onOrientationChange,
   center,
@@ -488,7 +492,7 @@ export default function SwipeCompareMap({
             url={beforeUrl}
             opacity={opacity}
             pane={BEFORE_PANE}
-            attribution="Google Earth Engine"
+            attribution={beforeAttribution}
             crossOrigin={beforeCrossOrigin}
             bounds={bounds}
             maxNativeZoom={beforeMaxNativeZoom ?? maxNativeZoom}
@@ -502,7 +506,7 @@ export default function SwipeCompareMap({
             url={afterUrl}
             opacity={opacity}
             pane={AFTER_PANE}
-            attribution="Google Earth Engine"
+            attribution={afterAttribution}
             crossOrigin={afterCrossOrigin}
             bounds={bounds}
             maxNativeZoom={afterMaxNativeZoom ?? maxNativeZoom}

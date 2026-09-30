@@ -447,6 +447,7 @@ export default function DisasterDashboard() {
         <div className="disaster-map-column">
           {comparisonEntries.map((entry, index) => <SegmentationComparison key={`${entry.model_id}-${entry.run?.id}`} result={entry.result!.comparison!} showGlobeControl={index === 0} />)}
           <SatelliteViewer
+            event={event}
             aoi={aoi}
             imagery={imagery}
             primaryImagery={primary_imagery}

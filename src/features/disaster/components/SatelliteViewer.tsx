@@ -1,18 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, Pane, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
 import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
+import { HistoricalAoiClipController } from "@/components/map/HistoricalImageryControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
-import { RESULT_PANE } from "@/config/mapPanes";
 import { env } from "@/config/env";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { getImagerySceneTile, listImageryScenes } from "@/features/imagery/api";
+import {
+  ESRI_WAYBACK_START_DATE,
+  listEsriWaybackScenes,
+  selectEsriWaybackScene,
+  type WaybackScene,
+} from "@/features/imagery/wayback";
+import type { AoiFeature } from "@/types/map";
 import type {
   DisasterAoiRecord,
   DisasterAnalysisEntry,
+  DisasterEventRecord,
   DisasterImageryGroup,
   DisasterPrimaryImagery,
   DisasterSatelliteLayers,
@@ -30,6 +39,57 @@ const HOTSPOT_STYLE = { color: "#e53935", weight: 2, fillOpacity: 0.25 };
 const HOTSPOT_HIGHLIGHT_STYLE = { color: "#ffb300", weight: 4, fillOpacity: 0.35 };
 const DISASTER_ANALYSIS_PANE = "disaster-analysis-pane";
 const DISASTER_ANALYSIS_PANE_Z_INDEX = 370;
+const DISASTER_IMAGERY_PANE = "disaster-imagery-pane";
+const DISASTER_IMAGERY_PANE_Z_INDEX = 350;
+
+type DynamicPostSource = "sentinel2" | "esri_wayback";
+
+interface DynamicPostLayer {
+  source: DynamicPostSource;
+  label: string;
+  tileUrl: string;
+  acquisitionDate: string;
+  resolutionM: number | null;
+  attribution: string;
+}
+
+function aoiFeatureOf(aoi: DisasterAoiRecord | null): AoiFeature | null {
+  const geojson = aoi?.geojson;
+  if (!geojson) return null;
+  const geometry = geojson.type === "Feature" ? geojson.geometry : geojson;
+  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (geojson.type === "Feature") return geojson as AoiFeature;
+  return { type: "Feature", properties: {}, geometry } as AoiFeature;
+}
+
+function aoiBoundsOf(aoi: DisasterAoiRecord | null): [[number, number], [number, number]] | undefined {
+  if (aoi?.bbox && aoi.bbox.length === 4) {
+    const [west, south, east, north] = aoi.bbox;
+    return [[south, west], [north, east]];
+  }
+  const feature = aoiFeatureOf(aoi);
+  if (!feature) return undefined;
+  const bounds = L.geoJSON(feature).getBounds();
+  return bounds.isValid()
+    ? [[bounds.getSouth(), bounds.getWest()], [bounds.getNorth(), bounds.getEast()]]
+    : undefined;
+}
+
+function dateOnly(value: string | null | undefined): string | null {
+  const match = value?.match(/^\d{4}-\d{2}-\d{2}/);
+  return match?.[0] ?? null;
+}
+
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+}
+
+function postDateRange(event?: DisasterEventRecord): { startDate: string; endDate: string } {
+  const endDate = todayIso();
+  const startDate = dateOnly(event?.end_date) ?? dateOnly(event?.event_date) ?? dateOnly(event?.start_date);
+  return { startDate: startDate && startDate <= endDate ? startDate : endDate, endDate };
+}
 
 function FitToAoi({
   aoi,
@@ -251,6 +311,7 @@ function ViewerLayers({
 }
 
 interface Props {
+  event?: DisasterEventRecord;
   aoi: DisasterAoiRecord | null;
   imagery: DisasterImageryGroup;
   primaryImagery: DisasterPrimaryImagery;
@@ -281,6 +342,7 @@ interface Props {
  * input), per the contract doc.
  */
 export default function SatelliteViewer({
+  event,
   aoi,
   imagery,
   primaryImagery,
@@ -309,21 +371,117 @@ export default function SatelliteViewer({
   const [view, setView] = useState<ViewMode>("swipe");
   const [swipeOrientation, setSwipeOrientation] = useState<SwipeOrientation>("vertical");
   const [imageryOpacity, setImageryOpacity] = useState(0.9);
+  const [postSource, setPostSource] = useState<DynamicPostSource | null>(null);
+  const [dynamicPost, setDynamicPost] = useState<DynamicPostLayer | null>(null);
+  const [dynamicPostLoading, setDynamicPostLoading] = useState(false);
+  const [dynamicPostError, setDynamicPostError] = useState<string | null>(null);
+
+  const aoiFeature = useMemo(() => aoiFeatureOf(aoi), [aoi]);
+  const aoiBounds = useMemo(() => aoiBoundsOf(aoi), [aoi]);
 
   const preImg = useMemo(
     () => imagery.pre.find((i) => i.id === preId) ?? null,
     [imagery.pre, preId],
   );
   const postImg = useMemo(
-    () => imagery.post.find((i) => i.id === postId) ?? null,
-    [imagery.post, postId],
+    () => (postSource ? null : imagery.post.find((i) => i.id === postId) ?? null),
+    [imagery.post, postId, postSource],
   );
+  const postRange = useMemo(() => postDateRange(event), [event]);
+  const postTile = dynamicPost?.tileUrl ?? viewerTileUrl(postImg);
+  const postDate = dynamicPost?.acquisitionDate ?? postImg?.acquisition_date ?? null;
+  const postResolutionM = dynamicPost?.resolutionM ?? postImg?.resolution_m ?? null;
+  const postAttribution = dynamicPost?.attribution ?? "Google Earth Engine";
   const preTile = viewerTileUrl(preImg);
-  const postTile = viewerTileUrl(postImg);
   const preNativeZoom = nativeZoomForImagery(preImg);
-  const postNativeZoom = nativeZoomForImagery(postImg);
+  const postNativeZoom = nativeZoomForResolution(postResolutionM);
+  const postSelection = postSource ? `source:${postSource}` : postId ? String(postId) : "";
 
-  if (!imagery.pre.length && !imagery.post.length) {
+  useEffect(() => {
+    let cancelled = false;
+    if (!postSource) {
+      setDynamicPost(null);
+      setDynamicPostLoading(false);
+      setDynamicPostError(null);
+      return;
+    }
+    if (!aoiFeature) {
+      setDynamicPost(null);
+      setDynamicPostLoading(false);
+      setDynamicPostError("AOI tidak valid untuk memuat citra pasca-bencana.");
+      return;
+    }
+
+    setDynamicPost(null);
+    setDynamicPostLoading(true);
+    setDynamicPostError(null);
+
+    const loadDynamicPost = async () => {
+      try {
+        if (postSource === "sentinel2") {
+          const scenes = await listImageryScenes({
+            aoi: { geojson: aoiFeature },
+            satellite: "sentinel2",
+            startDate: postRange.startDate,
+            endDate: postRange.endDate,
+            maxCloudCover: 60,
+          });
+          const scene = scenes.scenes
+            .slice()
+            .sort((left, right) => right.acquired_at.localeCompare(left.acquired_at))[0];
+          if (!scene) throw new Error("Scene Sentinel-2 pasca-bencana tidak ditemukan pada rentang ini.");
+
+          const tile = await getImagerySceneTile({
+            satellite: "sentinel2",
+            sceneId: scene.id,
+            aoi: { geojson: aoiFeature },
+            forceMosaic: true,
+            startDate: postRange.startDate,
+            endDate: postRange.endDate,
+            maxCloudCover: 60,
+            cloudMaskTechnique: "scl",
+          });
+          if (!tile.tile_url) throw new Error("Tile Sentinel-2 tidak tersedia.");
+          if (!cancelled) {
+            setDynamicPost({
+              source: postSource,
+              label: `Sentinel-2 · ${dateOnly(scene.acquired_at) ?? scene.acquired_at}`,
+              tileUrl: viewerUrl(tile.tile_url) ?? tile.tile_url,
+              acquisitionDate: dateOnly(scene.acquired_at) ?? scene.acquired_at,
+              resolutionM: tile.satellite?.resolution_m ?? scene.resolution_m ?? 10,
+              attribution: "Sentinel-2 · Google Earth Engine",
+            });
+          }
+        } else {
+          const scenes = await listEsriWaybackScenes(ESRI_WAYBACK_START_DATE, postRange.endDate, 2000);
+          const targetDate = dateOnly(event?.end_date) ?? dateOnly(event?.event_date) ?? postRange.endDate;
+          const scene = selectEsriWaybackScene(scenes as WaybackScene[], targetDate);
+          if (!scene) throw new Error("Snapshot Esri Wayback pasca-bencana tidak ditemukan.");
+          if (!cancelled) {
+            setDynamicPost({
+              source: postSource,
+              label: `Esri Wayback · ${scene.release_label}`,
+              tileUrl: scene.tile_url,
+              acquisitionDate: scene.release_label,
+              resolutionM: null,
+              attribution: `Esri World Imagery Wayback · Rilis ${scene.release_label}`,
+            });
+          }
+        }
+      } catch (error) {
+        if (!cancelled) setDynamicPostError(error instanceof Error ? error.message : "Gagal memuat citra pasca-bencana.");
+      } finally {
+        if (!cancelled) setDynamicPostLoading(false);
+      }
+    };
+
+    void loadDynamicPost();
+    return () => {
+      cancelled = true;
+    };
+  }, [aoiFeature, event?.end_date, event?.event_date, postRange, postSource]);
+
+  if (!imagery.pre.length && !imagery.post.length && !aoiFeature) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
         Belum ada citra satelit pre/post untuk event ini.
@@ -395,24 +553,47 @@ export default function SatelliteViewer({
             <label className="form-label small fw-semibold mb-1">Citra Sesudah (Post)</label>
             <select
               className="form-select form-select-sm"
-              value={postId ?? ""}
-              onChange={(e) => setPostId(e.target.value ? Number(e.target.value) : null)}
-              disabled={!imagery.post.length}
+              value={postSelection}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.startsWith("source:")) {
+                  setPostId(null);
+                  setPostSource(value.slice("source:".length) as DynamicPostSource);
+                } else {
+                  setPostSource(null);
+                  setPostId(value ? Number(value) : null);
+                }
+              }}
+              disabled={!imagery.post.length && !aoiFeature}
             >
-              {!imagery.post.length && <option value="">Tidak tersedia</option>}
-              {imagery.post.map((img) => (
-                <option key={img.id} value={img.id}>
-                  {imageryLabel(img)}
-                  {img.is_primary ? " (utama)" : ""}
-                </option>
-              ))}
+              {!imagery.post.length && !aoiFeature && <option value="">Tidak tersedia</option>}
+              {imagery.post.length > 0 && (
+                <optgroup label="Citra tersimpan">
+                  {imagery.post.map((img) => (
+                    <option key={img.id} value={img.id}>
+                      {imageryLabel(img)}
+                      {img.is_primary ? " (utama)" : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {aoiFeature && (
+                <optgroup label="Sumber tambahan · dipotong sesuai AOI">
+                  <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
+                  <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+                </optgroup>
+              )}
             </select>
+            {dynamicPostLoading && <div className="small text-muted mt-1" role="status">Memuat citra pasca-bencana dan memotong sesuai AOI…</div>}
+            {dynamicPostError && <div className="small text-danger mt-1" role="alert">{dynamicPostError}</div>}
           </div>
         </div>
 
         {(view === "pre" || view === "post") && (
-          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? preImg?.acquisition_date : postImg?.acquisition_date}>
+          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? preImg?.acquisition_date : postSource === "esri_wayback" ? undefined : postDate ?? undefined}>
             <BasemapSwitcher />
+            <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
+            <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
             <LayerOpacityControl
               opacity={imageryOpacity}
               onChange={setImageryOpacity}
@@ -424,7 +605,8 @@ export default function SatelliteViewer({
                 opacity={imageryOpacity}
                 attribution="Google Earth Engine"
                 crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                pane={RESULT_PANE}
+                pane={DISASTER_IMAGERY_PANE}
+                bounds={aoiBounds}
                 maxNativeZoom={preNativeZoom}
                 maxZoom={DISASTER_SCENE_MAX_ZOOM}
               />
@@ -433,9 +615,10 @@ export default function SatelliteViewer({
               <TileLayer
                 url={postTile}
                 opacity={imageryOpacity}
-                attribution="Google Earth Engine"
+                attribution={postAttribution}
                 crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                pane={RESULT_PANE}
+                pane={DISASTER_IMAGERY_PANE}
+                bounds={aoiBounds}
                 maxNativeZoom={postNativeZoom}
                 maxZoom={DISASTER_SCENE_MAX_ZOOM}
               />
@@ -455,7 +638,7 @@ export default function SatelliteViewer({
               firmsShowLabels={firmsShowLabels}
               firmsCluster={firmsCluster}
             />
-            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
+            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
             <FitToFeature feature={focusFeature} signal={focusSignal} />
           </MapView>
@@ -466,6 +649,8 @@ export default function SatelliteViewer({
             <div className="col-md-6">
               <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl} historicalDate={preImg?.acquisition_date}>
                 <BasemapSwitcher />
+                <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
+                <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
                 <LayerOpacityControl
                   opacity={imageryOpacity}
                   onChange={setImageryOpacity}
@@ -477,7 +662,8 @@ export default function SatelliteViewer({
                     opacity={imageryOpacity}
                     attribution="Google Earth Engine"
                     crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                    pane={RESULT_PANE}
+                    pane={DISASTER_IMAGERY_PANE}
+                    bounds={aoiBounds}
                     maxNativeZoom={preNativeZoom}
                     maxZoom={DISASTER_SCENE_MAX_ZOOM}
                   />
@@ -506,8 +692,10 @@ export default function SatelliteViewer({
               </div>
             </div>
             <div className="col-md-6">
-              <MapView id="disasterSatMapPost" showGlobeControl={false} historicalDate={postImg?.acquisition_date}>
+              <MapView id="disasterSatMapPost" showGlobeControl={false} historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? undefined}>
                 <BasemapSwitcher />
+                <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
+                <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
                 <LayerOpacityControl
                   opacity={imageryOpacity}
                   onChange={setImageryOpacity}
@@ -517,9 +705,10 @@ export default function SatelliteViewer({
                   <TileLayer
                     url={postTile}
                     opacity={imageryOpacity}
-                    attribution="Google Earth Engine"
+                    attribution={postAttribution}
                     crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                    pane={RESULT_PANE}
+                    pane={DISASTER_IMAGERY_PANE}
+                    bounds={aoiBounds}
                     maxNativeZoom={postNativeZoom}
                     maxZoom={DISASTER_SCENE_MAX_ZOOM}
                   />
@@ -539,7 +728,7 @@ export default function SatelliteViewer({
                   firmsShowLabels={firmsShowLabels}
                   firmsCluster={firmsCluster}
                 />
-                <RasterResolutionNotice layers={[{label: "Post", resolutionM: postImg?.resolution_m, nativeZoom: postNativeZoom}]} />
+                <RasterResolutionNotice layers={[{label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
                 <FitToFeature feature={focusFeature} signal={focusSignal} />
               </MapView>
@@ -556,7 +745,9 @@ export default function SatelliteViewer({
             beforeUrl={preTile}
             afterUrl={postTile}
             beforeLabel={`Sebelum${preImg ? ` · ${preImg.acquisition_date}` : ""}`}
-            afterLabel={`Sesudah${postImg ? ` · ${postImg.acquisition_date}` : ""}`}
+            afterLabel={`Sesudah${postDate ? ` · ${postDate}` : ""}`}
+            beforeAttribution="Google Earth Engine"
+            afterAttribution={postAttribution}
             orientation={swipeOrientation}
             beforeCrossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
             afterCrossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
@@ -564,14 +755,14 @@ export default function SatelliteViewer({
             opacity={imageryOpacity}
             maxZoom={DISASTER_SCENE_MAX_ZOOM}
             beforeResolutionM={preImg?.resolution_m ?? undefined}
-            afterResolutionM={postImg?.resolution_m ?? undefined}
+            afterResolutionM={postResolutionM ?? undefined}
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
-            historicalDate={postImg?.acquisition_date ?? preImg?.acquisition_date}
+            historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? preImg?.acquisition_date}
             showGlobeControl={showGlobeControl}
             initialPercent={35}
             bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}
-            clipGeometry={aoi?.geojson as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
+            clipGeometry={aoiFeature}
           >
             <LayerOpacityControl
               opacity={imageryOpacity}
