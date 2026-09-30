@@ -109,6 +109,7 @@ jobs:
           sshpass -e ssh -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "mkdir -p '$FRONTEND_REMOTE_DIR/dist'"
           rsync -az --delete \
+            --delay-updates --delete-delay \
             -e "sshpass -e ssh -p $DEPLOY_SSH_PORT" \
             dist/ "$DEPLOY_USER@$DEPLOY_HOST:$FRONTEND_REMOTE_DIR/dist/"
           sshpass -e ssh -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
