@@ -118,7 +118,8 @@ jobs:
           trap cleanup_upload EXIT
           tar -xzf "$archive" -C "$upload_stage" --no-same-owner
           mkdir -p "$FRONTEND_REMOTE_DIR/dist"
-          rsync -a --delay-updates --delete-delay "$upload_stage/" "$FRONTEND_REMOTE_DIR/dist/"
+          # Keep older Vite hashes for open tabs using the previous index.html.
+          rsync -a --delay-updates "$upload_stage/" "$FRONTEND_REMOTE_DIR/dist/"
           apache2ctl configtest
           systemctl reload apache2
           REMOTE
