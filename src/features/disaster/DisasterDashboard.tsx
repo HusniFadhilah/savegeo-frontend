@@ -38,6 +38,7 @@ import SourceStatusPanel from "./components/SourceStatusPanel";
 import BmkgAlerts from "./components/BmkgAlerts";
 import DemSlopeControls from "./components/DemSlopeControls";
 import FirmsHotspotPanel from "./components/FirmsHotspotPanel";
+import SamGeoSegmentationPanel from "./components/SamGeoSegmentationPanel";
 import { clearFirmsQuery } from "./lib/firmsQueryState";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -571,6 +572,7 @@ export default function DisasterDashboard() {
           </div>
         )}
       </div>
+      <SamGeoSegmentationPanel aoi={aoi} imagery={imagery} />
     </div>
   );
 }

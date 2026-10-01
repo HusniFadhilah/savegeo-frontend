@@ -194,6 +194,37 @@ export function fetchDisasterFeatures(eventId: number | string, params: { analys
   return userGet<DisasterFeaturesResponse>(`/disasters/${eventId}/features${qs}`);
 }
 
+export function fetchSamGeoCapabilities() {
+  return apiClient.get<import("./types").SamGeoCapabilities>("/imagery/samgeo/status");
+}
+
+export function startSamGeoSegmentation(payload: {
+  item_url?: string;
+  local_file_path?: string;
+  asset_key?: string;
+  aoi: GeoJSON.Feature | GeoJSON.Geometry | Record<string, unknown>;
+  mode?: import("./types").SamGeoMode;
+  class_label?: import("./types").SamGeoClass;
+  prompt?: string;
+  confidence_threshold?: number;
+  bands?: string;
+  rescale?: string;
+  file?: File;
+}) {
+  if (payload.file) {
+    const form = new FormData();
+    const { file, ...metadata } = payload;
+    form.append("file", file);
+    form.append("payload", JSON.stringify(metadata));
+    return apiClient.upload<import("./types").SamGeoJob>("/imagery/samgeo/jobs", form, { auth: "app" });
+  }
+  return apiClient.post<import("./types").SamGeoJob>("/imagery/samgeo/jobs", payload, { auth: "app" });
+}
+
+export function fetchSamGeoJob(jobId: string) {
+  return apiClient.get<import("./types").SamGeoJob>(`/imagery/samgeo/jobs/${encodeURIComponent(jobId)}`, { auth: "app" });
+}
+
 // --- standalone wildfire explorer ----------------------------------------
 
 export function fetchWildfireEvents(params: {

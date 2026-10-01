@@ -25,6 +25,17 @@ function renderValue(v: unknown): string {
   return String(v);
 }
 
+function exportGeoJson(features: GeoJSON.FeatureCollection | null | undefined, runId: number) {
+  if (!features?.features?.length) return;
+  const blob = new Blob([JSON.stringify(features, null, 2)], { type: "application/geo+json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `savegeo-analysis-${runId}.geojson`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 interface Props {
   eventId: number;
   runs: AnalysisRunWithResult[];
@@ -152,6 +163,16 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
                   <MapLegend title="Legenda" entries={selected.result.legend.map((l) => ({ color: l.color, label: l.label }))} />
                 </div>
               )}
+              {selected.result.review_reasons?.length ? (
+                <div className="alert alert-warning py-1 px-2 small mt-2">
+                  <strong>Alasan review:</strong> {selected.result.review_reasons.join("; ")}
+                </div>
+              ) : null}
+              {selected.result.coverage && (
+                <div className="small text-muted mt-2">
+                  Coverage valid: {renderValue(selected.result.coverage.coverage_pct)}% · valid {renderValue(selected.result.coverage.valid_area_ha)} ha · no-data {renderValue(selected.result.coverage.no_data_area_ha)} ha
+                </div>
+              )}
             </div>
 
             <div className="two-col" style={{ marginBottom: 12 }}>
@@ -192,6 +213,11 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
             </div>
 
             <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+              {selected.result.features && (
+                <button type="button" className="btn-sm" disabled={!selected.result.features.features.length} onClick={() => exportGeoJson(selected.result?.features, selected.run.id)}>
+                  <i className="bi bi-download" /> Export GeoJSON
+                </button>
+              )}
               {selected.result.is_published ? (
                 <button type="button" className="btn-sm danger" disabled={busy} onClick={handleUnpublish}>
                   <i className="bi bi-eye-slash" /> Unpublish

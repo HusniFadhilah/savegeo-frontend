@@ -46,8 +46,10 @@ export const FALLBACK_WILDFIRE_EVENTS: WildfireEvent[] = [
     is_public: true,
     hotspot_count: 57700,
     high_confidence_count: 6950,
-    burned_area_ha: 29063.54,
-    burned_area_source: "Laporan resmi Januari–Juni 2026",
+    // Burned area must come from a compatible, published analysis result;
+    // never show a static estimate when the API is unavailable.
+    burned_area_ha: null,
+    burned_area_source: null,
     updated_at: "2026-09-20T23:15:55Z",
   },
   {

@@ -15,8 +15,15 @@ interface Props {
 
 const CATEGORY_LABELS: Record<string, string> = {
   change_detection: "Change Detection",
-  segmentation: "Segmentation",
-  damage_assessment: "Damage Assessment",
+  segmentation: "Satellite imagery / Segmentation",
+  water_inundation: "Water / Inundation",
+  building_exposure: "Building Exposure",
+  road_exposure: "Road Exposure",
+  landcover_impact: "Landcover Impact",
+  building_change: "Building Change",
+  damage_candidate: "Damage Candidate",
+  official_observation: "Official Intensity",
+  damage_assessment: "Damage Candidate",
 };
 
 function categoryLabel(category: string): string {
@@ -91,9 +98,10 @@ export default function LayerPanel({
                 />
                 <label className="form-check-label small" htmlFor={`layer-${entry.model_id}`}>
                   {entry.user_label}
-                  {!entry.available && <span className="text-muted ms-1">(Not Available)</span>}
+                  {!entry.available && <span className="text-muted ms-1">(Belum tersedia)</span>}
                 </label>
-                {entry.damage_model === false && <div className="text-muted ms-4 small">Proksi tutupan lahan; bukan kelas kerusakan</div>}
+                {entry.damage_model === false && <div className="text-muted ms-4 small">Indikator/paparan; bukan kerusakan terkonfirmasi</div>}
+                {entry.validation_status === "review_required" && <div className="text-warning ms-4 small">Review required sebelum publikasi</div>}
               </div>
             ))}
           </div>

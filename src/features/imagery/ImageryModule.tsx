@@ -25,6 +25,7 @@ import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
 import ImageryToolsPanel from "./ImageryToolsPanel";
+import HimawariExplorerPanel from "./HimawariExplorerPanel";
 import { parseQuery, updateUrlFromState } from "./lib/imageryQueryState";
 import GpuEnhancedTileLayer from "./GpuEnhancedTileLayer";
 import { useGpuSuperResolution } from "./hooks/useGpuSuperResolution";
@@ -431,6 +432,8 @@ export default function ImageryModule() {
   const [tileError, setTileError] = useState<string | null>(null);
   const [segmentation, setSegmentation] = useState<FeatureCollection | null>(null);
   const [nasaTimeLayerUrl, setNasaTimeLayerUrl] = useState<string | null>(null);
+  const [himawariTimeLayerUrl, setHimawariTimeLayerUrl] = useState<string | null>(null);
+  const [himawariOpacity, setHimawariOpacity] = useState(0.65);
   const [storyMap, setStoryMap] = useState<FeatureCollection | null>(null);
   const [provenanceOpen, setProvenanceOpen] = useState(true);
   const [mapOpen, setMapOpen] = useState(true);
@@ -995,12 +998,13 @@ export default function ImageryModule() {
 
   const globeLayers = useMemo<GlobeLayer[]>(() => {
     const result: GlobeLayer[] = [];
-    if (tileUrl) result.push({ id: "scene-result", type: "raster", url: tileUrl, opacity: tileOpacity, maxZoom: SCENE_TILE_MAX_ZOOM, maxNativeZoom: sceneTileMaxNativeZoom, attribution: "Scene imagery" });
     if (nasaTimeLayerUrl) result.push({ id: "nasa-time", type: "raster", url: nasaTimeLayerUrl, opacity: 0.55, attribution: "NASA GIBS / Earthdata" });
+    if (himawariTimeLayerUrl) result.push({ id: "himawari-time", type: "raster", url: himawariTimeLayerUrl, opacity: himawariOpacity, maxZoom: SCENE_TILE_MAX_ZOOM, maxNativeZoom: 5, attribution: "JMA Himawari-9" });
+    if (tileUrl) result.push({ id: "scene-result", type: "raster", url: tileUrl, opacity: tileOpacity, maxZoom: SCENE_TILE_MAX_ZOOM, maxNativeZoom: sceneTileMaxNativeZoom, attribution: "Scene imagery" });
     if (demLayerMode !== "none" && demResult?.tile_url) result.push({ id: "dem-result", type: "raster", url: demResult.tile_url, opacity: 0.82, attribution: demResult.source });
     if (segmentation) result.push({ id: "segmentation-result", type: "geojson", data: segmentation, color: "#e83e8c", fillColor: "#e83e8c", opacity: 0.18 });
     return result;
-  }, [demLayerMode, demResult, nasaTimeLayerUrl, sceneTileMaxNativeZoom, segmentation, tileOpacity, tileUrl]);
+  }, [demLayerMode, demResult, himawariOpacity, himawariTimeLayerUrl, nasaTimeLayerUrl, sceneTileMaxNativeZoom, segmentation, tileOpacity, tileUrl]);
 
   return (
     <div className="analysis-page analysis-page-imagery">
@@ -1602,6 +1606,13 @@ export default function ImageryModule() {
           </div>
         )}
 
+        <HimawariExplorerPanel
+          activeLayerUrl={himawariTimeLayerUrl}
+          opacity={himawariOpacity}
+          onLayer={setHimawariTimeLayerUrl}
+          onOpacity={setHimawariOpacity}
+        />
+
         {selectedScene && satelliteMeta && (
           <div className="card mb-3" aria-label="Data provenance scene terpilih">
             <div
@@ -1717,6 +1728,7 @@ export default function ImageryModule() {
                     {segmentation && <GeoJSON key={JSON.stringify(segmentation)} data={segmentation}
                       style={{ color: "#e83e8c", weight: 2, fillOpacity: 0.18 }} />}
                     {nasaTimeLayerUrl && <TileLayer key={nasaTimeLayerUrl} url={nasaTimeLayerUrl} opacity={0.55} attribution="NASA GIBS / Earthdata" pane={RESULT_PANE} />}
+                    {himawariTimeLayerUrl && <TileLayer key={himawariTimeLayerUrl} url={himawariTimeLayerUrl} opacity={himawariOpacity} attribution="JMA Himawari-9" maxNativeZoom={5} maxZoom={SCENE_TILE_MAX_ZOOM} pane={RESULT_PANE} />}
                     {tileUrl && (
                       <>
                         <TileLayer

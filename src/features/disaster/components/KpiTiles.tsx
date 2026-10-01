@@ -11,13 +11,17 @@ function humanizeKey(key: string): string {
   return words.join(" ");
 }
 
-function formatValue(key: string, value: number | string | null): string {
-  if (value === null || value === undefined) return "-";
+function formatValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "Belum tersedia";
   if (typeof value === "number") {
     const formatted = value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
     return key.endsWith("_ha") ? `${formatted} ha` : formatted;
   }
   return String(value);
+}
+
+function isScalar(value: unknown): boolean {
+  return value === null || value === undefined || typeof value === "number" || typeof value === "string";
 }
 
 function modelIcon(modelId: string): string {
@@ -77,8 +81,13 @@ export default function KpiTiles({ kpis, analyses }: Props) {
                 {analysis.limitations?.[0] ? ` ${analysis.limitations[0]}` : ""}
               </div>
             )}
+            {analysis?.validation_status === "review_required" && (
+              <div className="alert alert-warning py-1 px-2 mb-2 small">
+                <i className="bi bi-clipboard-check me-1" /> Hasil berstatus review_required; angka ini belum merupakan kerusakan terkonfirmasi.
+              </div>
+            )}
             <div className="row g-2">
-              {Object.entries(stats).map(([key, value]) => (
+              {Object.entries(stats).filter(([, value]) => isScalar(value)).map(([key, value]) => (
                 <div className="col-6 col-md-3" key={key}>
                   <div className="metric-card">
                     <div className="disaster-metric-icon">

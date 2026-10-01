@@ -293,6 +293,28 @@ export function isKarhutlaDisasterType(type: string | null | undefined): boolean
   return normalized === "forest_fire" || normalized === "wildfire" || normalized === "karhutla" || normalized === "fire";
 }
 
+export type SamGeoMode = "automatic" | "prompt_based";
+export type SamGeoClass = "building" | "road" | "water" | "tree" | "crop" | "bare_land" | "custom_prompt";
+
+export interface SamGeoCapabilities {
+  available: boolean;
+  model: string;
+  max_size: number;
+  modes?: SamGeoMode[];
+  classes?: SamGeoClass[];
+  message?: string;
+}
+
+export interface SamGeoJob {
+  job_id: string;
+  status: "running" | "complete" | "failed";
+  message?: string;
+  mode?: SamGeoMode;
+  prompt?: string | null;
+  validation_status?: "review_required" | string;
+  result?: GeoJSON.FeatureCollection & { metadata?: Record<string, unknown> };
+}
+
 export const EVENT_DISASTER_TYPE_OPTIONS: { value: EventDisasterType; label: string }[] = Object.entries(
   EVENT_DISASTER_TYPE_LABELS,
 ).map(([value, label]) => ({ value: value as EventDisasterType, label }));
@@ -431,6 +453,10 @@ export interface AnalysisResultRecord {
   statistics: Record<string, number | string | null> | null;
   legend: MapLegendEntry[];
   confidence_summary: Record<string, number | string | null> | null;
+  coverage?: { valid_area_ha?: number | null; no_data_area_ha?: number | null; coverage_pct?: number | null } | null;
+  quality_flags?: Record<string, unknown>;
+  review_reasons?: string[];
+  publication_status?: "published" | "unpublished" | string;
   provenance?: Record<string, unknown> | null;
   validation_status?: string | null;
   limitations?: string[];
@@ -456,6 +482,7 @@ export interface DisasterAnalysisEntry {
   available: boolean;
   run: AnalysisRunRecord | null;
   result: AnalysisResultRecord | null;
+  resolution_m?: number | null;
 }
 
 export interface DisasterAnalysesResponse {

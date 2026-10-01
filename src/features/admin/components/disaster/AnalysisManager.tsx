@@ -49,6 +49,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
   const [openConfigModelId, setOpenConfigModelId] = useState<string | null>(null);
   const [preImageryId, setPreImageryId] = useState("");
   const [postImageryId, setPostImageryId] = useState("");
+  const [parametersText, setParametersText] = useState("");
   const [creating, setCreating] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [busyRunId, setBusyRunId] = useState<number | null>(null);
@@ -83,6 +84,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
     const model = models.find(m => m.model_id === modelId);
     setPreImageryId(model?.default_pre_imagery_id ? String(model.default_pre_imagery_id) : "");
     setPostImageryId(model?.default_post_imagery_id ? String(model.default_post_imagery_id) : "");
+    setParametersText("");
     setConfigError(null);
   };
 
@@ -104,11 +106,29 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
     setCreating(true);
     setConfigError(null);
     try {
+      let parameters: Record<string, unknown> | undefined;
+      if (parametersText.trim()) {
+        try {
+          const parsed = JSON.parse(parametersText);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("JSON harus berupa object");
+          parameters = parsed as Record<string, unknown>;
+        } catch (error) {
+          setConfigError(`Parameter JSON tidak valid: ${error instanceof Error ? error.message : "format salah"}`);
+          setCreating(false);
+          return;
+        }
+      }
+      if (["building_exposure", "road_exposure", "building_change"].includes(model.category) && !parameters) {
+        setConfigError("Model exposure memerlukan parameter dataset dan geometri hazard dalam JSON");
+        setCreating(false);
+        return;
+      }
       await createAnalysisRun(eventId, {
         model_id: model.model_id,
         aoi_id: aoi.id,
         pre_imagery_id: preImageryId ? Number(preImageryId) : undefined,
         post_imagery_id: postImageryId ? Number(postImageryId) : undefined,
+        parameters,
       });
       notify("Analisis dikonfigurasi", "s");
       setOpenConfigModelId(null);
@@ -218,6 +238,13 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                             </div>
                           )}
                         </div>
+                        {["building_exposure", "road_exposure", "landcover_impact", "building_change"].includes(model.category) && (
+                          <div className="form-field" style={{ marginBottom: "0.5rem" }}>
+                            <label className="form-label">Parameter dataset / hazard (JSON)</label>
+                            <textarea className="form-input" rows={4} value={parametersText} onChange={(e) => setParametersText(e.target.value)} placeholder={'{"source_dataset":"...","source_date":"YYYY-MM-DD","source_kind":"official","hazard_geojson":{...},"exposure_features":{...}}'} />
+                            <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>Tidak ada fallback statis; dataset dan tanggal sumber wajib dicatat untuk provenance.</div>
+                          </div>
+                        )}
                         {configError && <div className="alert alert-danger py-1 px-2 small">{configError}</div>}
                         <div style={{ display: "flex", gap: 6 }}>
                           <button type="button" className="btn-sm primary" disabled={creating} onClick={() => handleCreateRun(model)}>

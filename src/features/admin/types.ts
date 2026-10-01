@@ -321,6 +321,9 @@ export interface AnalysisResult {
   features?: GeoJSON.FeatureCollection | null;
   legend: { label: string; color: string }[];
   confidence_summary?: Record<string, unknown> | null;
+  coverage?: { valid_area_ha?: number | null; no_data_area_ha?: number | null; coverage_pct?: number | null } | null;
+  quality_flags?: Record<string, unknown>;
+  review_reasons?: string[];
   provenance?: Record<string, unknown> | null;
   validation_status?: string | null;
   limitations?: string[];
@@ -354,6 +357,10 @@ export interface DisasterModelRegistryEntry {
   description: string;
   enabled: boolean;
   requires_earth_engine?: boolean;
+  resolution_m?: number | null;
+  data_dependencies?: string[];
+  requires_pre?: boolean;
+  requires_post?: boolean;
 }
 
 export type HotspotImpactLevel = "low" | "medium" | "high" | "critical";
