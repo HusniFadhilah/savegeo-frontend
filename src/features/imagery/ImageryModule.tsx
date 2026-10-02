@@ -25,7 +25,7 @@ import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { Feature, FeatureCollection, Geometry, Polygon } from "geojson";
 import SamGeoPanel from "./SamGeoPanel";
 import ImageryToolsPanel from "./ImageryToolsPanel";
-import HimawariExplorerPanel from "./HimawariExplorerPanel";
+import { himawariTileUrlFromSceneId, listHimawariScenes } from "./himawari";
 import { parseQuery, updateUrlFromState } from "./lib/imageryQueryState";
 import GpuEnhancedTileLayer from "./GpuEnhancedTileLayer";
 import { useGpuSuperResolution } from "./hooks/useGpuSuperResolution";
@@ -86,7 +86,7 @@ const HIMAWARI_PROVIDER: ImageryProvider = {
   cloud_property: null,
   cloud_mask_techniques: null,
   capabilities: {
-    searchable: false,
+    searchable: true,
     downloadable: false,
     analytical: false,
     visualization_only: true,
@@ -519,7 +519,17 @@ export default function ImageryModule() {
     () => ({
       ...satellites,
       [ESRI_WAYBACK_PROVIDER_KEY]: ESRI_WAYBACK_PROVIDER,
-      [HIMAWARI_PROVIDER_KEY]: satellites[HIMAWARI_PROVIDER_KEY] ?? HIMAWARI_PROVIDER,
+      [HIMAWARI_PROVIDER_KEY]: {
+        ...HIMAWARI_PROVIDER,
+        ...satellites[HIMAWARI_PROVIDER_KEY],
+        capabilities: {
+          ...HIMAWARI_PROVIDER.capabilities,
+          ...satellites[HIMAWARI_PROVIDER_KEY]?.capabilities,
+          searchable: true,
+          supports_time: true,
+          visualization_only: true,
+        },
+      },
     }),
     [satellites],
   );
@@ -670,6 +680,13 @@ export default function ImageryModule() {
       setTileRenderMode("scene");
       setTileSceneCount(1);
       try {
+        if (isHimawari) {
+          const frameTileUrl = himawariTileUrlFromSceneId(scene.id);
+          if (!frameTileUrl) throw new Error("ID frame Himawari tidak valid.");
+          if (requestId !== tileRequestRef.current) return;
+          setHimawariTimeLayerUrl(frameTileUrl);
+          return;
+        }
         if (isEsriWayback) {
           const waybackTile = sceneTilesById[scene.id] ?? (scene as WaybackScene).tile_url;
           if (!waybackTile) throw new Error("Tile Esri Wayback untuk rilis ini tidak ditemukan.");
@@ -718,6 +735,7 @@ export default function ImageryModule() {
       cogAssetKey,
       cogBands,
       cogRescale,
+      isHimawari,
       isCogProvider,
       isEsriWayback,
       isSentinel2,
@@ -729,21 +747,18 @@ export default function ImageryModule() {
   );
 
   const searchScenes = async () => {
-    if (isHimawari) {
-      setSearchError("Pilih frame UTC Himawari di panel Satellite; sensor ini tidak memakai pencarian scene AOI.");
-      return;
-    }
-    if (!aoi) {
+    if (!aoi && !isHimawari) {
       setSearchError("Gambar AOI terlebih dahulu di peta.");
       return;
     }
-    if (!startDate || !endDate || startDate >= endDate) {
-      setSearchError(`${t("imagery.dateRange")} tidak valid (tanggal awal harus sebelum tanggal akhir).`);
+    if (!startDate || !endDate || (isHimawari ? startDate > endDate : startDate >= endDate)) {
+      setSearchError(`${t("imagery.dateRange")} tidak valid (${isHimawari ? "tanggal awal tidak boleh setelah tanggal akhir" : "tanggal awal harus sebelum tanggal akhir"}).`);
       return;
     }
     const requestId = ++searchRequestRef.current;
     ++tileRequestRef.current;
     setSearching(true);
+    setSceneResultsOpen(true);
     setSearchError(null);
       setSelectedSceneId(null);
       setHoverSceneId(null);
@@ -762,8 +777,11 @@ export default function ImageryModule() {
       setCompareTileA(null);
       setCompareTileB(null);
       setCompareError(null);
+      setHimawariTimeLayerUrl(null);
     try {
-      const res = isEsriWayback
+      const res = isHimawari
+        ? { scenes: await listHimawariScenes(startDate, endDate), truncated: false }
+        : isEsriWayback
         ? {
             scenes: await listEsriWaybackScenes(startDate, endDate),
             truncated: false,
@@ -775,7 +793,7 @@ export default function ImageryModule() {
             const inclusiveEnd = new Date(endDate);
             inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
             return listImageryScenes({
-              aoi: { geojson: aoi },
+              aoi: { geojson: aoi! },
               satellite,
               startDate,
               endDate: isOpenHighResProvider ? endDate : inclusiveEnd.toISOString().slice(0, 10),
@@ -851,12 +869,16 @@ export default function ImageryModule() {
     setCompareTileA(null);
     setCompareTileB(null);
     try {
-      if (isEsriWayback) {
+      if (isEsriWayback || isHimawari) {
         const tileA = sceneTilesById[compareSceneAId];
         const tileB = sceneTilesById[compareSceneBId];
-        if (!tileA || !tileB) throw new Error("Tile Esri Wayback untuk salah satu rilis tidak ditemukan.");
-        setCompareTileA(tileA);
-        setCompareTileB(tileB);
+        const frameTileA = isHimawari ? himawariTileUrlFromSceneId(compareSceneAId) : tileA;
+        const frameTileB = isHimawari ? himawariTileUrlFromSceneId(compareSceneBId) : tileB;
+        if (!frameTileA || !frameTileB) {
+          throw new Error(isHimawari ? "Tile JMA untuk salah satu frame tidak ditemukan." : "Tile Esri Wayback untuk salah satu rilis tidak ditemukan.");
+        }
+        setCompareTileA(frameTileA);
+        setCompareTileB(frameTileB);
         return;
       }
       const [resA, resB] = await Promise.all([
@@ -942,7 +964,7 @@ export default function ImageryModule() {
       sceneCount: scenes.length,
       truncated,
       selectedSceneId,
-      sceneVisible: Boolean(tileUrl),
+      sceneVisible: Boolean(tileUrl || himawariTimeLayerUrl),
       availableSceneIds: scenes.map((scene) => scene.id),
       error: searchError || tileError,
     }),
@@ -973,7 +995,7 @@ export default function ImageryModule() {
         if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > scenePageCount) throw new Error("Halaman scene di luar hasil yang telah dimuat.");
         setScenePage(value as number);
       } else if (action === "search_scenes" && target === "scenes.searchRequest") {
-        if (!aoi) throw new Error("AOI diperlukan sebelum mencari scene.");
+        if (!aoi && !isHimawari) throw new Error("AOI diperlukan sebelum mencari scene.");
         if (searching) throw new Error("Pencarian scene masih berjalan.");
         await searchScenes();
       } else if (action === "show_scene" && target === "scenes.scene") {
@@ -983,6 +1005,7 @@ export default function ImageryModule() {
         if (!visible) {
           ++tileRequestRef.current;
           setTileUrl(null);
+          setHimawariTimeLayerUrl(null);
           setSelectedSceneId(null);
           return;
         }
@@ -994,6 +1017,7 @@ export default function ImageryModule() {
       } else if (action === "clear_scenes" && target === "scenes.layers") {
         ++tileRequestRef.current;
         setTileUrl(null);
+        setHimawariTimeLayerUrl(null);
         setSelectedSceneId(null);
       } else if (action === "accordion" && target === "scenes.results") {
         if (typeof parameters?.open !== "boolean") throw new Error("Status panel harus true atau false.");
@@ -1118,6 +1142,10 @@ export default function ImageryModule() {
               <div className="alert alert-success py-2 mb-0" style={{ fontSize: ".8rem" }}>
                 <i className="fas fa-check-circle" /> {t("imagery.aoiDrawn")} ({aoi.geometry.type})
               </div>
+            ) : isHimawari ? (
+              <div className="alert alert-info py-2 mb-0" style={{ fontSize: ".8rem" }}>
+                <i className="fas fa-circle-info" /> Himawari mencakup area full-disk; AOI tidak diperlukan.
+              </div>
             ) : (
               <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
                 <i className="fas fa-exclamation-triangle" /> {t("imagery.chooseAoi")}
@@ -1185,14 +1213,6 @@ export default function ImageryModule() {
                   </div>
                 )}
               </>
-            )}
-            {isHimawari && (
-              <HimawariExplorerPanel
-                activeLayerUrl={himawariTimeLayerUrl}
-                opacity={himawariOpacity}
-                onLayer={setHimawariTimeLayerUrl}
-                onOpacity={setHimawariOpacity}
-              />
             )}
           </div>
 
@@ -1361,7 +1381,7 @@ export default function ImageryModule() {
             </div>
           )}
 
-          {!isHimawari && <div className="mb-3">
+          <div className="mb-3">
             <label className="form-label fw-bold">
               <i className="fas fa-calendar" /> {t("imagery.dateRange")}
             </label>
@@ -1384,11 +1404,34 @@ export default function ImageryModule() {
               />
             </div>
             <small className="text-muted">
-              {isEsriWayback
-                ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
-                : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
+              {isHimawari
+                ? "Frame full-disk yang saat ini tersedia dari JMA akan dicari pada tanggal UTC yang dipilih."
+                : isEsriWayback
+                  ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
+                  : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
             </small>
-          </div>}
+          </div>
+
+          {isHimawari && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="himawariOpacity">
+                Opasitas frame Himawari
+              </label>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  id="himawariOpacity"
+                  type="range"
+                  className="form-range mb-0"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={himawariOpacity}
+                  onChange={(event) => setHimawariOpacity(Number(event.target.value))}
+                />
+                <span className="small text-muted" style={{ minWidth: 38 }}>{Math.round(himawariOpacity * 100)}%</span>
+              </div>
+            </div>
+          )}
 
           {!isHimawari && (satelliteMeta?.cloud_property ? (
             <div className="mb-3">
@@ -1454,13 +1497,13 @@ export default function ImageryModule() {
 
           <hr />
 
-          {!isHimawari && searchError && (
+          {searchError && (
             <div className="alert alert-danger py-2 mb-2" style={{ fontSize: ".8rem" }}>
               {searchError}
             </div>
           )}
 
-          {!isHimawari && <button className="btn btn-warning w-100 fw-bold" disabled={searching} onClick={searchScenes}>
+          <button className="btn btn-warning w-100 fw-bold" disabled={searching} onClick={searchScenes}>
             {searching ? (
               <>
                 <i className="fas fa-spinner fa-spin" /> Mencari...
@@ -1470,7 +1513,7 @@ export default function ImageryModule() {
                 <i className="fas fa-search" /> Cari Scene
               </>
             )}
-          </button>}
+          </button>
           {demError && (
             <div className="alert alert-danger py-2 mt-2 mb-0" style={{ fontSize: ".8rem" }}>
               {demError}
@@ -1485,10 +1528,10 @@ export default function ImageryModule() {
             <div className="card-body d-flex align-items-start gap-3">
               <i className="bi bi-cloud-sun text-info fs-3" aria-hidden="true" />
               <div>
-                <h5 className="mb-1">Pilih waktu Himawari</h5>
+                <h5 className="mb-1">Frame Himawari-9 full-disk</h5>
                 <p className="text-muted mb-0">
-                  Atur frame UTC dan tekan <strong>Tampilkan</strong> pada panel di sebelah kiri.
-                  Layer cuaca JMA akan muncul di peta di bawah ini tanpa pencarian AOI atau proses land cover.
+                  Pilih rentang tanggal UTC lalu klik <strong>Cari Scene</strong>. Frame JMA akan muncul pada tabel
+                  yang sama seperti Sentinel; pilih baris untuk menampilkan citra cuaca di peta. AOI tidak diperlukan.
                 </p>
               </div>
             </div>
@@ -1507,7 +1550,7 @@ export default function ImageryModule() {
           </div>
         )}
 
-        {searched && !isHimawari && (
+        {searched && (
           <div className="card mb-3">
             <div
               className="card-header imagery-accordion-card-header imagery-scene-results-header"
@@ -1569,8 +1612,9 @@ export default function ImageryModule() {
             <div className="card-body p-0">
               {scenes.length === 0 ? (
                 <div className="p-3 text-center text-muted small">
-                  Tidak ada scene ditemukan untuk AOI/rentang/filter ini. Coba perlebar {t("imagery.dateRange")} atau nonaktifkan
-                  filter awan.
+                  {isHimawari
+                    ? "Tidak ada frame Himawari yang tersedia dari JMA pada rentang tanggal ini. Coba pilih tanggal lain."
+                    : <>Tidak ada scene ditemukan untuk AOI/rentang/filter ini. Coba perlebar {t("imagery.dateRange")} atau nonaktifkan filter awan.</>}
                 </div>
               ) : (
                 <>
@@ -1579,7 +1623,7 @@ export default function ImageryModule() {
                     <thead className="table-primary sticky-top">
                       <tr>
                         <th>Tanggal &amp; Jam Akuisisi (UTC)</th>
-                        {isOpenHighResProvider && (
+                        {(isOpenHighResProvider || isHimawari) && (
                           <>
                             <th>Resolusi</th>
                             <th>Platform</th>
@@ -1628,7 +1672,7 @@ export default function ImageryModule() {
                             {formatAcquired(scene.acquired_at)}
                             {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
-                          {isOpenHighResProvider && (
+                          {(isOpenHighResProvider || isHimawari) && (
                             <>
                               <td>{formatResolution(scene.resolution_m)}</td>
                               <td>{scene.platform ?? "-"}</td>
@@ -1645,7 +1689,8 @@ export default function ImageryModule() {
                               <button
                                 type="button"
                                 className="btn btn-outline-secondary"
-                                title="Zoom ke footprint scene"
+                                title={isHimawari ? "Citra full-disk, tidak memiliki footprint scene" : "Zoom ke footprint scene"}
+                                disabled={isHimawari}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   zoomToScene(scene);
@@ -1794,7 +1839,7 @@ export default function ImageryModule() {
                     onViewChange={setMapMode}
                   />
                 ) : (
-                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={selectedScene?.acquired_at?.slice(0, 10)} historicalAoi={aoi}>
+                  <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={isHimawari ? undefined : selectedScene?.acquired_at?.slice(0, 10)} historicalAoi={isHimawari ? null : aoi}>
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <SceneFootprintLayer
