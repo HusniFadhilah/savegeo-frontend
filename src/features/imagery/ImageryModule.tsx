@@ -40,6 +40,7 @@ const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 const SCENE_TILE_MAX_NATIVE_ZOOM = 19;
 const SCENE_TILE_MAX_ZOOM = 23;
 const ESRI_WAYBACK_PROVIDER_KEY = "esri_wayback";
+const HIMAWARI_PROVIDER_KEY = "himawari";
 const ESRI_WAYBACK_PROVIDER: ImageryProvider = {
   key: ESRI_WAYBACK_PROVIDER_KEY,
   name: "Esri World Imagery Wayback",
@@ -69,6 +70,41 @@ const ESRI_WAYBACK_PROVIDER: ImageryProvider = {
   },
   description:
     "Arsip rilis World Imagery basemap. Tanggal adalah tanggal publikasi Wayback, bukan selalu tanggal akuisisi sensor.",
+};
+const HIMAWARI_PROVIDER: ImageryProvider = {
+  key: HIMAWARI_PROVIDER_KEY,
+  name: "Himawari-9 - Cuaca Asia-Pasifik",
+  provider: "Japan Meteorological Agency (JMA)",
+  group: "Cuaca Geostasioner",
+  gee_collection: "",
+  source_kind: "himawari",
+  visualization: "rgb",
+  color_mode: "natural",
+  resolution_m: 2000,
+  revisit_days: 0.007,
+  start_year: 2015,
+  cloud_property: null,
+  cloud_mask_techniques: null,
+  capabilities: {
+    searchable: false,
+    downloadable: false,
+    analytical: false,
+    visualization_only: true,
+    supports_time: true,
+    supports_cloud_filter: false,
+    supports_bands: false,
+    supports_raw_data: false,
+    supports_ai: false,
+    requires_authentication: false,
+    commercial: false,
+    open_data: true,
+  },
+  description: "Citra cuaca full-disk Asia-Pasifik dari JMA. Pilih waktu UTC; resolusi kilometer untuk pengamatan awan dan sistem cuaca.",
+};
+const LEGACY_LANDSAT_DEFAULT_RANGES: Record<string, [string, string]> = {
+  landsat4: ["1993-05-25", "1993-06-24"],
+  landsat5: ["2012-04-05", "2012-05-05"],
+  landsat7: ["2023-12-20", "2024-01-19"],
 };
 type ViewMode = "single" | "compare";
 type DemLayerMode = "none" | "dem" | "3d";
@@ -332,7 +368,11 @@ export default function ImageryModule() {
       .then((res) => {
         if (cancelled) return;
         setSatellites(res.providers);
-        setSatellite(res.default);
+        setSatellite((current) =>
+          current === ESRI_WAYBACK_PROVIDER_KEY || current === HIMAWARI_PROVIDER_KEY || res.providers[current]
+            ? current
+            : res.default,
+        );
       })
       .catch(() => {
         /* keep default */
@@ -476,11 +516,16 @@ export default function ImageryModule() {
   const [demLayerMode, setDemLayerMode] = useState<DemLayerMode>("none");
 
   const imageryProviders = useMemo<Record<string, ImageryProvider>>(
-    () => ({ ...satellites, [ESRI_WAYBACK_PROVIDER_KEY]: ESRI_WAYBACK_PROVIDER }),
+    () => ({
+      ...satellites,
+      [ESRI_WAYBACK_PROVIDER_KEY]: ESRI_WAYBACK_PROVIDER,
+      [HIMAWARI_PROVIDER_KEY]: satellites[HIMAWARI_PROVIDER_KEY] ?? HIMAWARI_PROVIDER,
+    }),
     [satellites],
   );
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
+  const isHimawari = satellite === HIMAWARI_PROVIDER_KEY;
   const isSentinel2 = satellite === "sentinel2" || satellite === "sentinel2_l1c";
   const isCogProvider = Boolean(
     satelliteMeta?.source_kind &&
@@ -509,7 +554,7 @@ export default function ImageryModule() {
   const supportsSamGeo = Boolean(isCogProvider && satelliteMeta?.capabilities?.supports_ai);
   const scientificSupport: ScientificSupport = {
     hyperspectral: ["sentinel3", "aster", "stac_catalog"].includes(satellite),
-    thermal: ["landsat8", "landsat9", "aster"].includes(satellite),
+    thermal: ["landsat4", "landsat5", "landsat7", "landsat8", "landsat9", "aster"].includes(satellite),
     insar: satelliteMeta?.visualization === "sar",
     ai: supportsSamGeo,
   };
@@ -557,6 +602,8 @@ export default function ImageryModule() {
     setCogAssetKey("visual");
     setCogBands("");
     setCogRescale("");
+    setViewMode("single");
+    if (satellite !== HIMAWARI_PROVIDER_KEY) setHimawariTimeLayerUrl(null);
     if (satellite === ESRI_WAYBACK_PROVIDER_KEY) {
       // Wayback contains monthly archive releases, so the generic "last 30
       // days" scene default often has no results. Start at archive coverage
@@ -564,19 +611,27 @@ export default function ImageryModule() {
       setStartDate(ESRI_WAYBACK_START_DATE);
       setEndDate(todayIso());
     }
+    const legacyRange = LEGACY_LANDSAT_DEFAULT_RANGES[satellite];
+    if (legacyRange) {
+      setStartDate(legacyRange[0]);
+      setEndDate(legacyRange[1]);
+    }
   }, [satellite]);
 
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
   // group itself, so the array must already come in group order).
   const GROUP_ORDER = [
+    "Commercial SAR",
+    "Commercial EO",
     "Basemap Historis",
+    "Cuaca Geostasioner",
     "BIG / CTSRT",
     "Open Aerial",
     "Open Disaster",
     "Custom STAC",
     "Sentinel-2",
-    "Landsat",
+    "USGS / Landsat",
     "Sentinel-3",
     "ASTER",
     "Sentinel-1",
@@ -674,6 +729,10 @@ export default function ImageryModule() {
   );
 
   const searchScenes = async () => {
+    if (isHimawari) {
+      setSearchError("Pilih frame UTC Himawari di panel Satellite; sensor ini tidak memakai pencarian scene AOI.");
+      return;
+    }
     if (!aoi) {
       setSearchError("Gambar AOI terlebih dahulu di peta.");
       return;
@@ -1096,7 +1155,9 @@ export default function ImageryModule() {
                 <small className="text-muted d-block mt-1">
                   {isEsriWayback
                     ? "Resolusi bervariasi (sering sub-meter hingga beberapa meter) · arsip rilis basemap sejak 2014"
-                    : `${satelliteMeta.resolution_m}m · revisit ~${satelliteMeta.revisit_days} hari · sejak ${satelliteMeta.start_year}`}
+                    : isHimawari
+                      ? "Cakupan full-disk Asia-Pasifik · frame baru kira-kira tiap 10 menit · sejak 2015"
+                      : `${satelliteMeta.resolution_m}m · revisit ~${satelliteMeta.revisit_days} hari · sejak ${satelliteMeta.start_year}`}
                 </small>
                 {isEsriWayback && (
                   <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
@@ -1124,6 +1185,14 @@ export default function ImageryModule() {
                   </div>
                 )}
               </>
+            )}
+            {isHimawari && (
+              <HimawariExplorerPanel
+                activeLayerUrl={himawariTimeLayerUrl}
+                opacity={himawariOpacity}
+                onLayer={setHimawariTimeLayerUrl}
+                onOpacity={setHimawariOpacity}
+              />
             )}
           </div>
 
@@ -1264,7 +1333,7 @@ export default function ImageryModule() {
 
           <ScientificCapabilitiesPanel support={scientificSupport} />
 
-          {satelliteMeta?.visualization === "sar" && (
+          {!isHimawari && satelliteMeta?.visualization === "sar" && (
             <div className="mb-3">
               <label className="form-label fw-bold">
                 <i className="fas fa-satellite-dish" /> Mode Tampilan SAR
@@ -1292,7 +1361,7 @@ export default function ImageryModule() {
             </div>
           )}
 
-          <div className="mb-3">
+          {!isHimawari && <div className="mb-3">
             <label className="form-label fw-bold">
               <i className="fas fa-calendar" /> {t("imagery.dateRange")}
             </label>
@@ -1319,9 +1388,9 @@ export default function ImageryModule() {
                 ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
                 : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
             </small>
-          </div>
+          </div>}
 
-          {satelliteMeta?.cloud_property ? (
+          {!isHimawari && (satelliteMeta?.cloud_property ? (
             <div className="mb-3">
               <div className="form-check form-switch mb-1">
                 <input
@@ -1381,17 +1450,17 @@ export default function ImageryModule() {
                 tidak berlaku.
               </small>
             )
-          )}
+          ))}
 
           <hr />
 
-          {searchError && (
+          {!isHimawari && searchError && (
             <div className="alert alert-danger py-2 mb-2" style={{ fontSize: ".8rem" }}>
               {searchError}
             </div>
           )}
 
-          <button className="btn btn-warning w-100 fw-bold" disabled={searching} onClick={searchScenes}>
+          {!isHimawari && <button className="btn btn-warning w-100 fw-bold" disabled={searching} onClick={searchScenes}>
             {searching ? (
               <>
                 <i className="fas fa-spinner fa-spin" /> Mencari...
@@ -1401,7 +1470,7 @@ export default function ImageryModule() {
                 <i className="fas fa-search" /> Cari Scene
               </>
             )}
-          </button>
+          </button>}
           {demError && (
             <div className="alert alert-danger py-2 mt-2 mb-0" style={{ fontSize: ".8rem" }}>
               {demError}
@@ -1411,7 +1480,22 @@ export default function ImageryModule() {
       </div>
 
       <div className="col-lg-9">
-        {!searched && (
+        {isHimawari && (
+          <div className="card border-info mb-3">
+            <div className="card-body d-flex align-items-start gap-3">
+              <i className="bi bi-cloud-sun text-info fs-3" aria-hidden="true" />
+              <div>
+                <h5 className="mb-1">Pilih waktu Himawari</h5>
+                <p className="text-muted mb-0">
+                  Atur frame UTC dan tekan <strong>Tampilkan</strong> pada panel di sebelah kiri.
+                  Layer cuaca JMA akan muncul di peta di bawah ini tanpa pencarian AOI atau proses land cover.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!searched && !isHimawari && (
           <div className="card text-center py-5 border-dashed mb-3">
             <div className="card-body">
               <i className="bi bi-camera text-muted" style={{ fontSize: "3.5rem" }} />
@@ -1423,7 +1507,7 @@ export default function ImageryModule() {
           </div>
         )}
 
-        {searched && (
+        {searched && !isHimawari && (
           <div className="card mb-3">
             <div
               className="card-header imagery-accordion-card-header imagery-scene-results-header"
@@ -1606,13 +1690,6 @@ export default function ImageryModule() {
           </div>
         )}
 
-        <HimawariExplorerPanel
-          activeLayerUrl={himawariTimeLayerUrl}
-          opacity={himawariOpacity}
-          onLayer={setHimawariTimeLayerUrl}
-          onOpacity={setHimawariOpacity}
-        />
-
         {selectedScene && satelliteMeta && (
           <div className="card mb-3" aria-label="Data provenance scene terpilih">
             <div
@@ -1696,6 +1773,9 @@ export default function ImageryModule() {
                           ? `- mosaik ${tileSceneCount} scene pada rentang tanggal`
                           : `- menampilkan scene ${formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}`}
                       </span>
+                    )}
+                    {himawariTimeLayerUrl && (
+                      <span className="imagery-accordion-scene">- frame Himawari-9 JMA ditampilkan</span>
                     )}
                   </span>
                   <i className={`bi bi-chevron-${mapOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />

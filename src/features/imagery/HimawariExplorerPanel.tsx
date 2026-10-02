@@ -109,7 +109,14 @@ export default function HimawariExplorerPanel({
               className="form-select form-select-sm"
               value={selectedTime}
               disabled={loading || frames.length === 0}
-              onChange={(event) => setSelectedTime(event.target.value)}
+              onChange={(event) => {
+                const nextTime = event.target.value;
+                const nextFrame = frames.find((frame) => frame.validtime === nextTime);
+                if (selectedUrl && activeLayerUrl === selectedUrl && nextFrame) {
+                  onLayer(buildTileUrl(nextFrame));
+                }
+                setSelectedTime(nextTime);
+              }}
             >
               {frames.map((frame) => (
                 <option key={frame.validtime} value={frame.validtime}>

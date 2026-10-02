@@ -14,6 +14,7 @@ export type ImagerySourceKind =
   | "vantor_stac"
   | "iceye_stac"
   | "generic_stac"
+  | "himawari"
   | "big_ctsrt";
 
 /**
