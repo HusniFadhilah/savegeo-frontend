@@ -1,5 +1,5 @@
 import type { BasemapDefinition } from "@/types/map";
-import { nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
+import { nasaGibsBlackMarbleTileUrl, nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
 
 /**
  * Static fallback basemaps, used whenever GET /api/basemaps is unreachable
@@ -82,11 +82,11 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
 
 export const DEFAULT_BASEMAP_ID = "satellite";
 
-/** NASA GIBS True Color is a daily visualization with a service-managed latest date. */
+/** Adds NASA GIBS daily imagery and fixed global composite basemaps. */
 export function withNasaGibsBasemap(basemaps: BasemapDefinition[]): BasemapDefinition[] {
   const nasa: BasemapDefinition = {
     id: "nasa-gibs",
-    name: "NASA GIBS MODIS True Color",
+    name: "NASA GIBS MODIS Terra True Color",
     url: nasaGibsTrueColorTileUrl("default"),
     attribution: '<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> · MODIS Terra Corrected Reflectance True Color',
     maxZoom: 22,
@@ -94,7 +94,70 @@ export function withNasaGibsBasemap(basemaps: BasemapDefinition[]): BasemapDefin
     isDefault: false,
     order: 1.5,
   };
-  return [...basemaps.filter((basemap) => basemap.id !== nasa.id), nasa]
+  const viirsNight: BasemapDefinition = {
+    id: "nasa-gibs-viirs-night",
+    name: "NASA GIBS VIIRS Day/Night 2012 composite",
+    url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg",
+    attribution: '<a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" target="_blank" rel="noreferrer">NASA Global Imagery Browse Services (GIBS)</a> - VIIRS Earth at Night 2012 composite',
+    maxZoom: 22,
+    maxNativeZoom: 8,
+    isDefault: false,
+    order: 1.6,
+  };
+  const blackMarble: BasemapDefinition = {
+    id: "nasa-gibs-black-marble",
+    name: "NASA GIBS VIIRS Black Marble 2016",
+    url: nasaGibsBlackMarbleTileUrl(2016),
+    attribution: '<a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" target="_blank" rel="noreferrer">NASA Global Imagery Browse Services (GIBS)</a> - VIIRS Black Marble 2016',
+    maxZoom: 22,
+    maxNativeZoom: 8,
+    isDefault: false,
+    order: 1.65,
+  };
+  const blueMarble: BasemapDefinition = {
+    id: "nasa-gibs-blue-marble",
+    name: "NASA GIBS Blue Marble",
+    url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+    attribution: '<a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" target="_blank" rel="noreferrer">NASA Global Imagery Browse Services (GIBS)</a> - Blue Marble Next Generation',
+    maxZoom: 22,
+    maxNativeZoom: 8,
+    isDefault: false,
+    order: 1.7,
+  };
+  const nasaIds = new Set([nasa.id, viirsNight.id, blackMarble.id, blueMarble.id]);
+  return [...basemaps.filter((basemap) => !nasaIds.has(basemap.id)), nasa, viirsNight, blackMarble, blueMarble]
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+/** Adds USGS The National Map imagery tiles. High-resolution coverage focuses on the United States. */
+export function withUsgsImageryBasemap(basemaps: BasemapDefinition[]): BasemapDefinition[] {
+  const usgs: BasemapDefinition = {
+    id: "usgs-imagery",
+    name: "USGS US Imagery",
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}",
+    attribution: '<a href="https://www.usgs.gov/" target="_blank" rel="noreferrer">USGS</a>, USDA NAIP, The National Map',
+    maxZoom: 22,
+    maxNativeZoom: 16,
+    isDefault: false,
+    order: 1.45,
+  };
+  return [...basemaps.filter((basemap) => basemap.id !== usgs.id), usgs]
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+/** Adds the latest annual EOxCloudless mosaic as a selectable satellite basemap. */
+export function withEoxCloudlessBasemap(basemaps: BasemapDefinition[]): BasemapDefinition[] {
+  const eox: BasemapDefinition = {
+    id: "eox-sentinel2-cloudless",
+    name: "EOX Sentinel-2 Cloudless 2025",
+    url: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg",
+    attribution: '<a href="https://cloudless.eox.at/" target="_blank" rel="noreferrer">EOxCloudless</a> by <a href="https://eox.at/" target="_blank" rel="noreferrer">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2025; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noreferrer">CC BY-NC-SA 4.0, non-commercial use</a>)',
+    maxZoom: 22,
+    maxNativeZoom: 14,
+    isDefault: false,
+    order: 1.75,
+  };
+  return [...basemaps.filter((basemap) => basemap.id !== eox.id), eox]
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 }
 

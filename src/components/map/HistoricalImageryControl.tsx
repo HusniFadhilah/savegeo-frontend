@@ -4,8 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, selectEsriWaybackScene, type WaybackScene } from "@/features/imagery/wayback";
-import { clampNasaGibsDate, nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
+import { clampNasaGibsDate, nasaGibsBlackMarbleTileUrl, NASA_GIBS_BLACK_MARBLE_YEARS, NASA_GIBS_FIRST_DATE, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE, nasaGibsDateAt, nasaGibsDateIndex, nasaGibsTimelineTicks, nasaGibsTrueColorTileUrl, nasaGibsViirsNightTileUrl, type NasaGibsBlackMarbleYear } from "@/features/imagery/nasaGibs";
+import { EOX_CLOUDLESS_YEARS, eoxCloudlessTileUrl, type EoxCloudlessYear } from "@/features/imagery/eoxCloudless";
+import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBasemaps } from "@/hooks/useBasemaps";
+import { BASEMAP_FOR_HISTORICAL_SOURCE, historicalSourceForBasemap, type HistoricalImagerySource } from "@/config/historicalBasemapSync";
 import { useBasemapContext } from "./BasemapContext";
+import { writeGlobeQuery } from "./globe3d/query";
 import "./map-tools.css";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
@@ -21,7 +26,6 @@ function dateFromQuery(): string | undefined {
 }
 
 type HistoricalAoi = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
-
 function aoiClipPath(aoi: HistoricalAoi, map: L.Map): string {
   if (!aoi) return "";
   const polygons = aoi.geometry.type === "Polygon" ? [aoi.geometry.coordinates] : aoi.geometry.coordinates;
@@ -68,20 +72,35 @@ export function HistoricalAoiClipController({ aoi, paneName = "historical-imager
 
 export default function HistoricalImageryControl({ enabled = true, targetDate }: { enabled?: boolean; targetDate?: string }) {
   const map = useMap();
-  const { activeBasemapId, setHistoricalImageryDate } = useBasemapContext();
+  const { activeBasemapId, setActiveBasemapId, setHistoricalImageryDate } = useBasemapContext();
+  const { basemaps } = useBasemaps();
+  const t = useI18nStore((state) => state.t);
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [historySource, setHistorySource] = useState<"esri-wayback" | "nasa-gibs">("esri-wayback");
+  const [historySource, setHistorySource] = useState<HistoricalImagerySource>("current-basemap");
   const [nasaDate, setNasaDate] = useState(() => dateFromQuery() ?? today);
+  const [nasaTileDate, setNasaTileDate] = useState(() => dateFromQuery() ?? today);
+  const [viirsNightDate, setViirsNightDate] = useState(() => dateFromQuery() ?? today);
+  const [viirsNightTileDate, setViirsNightTileDate] = useState(() => dateFromQuery() ?? today);
+  const [blackMarbleYear, setBlackMarbleYear] = useState<NasaGibsBlackMarbleYear>(2016);
+  const [eoxYear, setEoxYear] = useState<EoxCloudlessYear>(2025);
   const [tileError, setTileError] = useState(false);
   const [queryDate, setQueryDate] = useState<string | undefined>(() => dateFromQuery());
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const historyDrivenBasemapId = useRef<string | null>(null);
   const panelId = useId();
   const analysisDate = targetDate ?? queryDate;
+  const activeBasemap = basemaps.find((basemap) => basemap.id === activeBasemapId);
+  const activeBasemapTranslationId = activeBasemap?.id === "satellite_roads" ? "satelliteRoads"
+    : activeBasemap?.id === "topo" ? "topographic"
+      : activeBasemap?.id === "terrain" ? "terrainRelief" : activeBasemap?.id;
+  const activeBasemapName = activeBasemapTranslationId
+    ? t(`map.basemap.${activeBasemapTranslationId}`) || activeBasemap?.name || "Basemap aktif"
+    : "Basemap aktif";
   const visible = open && enabled;
   const { data: scenes = [], isFetching, isError, refetch } = useQuery({
     queryKey: ["map-wayback-releases", analysisDate ?? today],
@@ -92,12 +111,31 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   });
   const entries = [...scenes, { id: CURRENT_SCENE_ID, release_label: today, tile_url: "" }];
   const autoScene = analysisDate ? selectEsriWaybackScene(scenes as WaybackScene[], analysisDate) : null;
+  const defaultHistoricalSceneId = autoScene?.id ?? scenes[0]?.id ?? null;
   const effectiveSelectedId = selectedId ?? autoScene?.id ?? CURRENT_SCENE_ID;
   const foundIndex = entries.findIndex(scene => scene.id === effectiveSelectedId);
   const index = foundIndex >= 0 ? foundIndex : entries.length - 1;
   const selected = entries[index] ?? entries[entries.length - 1];
-  const isCurrent = historySource === "esri-wayback" && selected.id === CURRENT_SCENE_ID;
+  const isCurrent = historySource === "current-basemap" || (historySource === "esri-wayback" && selected.id === CURRENT_SCENE_ID);
   const effectiveNasaDate = clampNasaGibsDate(nasaDate, today);
+  const effectiveNasaTileDate = clampNasaGibsDate(nasaTileDate, today);
+  const effectiveViirsNightDate = clampNasaGibsDate(viirsNightDate, today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
+  const effectiveViirsNightTileDate = clampNasaGibsDate(viirsNightTileDate, today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
+  const nasaDateIndex = nasaGibsDateIndex(effectiveNasaDate, today);
+  const nasaMaxDateIndex = nasaGibsDateIndex(today, today);
+  const nasaYearTicks = nasaGibsTimelineTicks(today);
+  const viirsNightDateIndex = nasaGibsDateIndex(effectiveViirsNightDate, today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
+  const viirsNightMaxDateIndex = nasaGibsDateIndex(today, today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
+  const viirsNightYearTicks = nasaGibsTimelineTicks(today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
+  const isViirsNight = historySource === "nasa-viirs-night";
+  const nasaTimelineDate = isViirsNight ? effectiveViirsNightDate : effectiveNasaDate;
+  const nasaTimelineIndex = isViirsNight ? viirsNightDateIndex : nasaDateIndex;
+  const nasaTimelineMaxDateIndex = isViirsNight ? viirsNightMaxDateIndex : nasaMaxDateIndex;
+  const nasaTimelineTicks = isViirsNight ? viirsNightYearTicks : nasaYearTicks;
+  const blackMarbleIndex = NASA_GIBS_BLACK_MARBLE_YEARS.indexOf(blackMarbleYear);
+  const blackMarbleTicks = NASA_GIBS_BLACK_MARBLE_YEARS.map((year, index) => ({ year: String(year), position: index / (NASA_GIBS_BLACK_MARBLE_YEARS.length - 1) * 100 }));
+  const eoxYearIndex = EOX_CLOUDLESS_YEARS.indexOf(eoxYear);
+  const eoxYearTicks = EOX_CLOUDLESS_YEARS.map((year, index) => ({ year: String(year), position: index / (EOX_CLOUDLESS_YEARS.length - 1) * 100 }));
   const selectedTileUrl = selected?.tile_url ?? "";
   const selectedReleaseDate = selected?.release_label ?? today;
 
@@ -109,7 +147,21 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   }, []);
 
   useEffect(() => { setSelectedId(null); }, [queryDate, targetDate]);
+  useEffect(() => {
+    if (historySource !== "esri-wayback" || isFetching || selected.id !== CURRENT_SCENE_ID) return;
+    if (defaultHistoricalSceneId) setSelectedId(defaultHistoricalSceneId);
+    else if (!isError) setHistorySource("current-basemap");
+  }, [defaultHistoricalSceneId, historySource, isError, isFetching, selected.id]);
   useEffect(() => { if (analysisDate) setNasaDate(analysisDate); }, [analysisDate]);
+  useEffect(() => { if (analysisDate) setViirsNightDate(analysisDate); }, [analysisDate]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNasaTileDate(effectiveNasaDate), 220);
+    return () => window.clearTimeout(timer);
+  }, [effectiveNasaDate]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setViirsNightTileDate(effectiveViirsNightDate), 220);
+    return () => window.clearTimeout(timer);
+  }, [effectiveViirsNightDate]);
 
   useEffect(() => {
     const control = new L.Control({ position: "topleft" });
@@ -132,44 +184,86 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   }, [visible]);
 
   useEffect(() => {
-    setOpen(false);
-    setHistorySource("esri-wayback");
-    setSelectedId(CURRENT_SCENE_ID);
+    if (!activeBasemapId) return;
+    if (historyDrivenBasemapId.current === activeBasemapId) {
+      historyDrivenBasemapId.current = null;
+      return;
+    }
+    setHistorySource(historicalSourceForBasemap(activeBasemapId));
+    setSelectedId(null);
     setTileError(false);
   }, [activeBasemapId]);
 
+  const chooseHistorySource = (nextSource: HistoricalImagerySource) => {
+    setHistorySource(nextSource);
+    setSelectedId(null);
+    setTileError(false);
+    const nextBasemapId = BASEMAP_FOR_HISTORICAL_SOURCE[nextSource];
+    if (!nextBasemapId || nextBasemapId === activeBasemapId || !basemaps.some((basemap) => basemap.id === nextBasemapId)) return;
+    historyDrivenBasemapId.current = nextBasemapId;
+    setActiveBasemapId(nextBasemapId);
+    window.localStorage.setItem("savegeo_basemap", nextBasemapId);
+    writeGlobeQuery({ basemap: nextBasemapId });
+  };
+
   useEffect(() => {
-    const shouldShowHistorical = enabled && (historySource === "nasa-gibs" || (!isCurrent && (visible || Boolean(analysisDate))));
+    const shouldShowHistorical = enabled && historySource !== "current-basemap" && (historySource !== "esri-wayback" || (!isCurrent && (visible || Boolean(analysisDate))));
     if (!shouldShowHistorical || (historySource === "esri-wayback" && isFetching)) { setTileError(false); return; }
     const paneName = "historical-imagery";
     const pane = map.getPane(paneName) ?? map.createPane(paneName);
     pane.style.zIndex = "250";
     pane.style.pointerEvents = "none";
     setTileError(false);
-    const tileUrl = historySource === "nasa-gibs" ? nasaGibsTrueColorTileUrl(effectiveNasaDate) : selectedTileUrl;
+    const tileUrl = historySource === "nasa-gibs"
+      ? nasaGibsTrueColorTileUrl(effectiveNasaTileDate)
+      : historySource === "nasa-viirs-night"
+        ? nasaGibsViirsNightTileUrl(effectiveViirsNightTileDate)
+      : historySource === "nasa-black-marble"
+        ? nasaGibsBlackMarbleTileUrl(blackMarbleYear)
+        : historySource === "eox-cloudless"
+          ? eoxCloudlessTileUrl(eoxYear)
+          : selectedTileUrl;
     const attribution = historySource === "nasa-gibs"
-      ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> · MODIS Terra Corrected Reflectance True Color · ${effectiveNasaDate}`
-      : `Esri World Imagery Wayback · Rilis ${selectedReleaseDate}`;
+      ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - MODIS Terra Corrected Reflectance True Color - ${effectiveNasaTileDate}`
+      : historySource === "nasa-viirs-night"
+        ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Day/Night Band ENCC - ${effectiveViirsNightTileDate}`
+      : historySource === "nasa-black-marble"
+        ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Black Marble ${blackMarbleYear}`
+      : historySource === "eox-cloudless"
+          ? `<a href="https://cloudless.eox.at/" target="_blank" rel="noreferrer">EOxCloudless</a> by EOX IT Services GmbH - modified Copernicus Sentinel data ${eoxYear} - <a href="${eoxYear === 2016 ? "https://creativecommons.org/licenses/by/4.0/" : "https://creativecommons.org/licenses/by-nc-sa/4.0/"}" target="_blank" rel="noreferrer">${eoxYear === 2016 ? "CC BY 4.0" : "CC BY-NC-SA 4.0 (non-commercial use)"}</a>`
+          : `Esri World Imagery Wayback · Rilis ${selectedReleaseDate}`;
+    const maxNativeZoom = historySource === "nasa-gibs" ? 9 : historySource === "nasa-black-marble" || historySource === "nasa-viirs-night" ? 8 : historySource === "eox-cloudless" ? 14 : 19;
     const layer = L.tileLayer(tileUrl, {
       pane: paneName,
-      maxNativeZoom: historySource === "nasa-gibs" ? 9 : 19,
+      maxNativeZoom,
       maxZoom: map.getMaxZoom(),
       attribution,
     });
     const onError = () => setTileError(true);
     layer.on("tileerror", onError);
     layer.addTo(map);
-    setHistoricalImageryDate?.(historySource === "nasa-gibs" ? `NASA GIBS ${effectiveNasaDate}` : selectedReleaseDate);
+    const sourceDate = historySource === "nasa-gibs"
+      ? `NASA GIBS ${effectiveNasaTileDate}`
+      : historySource === "nasa-viirs-night"
+        ? `NASA VIIRS Nighttime ${effectiveViirsNightTileDate}`
+      : historySource === "nasa-black-marble"
+        ? `NASA Black Marble ${blackMarbleYear}`
+        : historySource === "eox-cloudless"
+          ? `EOX Sentinel-2 Cloudless ${eoxYear}`
+          : selectedReleaseDate;
+    setHistoricalImageryDate?.(sourceDate);
     return () => {
       layer.off("tileerror", onError);
       map.removeLayer(layer);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, enabled, effectiveNasaDate, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, blackMarbleYear, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];
-    if (scene) setSelectedId(scene.id);
+    if (!scene) return;
+    if (scene.id === CURRENT_SCENE_ID) setHistorySource("current-basemap");
+    else setSelectedId(scene.id);
   };
   const close = () => { setOpen(false); triggerRef.current?.focus(); };
   const date = selected?.release_label ?? "";
@@ -178,8 +272,35 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const days = entries.filter(scene => scene.release_label.startsWith(date.slice(0, 7)));
   const choosePrefix = (prefix: string) => {
     const scene = entries.find(item => item.release_label.startsWith(prefix));
-    if (scene) setSelectedId(scene.id);
+    if (!scene) return;
+    if (scene.id === CURRENT_SCENE_ID) setHistorySource("current-basemap");
+    else setSelectedId(scene.id);
   };
+  const chooseBlackMarbleIndex = (nextIndex: number) => {
+    const year = NASA_GIBS_BLACK_MARBLE_YEARS[nextIndex];
+    if (year !== undefined) setBlackMarbleYear(year);
+  };
+  const chooseEoxYearIndex = (nextIndex: number) => {
+    const year = EOX_CLOUDLESS_YEARS[nextIndex];
+    if (year !== undefined) setEoxYear(year);
+  };
+  const setNasaTimelineDateAt = (nextIndex: number) => {
+    const firstDate = isViirsNight ? NASA_GIBS_VIIRS_NIGHT_FIRST_DATE : NASA_GIBS_FIRST_DATE;
+    const nextDate = nasaGibsDateAt(nextIndex, today, firstDate);
+    if (isViirsNight) setViirsNightDate(nextDate);
+    else setNasaDate(nextDate);
+  };
+  const sourceLabel = historySource === "current-basemap"
+    ? activeBasemapName
+    : historySource === "nasa-gibs"
+    ? "NASA GIBS - MODIS Terra"
+    : historySource === "nasa-viirs-night"
+      ? "NASA GIBS - VIIRS nighttime"
+      : historySource === "nasa-black-marble"
+        ? "NASA GIBS - Black Marble"
+        : historySource === "eox-cloudless"
+          ? "EOX - Sentinel-2 Cloudless"
+          : "Esri Wayback";
 
   return <>
     {host && createPortal(<button ref={triggerRef} type="button" className="history-trigger" hidden={!enabled}
@@ -187,28 +308,93 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       onClick={() => setOpen(value => !value)}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}
     {visible && createPortal(<div ref={panelRef} id={panelId} className="map-history-panel" role="region" aria-label="Citra historis"
       onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}>
-      <div className="map-history-heading"><span>{isCurrent ? "Basemap terkini" : "Citra historis"} <small>{historySource === "nasa-gibs" ? "NASA GIBS · MODIS Terra" : isCurrent ? "Tampilan hari ini" : "Esri Wayback"}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
+      <div className="map-history-heading"><span>{historySource === "current-basemap" ? "Basemap terkini" : "Citra historis"} <small>{sourceLabel}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
       <label className="map-history-source">Sumber citra
-        <select aria-label="Sumber citra historis" value={historySource} onChange={event => setHistorySource(event.target.value as "esri-wayback" | "nasa-gibs")}>
+        <select aria-label="Sumber citra historis" value={historySource} onChange={event => chooseHistorySource(event.target.value as HistoricalImagerySource)}>
+          <option value="current-basemap">Basemap terkini · {activeBasemapName}</option>
           <option value="esri-wayback">Esri Wayback · mosaik resolusi tinggi</option>
-          <option value="nasa-gibs">NASA GIBS · MODIS harian</option>
+          <option value="nasa-gibs">NASA GIBS - MODIS Terra True Color (harian)</option>
+          <option value="nasa-black-marble">NASA GIBS · Black Marble (2012, 2016)</option>
+          <option value="nasa-viirs-night">NASA GIBS - VIIRS Day/Night harian (sejak 2016)</option>
+          <option value="eox-cloudless">EOX · Sentinel-2 Cloudless (tahunan)</option>
         </select>
       </label>
+      {activeBasemapId === "nasa-gibs-viirs-night" && <p className="map-history-note">Basemap Earth at Night 2012 adalah komposit tetap. Untuk menelusuri citra malam harian, pilih NASA GIBS - VIIRS malam harian.</p>}
+      {activeBasemapId === "nasa-gibs-blue-marble" && <p className="map-history-note">Blue Marble Next Generation adalah komposit global tanpa tanggal historis. Gunakan Esri Wayback, MODIS, atau EOX untuk melihat citra pada waktu berbeda.</p>}
       {historySource === "esri-wayback" && analysisDate && !isCurrent && <p className="map-history-note">Sinkron dengan waktu analisis: <strong>{analysisDate}</strong>. Menampilkan rilis arsip Wayback terdekat yang tersedia.</p>}
       {historySource === "esri-wayback" && isFetching && !scenes.length && <p role="status">Memuat arsip citra...</p>}
       {historySource === "esri-wayback" && isError && <p role="alert">Arsip citra Wayback gagal dimuat. Basemap tetap tersedia. <button type="button" onClick={() => void refetch()}>Coba lagi</button></p>}
-      {historySource === "nasa-gibs" ? <>
-        <div className="map-history-nasa-date"><label htmlFor={`${panelId}-nasa-date`}>Tanggal citra
-          <input id={`${panelId}-nasa-date`} type="date" min="2000-02-24" max={today} value={effectiveNasaDate} onChange={event => { if (event.target.value) setNasaDate(event.target.value); }} />
-        </label></div>
-        <p className="map-history-note">Citra harian MODIS Terra, resolusi hingga sekitar 250 m/piksel. Arsip tersedia sejak 24 Februari 2000; awan dan mosaik harian dapat memengaruhi tampilan.</p>
-        {analysisDate && analysisDate !== effectiveNasaDate && <p className="map-history-note">Tanggal analisis berada di luar rentang arsip; menampilkan <strong>{effectiveNasaDate}</strong>.</p>}
+      {historySource === "current-basemap"
+        ? <p className="map-history-note">Peta menampilkan basemap aktif: <strong>{activeBasemapName}</strong>. Pilih sumber lain untuk menampilkan citra historis.</p>
+        : historySource === "nasa-gibs" || historySource === "nasa-viirs-night" ? <>
+        <div className="map-history-body map-history-nasa-body">
+          <div className="map-history-nasa-selected-date"><small>{isViirsNight ? "Tanggal malam VIIRS" : "Tanggal citra"}</small><strong>{nasaTimelineDate}</strong></div>
+          <div className="map-history-slider">
+            <div className="map-history-track">
+              <button type="button" aria-label={isViirsNight ? "Tanggal VIIRS sebelumnya" : "Tanggal NASA sebelumnya"} disabled={nasaTimelineIndex === 0}
+                onClick={() => setNasaTimelineDateAt(nasaTimelineIndex - 1)}>&lsaquo;</button>
+              <input id={`${panelId}-nasa-date`} type="range" aria-label={isViirsNight ? "Linimasa malam VIIRS harian" : "Linimasa citra MODIS harian"}
+                aria-valuetext={nasaTimelineDate} min={0} max={nasaTimelineMaxDateIndex} step={1} value={nasaTimelineIndex}
+                onChange={event => setNasaTimelineDateAt(Number(event.target.value))} />
+              <button type="button" aria-label={isViirsNight ? "Tanggal VIIRS berikutnya" : "Tanggal NASA berikutnya"} disabled={nasaTimelineIndex === nasaTimelineMaxDateIndex}
+                onClick={() => setNasaTimelineDateAt(nasaTimelineIndex + 1)}>&rsaquo;</button>
+            </div>
+            <div className="map-history-ruler" aria-hidden="true">
+              {nasaTimelineTicks.map(({ year, position }) => <span key={year} style={{ left: `${position}%` }}>{year}</span>)}
+            </div>
+          </div>
+        </div>
+        {isViirsNight
+          ? <p className="map-history-note">Citra malam VIIRS Day/Night Band tersedia harian sejak 3 Desember 2016. Tampilan skala abu-abu dapat berubah karena pantulan cahaya Bulan, awan, dan sumber cahaya di permukaan.</p>
+          : <p className="map-history-note">Citra harian MODIS Terra, hingga sekitar 250 m/piksel. Area hitam dapat muncul sebagai celah sapuan orbit pada tanggal tersebut; tutupan awan juga memengaruhi citra.</p>}
+        {analysisDate && analysisDate !== nasaTimelineDate && <p className="map-history-note">Tanggal analisis berada di luar rentang arsip; menampilkan <strong>{nasaTimelineDate}</strong>.</p>}
+      </> : historySource === "nasa-black-marble" ? <>
+        <div className="map-history-body map-history-nasa-body">
+          <div className="map-history-nasa-selected-date"><small>Tahun komposit</small><strong>{blackMarbleYear}</strong></div>
+          <div className="map-history-slider">
+            <div className="map-history-track">
+              <button type="button" aria-label="Snapshot Black Marble sebelumnya" disabled={blackMarbleIndex === 0}
+                onClick={() => chooseBlackMarbleIndex(blackMarbleIndex - 1)}>‹</button>
+              <input type="range" aria-label="Linimasa Black Marble" aria-valuetext={String(blackMarbleYear)} min={0}
+                max={NASA_GIBS_BLACK_MARBLE_YEARS.length - 1} step={1} value={blackMarbleIndex}
+                onChange={event => chooseBlackMarbleIndex(Number(event.target.value))} />
+              <button type="button" aria-label="Snapshot Black Marble berikutnya" disabled={blackMarbleIndex === NASA_GIBS_BLACK_MARBLE_YEARS.length - 1}
+                onClick={() => chooseBlackMarbleIndex(blackMarbleIndex + 1)}>›</button>
+            </div>
+            <div className="map-history-ruler" aria-hidden="true">
+              {blackMarbleTicks.map(({ year, position }) => <span key={year} style={{ left: `${position}%` }}>{year}</span>)}
+            </div>
+          </div>
+        </div>
+        <p className="map-history-note">NASA Black Marble tersedia sebagai komposit untuk 2012 dan 2016. Produk Earth at Night 2012 adalah komposit tetap, bukan arsip tahunan.</p>
+      </> : historySource === "eox-cloudless" ? <>
+        <div className="map-history-body map-history-nasa-body">
+          <div className="map-history-nasa-selected-date"><small>Tahun mosaik</small><strong>{eoxYear}</strong></div>
+          <div className="map-history-slider">
+            <div className="map-history-track">
+              <button type="button" aria-label="Mosaik EOX sebelumnya" disabled={eoxYearIndex === 0}
+                onClick={() => chooseEoxYearIndex(eoxYearIndex - 1)}>‹</button>
+              <input type="range" aria-label="Linimasa mosaik EOX Sentinel-2" aria-valuetext={String(eoxYear)} min={0}
+                max={EOX_CLOUDLESS_YEARS.length - 1} step={1} value={eoxYearIndex}
+                onChange={event => chooseEoxYearIndex(Number(event.target.value))} />
+              <button type="button" aria-label="Mosaik EOX berikutnya" disabled={eoxYearIndex === EOX_CLOUDLESS_YEARS.length - 1}
+                onClick={() => chooseEoxYearIndex(eoxYearIndex + 1)}>›</button>
+            </div>
+            <div className="map-history-ruler" aria-hidden="true">
+              {eoxYearTicks.map(({ year, position }) => <span key={year} style={{ left: `${position}%` }}>{year}</span>)}
+            </div>
+          </div>
+        </div>
+        <p className="map-history-note">Mosaik tahunan tersedia untuk 2016 dan 2018–2025; data 2017 tidak tersedia. Mosaik 2018–2025 berlisensi CC BY-NC-SA 4.0 dan hanya untuk penggunaan nonkomersial; mosaik 2016 berlisensi CC BY 4.0.</p>
       </> : <>
         <div className="map-history-body">
           <div className="map-history-date">
             <select aria-label="Tahun tampilan" value={date.slice(0, 4)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select>
             <select aria-label="Bulan tampilan" value={date.slice(5, 7)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(`${date.slice(0, 4)}-${event.target.value}`)}>{months.map(month => <option key={month} value={month}>{MONTHS[Number(month) - 1]}</option>)}</select>
-            <select aria-label="Hari tampilan" value={selected.id} disabled={isFetching || !days.length} onChange={event => setSelectedId(event.target.value)}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === CURRENT_SCENE_ID ? " - Terkini" : ""}</option>)}</select>
+            <select aria-label="Hari tampilan" value={selected.id} disabled={isFetching || !days.length} onChange={event => {
+              if (event.target.value === CURRENT_SCENE_ID) setHistorySource("current-basemap");
+              else setSelectedId(event.target.value);
+            }}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === CURRENT_SCENE_ID ? " - Terkini" : ""}</option>)}</select>
           </div>
           <div className="map-history-slider">
             <div className="map-history-track"><button type="button" aria-label="Rilis sebelumnya" disabled={index === 0} onClick={() => choose(index - 1)}>‹</button>

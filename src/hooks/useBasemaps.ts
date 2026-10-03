@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchBasemaps } from "@/services/mapLayerService";
 import { withOptionalGoogleSatelliteBasemap } from "@/services/googleMapsTiles";
-import { FALLBACK_BASEMAPS, withNasaGibsBasemap, withOptionalMapboxBasemap } from "@/config/basemaps";
+import { FALLBACK_BASEMAPS, withEoxCloudlessBasemap, withNasaGibsBasemap, withOptionalMapboxBasemap, withUsgsImageryBasemap } from "@/config/basemaps";
 import type { BasemapDefinition } from "@/types/map";
 
 /** Shared across every map instance so the registry is only fetched once. */
@@ -21,7 +21,7 @@ async function load(): Promise<BasemapDefinition[]> {
       } catch {
         configured = FALLBACK_BASEMAPS;
       }
-      cache = await withOptionalGoogleSatelliteBasemap(withOptionalMapboxBasemap(withNasaGibsBasemap(configured)));
+      cache = await withOptionalGoogleSatelliteBasemap(withOptionalMapboxBasemap(withEoxCloudlessBasemap(withUsgsImageryBasemap(withNasaGibsBasemap(configured)))));
       return cache;
     })();
   }
@@ -29,7 +29,7 @@ async function load(): Promise<BasemapDefinition[]> {
 }
 
 export function useBasemaps() {
-  const [basemaps, setBasemaps] = useState<BasemapDefinition[]>(cache ?? withOptionalMapboxBasemap(FALLBACK_BASEMAPS));
+  const [basemaps, setBasemaps] = useState<BasemapDefinition[]>(cache ?? withOptionalMapboxBasemap(withEoxCloudlessBasemap(withUsgsImageryBasemap(FALLBACK_BASEMAPS))));
   const [loading, setLoading] = useState(!cache);
 
   useEffect(() => {

@@ -10,10 +10,10 @@ import UserLocationControl from "./UserLocationControl";
 import { imageryProvider } from "./globe3d/imagery";
 import { escapeAttributionHtml, fetchGoogleViewportCopyright } from "@/services/googleMapsTiles";
 import { cameraNumber, useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
+import { SATELLITE_BASEMAP_GROUPS, SATELLITE_BASEMAP_IDS } from "@/config/satelliteBasemapGroups";
 import "./globe3d/globe.css";
 
 const EMPTY_LAYERS: GlobeLayer[] = [];
-const SATELLITE_BASEMAP_IDS = new Set(["satellite", "nasa-gibs", "mapbox-satellite", "google-satellite"]);
 function geometryBounds(geometry: GeoJSON.Geometry | null | undefined): C.BoundingSphere | null {
   if (!geometry || !("coordinates" in geometry)) return null;
   const points: C.Cartesian3[] = [];
@@ -69,6 +69,10 @@ export default function Globe3DView(props: GlobeViewProps) {
   const basemap = basemaps.find(b => b.id === alias) ?? basemaps.find(b => b.isDefault) ?? basemaps[0];
   const satelliteBasemaps = basemaps.filter(item => SATELLITE_BASEMAP_IDS.has(item.id));
   const otherBasemaps = basemaps.filter(item => !SATELLITE_BASEMAP_IDS.has(item.id));
+  const satelliteGroups = SATELLITE_BASEMAP_GROUPS.map(group => ({
+    ...group,
+    items: satelliteBasemaps.filter(item => group.basemapIds.some(id => id === item.id)),
+  })).filter(group => group.items.length > 0 || group.id === "google");
   const terrain = query.get("show_terrain") !== "false";
   const buildings = query.get("show_buildings") === "true";
   const showAoi = query.get("show_aoi") !== "false";
@@ -353,11 +357,12 @@ export default function Globe3DView(props: GlobeViewProps) {
       <div className="globe-panels">
         <details className="globe-settings"><summary title={t("map.3d.basemap")} aria-label={t("map.3d.basemap")}><i className="bi bi-layers" aria-hidden="true" /></summary><div className="globe-settings-body">
           <select aria-label={t("map.3d.basemap")} value={basemap?.id ?? ""} onChange={e => { writeGlobeQuery({ basemap: e.target.value }); props.onBasemapChange?.(e.target.value); }}>
-            <optgroup label={t("map.basemap.satelliteSources")}>{satelliteBasemaps.map(b =>
-              <option key={b.id} value={b.id}>{t(`map.basemap.${b.id}`) || b.name}</option>
-            )}
-            {!basemaps.some(item => item.id === "google-satellite") && <option value="__google-satellite-unavailable" disabled>{t(import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ? "map.basemap.google-unavailable" : "map.basemap.google-key-required")}</option>}
-            </optgroup>
+            {satelliteGroups.map(group => <optgroup key={group.id} label={group.label}>
+              {group.items.map(b =>
+                <option key={b.id} value={b.id}>{t(`map.basemap.${b.id === "satellite_roads" ? "satelliteRoads" : b.id}`) || b.name}</option>
+              )}
+              {group.id === "google" && !basemaps.some(item => item.id === "google-satellite") && <option value="__google-satellite-unavailable" disabled>{t(import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ? "map.basemap.google-unavailable" : "map.basemap.google-key-required")}</option>}
+            </optgroup>)}
             <optgroup label={t("map.basemap.otherBasemaps")}>{otherBasemaps.map(b =>
               <option key={b.id} value={b.id}>{t(`map.basemap.${b.id === "satellite_roads" ? "satelliteRoads" : b.id === "topo" ? "topographic" : b.id === "terrain" ? "terrainRelief" : b.id}`) || b.name}</option>
             )}</optgroup>

@@ -6,6 +6,7 @@ import { useBasemaps } from "@/hooks/useBasemaps";
 import { useBasemapContext } from "./BasemapContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { BASEMAP_REFERENCE_PANE } from "@/config/mapPanes";
+import { SATELLITE_BASEMAP_GROUPS, SATELLITE_BASEMAP_IDS, satelliteBasemapGroupId } from "@/config/satelliteBasemapGroups";
 
 interface ExtraBasemapOption {
   id: string;
@@ -18,8 +19,6 @@ interface ExtraBasemapOption {
 interface Props {
   extraOptions?: ExtraBasemapOption[];
 }
-
-const SATELLITE_BASEMAP_IDS = new Set(["satellite", "nasa-gibs", "mapbox-satellite", "google-satellite"]);
 
 /**
  * Layer-switcher control (top-right), mirrors legacy `addBasemapSwitcher`.
@@ -38,6 +37,7 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   // this map has switched away from/back to the satellite basemap.
   const { activeBasemapId: activeId, setActiveBasemapId: setActiveId } = useBasemapContext();
   const [open, setOpen] = useState(false);
+  const [expandedSatelliteGroup, setExpandedSatelliteGroup] = useState<string | null>("esri");
   const rootRef = useRef<HTMLDivElement>(null);
   const t = useI18nStore((s) => s.t);
   const googleBasemapAvailable = basemaps.some((basemap) => basemap.id === "google-satellite");
@@ -46,6 +46,10 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     : "map.basemap.google-key-required";
   const satelliteBasemaps = basemaps.filter((basemap) => SATELLITE_BASEMAP_IDS.has(basemap.id));
   const otherBasemaps = basemaps.filter((basemap) => !SATELLITE_BASEMAP_IDS.has(basemap.id));
+  const satelliteGroups = SATELLITE_BASEMAP_GROUPS.map((group) => ({
+    ...group,
+    items: satelliteBasemaps.filter((basemap) => group.basemapIds.some((id) => id === basemap.id)),
+  })).filter((group) => group.items.length > 0 || group.id === "google");
   const basemapLabel = (id: string) => t(`map.basemap.${id === "satellite_roads" ? "satelliteRoads" : id === "topo" ? "topographic" : id === "terrain" ? "terrainRelief" : id}`);
   useEffect(() => {
     if (!open) return;
@@ -53,6 +57,10 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+  useEffect(() => {
+    const groupId = satelliteBasemapGroupId(activeId);
+    if (groupId) setExpandedSatelliteGroup(groupId);
+  }, [activeId]);
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false); };
@@ -147,26 +155,34 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
         {open && (
           <div className="basemap-panel" role="listbox" aria-label={t("map.basemap.title")}>
             <div className="basemap-panel-heading" role="presentation">{t("map.basemap.satelliteSources")}</div>
-            {satelliteBasemaps.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                className={`basemap-option ${activeId === b.id ? "active" : ""}`}
-                aria-selected={activeId === b.id}
-                role="option"
-                onClick={() => switchTo(b.id)}
-              >
-                {basemapLabel(b.id) || b.name}
-              </button>
-            ))}
-            {!googleBasemapAvailable && <button
-                type="button"
-                className="basemap-option"
-                role="option"
-                aria-disabled="true"
-                disabled
-                title={t(googleUnavailableKey)}
-              >{t(googleUnavailableKey)}</button>}
+            {satelliteGroups.map((group) => <details key={group.id} className="basemap-provider-group" role="group" aria-label={group.label}
+              open={expandedSatelliteGroup === group.id}
+              onToggle={(event) => {
+                const nextOpen = event.currentTarget.open;
+                setExpandedSatelliteGroup((current) => nextOpen ? group.id : current === group.id ? null : current);
+              }}>
+              <summary>{group.label}<i className="bi bi-chevron-down" aria-hidden="true" /></summary>
+              {group.items.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={`basemap-option ${activeId === b.id ? "active" : ""}`}
+                  aria-selected={activeId === b.id}
+                  role="option"
+                  onClick={() => switchTo(b.id)}
+                >
+                  {basemapLabel(b.id) || b.name}
+                </button>
+              ))}
+              {group.id === "google" && !googleBasemapAvailable && <button
+                  type="button"
+                  className="basemap-option"
+                  role="option"
+                  aria-disabled="true"
+                  disabled
+                  title={t(googleUnavailableKey)}
+                >{t(googleUnavailableKey)}</button>}
+            </details>)}
             <div className="basemap-panel-divider" role="presentation" />
             <div className="basemap-panel-heading" role="presentation">{t("map.basemap.otherBasemaps")}</div>
             {otherBasemaps.map((b) => (

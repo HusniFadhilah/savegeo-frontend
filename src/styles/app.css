@@ -2765,6 +2765,29 @@
   text-transform: uppercase;
 }
 
+.basemap-provider-group {
+  border-top: 1px solid #e5e7eb;
+}
+
+.basemap-provider-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.basemap-provider-group > summary::-webkit-details-marker { display: none; }
+.basemap-provider-group > summary:hover { background: #f8fafc; }
+.basemap-provider-group > summary i { font-size: 0.65rem; transition: transform 0.16s ease; }
+.basemap-provider-group[open] > summary i { transform: rotate(180deg); }
+.basemap-provider-group .basemap-option { padding-left: 18px; }
+
 .basemap-panel-divider {
   height: 1px;
   background: #e5e7eb;
@@ -6542,6 +6565,18 @@ html[data-theme="dark"] .basemap-panel {
 html[data-theme="dark"] .basemap-panel-heading {
   background: #0f172a !important;
   color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .basemap-provider-group {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .basemap-provider-group > summary {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .basemap-provider-group > summary:hover {
+  background: #172033;
 }
 
 html[data-theme="dark"] .basemap-panel-divider {

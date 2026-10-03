@@ -1,0 +1,28 @@
+export type HistoricalImagerySource =
+  | "current-basemap"
+  | "esri-wayback"
+  | "nasa-gibs"
+  | "nasa-viirs-night"
+  | "nasa-black-marble"
+  | "eox-cloudless";
+
+/** Basemap to activate when a matching source is selected in the history panel. */
+export const BASEMAP_FOR_HISTORICAL_SOURCE: Readonly<Record<HistoricalImagerySource, string | null>> = {
+  "current-basemap": null,
+  "esri-wayback": "satellite",
+  "nasa-gibs": "nasa-gibs",
+  "nasa-viirs-night": "nasa-gibs-viirs-night",
+  "nasa-black-marble": "nasa-gibs-black-marble",
+  "eox-cloudless": "eox-sentinel2-cloudless",
+};
+
+/** Keep the history selector aligned when a basemap is selected on the map. */
+export function historicalSourceForBasemap(basemapId: string | null): HistoricalImagerySource {
+  switch (basemapId) {
+    case "nasa-gibs": return "nasa-gibs";
+    case "nasa-gibs-viirs-night": return "nasa-viirs-night";
+    case "nasa-gibs-black-marble": return "nasa-black-marble";
+    case "eox-sentinel2-cloudless": return "eox-cloudless";
+    default: return "current-basemap";
+  }
+}
