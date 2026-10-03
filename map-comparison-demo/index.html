@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAVEGEO — Map Technology Comparison</title>
+<meta name="description" content="Perbandingan interaktif Leaflet, MapLibre, OpenLayers, Cesium, OSM, Mapbox, MapTiler, Tilebox, dan GeoLibre.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css">
+<link rel="stylesheet" href="https://unpkg.com/ol@10.6.1/ol.css">
+<link rel="stylesheet" href="https://unpkg.com/cesium@1.132.0/Build/Cesium/Widgets/widgets.css">
+<style>
+:root{--bg:#06111e;--panel:#0c1a2c;--line:#213750;--text:#eef6ff;--muted:#9db0c4;--a:#42d6a4;--b:#62aaff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(#06111e,#081827 45%,#06111e);color:var(--text);font:15px/1.6 Inter,system-ui,sans-serif}
+header{padding:58px 24px 38px;border-bottom:1px solid var(--line);background:radial-gradient(circle at 75% 15%,#1a4b7544,transparent 32%),radial-gradient(circle at 15% 20%,#167a5a33,transparent 30%)}
+.wrap{max-width:1220px;margin:auto}h1{font-size:clamp(2.2rem,5vw,4.6rem);line-height:1;margin:.2em 0}.sub{max-width:920px;color:#c8d8e8;font-size:1.08rem}.ey{color:var(--a);font-weight:800;letter-spacing:.13em;font-size:.76rem}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.badge,.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#ffffff08;color:#c8d8e8;font-size:.78rem}
+nav{position:sticky;top:0;z-index:999;background:#071321e8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:10px calc(max(20px,(100vw - 1220px)/2));display:flex;gap:7px;overflow:auto}
+nav button,.btn{border:1px solid transparent;background:transparent;color:var(--muted);padding:9px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}nav button.on,.btn:hover{background:#132640;color:white;border-color:var(--line)}
+section{padding:48px 20px}.title{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:22px}.title h2{font-size:clamp(1.7rem,3vw,2.6rem);margin:.1em 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card,.mapcard,.box{background:linear-gradient(#0f2137,#0b192a);border:1px solid var(--line);border-radius:16px}.card{padding:20px}.card strong{font-size:1.35rem}.card p,.muted{color:var(--muted)}.tag{color:var(--a);font-size:.7rem;font-weight:800;letter-spacing:.1em}.mini{display:flex;gap:6px;flex-wrap:wrap}.mini span{font-size:.73rem;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:#bed0e3}
+.call{margin-top:18px;border:1px solid #42d6a455;background:#42d6a410;padding:17px;border-radius:13px;color:#d8f8eb}
+.mapgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mapcard{overflow:hidden}.mh{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid var(--line)}.mh small{display:block;color:var(--muted)}.map{height:340px;background:#07111e}.mf{padding:10px 14px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line)}.tools{display:flex;gap:8px}.btn{border-color:var(--line);background:#10243c;color:white}
+.prov{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.prov .box{padding:18px}.prov pre,.code pre{white-space:pre-wrap;overflow:auto;background:#050d17;border:1px solid var(--line);border-radius:10px;padding:12px;color:#c8f2df}
+table{width:100%;border-collapse:collapse;min-width:1050px;background:#091625}.tw{overflow:auto;border:1px solid var(--line);border-radius:14px}th,td{padding:13px;border-bottom:1px solid #18304a;text-align:left;font-size:.86rem}th{background:#10243c}td{color:#bfd0e0}.yes{color:#65e1b6;font-weight:800}.mid{color:#ffd166;font-weight:800}.no{color:#738aa3}
+.arch{padding:22px}.row{display:flex;gap:12px;justify-content:center}.node{flex:1;padding:15px;text-align:center;border:1px solid var(--line);border-radius:12px;background:#10243c}.node b,.node span{display:block}.node span{color:var(--muted);font-size:.8rem}.arrow{text-align:center;color:#708aa5;padding:8px}.sources{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}.sources span{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#0c1c30}.code{display:grid;grid-template-columns:240px 1fr;gap:14px}.code .box{padding:14px}.rtabs button{width:100%;text-align:left;margin-bottom:6px}.code pre{min-height:430px;margin:0}.note{color:var(--muted);margin-top:8px}
+footer{padding:28px 20px 46px;border-top:1px solid var(--line);color:var(--muted)}.cesium-widget-credits{font-size:9px!important}
+@media(max-width:900px){.grid,.prov{grid-template-columns:1fr 1fr}.code{grid-template-columns:1fr}.rtabs{display:flex;overflow:auto;gap:7px}.rtabs button{width:auto}.row{flex-wrap:wrap}.node{min-width:45%}}
+@media(max-width:680px){.grid,.prov,.mapgrid{grid-template-columns:1fr}.title{align-items:flex-start;flex-direction:column}.map{height:300px}.node{min-width:100%}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="ey">SAVEGEO • WEB GIS TECHNOLOGY LAB</div><h1>Map Engine, Basemap, Platform & EO Stack</h1><p class="sub">Demo interaktif untuk membedakan Leaflet, MapLibre GL JS, OpenLayers, CesiumJS, OpenStreetMap, Mapbox, MapTiler, Tilebox, dan GeoLibre—termasuk live maps, kemampuan, contoh kode, dan arsitektur production.</p><div class="badges"><span class="badge">4 live map demos</span><span class="badge">Tanpa API key wajib</span><span class="badge">Production notes</span><span class="badge">SAVEGEO-ready</span></div></div></header>
+<nav><button class="on" data-go="roles">Peran</button><button data-go="live">Live Maps</button><button data-go="matrix">Matrix</button><button data-go="arch">Architecture</button><button data-go="recipes">Code</button></nav>
+
+<section id="roles"><div class="wrap"><div class="title"><div><div class="ey">01 — PERAN</div><h2>Jangan bandingkan teknologi yang berbeda layer</h2></div><span class="muted">Renderer ≠ basemap ≠ platform ≠ EO pipeline</span></div>
+<div class="grid">
+<div class="card"><div class="tag">2D RENDERER</div><strong>Leaflet</strong><p>Library 2D ringan untuk marker, popup, GeoJSON, raster tile, dan dashboard sederhana.</p><div class="mini"><span>2D</span><span>SVG/Canvas</span><span>Open source</span></div></div>
+<div class="card"><div class="tag">GPU RENDERER</div><strong>MapLibre GL JS</strong><p>WebGL renderer untuk vector tiles, style dinamis, data besar, pitch, terrain ringan dan globe.</p><div class="mini"><span>WebGL</span><span>Vector tiles</span><span>Open source</span></div></div>
+<div class="card"><div class="tag">GIS RENDERER</div><strong>OpenLayers</strong><p>WebGIS kaya fitur untuk OGC, proyeksi/CRS, WMS, WMTS, WFS, raster dan vector.</p><div class="mini"><span>OGC</span><span>Projection-rich</span><span>Open source</span></div></div>
+<div class="card"><div class="tag">3D ENGINE</div><strong>CesiumJS</strong><p>3D globe untuk terrain, 3D Tiles, point cloud, photogrammetry, trajectory dan digital twin.</p><div class="mini"><span>3D globe</span><span>3D Tiles</span><span>WebGL</span></div></div>
+<div class="card"><div class="tag">DATA / BASEMAP</div><strong>OpenStreetMap</strong><p>Sumber data peta terbuka. OSM bukan renderer JavaScript; Leaflet/MapLibre/OpenLayers yang merendernya.</p><div class="mini"><span>Road</span><span>POI</span><span>Building</span></div></div>
+<div class="card"><div class="tag">COMMERCIAL PLATFORM</div><strong>Mapbox</strong><p>Ekosistem renderer, styles, satellite, terrain, geocoding, routing, navigation, dan hosting.</p><div class="mini"><span>All-in-one</span><span>Token</span><span>Managed</span></div></div>
+<div class="card"><div class="tag">TILE / STYLE PROVIDER</div><strong>MapTiler</strong><p>Hosted basemap, tiles, styles, terrain dan geocoding; pasangan natural untuk MapLibre.</p><div class="mini"><span>Tiles</span><span>Styles</span><span>Hosted</span></div></div>
+<div class="card"><div class="tag">EO PIPELINE</div><strong>Tilebox</strong><p>Discovery, ingestion dan orchestration Earth Observation. Bukan browser map renderer.</p><div class="mini"><span>EO</span><span>Catalog</span><span>Pipeline</span></div></div>
+<div class="card"><div class="tag">APPLICATION LAYER</div><strong>GeoLibre</strong><p>Workspace/aplikasi geospasial yang dapat memakai engine seperti MapLibre, Mapbox atau Cesium.</p><div class="mini"><span>Multi-engine</span><span>Workspace</span><span>App layer</span></div></div>
+</div><div class="call"><b>Untuk SAVEGEO:</b> MapLibre sebagai map utama 2D/2.5D, Cesium untuk 3D, PostGIS + vector tiles untuk jutaan fitur, dan COG/TiTiler untuk raster satelit.</div></div></section>
+
+<section id="live"><div class="wrap"><div class="title"><div><div class="ey">02 — LIVE MAP LAB</div><h2>Empat renderer, lokasi yang sama</h2></div><div class="tools"><button class="btn" id="reset">Reset Semarang</button><button class="btn" id="markers">Toggle markers</button></div></div>
+<p class="muted">Basemap demo menggunakan public OpenStreetMap tiles untuk demonstrasi ringan. Untuk production gunakan provider/self-hosting sesuai kebijakan penggunaan.</p>
+<div class="mapgrid">
+<div class="mapcard"><div class="mh"><div><b>Leaflet</b><small>Simple 2D</small></div><span class="pill">Raster XYZ</span></div><div class="map" id="leaflet"></div><div class="mf">Kuat untuk dashboard ringan, marker, GeoJSON dan WMS.</div></div>
+<div class="mapcard"><div class="mh"><div><b>MapLibre GL JS</b><small>GPU accelerated</small></div><span class="pill">WebGL</span></div><div class="map" id="maplibre"></div><div class="mf">Pilihan utama untuk SAVEGEO 2D + vector tiles.</div></div>
+<div class="mapcard"><div class="mh"><div><b>OpenLayers</b><small>GIS-oriented</small></div><span class="pill">OGC</span></div><div class="map" id="openlayers"></div><div class="mf">Kuat saat WMS/WFS/WMTS dan banyak CRS menjadi kebutuhan utama.</div></div>
+<div class="mapcard"><div class="mh"><div><b>CesiumJS</b><small>3D globe</small></div><span class="pill">3D</span></div><div class="map" id="cesium"></div><div class="mf">Terrain, city model, 3D Tiles, point cloud dan globe.</div></div>
+</div>
+<div class="prov">
+<div class="box"><b>Mapbox</b><p class="muted">All-in-one platform. Live satellite memerlukan token.</p><pre>style: "mapbox://styles/mapbox/satellite-streets-v12"</pre></div>
+<div class="box"><b>MapTiler</b><p class="muted">Provider tile/style; MapLibre tetap menjadi renderer.</p><pre>style: "https://api.maptiler.com/maps/streets-v2/style.json?key=KEY"</pre></div>
+<div class="box"><b>Tilebox → MapLibre/Cesium</b><p class="muted">Catalog → ingest → process → serve → visualize. Tilebox berada di data pipeline, bukan pengganti map renderer.</p></div>
+</div></div></section>
+
+<section id="matrix"><div class="wrap"><div class="title"><div><div class="ey">03 — COMPARISON MATRIX</div><h2>Bandingkan berdasarkan fungsi</h2></div></div><div class="tw"><table><thead><tr><th>Teknologi</th><th>Jenis</th><th>2D</th><th>3D</th><th>Vector tile</th><th>Raster EO</th><th>Data besar</th><th>Lock-in</th><th>Ideal di SAVEGEO</th></tr></thead><tbody>
+<tr><td><b>Leaflet</b></td><td>Renderer</td><td class="yes">Kuat</td><td class="no">Tidak fokus</td><td class="mid">Plugin</td><td class="yes">Kuat</td><td class="mid">Terbatas</td><td>Rendah</td><td>Dashboard sederhana</td></tr>
+<tr><td><b>MapLibre</b></td><td>GPU renderer</td><td class="yes">Kuat</td><td class="mid">2.5D</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td>Rendah</td><td>Main WebGIS</td></tr>
+<tr><td><b>OpenLayers</b></td><td>GIS renderer</td><td class="yes">Kuat</td><td class="mid">Terbatas</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td>Rendah</td><td>OGC / proyeksi</td></tr>
+<tr><td><b>CesiumJS</b></td><td>3D globe</td><td class="mid">Bisa</td><td class="yes">Sangat kuat</td><td class="mid">Bisa</td><td class="yes">Kuat</td><td class="yes">3D Tiles</td><td>Rendah*</td><td>3D / terrain</td></tr>
+<tr><td><b>OSM</b></td><td>Data/basemap</td><td class="no">Bukan renderer</td><td class="no">Bukan renderer</td><td class="mid">Data source</td><td class="no">Bukan fokus</td><td class="mid">Data source</td><td>Rendah</td><td>Road / POI / building</td></tr>
+<tr><td><b>Mapbox</b></td><td>Platform</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td>Lebih tinggi</td><td>Managed all-in-one</td></tr>
+<tr><td><b>MapTiler</b></td><td>Provider</td><td class="yes">Kuat</td><td class="mid">Bisa</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td>Sedang</td><td>Hosted basemap</td></tr>
+<tr><td><b>Tilebox</b></td><td>EO pipeline</td><td class="no">Bukan renderer</td><td class="no">Bukan renderer</td><td class="no">Bukan fokus</td><td class="yes">Kuat</td><td class="yes">Kuat</td><td>Sedang</td><td>EO orchestration</td></tr>
+<tr><td><b>GeoLibre</b></td><td>App layer</td><td class="yes">Engine-dependent</td><td class="yes">Engine-dependent</td><td class="mid">Engine-dependent</td><td class="yes">Bisa</td><td class="mid">Tergantung stack</td><td>Tergantung</td><td>Workspace geospatial</td></tr>
+</tbody></table></div></div></section>
+
+<section id="arch"><div class="wrap"><div class="title"><div><div class="ey">04 — PRODUCTION ARCHITECTURE</div><h2>Stack yang scalable untuk SAVEGEO</h2></div></div><div class="box arch">
+<div class="row"><div class="node"><b>Users</b><span>Viewer · Expert · Admin</span></div></div><div class="arrow">↓ HTTPS</div>
+<div class="row"><div class="node"><b>MapLibre GL JS</b><span>Main 2D/2.5D</span></div><div class="node"><b>CesiumJS</b><span>Optional 3D</span></div></div><div class="arrow">↓ API / Tiles</div>
+<div class="row"><div class="node"><b>Martin</b><span>PostGIS → MVT</span></div><div class="node"><b>TiTiler</b><span>COG → raster tiles</span></div><div class="node"><b>FastAPI / Node</b><span>Business API</span></div></div><div class="arrow">↓</div>
+<div class="row"><div class="node"><b>PostgreSQL + PostGIS</b><span>GEDI · hotspots · polygons</span></div><div class="node"><b>Object Storage</b><span>S1/S2 · Landsat · DEM · COG</span></div><div class="node"><b>AI Workers</b><span>Inference / segmentation</span></div></div><div class="arrow">↓ data sources</div>
+<div class="sources"><span>Sentinel-1</span><span>Sentinel-2</span><span>Landsat</span><span>GEDI</span><span>VIIRS/MODIS</span><span>Himawari</span><span>WoSIS</span><span>DEM</span><span>BNPB</span></div>
+</div></div></section>
+
+<section id="recipes"><div class="wrap"><div class="title"><div><div class="ey">05 — CODE RECIPES</div><h2>Contoh implementasi</h2></div></div><div class="code"><div class="box rtabs" id="rtabs"></div><div><div class="box"><pre id="rcode"></pre></div><div class="note" id="rnote"></div></div></div></div></section>
+
+<footer><div class="wrap"><b>SAVEGEO Map Technology Comparison</b><br>Interactive architecture reference — dibuat sebagai demonstrasi teknologi, bukan benchmark performa absolut.</div></footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/ol@10.6.1/dist/ol.js"></script>
+<script>window.CESIUM_BASE_URL="https://unpkg.com/cesium@1.132.0/Build/Cesium/";</script>
+<script src="https://unpkg.com/cesium@1.132.0/Build/Cesium/Cesium.js"></script>
+<script>
+var C=[110.4203,-6.9932],pts=[["UNDIP Tembalang",110.4407,-7.0528],["Simpang Lima",110.4227,-6.9904],["Kota Lama",110.428,-6.9685]],shown=true;
+document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){document.querySelectorAll("nav button").forEach(function(x){x.classList.remove("on")});b.classList.add("on");document.getElementById(b.dataset.go).scrollIntoView({behavior:"smooth"});}});
+var lm=L.map("leaflet").setView([C[1],C[0]],12);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(lm);var lg=L.layerGroup().addTo(lm);pts.forEach(function(p){L.circleMarker([p[2],p[1]],{radius:7,color:"#07111e",weight:2,fillColor:"#42d6a4",fillOpacity:1}).bindPopup("<b>"+p[0]+"</b>").addTo(lg)});
+var mm=new maplibregl.Map({container:"maplibre",center:C,zoom:11.5,style:{version:8,sources:{osm:{type:"raster",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],tileSize:256,attribution:"© OpenStreetMap contributors"}},layers:[{id:"osm",type:"raster",source:"osm"}]}});mm.addControl(new maplibregl.NavigationControl(),"top-right");mm.on("load",function(){mm.addSource("p",{type:"geojson",data:{type:"FeatureCollection",features:pts.map(function(p){return{type:"Feature",properties:{name:p[0]},geometry:{type:"Point",coordinates:[p[1],p[2]]}}})}});mm.addLayer({id:"p",type:"circle",source:"p",paint:{"circle-radius":7,"circle-color":"#42d6a4","circle-stroke-color":"#07111e","circle-stroke-width":2}})});
+var of=pts.map(function(p){return new ol.Feature({geometry:new ol.geom.Point(ol.proj.fromLonLat([p[1],p[2]]))})});var ovs=new ol.source.Vector({features:of});var ov=new ol.layer.Vector({source:ovs,style:new ol.style.Style({image:new ol.style.Circle({radius:7,fill:new ol.style.Fill({color:"#42d6a4"}),stroke:new ol.style.Stroke({color:"#07111e",width:2})})})});var om=new ol.Map({target:"openlayers",layers:[new ol.layer.Tile({source:new ol.source.OSM()}),ov],view:new ol.View({center:ol.proj.fromLonLat(C),zoom:11.5})});
+var cv;try{Cesium.Ion.defaultAccessToken=undefined;cv=new Cesium.Viewer("cesium",{animation:false,timeline:false,baseLayerPicker:false,geocoder:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,imageryProvider:new Cesium.OpenStreetMapImageryProvider({url:"https://tile.openstreetmap.org/"}),terrainProvider:new Cesium.EllipsoidTerrainProvider()});cv.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(C[0],C[1],110000),duration:0});pts.forEach(function(p){cv.entities.add({name:p[0],position:Cesium.Cartesian3.fromDegrees(p[1],p[2]),point:{pixelSize:10,color:Cesium.Color.fromCssColorString("#42d6a4"),outlineWidth:2,outlineColor:Cesium.Color.fromCssColorString("#07111e")}})})}catch(e){document.getElementById("cesium").innerHTML="<p style='padding:20px'>Cesium gagal dimuat: "+e.message+"</p>"}
+document.getElementById("reset").onclick=function(){lm.setView([C[1],C[0]],12);mm.jumpTo({center:C,zoom:11.5});om.getView().setCenter(ol.proj.fromLonLat(C));om.getView().setZoom(11.5);if(cv)cv.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(C[0],C[1],110000),duration:.5})};
+document.getElementById("markers").onclick=function(){shown=!shown;if(shown)lg.addTo(lm);else lm.removeLayer(lg);if(mm.getLayer("p"))mm.setLayoutProperty("p","visibility",shown?"visible":"none");ov.setVisible(shown);if(cv)cv.entities.values.forEach(function(e){e.show=shown})};
+var recipes={
+"Leaflet":"const map = L.map('map').setView([-6.99,110.42],12);\\nL.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);",
+"MapLibre":"new maplibregl.Map({ container:'map', style:STYLE, center:[110.42,-6.99], zoom:11 });\\n// Untuk jutaan fitur: source type='vector' + MVT/PBF dari Martin.",
+"OpenLayers":"new ol.layer.Tile({ source:new ol.source.TileWMS({ url:GEOSERVER, params:{LAYERS:'savegeo:landcover'} }) });",
+"Cesium":"const tileset = await Cesium.Cesium3DTileset.fromUrl('/tileset.json');\\nviewer.scene.primitives.add(tileset);",
+"Mapbox":"mapboxgl.accessToken = 'TOKEN';\\nnew mapboxgl.Map({style:'mapbox://styles/mapbox/satellite-streets-v12'});",
+"MapTiler":"new maplibregl.Map({style:'https://api.maptiler.com/maps/streets-v2/style.json?key=KEY'});",
+"Production":"PostGIS → Martin → MVT/PBF → MapLibre\\nCOG/Object Storage → TiTiler → raster tiles → MapLibre\\n3D Tiles → CesiumJS"
+};
+var notes={"Leaflet":"Paling simpel untuk peta 2D ringan.","MapLibre":"Rekomendasi renderer utama SAVEGEO.","OpenLayers":"Kuat untuk layanan OGC dan proyeksi.","Cesium":"Gunakan saat 3D benar-benar memberi nilai.","Mapbox":"Managed platform; token dan billing provider berlaku.","MapTiler":"Hosted basemap/style yang cocok dengan MapLibre.","Production":"Pisahkan vector, raster, API dan AI worker agar scalable."};
+var rt=document.getElementById("rtabs"),rc=document.getElementById("rcode"),rn=document.getElementById("rnote");Object.keys(recipes).forEach(function(k,i){var b=document.createElement("button");b.className="btn"+(i===0?" on":"");b.textContent=k;b.onclick=function(){rt.querySelectorAll("button").forEach(function(x){x.classList.remove("on")});b.classList.add("on");rc.textContent=recipes[k];rn.textContent=notes[k]};rt.appendChild(b)});rc.textContent=recipes.Leaflet;rn.textContent=notes.Leaflet;
+window.addEventListener("resize",function(){lm.invalidateSize();mm.resize();om.updateSize();if(cv)cv.resize()});
+</script>
+</body></html>
