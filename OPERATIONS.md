@@ -10,6 +10,8 @@
 
 Production builds must use `VITE_API_BASE_URL=/api` so browser requests remain same-origin.
 
+Google Satellite is optional. Enable **Map Tiles API** in Google Cloud and use a billing-enabled project. Set `VITE_GOOGLE_MAPS_API_KEY` in `.env.local` for local development or as a GitHub Actions secret with the same name for production builds. This browser key is included in the built app, so restrict it to the deployed HTTP referrers and the Map Tiles API. Google tiles are for map display only; do not use them as imagery input for analysis or extraction.
+
 ## Required checks
 
 ```powershell

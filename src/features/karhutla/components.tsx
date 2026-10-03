@@ -1345,13 +1345,81 @@ export function KarhutlaDetailPage() {
         </div>
       </div>
       {event.province_codes.length > 0 && (
-        <section className="wildfire-region-workspace" aria-label="Filter wilayah dan statistik hotspot">
+        <section className="wildfire-region-workspace" aria-label="Filter wilayah">
           <div className="wildfire-region-filter-panel">
             <div className="wildfire-region-panel-heading">
-              <div>
-                <h2><i className="bi bi-geo-alt" aria-hidden="true" /> Filter wilayah</h2>
-                <span>Pilih batas administrasi untuk menyaring peta dan statistik hotspot.</span>
-              </div>
+              <details className="wildfire-region-filter-accordion">
+                <summary>
+                  <h2><i className="bi bi-geo-alt" aria-hidden="true" /> Filter wilayah</h2>
+                  <span>Pilih batas administrasi untuk menyaring peta dan statistik hotspot.</span>
+                  <i className="bi bi-chevron-down wildfire-region-filter-chevron" aria-hidden="true" />
+                </summary>
+                <div className="wildfire-region-filter-grid">
+                  <label>
+                    Provinsi
+                    <select
+                      value={query.provinceCode || provinceOptions.find((option) => option.name === query.province)?.code || ""}
+                      disabled={regionOptionsLoading}
+                      onChange={(event) => {
+                        const option = provinceOptions.find((item) => item.code === event.target.value);
+                        updateQuery({
+                          province: option?.name ?? "", provinceCode: option?.code ?? "",
+                          city: "", cityCode: "", district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+                        });
+                      }}
+                    >
+                      <option value="">Semua provinsi Kalimantan</option>
+                      {provinceOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Kabupaten/kota
+                    <select
+                      value={query.cityCode}
+                      disabled={!query.provinceCode || cityOptionsLoading}
+                      onChange={(event) => {
+                        const option = cityOptions.find((item) => item.code === event.target.value);
+                        updateQuery({
+                          city: option?.name ?? "", cityCode: option?.code ?? "",
+                          district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+                        });
+                      }}
+                    >
+                      <option value="">{cityOptionsLoading ? "Memuat kabupaten/kota…" : "Semua kabupaten/kota"}</option>
+                      {cityOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Kecamatan
+                    <select
+                      value={query.districtCode}
+                      disabled={!query.cityCode || districtOptionsLoading}
+                      onChange={(event) => {
+                        const option = districtOptions.find((item) => item.code === event.target.value);
+                        updateQuery({ district: option?.name ?? "", districtCode: option?.code ?? "", village: "", villageCode: "", hotspot: "" });
+                      }}
+                    >
+                      <option value="">{districtOptionsLoading ? "Memuat kecamatan…" : "Semua kecamatan"}</option>
+                      {districtOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Kelurahan/desa
+                    <select
+                      value={query.villageCode}
+                      disabled={!query.districtCode || villageOptionsLoading}
+                      onChange={(event) => {
+                        const option = villageOptions.find((item) => item.code === event.target.value);
+                        updateQuery({ village: option?.name ?? "", villageCode: option?.code ?? "", hotspot: "" });
+                      }}
+                    >
+                      <option value="">{villageOptionsLoading ? "Memuat kelurahan/desa…" : "Semua kelurahan/desa"}</option>
+                      {villageOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {regionOptionsError && <div className="wildfire-region-error" role="status">{regionOptionsError}</div>}
+              </details>
               <button
                 type="button"
                 className="wildfire-region-reset"
@@ -1364,109 +1432,6 @@ export function KarhutlaDetailPage() {
                 Hapus filter
               </button>
             </div>
-            <div className="wildfire-region-filter-grid">
-              <label>
-                Provinsi
-                <select
-                  value={query.provinceCode || provinceOptions.find((option) => option.name === query.province)?.code || ""}
-                  disabled={regionOptionsLoading}
-                  onChange={(event) => {
-                    const option = provinceOptions.find((item) => item.code === event.target.value);
-                    updateQuery({
-                      province: option?.name ?? "", provinceCode: option?.code ?? "",
-                      city: "", cityCode: "", district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
-                    });
-                  }}
-                >
-                  <option value="">Semua provinsi Kalimantan</option>
-                  {provinceOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
-                </select>
-              </label>
-              <label>
-                Kabupaten/kota
-                <select
-                  value={query.cityCode}
-                  disabled={!query.provinceCode || cityOptionsLoading}
-                  onChange={(event) => {
-                    const option = cityOptions.find((item) => item.code === event.target.value);
-                    updateQuery({
-                      city: option?.name ?? "", cityCode: option?.code ?? "",
-                      district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
-                    });
-                  }}
-                >
-                  <option value="">{cityOptionsLoading ? "Memuat kabupaten/kota…" : "Semua kabupaten/kota"}</option>
-                  {cityOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
-                </select>
-              </label>
-              <label>
-                Kecamatan
-                <select
-                  value={query.districtCode}
-                  disabled={!query.cityCode || districtOptionsLoading}
-                  onChange={(event) => {
-                    const option = districtOptions.find((item) => item.code === event.target.value);
-                    updateQuery({ district: option?.name ?? "", districtCode: option?.code ?? "", village: "", villageCode: "", hotspot: "" });
-                  }}
-                >
-                  <option value="">{districtOptionsLoading ? "Memuat kecamatan…" : "Semua kecamatan"}</option>
-                  {districtOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
-                </select>
-              </label>
-              <label>
-                Kelurahan/desa
-                <select
-                  value={query.villageCode}
-                  disabled={!query.districtCode || villageOptionsLoading}
-                  onChange={(event) => {
-                    const option = villageOptions.find((item) => item.code === event.target.value);
-                    updateQuery({ village: option?.name ?? "", villageCode: option?.code ?? "", hotspot: "" });
-                  }}
-                >
-                  <option value="">{villageOptionsLoading ? "Memuat kelurahan/desa…" : "Semua kelurahan/desa"}</option>
-                  {villageOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
-                </select>
-              </label>
-            </div>
-            {regionOptionsError && <div className="wildfire-region-error" role="status">{regionOptionsError}</div>}
-          </div>
-          <div className="wildfire-region-statistics">
-            <div className="wildfire-region-panel-heading">
-              <div>
-                <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
-                <span>
-                  {query.district || query.city || query.province || "Seluruh Kalimantan"} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
-                </span>
-              </div>
-              {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
-            </div>
-            {regionStatisticsError ? (
-              <div className="wildfire-region-error" role="alert">{regionStatisticsError}</div>
-            ) : (
-              <div className="wildfire-region-table-wrap">
-                <table className="wildfire-region-table">
-                  <thead><tr><th>Wilayah</th><th>Jumlah hotspot</th><th>Keyakinan tinggi</th></tr></thead>
-                  <tbody>
-                    {regionStatisticsLoading && regionStatistics.length === 0 ? (
-                      <tr><td colSpan={3}>Memuat statistik batas wilayah…</td></tr>
-                    ) : regionStatistics.length === 0 ? (
-                      <tr><td colSpan={3}>Belum ada data hotspot pada wilayah dan filter ini.</td></tr>
-                    ) : regionStatistics.map((region, index) => (
-                      <tr key={`${region.code}:${region.name}:${index}`}>
-                        <td>
-                          <button type="button" className="wildfire-region-stat-link" onClick={() => selectRegionStatistic(region)} disabled={!regionStatisticCode(region)}>
-                            {region.name}<i className="bi bi-arrow-down-right" aria-hidden="true" />
-                          </button>
-                        </td>
-                        <td>{formatNumber(region.hotspot_count, language)}</td>
-                        <td>{formatNumber(region.high_confidence_count, language)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif SP3STAB. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
           </div>
         </section>
       )}
@@ -1632,6 +1597,46 @@ export function KarhutlaDetailPage() {
               </div>
             )}
           </div>
+          {event.province_codes.length > 0 && (
+            <div className="wildfire-region-statistics">
+              <div className="wildfire-region-panel-heading">
+                <div>
+                  <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
+                  <span>
+                    {query.district || query.city || query.province || "Seluruh Kalimantan"} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
+                  </span>
+                </div>
+                {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
+              </div>
+              {regionStatisticsError ? (
+                <div className="wildfire-region-error" role="alert">{regionStatisticsError}</div>
+              ) : (
+                <div className="wildfire-region-table-wrap">
+                  <table className="wildfire-region-table">
+                    <thead><tr><th>Wilayah</th><th>Jumlah hotspot</th><th>Keyakinan tinggi</th></tr></thead>
+                    <tbody>
+                      {regionStatisticsLoading && regionStatistics.length === 0 ? (
+                        <tr><td colSpan={3}>Memuat statistik batas wilayah…</td></tr>
+                      ) : regionStatistics.length === 0 ? (
+                        <tr><td colSpan={3}>Belum ada data hotspot pada wilayah dan filter ini.</td></tr>
+                      ) : regionStatistics.map((region, index) => (
+                        <tr key={`${region.code}:${region.name}:${index}`}>
+                          <td>
+                            <button type="button" className="wildfire-region-stat-link" onClick={() => selectRegionStatistic(region)} disabled={!regionStatisticCode(region)}>
+                              {region.name}<i className="bi bi-arrow-down-right" aria-hidden="true" />
+                            </button>
+                          </td>
+                          <td>{formatNumber(region.hotspot_count, language)}</td>
+                          <td>{formatNumber(region.high_confidence_count, language)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif SP3STAB. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
+            </div>
+          )}
         </main>
         <aside className="wildfire-detail-sidebar">
           <div className="wildfire-stat-grid">

@@ -8,10 +8,12 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { useUserGeolocation, useLocationStore } from "@/hooks/useUserGeolocation";
 import UserLocationControl from "./UserLocationControl";
 import { imageryProvider } from "./globe3d/imagery";
+import { escapeAttributionHtml, fetchGoogleViewportCopyright } from "@/services/googleMapsTiles";
 import { cameraNumber, useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
 import "./globe3d/globe.css";
 
 const EMPTY_LAYERS: GlobeLayer[] = [];
+const SATELLITE_BASEMAP_IDS = new Set(["satellite", "nasa-gibs", "mapbox-satellite", "google-satellite"]);
 function geometryBounds(geometry: GeoJSON.Geometry | null | undefined): C.BoundingSphere | null {
   if (!geometry || !("coordinates" in geometry)) return null;
   const points: C.Cartesian3[] = [];
@@ -65,6 +67,8 @@ export default function Globe3DView(props: GlobeViewProps) {
   const basemapId = query.get("basemap") ?? props.basemapId;
   const alias = basemapId === "terrain_relief" ? "terrain" : basemapId === "topographic" ? "topo" : basemapId;
   const basemap = basemaps.find(b => b.id === alias) ?? basemaps.find(b => b.isDefault) ?? basemaps[0];
+  const satelliteBasemaps = basemaps.filter(item => SATELLITE_BASEMAP_IDS.has(item.id));
+  const otherBasemaps = basemaps.filter(item => !SATELLITE_BASEMAP_IDS.has(item.id));
   const terrain = query.get("show_terrain") !== "false";
   const buildings = query.get("show_buildings") === "true";
   const showAoi = query.get("show_aoi") !== "false";
@@ -165,13 +169,57 @@ export default function Globe3DView(props: GlobeViewProps) {
       installed.push(viewer.imageryLayers.addImageryProvider(provider, index));
     };
     try {
-      add(basemap.url, basemap.attribution, 0);
+      add(basemap.url, basemap.id === "google-satellite" ? undefined : basemap.attribution, 0);
       if (basemap.overlayUrl && roads) add(basemap.overlayUrl, basemap.overlayAttribution, 1, true);
       if (basemap.labelsUrl && labels) add(basemap.labelsUrl, basemap.labelsAttribution, installed.length, true);
     } catch { setImageryError(true); }
     viewer.scene.requestRender();
     return () => { removers.forEach(fn => fn()); if (!viewer.isDestroyed()) installed.forEach(layer => viewer.imageryLayers.remove(layer, true)); };
   }, [viewer, basemap, roads, labels]);
+
+  useEffect(() => {
+    if (!viewer || viewer.isDestroyed() || basemap?.id !== "google-satellite") return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let copyrightCredit: C.Credit | null = null;
+    const providerCredit = new C.Credit('<span class="savegeo-google-maps-attribution" translate="no">Google Maps</span>', true);
+    viewer.creditDisplay.addStaticCredit(providerCredit);
+
+    const updateAttribution = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        if (viewer.isDestroyed()) return;
+        const rectangle = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid);
+        if (!rectangle) return;
+        const canvasHeight = Math.max(1, viewer.scene.canvas.clientHeight);
+        const latitude = (rectangle.north + rectangle.south) / 2;
+        const metersPerPixel = Math.max(1, viewer.camera.positionCartographic.height / canvasHeight);
+        const zoom = Math.log2((156543.03392 * Math.max(0.01, Math.cos(latitude))) / metersPerPixel);
+        const copyright = await fetchGoogleViewportCopyright({
+          north: C.Math.toDegrees(rectangle.north),
+          south: C.Math.toDegrees(rectangle.south),
+          east: C.Math.toDegrees(rectangle.east),
+          west: C.Math.toDegrees(rectangle.west),
+        }, zoom);
+        if (cancelled || viewer.isDestroyed()) return;
+        if (copyrightCredit) viewer.creditDisplay.removeStaticCredit(copyrightCredit);
+        copyrightCredit = copyright ? new C.Credit(escapeAttributionHtml(copyright), true) : null;
+        if (copyrightCredit) viewer.creditDisplay.addStaticCredit(copyrightCredit);
+      }, 250);
+    };
+
+    updateAttribution();
+    const removeMoveEnd = viewer.camera.moveEnd.addEventListener(updateAttribution);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      removeMoveEnd();
+      if (!viewer.isDestroyed()) {
+        viewer.creditDisplay.removeStaticCredit(providerCredit);
+        if (copyrightCredit) viewer.creditDisplay.removeStaticCredit(copyrightCredit);
+      }
+    };
+  }, [viewer, basemap]);
 
   useEffect(() => {
     if (!viewer || viewer.isDestroyed()) return;
@@ -304,7 +352,16 @@ export default function Globe3DView(props: GlobeViewProps) {
       </div>
       <div className="globe-panels">
         <details className="globe-settings"><summary title={t("map.3d.basemap")} aria-label={t("map.3d.basemap")}><i className="bi bi-layers" aria-hidden="true" /></summary><div className="globe-settings-body">
-          <select aria-label={t("map.3d.basemap")} value={basemap?.id ?? ""} onChange={e => { writeGlobeQuery({ basemap: e.target.value }); props.onBasemapChange?.(e.target.value); }}>{basemaps.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+          <select aria-label={t("map.3d.basemap")} value={basemap?.id ?? ""} onChange={e => { writeGlobeQuery({ basemap: e.target.value }); props.onBasemapChange?.(e.target.value); }}>
+            <optgroup label={t("map.basemap.satelliteSources")}>{satelliteBasemaps.map(b =>
+              <option key={b.id} value={b.id}>{t(`map.basemap.${b.id}`) || b.name}</option>
+            )}
+            {!basemaps.some(item => item.id === "google-satellite") && <option value="__google-satellite-unavailable" disabled>{t(import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ? "map.basemap.google-unavailable" : "map.basemap.google-key-required")}</option>}
+            </optgroup>
+            <optgroup label={t("map.basemap.otherBasemaps")}>{otherBasemaps.map(b =>
+              <option key={b.id} value={b.id}>{t(`map.basemap.${b.id === "satellite_roads" ? "satelliteRoads" : b.id === "topo" ? "topographic" : b.id === "terrain" ? "terrainRelief" : b.id}`) || b.name}</option>
+            )}</optgroup>
+          </select>
           <label><input type="checkbox" checked={terrain && terrainConfigured} disabled={!terrainConfigured} onChange={e => toggle("show_terrain", e.target.checked)} />{t("map.3d.terrain")}</label>
           <p role="status">{t(`map.3d.${terrainStatus}`)}</p>
           {terrainStatus === "terrainActive" && <label>{t("map.3d.exaggeration")} {exaggeration}×<input type="range" min="0.5" max="3" step="0.1" value={exaggeration} onChange={e => writeGlobeQuery({ terrain_exaggeration: e.target.value })} /></label>}

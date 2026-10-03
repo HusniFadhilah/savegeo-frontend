@@ -29,12 +29,15 @@ jobs:
         env:
           VITE_API_BASE_URL: /api
           VITE_APP_ENV: production
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          SAVEGEO_DEPLOYMENT_ENVIRONMENT: beta
         run: |
           npm ci
           npm run lint
           npm test
           npm audit --audit-level=high
           npm run build
+          node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-environment beta
       - uses: actions/upload-artifact@v4
         with:
           name: savegeo-frontend-dist
@@ -80,10 +83,17 @@ jobs:
       DOLTINUKU_SSH_PORT: ${{ secrets.SFTP_DOLTINUKU_PORT }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - uses: actions/download-artifact@v4
         with:
           name: savegeo-frontend-dist
           path: dist/
+      - name: Validate deployed artifact provenance
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-sha "$GITHUB_SHA" --expected-environment beta
       - name: Install deployment tools
         run: sudo apt-get update && sudo apt-get install -y sshpass netcat-openbsd
       - name: Verify Doltinuku SSH is reachable
@@ -129,3 +139,11 @@ jobs:
             "sudo -S -p '' env FRONTEND_REMOTE_DIR='$FRONTEND_REMOTE_DIR' bash -s"
           curl --fail --silent --show-error --max-time 30 "https://$SAVEGEO_DOMAIN/" >/dev/null
           curl --fail --silent --show-error --max-time 30 "https://$BEGEO_DOMAIN/api/health" >/dev/null
+      - name: Record beta deployment
+        run: node scripts/write-deployment-record.mjs dist/build-metadata.json frontend-beta-deployment-record.json beta
+      - name: Upload beta deployment record
+        uses: actions/upload-artifact@v4
+        with:
+          name: savegeo-frontend-beta-deployment-record
+          path: frontend-beta-deployment-record.json
+          if-no-files-found: error

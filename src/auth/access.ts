@@ -36,6 +36,7 @@ export function canAccessAdminSection(
   user: { role?: string | null; permissions?: string[] | null } | null | undefined,
   section: string,
 ): boolean {
+  if (section === "profile") return Boolean(user && !isViewerRole(user.role));
   const permission = ADMIN_SECTION_PERMISSIONS[section];
   return permission ? hasAdminPermission(user, permission) : false;
 }
@@ -44,7 +45,7 @@ export function firstAccessibleAdminSection(
   user: { role?: string | null; permissions?: string[] | null } | null | undefined,
 ): string | null {
   const preferred = ["co", "ds", "gd", "ml", "ov", "ge", "ag", "cf", "us", "sp", "ri"];
-  return preferred.find((section) => canAccessAdminSection(user, section)) ?? null;
+  return [...preferred, "profile"].find((section) => canAccessAdminSection(user, section)) ?? null;
 }
 
 export function getDashboardEntryPath(params: {

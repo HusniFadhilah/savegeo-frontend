@@ -18,8 +18,13 @@ export interface RegionOption {
 }
 
 export interface AdminUser {
+  id?: number;
   username: string;
-  role: string | null;
+  email?: string | null;
+  is_active?: boolean;
+  created_at?: string | null;
+  last_login?: string | null;
+  role?: string | null;
   permissions?: string[] | null;
 }
 

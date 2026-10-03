@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { fetchHealth } from "@/services/analysisService";
 import type { HealthStatus } from "@/types/api";
+import { buildLabel, fetchFrontendBuildMetadata, getCompatibilityStatus, localFrontendMetadata, shortCommit, type BuildMetadata } from "@/config/version";
+import { fetchBackendVersion } from "@/services/releaseService";
 
 interface Props {
   open: boolean;
@@ -37,16 +39,22 @@ export default function SystemStatusModal({ open, onClose }: Props) {
   const [data, setData] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
+  const [frontendMetadata, setFrontendMetadata] = useState<BuildMetadata>(localFrontendMetadata);
+  const [backendMetadata, setBackendMetadata] = useState<BuildMetadata | null>(null);
 
   const refresh = async () => {
     setLoading(true);
+    const [healthResult, frontendResult, backendResult] = await Promise.allSettled([
+      fetchHealth(),
+      fetchFrontendBuildMetadata(),
+      fetchBackendVersion(),
+    ]);
+    setData(healthResult.status === "fulfilled" ? healthResult.value : null);
+    if (frontendResult.status === "fulfilled") setFrontendMetadata(frontendResult.value);
+    setBackendMetadata(backendResult.status === "fulfilled" ? backendResult.value : null);
     try {
-      const res = await fetchHealth();
-      setData(res);
-    } catch {
-      setData(null);
-    } finally {
       setCheckedAt(new Date());
+    } finally {
       setLoading(false);
     }
   };
@@ -90,6 +98,24 @@ export default function SystemStatusModal({ open, onClose }: Props) {
           {checkedAt && (
             <div className="small text-muted mt-2">Diperbarui: {checkedAt.toLocaleString("id-ID")}</div>
           )}
+          <div className="mt-3 pt-3 border-top" aria-label="Informasi versi dan provenance">
+            <h6 className="mb-2"><i className="bi bi-box-seam me-2" />Versi &amp; provenance</h6>
+            <div className="small d-grid gap-1">
+              <div><span className="text-muted">Produk:</span> v{frontendMetadata.product_version}</div>
+              <div><span className="text-muted">Frontend:</span> v{frontendMetadata.component_version} · {buildLabel(frontendMetadata)} · {shortCommit(frontendMetadata.commit_sha)}</div>
+              <div><span className="text-muted">Backend:</span> {backendMetadata ? `v${backendMetadata.component_version} · ${buildLabel(backendMetadata)} · ${shortCommit(backendMetadata.commit_sha)}` : "metadata tidak tersedia"}</div>
+              <div>
+                <span className="text-muted">Pasangan:</span>{" "}
+                <span className={`badge ${getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? "bg-success-subtle text-success" : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? "bg-warning-subtle text-warning-emphasis" : "bg-secondary-subtle text-secondary"}`}>
+                  {getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? "kompatibel" : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? "berbeda" : "metadata tidak tersedia"}
+                </span>
+              </div>
+              {backendMetadata?.deployed_at_utc && <div><span className="text-muted">Deploy backend:</span> {new Date(backendMetadata.deployed_at_utc).toLocaleString("id-ID")}</div>}
+            </div>
+            <a className="small d-inline-block mt-2" href="https://github.com/HusniFadhilah/savegeo-frontend/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">
+              <i className="bi bi-journal-text me-1" />Buka changelog
+            </a>
+          </div>
           <button type="button" className="btn btn-sm btn-outline-secondary mt-3" onClick={refresh}>
             <i className="bi bi-arrow-repeat me-1" /> Muat Ulang
           </button>

@@ -1,4 +1,4 @@
-import { useGlobeQuery } from "./globe3d/query";
+import { useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
 import { useMap } from "react-leaflet";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
@@ -19,6 +19,8 @@ interface Props {
   extraOptions?: ExtraBasemapOption[];
 }
 
+const SATELLITE_BASEMAP_IDS = new Set(["satellite", "nasa-gibs", "mapbox-satellite", "google-satellite"]);
+
 /**
  * Layer-switcher control (top-right), mirrors legacy `addBasemapSwitcher`.
  * Collapsed into a single icon button by default - the basemap list only
@@ -38,6 +40,13 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const t = useI18nStore((s) => s.t);
+  const googleBasemapAvailable = basemaps.some((basemap) => basemap.id === "google-satellite");
+  const googleUnavailableKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim()
+    ? "map.basemap.google-unavailable"
+    : "map.basemap.google-key-required";
+  const satelliteBasemaps = basemaps.filter((basemap) => SATELLITE_BASEMAP_IDS.has(basemap.id));
+  const otherBasemaps = basemaps.filter((basemap) => !SATELLITE_BASEMAP_IDS.has(basemap.id));
+  const basemapLabel = (id: string) => t(`map.basemap.${id === "satellite_roads" ? "satelliteRoads" : id === "topo" ? "topographic" : id === "terrain" ? "terrainRelief" : id}`);
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
@@ -118,8 +127,7 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     setActiveId(id);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("savegeo_basemap", id);
-      const params = new URLSearchParams(window.location.search); params.set("basemap", id);
-      window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}`);
+      writeGlobeQuery({ basemap: id });
     }
     setOpen(false);
   };
@@ -138,7 +146,8 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
         </button>
         {open && (
           <div className="basemap-panel" role="listbox" aria-label={t("map.basemap.title")}>
-            {basemaps.map((b) => (
+            <div className="basemap-panel-heading" role="presentation">{t("map.basemap.satelliteSources")}</div>
+            {satelliteBasemaps.map((b) => (
               <button
                 key={b.id}
                 type="button"
@@ -147,7 +156,29 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
                 role="option"
                 onClick={() => switchTo(b.id)}
               >
-                {t(`map.basemap.${b.id === "satellite_roads" ? "satelliteRoads" : b.id === "topo" ? "topographic" : b.id === "terrain" ? "terrainRelief" : b.id}`) || b.name}
+                {basemapLabel(b.id) || b.name}
+              </button>
+            ))}
+            {!googleBasemapAvailable && <button
+                type="button"
+                className="basemap-option"
+                role="option"
+                aria-disabled="true"
+                disabled
+                title={t(googleUnavailableKey)}
+              >{t(googleUnavailableKey)}</button>}
+            <div className="basemap-panel-divider" role="presentation" />
+            <div className="basemap-panel-heading" role="presentation">{t("map.basemap.otherBasemaps")}</div>
+            {otherBasemaps.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                className={`basemap-option ${activeId === b.id ? "active" : ""}`}
+                aria-selected={activeId === b.id}
+                role="option"
+                onClick={() => switchTo(b.id)}
+              >
+                {basemapLabel(b.id) || b.name}
               </button>
             ))}
             {extraOptions.length > 0 && <div className="basemap-panel-divider" />}

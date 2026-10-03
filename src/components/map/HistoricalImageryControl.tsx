@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, selectEsriWaybackScene, type WaybackScene } from "@/features/imagery/wayback";
+import { clampNasaGibsDate, nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
 import { useBasemapContext } from "./BasemapContext";
 import "./map-tools.css";
 
@@ -33,11 +34,10 @@ function aoiClipPath(aoi: HistoricalAoi, map: L.Map): string {
     });
     return `M ${points.join(" L ")} Z`;
   }).filter((path): path is string => Boolean(path)));
-  // evenodd keeps holes in Polygon/MultiPolygon AOIs transparent.
   return paths.length ? `path(evenodd, "${paths.join(" ")}")` : 'path("M 0 0 Z")';
 }
 
-/** Keep every historical Wayback tile inside the selected AOI while the map moves. */
+/** Keep historical tiles inside the selected AOI while the map moves. */
 export function HistoricalAoiClipController({ aoi, paneName = "historical-imagery" }: { aoi?: HistoricalAoi; paneName?: string }) {
   const map = useMap();
   useEffect(() => {
@@ -66,18 +66,16 @@ export function HistoricalAoiClipController({ aoi, paneName = "historical-imager
   return null;
 }
 
-export default function HistoricalImageryControl({
-  enabled = true,
-  targetDate,
-}: {
-  enabled?: boolean;
-  targetDate?: string;
-}) {
+export default function HistoricalImageryControl({ enabled = true, targetDate }: { enabled?: boolean; targetDate?: string }) {
   const map = useMap();
   const { activeBasemapId, setHistoricalImageryDate } = useBasemapContext();
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [historySource, setHistorySource] = useState<"esri-wayback" | "nasa-gibs">("esri-wayback");
+  const [nasaDate, setNasaDate] = useState(() => dateFromQuery() ?? today);
   const [tileError, setTileError] = useState(false);
   const [queryDate, setQueryDate] = useState<string | undefined>(() => dateFromQuery());
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -85,26 +83,23 @@ export default function HistoricalImageryControl({
   const panelId = useId();
   const analysisDate = targetDate ?? queryDate;
   const visible = open && enabled;
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const { data: scenes = [], isFetching, isError, refetch } = useQuery({
     queryKey: ["map-wayback-releases", analysisDate ?? today],
     queryFn: async () => (await listEsriWaybackScenes(ESRI_WAYBACK_START_DATE, today, Infinity)).reverse(),
-    enabled: enabled && (visible || Boolean(analysisDate)),
+    enabled: historySource === "esri-wayback" && enabled && (visible || Boolean(analysisDate)),
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
-  // The final stop is the live basemap, never an invented Wayback release.
   const entries = [...scenes, { id: CURRENT_SCENE_ID, release_label: today, tile_url: "" }];
   const autoScene = analysisDate ? selectEsriWaybackScene(scenes as WaybackScene[], analysisDate) : null;
-  // `null` means no manual choice and therefore follows the analysis date.
-  // Keep an explicit `current` sentinel for the reset action. Clearing the
-  // state here would immediately re-select `autoScene` on the next render.
   const effectiveSelectedId = selectedId ?? autoScene?.id ?? CURRENT_SCENE_ID;
   const foundIndex = entries.findIndex(scene => scene.id === effectiveSelectedId);
   const index = foundIndex >= 0 ? foundIndex : entries.length - 1;
   const selected = entries[index] ?? entries[entries.length - 1];
-  const isCurrent = selected.id === CURRENT_SCENE_ID;
+  const isCurrent = historySource === "esri-wayback" && selected.id === CURRENT_SCENE_ID;
+  const effectiveNasaDate = clampNasaGibsDate(nasaDate, today);
+  const selectedTileUrl = selected?.tile_url ?? "";
+  const selectedReleaseDate = selected?.release_label ?? today;
 
   useEffect(() => {
     const sync = () => setQueryDate(dateFromQuery());
@@ -113,12 +108,8 @@ export default function HistoricalImageryControl({
     return () => { window.removeEventListener("popstate", sync); window.removeEventListener("savegeo:map-query", sync); };
   }, []);
 
-  // A new analysis period supersedes a manual Wayback choice from the
-  // previous period; a manual choice remains stable while that period is
-  // unchanged.
-  useEffect(() => {
-    setSelectedId(null);
-  }, [queryDate, targetDate]);
+  useEffect(() => { setSelectedId(null); }, [queryDate, targetDate]);
+  useEffect(() => { if (analysisDate) setNasaDate(analysisDate); }, [analysisDate]);
 
   useEffect(() => {
     const control = new L.Control({ position: "topleft" });
@@ -140,34 +131,41 @@ export default function HistoricalImageryControl({
     L.DomEvent.disableScrollPropagation(panel);
   }, [visible]);
 
-  // A basemap selection exits history; closing restores the existing basemap.
-  useEffect(() => { setOpen(false); }, [activeBasemapId]);
+  useEffect(() => {
+    setOpen(false);
+    setHistorySource("esri-wayback");
+    setSelectedId(CURRENT_SCENE_ID);
+    setTileError(false);
+  }, [activeBasemapId]);
 
   useEffect(() => {
-    const supportsHistorical = activeBasemapId === "satellite" || activeBasemapId === "satellite_roads";
-    const shouldShowHistorical = supportsHistorical && enabled && !isCurrent && (visible || Boolean(analysisDate));
-    if (!shouldShowHistorical || isFetching) { setTileError(false); return; }
+    const shouldShowHistorical = enabled && (historySource === "nasa-gibs" || (!isCurrent && (visible || Boolean(analysisDate))));
+    if (!shouldShowHistorical || (historySource === "esri-wayback" && isFetching)) { setTileError(false); return; }
     const paneName = "historical-imagery";
     const pane = map.getPane(paneName) ?? map.createPane(paneName);
     pane.style.zIndex = "250";
     pane.style.pointerEvents = "none";
     setTileError(false);
-    const layer = L.tileLayer(selected.tile_url, {
+    const tileUrl = historySource === "nasa-gibs" ? nasaGibsTrueColorTileUrl(effectiveNasaDate) : selectedTileUrl;
+    const attribution = historySource === "nasa-gibs"
+      ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> · MODIS Terra Corrected Reflectance True Color · ${effectiveNasaDate}`
+      : `Esri World Imagery Wayback · Rilis ${selectedReleaseDate}`;
+    const layer = L.tileLayer(tileUrl, {
       pane: paneName,
-      maxNativeZoom: 19,
+      maxNativeZoom: historySource === "nasa-gibs" ? 9 : 19,
       maxZoom: map.getMaxZoom(),
-      attribution: `Esri World Imagery Wayback · Rilis ${selected.release_label}`,
+      attribution,
     });
     const onError = () => setTileError(true);
     layer.on("tileerror", onError);
     layer.addTo(map);
-    setHistoricalImageryDate?.(selected.release_label);
+    setHistoricalImageryDate?.(historySource === "nasa-gibs" ? `NASA GIBS ${effectiveNasaDate}` : selectedReleaseDate);
     return () => {
       layer.off("tileerror", onError);
       map.removeLayer(layer);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, enabled, isCurrent, isFetching, map, selected, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, enabled, effectiveNasaDate, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];
@@ -186,14 +184,26 @@ export default function HistoricalImageryControl({
   return <>
     {host && createPortal(<button ref={triggerRef} type="button" className="history-trigger" hidden={!enabled}
       title="Citra historis" aria-label="Citra historis" aria-expanded={visible} aria-controls={panelId}
-      onClick={() => { setOpen(value => !value); }}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}
+      onClick={() => setOpen(value => !value)}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}
     {visible && createPortal(<div ref={panelRef} id={panelId} className="map-history-panel" role="region" aria-label="Citra historis"
       onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}>
-      <div className="map-history-heading"><span>{isCurrent ? "Basemap terkini" : "Citra historis"} <small>{isCurrent ? "Tampilan hari ini" : "Esri Wayback"}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Kembali ke peta dasar"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
-      {analysisDate && !isCurrent && <p className="map-history-note">Sinkron dengan waktu analisis: <strong>{analysisDate}</strong>. Menampilkan snapshot Wayback terdekat yang tersedia.</p>}
-      {isFetching && !scenes.length && <p role="status">Memuat arsip citra...</p>}
-      {isError && <p role="alert">Arsip citra gagal dimuat. Basemap terkini tetap tersedia. <button type="button" onClick={() => void refetch()}>Coba lagi</button></p>}
-      <>
+      <div className="map-history-heading"><span>{isCurrent ? "Basemap terkini" : "Citra historis"} <small>{historySource === "nasa-gibs" ? "NASA GIBS · MODIS Terra" : isCurrent ? "Tampilan hari ini" : "Esri Wayback"}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
+      <label className="map-history-source">Sumber citra
+        <select aria-label="Sumber citra historis" value={historySource} onChange={event => setHistorySource(event.target.value as "esri-wayback" | "nasa-gibs")}>
+          <option value="esri-wayback">Esri Wayback · mosaik resolusi tinggi</option>
+          <option value="nasa-gibs">NASA GIBS · MODIS harian</option>
+        </select>
+      </label>
+      {historySource === "esri-wayback" && analysisDate && !isCurrent && <p className="map-history-note">Sinkron dengan waktu analisis: <strong>{analysisDate}</strong>. Menampilkan rilis arsip Wayback terdekat yang tersedia.</p>}
+      {historySource === "esri-wayback" && isFetching && !scenes.length && <p role="status">Memuat arsip citra...</p>}
+      {historySource === "esri-wayback" && isError && <p role="alert">Arsip citra Wayback gagal dimuat. Basemap tetap tersedia. <button type="button" onClick={() => void refetch()}>Coba lagi</button></p>}
+      {historySource === "nasa-gibs" ? <>
+        <div className="map-history-nasa-date"><label htmlFor={`${panelId}-nasa-date`}>Tanggal citra
+          <input id={`${panelId}-nasa-date`} type="date" min="2000-02-24" max={today} value={effectiveNasaDate} onChange={event => { if (event.target.value) setNasaDate(event.target.value); }} />
+        </label></div>
+        <p className="map-history-note">Citra harian MODIS Terra, resolusi hingga sekitar 250 m/piksel. Arsip tersedia sejak 24 Februari 2000; awan dan mosaik harian dapat memengaruhi tampilan.</p>
+        {analysisDate && analysisDate !== effectiveNasaDate && <p className="map-history-note">Tanggal analisis berada di luar rentang arsip; menampilkan <strong>{effectiveNasaDate}</strong>.</p>}
+      </> : <>
         <div className="map-history-body">
           <div className="map-history-date">
             <select aria-label="Tahun tampilan" value={date.slice(0, 4)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select>
@@ -209,11 +219,11 @@ export default function HistoricalImageryControl({
         </div>
         <p className="map-history-note">{isCurrent
           ? `Diakses ${today}. Basemap terbaru yang tersedia; bukan tanggal perekaman citra.`
-          : "Tanggal rilis arsip; tanggal perekaman citra berbeda menurut lokasi."}
+          : "Tanggal rilis arsip; tanggal perekaman citra dapat berbeda menurut lokasi."}
           {!isCurrent && <> <button type="button" onClick={() => { setSelectedId(CURRENT_SCENE_ID); setTileError(false); }}>Kembali ke terkini</button></>}
         </p>
-        {tileError && <p role="alert">Sebagian citra gagal dimuat. Coba rilis lain atau perkecil zoom.</p>}
-      </>
+      </>}
+      {tileError && <p role="alert">Sebagian citra gagal dimuat. Coba tanggal lain atau perkecil zoom.</p>}
     </div>, map.getContainer())}
   </>;
 }

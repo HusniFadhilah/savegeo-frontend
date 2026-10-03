@@ -1,4 +1,5 @@
 import type { BasemapDefinition } from "@/types/map";
+import { nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
 
 /**
  * Static fallback basemaps, used whenever GET /api/basemaps is unreachable
@@ -12,7 +13,7 @@ import type { BasemapDefinition } from "@/types/map";
 export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
   {
     id: "satellite",
-    name: "Satellite",
+    name: "Esri Satellite",
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics",
     maxZoom: 22,
@@ -80,3 +81,38 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
 ];
 
 export const DEFAULT_BASEMAP_ID = "satellite";
+
+/** NASA GIBS True Color is a daily visualization with a service-managed latest date. */
+export function withNasaGibsBasemap(basemaps: BasemapDefinition[]): BasemapDefinition[] {
+  const nasa: BasemapDefinition = {
+    id: "nasa-gibs",
+    name: "NASA GIBS MODIS True Color",
+    url: nasaGibsTrueColorTileUrl("default"),
+    attribution: '<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> · MODIS Terra Corrected Reflectance True Color',
+    maxZoom: 22,
+    maxNativeZoom: 9,
+    isDefault: false,
+    order: 1.5,
+  };
+  return [...basemaps.filter((basemap) => basemap.id !== nasa.id), nasa]
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+/** Add Mapbox only when a public, domain-restricted browser token is configured. */
+export function withOptionalMapboxBasemap(basemaps: BasemapDefinition[]): BasemapDefinition[] {
+  const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim();
+  if (!token) return basemaps;
+
+  const mapbox: BasemapDefinition = {
+    id: "mapbox-satellite",
+    name: "Mapbox Satellite",
+    url: `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=${encodeURIComponent(token)}`,
+    attribution: '<a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a> <a href="https://www.maxar.com/" target="_blank" rel="noreferrer">© Maxar</a> <a href="https://apps.mapbox.com/feedback/" target="_blank" rel="noreferrer">Improve this map</a>',
+    maxZoom: 22,
+    maxNativeZoom: 22,
+    isDefault: false,
+    order: 1.8,
+  };
+  return [...basemaps.filter((basemap) => basemap.id !== mapbox.id), mapbox]
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}

@@ -826,7 +826,7 @@ export default function CarbonModule() {
               <label className="form-check-label small" htmlFor="directDatasetLoad" style={{ display: "inline" }}>
                 <i className="bi bi-globe2 me-1" /> {t("carbon.directLoadLabel")}
               </label>
-              <span className="text-nowrap align-middle">&nbsp;<InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.directLoadHint")} /></span>
+              <span className="text-nowrap align-middle ms-1"><InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.directLoadHint")} /></span>
             </div>
           )}
 

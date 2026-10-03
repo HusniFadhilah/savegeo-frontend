@@ -15,6 +15,7 @@ export const ADMIN_SECTION_PATHS: Record<AdminSection, string> = {
   sp: "/admin/satellite-providers",
   gd: "/admin/geospatial-data",
   ri: "/admin/research-information",
+  profile: "/admin/profile",
 };
 
 export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; description: string }> = {
@@ -65,6 +66,10 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   ri: {
     title: "Informasi Riset Admin | SaveGeo",
     description: "Informasi internal riset SaveGeo yang hanya tersedia untuk administrator.",
+  },
+  profile: {
+    title: "Profil Administrator | SaveGeo",
+    description: "Ubah nama pengguna, email, dan kata sandi akun administrator SaveGeo.",
   },
 };
 

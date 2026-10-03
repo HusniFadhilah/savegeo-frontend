@@ -4,7 +4,6 @@ import { useServerTable } from "@/hooks/useServerTable";
 import { useAdmin } from "../AdminContext";
 import { createAdminUser, deleteAdminUser, getCurrentAdminUser, listRoles, updateAdminUser } from "../api";
 import type { AdminRole, AdminUserRow } from "../types";
-import PasswordChange from "./PasswordChange";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { hasAdminPermission } from "@/auth/access";
 import BulkTableToolbar from "./BulkTableToolbar";
@@ -46,7 +45,6 @@ export default function AdminUsers() {
     useServerTable<AdminUserRow>("/admin/users", { reloadKey });
 
   const [roles, setRoles] = useState<AdminRole[]>([]);
-  const [pwOpen, setPwOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -164,17 +162,12 @@ export default function AdminUsers() {
       <div className="card-header-custom">
         <span>{t("admin.users.title")}</span>
         <div style={{ display: "flex", gap: 6 }}>
-          <button type="button" className="btn-sm" onClick={() => setPwOpen((open) => !open)}>
-            <i className="bi bi-key" /> {t("admin.users.changePassword")}
-          </button>
           <button type="button" className="btn-sm primary" onClick={openCreate}>
             <i className="bi bi-plus-lg" /> {t("admin.users.add")}
           </button>
         </div>
       </div>
       <div className="card-body-custom">
-        <PasswordChange open={pwOpen} onOpenChange={setPwOpen} />
-
         {formOpen && (
           <div className="collapse-form open" style={{ marginBottom: "0.875rem" }}>
             <div className="two-col" style={{ marginBottom: "0.75rem" }}>

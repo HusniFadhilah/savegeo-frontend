@@ -96,6 +96,11 @@ html[data-theme="dark"] .map-view-shell .leaflet-top.leaflet-left > .leaflet-con
 .map-history-panel { position: absolute; z-index: 1000; bottom: 42px; left: 60px; right: 60px; max-width: 850px; margin: 0 auto; padding: 10px 16px; border-radius: 6px; background: #202720c9; color: #fff; box-shadow: 0 3px 18px #0003; backdrop-filter: blur(5px); font: 13px/1.4 system-ui, sans-serif; }
 .map-history-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 600; }
 .map-history-heading small { font-weight: 400; color: #d0d8cf; margin-left: 8px; }
+.map-history-source { display: flex; align-items: center; gap: 8px; width: fit-content; margin: 2px 0 5px; color: #e3e9e2; font-size: 11px; }
+.map-history-source select, .map-history-nasa-date input { min-height: 28px; padding: 3px 7px; border: 1px solid #ffffff45; border-radius: 4px; background: #263226; color: #fff; font: inherit; }
+.map-history-source option { background: #263226; color: #fff; }
+.map-history-nasa-date label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.map-history-nasa-date input { color-scheme: dark; }
 .map-history-panel button { background: transparent; border: 0; color: #fff; cursor: pointer; min-width: 28px; min-height: 28px; border-radius: 3px; }
 .map-history-panel button:hover { background: #ffffff24; }
 .map-history-panel button:disabled { opacity: .3; cursor: default; }

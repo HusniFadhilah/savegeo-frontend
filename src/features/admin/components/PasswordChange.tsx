@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { changePassword } from "../api";
 import { useAdmin } from "../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   open: boolean;
@@ -8,10 +9,10 @@ interface Props {
 }
 
 /** Fully controlled — the "Ganti password" trigger button lives in the
- * caller (AdminUsers' table row), the form renders wherever the caller
- * places this component (below the table, matching legacy #pw-form). */
+ * profile page owns the trigger and visibility state. */
 export default function PasswordChange({ open, onOpenChange }: Props) {
   const { notify } = useAdmin();
+  const t = useI18nStore((state) => state.t);
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -27,26 +28,26 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
 
   const handleSave = async () => {
     if (!oldPw || !newPw) {
-      setError("Semua field wajib diisi");
+      setError(t("admin.profile.passwordRequired"));
       return;
     }
     if (newPw.length < 8) {
-      setError("Password minimal 8 karakter");
+      setError(t("admin.profile.passwordTooShort"));
       return;
     }
     if (newPw !== confirmPw) {
-      setError("Password baru tidak cocok");
+      setError(t("admin.profile.passwordMismatch"));
       return;
     }
     setSaving(true);
     setError(null);
     try {
       await changePassword(oldPw, newPw);
-      notify("Password berhasil diubah", "s");
+      notify(t("admin.profile.passwordSaved"), "s");
       reset();
       onOpenChange(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal ganti password";
+      const msg = err instanceof Error ? err.message : t("admin.profile.passwordFailed");
       setError(msg);
       notify(msg, "e");
     } finally {
@@ -58,7 +59,7 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
     <div className={`collapse-form ${open ? "open" : ""}`} style={{ marginTop: "0.5rem" }}>
         <div style={{ maxWidth: 320 }}>
           <div className="form-field">
-            <label className="form-label">Password lama</label>
+            <label className="form-label">{t("admin.profile.oldPassword")}</label>
             <input
               className="form-input"
               type="password"
@@ -68,7 +69,7 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Password baru (min. 8 karakter)</label>
+            <label className="form-label">{t("admin.profile.newPassword")}</label>
             <input
               className="form-input"
               type="password"
@@ -78,7 +79,7 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Konfirmasi password baru</label>
+            <label className="form-label">{t("admin.profile.confirmPassword")}</label>
             <input
               className="form-input"
               type="password"
@@ -90,7 +91,7 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
           {error && <div className="alert alert-danger py-1 px-2 small">{error}</div>}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
-              {saving ? "Menyimpan..." : "Simpan"}
+              {saving ? t("admin.profile.passwordSaving") : t("admin.profile.passwordSave")}
             </button>
             <button
               type="button"
@@ -100,7 +101,7 @@ export default function PasswordChange({ open, onOpenChange }: Props) {
                 onOpenChange(false);
               }}
             >
-              Batal
+              {t("admin.profile.passwordCancel")}
             </button>
           </div>
         </div>

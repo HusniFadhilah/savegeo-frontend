@@ -19,12 +19,13 @@ import AdminUsers from "./components/AdminUsers";
 import CompanyBoundaries from "./components/CompanyBoundaries";
 import SatelliteProviders from "./components/SatelliteProviders";
 import DisasterManagement from "./components/disaster/DisasterManagement";
+import AdminProfile from "./components/AdminProfile";
 import CloudDatasetPanel from "@/features/geospatial/CloudDatasetPanel";
 import { lazy, Suspense } from "react";
 
 const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
 
-const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string; permission: string }[] }[] = [
+const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string; permission?: string }[] }[] = [
   { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview", permission: "config.read" }] },
   {
     sectionKey: "admin.nav.configuration",
@@ -46,6 +47,10 @@ const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: strin
       { id: "gd", icon: "bi-database-fill-gear", labelKey: "admin.menu.geospatial", permission: "geospatial.read" },
     ],
   },
+  {
+    sectionKey: "admin.nav.account",
+    items: [{ id: "profile", icon: "bi-person-gear", labelKey: "admin.menu.profile" }],
+  },
   // {
   //   section: "Internal",
   //   items: [{ id: "ri", icon: "bi-lock-fill", label: "Informasi Riset" }],
@@ -65,6 +70,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   ds: ["admin.title.disasters", "admin.subtitle.disasters"],
   gd: ["admin.title.geospatial", "admin.subtitle.geospatial"],
   ri: ["admin.title.research", "admin.subtitle.research"],
+  profile: ["admin.title.profile", "admin.subtitle.profile"],
 };
 
 export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
@@ -158,7 +164,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
             </Link>
             <div className="sb-nav">
               {NAV_SECTIONS.map((grp) => {
-                const items = grp.items.filter((item) => hasAdminPermission(user, item.permission));
+                const items = grp.items.filter((item) => !item.permission || hasAdminPermission(user, item.permission));
                 if (!items.length) return null;
                 return (
                   <div key={grp.sectionKey}>
@@ -240,6 +246,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "co" && <CompanyBoundaries />}
               {section === "ds" && <DisasterManagement />}
               {section === "gd" && <CloudDatasetPanel />}
+              {section === "profile" && <AdminProfile />}
               {/* {section === "ri" && (
                 <Suspense fallback={<div className="adm-loading">Memuat informasi riset...</div>}>
                   <ResearchInformation />

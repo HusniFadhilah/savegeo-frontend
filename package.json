@@ -1,11 +1,14 @@
 {
   "name": "savegeo-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build:metadata": "node scripts/write-build-metadata.mjs public/build-metadata.json",
+    "prebuild": "npm run build:metadata",
     "build": "tsc --noEmit && vite build",
+    "validate:build-metadata": "node scripts/validate-build-metadata.mjs public/build-metadata.json",
     "preview": "vite preview",
     "lint": "eslint .",
     "i18n:audit": "node scripts/audit-i18n.mjs",

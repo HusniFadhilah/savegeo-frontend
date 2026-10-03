@@ -189,6 +189,9 @@ export const importCarbonCalibrationSources = (revised: File, previous?: File | 
 // ── Admin users ──────────────────────────────────────────────────
 export const getCurrentAdminUser = () => apiClient.get<AdminUserRow>("/admin/auth/me", { auth: true });
 
+export const updateAdminProfile = (payload: { username: string; email: string | null }) =>
+  apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/profile", payload, { auth: true });
+
 export const changePassword = (oldPassword: string, newPassword: string) =>
   apiClient.put<{ message: string }>(
     "/admin/auth/change-password",

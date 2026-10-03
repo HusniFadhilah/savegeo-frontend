@@ -54,6 +54,7 @@ export default function AppRoutes() {
     { path: "/admin/disasters", section: "ds" },
     { path: "/admin/geospatial-data", section: "gd" },
     { path: "/admin/research-information", section: "ri" },
+    { path: "/admin/profile", section: "profile" },
   ];
 
   return (

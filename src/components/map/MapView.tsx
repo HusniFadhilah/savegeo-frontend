@@ -169,6 +169,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
       active && <div className="map-flat-controls">{showGlobeControl && <button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)} aria-label={t("map.switchToGlobe")} title={t("map.switchToGlobe")}>3D</button>}<UserLocationControl /></div>}
+      {activeBasemapId === "mapbox-satellite" && <a className="savegeo-mapbox-logo" href="https://www.mapbox.com/" target="_blank" rel="noreferrer" aria-label="Mapbox"><img src="https://cdn.prod.website-files.com/6050a76fa6a633d5d54ae714/657a891ba7274ba4f8b3a168_img-main-logo.png" alt="Mapbox" /></a>}
       <MapHeightResizeHandle mapShellRef={mapShellRef} />
     </div>
   );

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiClient } from "@/services/apiClient";
+import { frontendPackageVersion } from "@/config/version";
 
 /**
  * Ports config-manager.js's `AppConfig` singleton. Read-only public runtime
@@ -23,7 +24,7 @@ const DEFAULTS: Record<string, string | number> = {
   "carbon.vis_palette": "440154,414487,2a788e,22a884,7ad151,fde725",
   "carbon.legend_bins": 6,
   "app.name": "SAVEGEO",
-  "app.version": "1.0.0",
+  "app.version": frontendPackageVersion,
 };
 
 interface ConfigState {

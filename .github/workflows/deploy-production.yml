@@ -29,12 +29,15 @@ jobs:
         env:
           VITE_API_BASE_URL: /api
           VITE_APP_ENV: production
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          SAVEGEO_DEPLOYMENT_ENVIRONMENT: production
         run: |
           npm ci
           npm run lint
           npm test
           npm audit --audit-level=high
           npm run build
+          node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-environment production
 
       - name: Upload production build
         uses: actions/upload-artifact@v4
@@ -63,11 +66,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node.js for artifact validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Download production build
         uses: actions/download-artifact@v4
         with:
           name: savegeo-frontend-dist
           path: dist/
+
+      - name: Validate deployed artifact provenance
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-sha "$GITHUB_SHA" --expected-environment production
 
       - name: Install VPN and deployment tools
         run: |
@@ -141,6 +154,16 @@ jobs:
           else
             curl --fail --silent --show-error "$FRONTEND_HEALTH_URL" >/dev/null
           fi
+
+      - name: Record production deployment
+        run: node scripts/write-deployment-record.mjs dist/build-metadata.json frontend-production-deployment-record.json production
+
+      - name: Upload production deployment record
+        uses: actions/upload-artifact@v4
+        with:
+          name: savegeo-frontend-production-deployment-record
+          path: frontend-production-deployment-record.json
+          if-no-files-found: error
 
   gitleaks:
     runs-on: ubuntu-latest
