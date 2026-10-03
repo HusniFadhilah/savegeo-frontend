@@ -12,3 +12,9 @@ docs/
 coverage
 test-results/
 MIGRATION.md
+
+# Local verification notes and temporary browser/tool state
+SENTINEL2_RESOLUTION_VERIFICATION.md
+SWIPE_COMPARE_VERIFICATION.md
+.tmp-chrome-profile/
+.ruff_cache/
