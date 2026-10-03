@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useAdmin } from "../AdminContext";
+import { useAdmin, type ToastType } from "../AdminContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { ApiError } from "@/services/apiClient";
 import {
   createCarbonCalibrationDataset,
   importCarbonCalibrationSources,
@@ -42,6 +43,56 @@ function formatBytes(value: number): string {
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
 }
 
+function readableApiMessage(value: unknown, fallback: string): { message: string; type: ToastType } {
+  let payload = value;
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try { payload = JSON.parse(trimmed); } catch { /* Keep the original message. */ }
+    }
+  }
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { message: typeof payload === "string" && payload ? payload : fallback, type: "e" };
+  }
+
+  const outer = payload as Record<string, unknown>;
+  const nested = [outer.detail, outer.error].find((item) => item && typeof item === "object" && !Array.isArray(item)) as Record<string, unknown> | undefined;
+  const result = { ...nested, ...outer };
+  const status = typeof result.status === "string" ? result.status.toLowerCase() : "";
+  const isBlocked = result.blocking === true || ["not_computed", "blocked", "failed", "error", "invalid"].includes(status);
+  const statusLabel: Record<string, string> = {
+    not_computed: "Belum dapat dihitung",
+    blocked: "Proses terhambat",
+    failed: "Proses gagal",
+    error: "Terjadi kesalahan",
+    invalid: "Data belum valid",
+  };
+  const rawReason = outer.reason ?? outer.message ?? outer.detail ?? outer.error ?? result.reason ?? result.message ?? result.detail ?? result.error;
+  const reason = readableReason(rawReason);
+
+  if (reason) {
+    const label = statusLabel[status] ?? (status ? status.replace(/_/g, " ") : "");
+    return { message: [label, reason].filter(Boolean).join(": "), type: isBlocked ? "e" : "i" };
+  }
+  if (status && statusLabel[status]) return { message: statusLabel[status], type: isBlocked ? "e" : "i" };
+  return { message: fallback, type: isBlocked ? "e" : "s" };
+}
+
+function readableReason(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return /^no readable DEM\/DTM\/DSM raster is attached$/i.test(value.trim())
+      ? "Tidak ada raster DEM/DTM/DSM yang dapat dibaca pada dataset."
+      : value;
+  }
+  if (Array.isArray(value)) return value.map(readableReason).filter(Boolean).join("; ") || undefined;
+  if (value && typeof value === "object") {
+    const detail = value as Record<string, unknown>;
+    return readableReason(detail.reason ?? detail.message ?? detail.detail ?? detail.error);
+  }
+  return undefined;
+}
+
 export default function CarbonCalibration() {
   const { notify } = useAdmin();
   const t = useI18nStore((state) => state.t);
@@ -49,23 +100,50 @@ export default function CarbonCalibration() {
   const [selected, setSelected] = useState<CarbonCalibrationDataset | null>(null);
   const [files, setFiles] = useState<CarbonCalibrationFile[]>([]);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [revisedWorkbook, setRevisedWorkbook] = useState<File | null>(null);
   const [previousWorkbook, setPreviousWorkbook] = useState<File | null>(null);
   const [demFile, setDemFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const reload = useCallback(() => listCarbonCalibrationDatasets().then((result) => setDatasets(result.datasets ?? [])).catch((error) => setMessage(error instanceof Error ? error.message : t("admin.calibration.loadFailed"))), [t]);
+  const reload = useCallback(() => listCarbonCalibrationDatasets().then((result) => setDatasets(result.datasets ?? [])).catch((error) => {
+    const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.loadFailed"));
+    notify(outcome.message, outcome.type);
+  }), [notify, t]);
   useEffect(() => { void reload(); }, [reload]);
 
   async function createDataset() {
     setBusy(true);
     try {
+      const existing = datasets.find((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id);
+      if (existing) {
+        await selectDataset(existing);
+        notify(t("admin.calibration.opened"), "s");
+        return;
+      }
+
       const created = await createCarbonCalibrationDataset(DEFAULT_DATASET);
       setSelected(created);
       setDatasets((current) => [created, ...current]);
       notify(t("admin.calibration.created"), "s");
-    } catch (error) { notify(error instanceof Error ? error.message : t("admin.calibration.createFailed"), "e"); }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        try {
+          const latest = await listCarbonCalibrationDatasets();
+          const available = latest.datasets ?? [];
+          setDatasets(available);
+          const existing = available.find((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id);
+          if (existing) {
+            await selectDataset(existing);
+            notify(t("admin.calibration.opened"), "s");
+            return;
+          }
+        } catch {
+          // Show the original conflict below if the dataset list cannot be refreshed.
+        }
+      }
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.createFailed"));
+      notify(outcome.message, outcome.type);
+    }
     finally { setBusy(false); }
   }
 
@@ -74,7 +152,10 @@ export default function CarbonCalibration() {
     try {
       const detail = await getCarbonCalibrationDataset(dataset.dataset_id);
       setFiles(detail.files ?? []);
-    } catch (error) { setMessage(error instanceof Error ? error.message : t("admin.calibration.loadFailed")); }
+    } catch (error) {
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.loadFailed"));
+      notify(outcome.message, outcome.type);
+    }
   }
 
   async function uploadFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -85,7 +166,10 @@ export default function CarbonCalibration() {
       for (const file of Array.from(event.target.files)) uploaded.push(await uploadCarbonCalibrationFile(selected.dataset_id, file));
       setFiles((current) => [...current, ...uploaded]);
       notify(t("admin.calibration.uploaded"), "s");
-    } catch (error) { notify(error instanceof Error ? error.message : t("admin.calibration.uploadFailed"), "e"); }
+    } catch (error) {
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.uploadFailed"));
+      notify(outcome.message, outcome.type);
+    }
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
   }
 
@@ -97,13 +181,16 @@ export default function CarbonCalibration() {
     setBusy(true);
     try {
       const result = await importCarbonCalibrationSources(revisedWorkbook, previousWorkbook, demFile);
-      setMessage(JSON.stringify(result));
-      notify(t("admin.calibration.importQueued"), "s");
+      const outcome = readableApiMessage(result, t("admin.calibration.importQueued"));
+      notify(outcome.message, outcome.type);
       setRevisedWorkbook(null);
       setPreviousWorkbook(null);
       setDemFile(null);
       await reload();
-    } catch (error) { notify(error instanceof Error ? error.message : t("admin.calibration.actionFailed"), "e"); }
+    } catch (error) {
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.actionFailed"));
+      notify(outcome.message, outcome.type);
+    }
     finally { setBusy(false); }
   }
 
@@ -118,10 +205,13 @@ export default function CarbonCalibration() {
           : action === "spatial"
             ? await validateCarbonCalibrationSpatial(selected.dataset_id)
             : await extractCarbonCalibrationFeatures(selected.dataset_id);
-      setMessage(JSON.stringify(result));
-      notify(t("admin.calibration.actionComplete"), "s");
+      const outcome = readableApiMessage(result, t("admin.calibration.actionComplete"));
+      notify(outcome.message, outcome.type);
       await reload();
-    } catch (error) { notify(error instanceof Error ? error.message : t("admin.calibration.actionFailed"), "e"); }
+    } catch (error) {
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.actionFailed"));
+      notify(outcome.message, outcome.type);
+    }
     finally { setBusy(false); }
   }
 
@@ -139,7 +229,7 @@ export default function CarbonCalibration() {
           <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Penyimpanan terkelola</span><span><i className="bi bi-diagram-3" /> Provenans yang dapat direproduksi</span><span><i className="bi bi-lock" /> Dataset terbatas</span></div>
         </div>
         <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> Ruang kerja siap</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
-          <i className="bi bi-plus-lg" /> {t("admin.calibration.create")}
+          <i className={`bi ${datasets.some((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id) ? "bi-folder2-open" : "bi-plus-lg"}`} /> {datasets.some((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id) ? t("admin.calibration.openDataset") : t("admin.calibration.create")}
         </button></div>
       </div>
       <div className="calibration-metrics" aria-label="Ringkasan ruang kerja kalibrasi">
@@ -176,7 +266,6 @@ export default function CarbonCalibration() {
           </>}
         </div>
       </div>
-      {message && <pre className="calibration-message">{message}</pre>}
     </section>
   );
 }

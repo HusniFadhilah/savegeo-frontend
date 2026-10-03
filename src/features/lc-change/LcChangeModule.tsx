@@ -7,6 +7,7 @@ import { useAoiStore } from "@/hooks/useAoiStore";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import InfoTip from "@/components/ui/InfoTip";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear } from "./api";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
@@ -195,6 +196,11 @@ export default function LcChangeModule() {
     return DATASET_NOTES[dataset] || "";
   })();
   const isDynamicWorldCompatible = DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(dataset);
+  const dateModeHelp = dateMode === "year"
+    ? t("lc.fullYearHint")
+    : isDynamicWorldCompatible
+      ? t("lc.partialDateHint")
+      : t("lc.datasetFullYearHint");
 
   const periodYears = useMemo(() => {
     if (activeYears.length < 2) return { yearA: null, yearB: null };
@@ -557,19 +563,31 @@ export default function LcChangeModule() {
             </h5>
 
             <div className="mb-3">
-              <label className="form-label fw-bold">
-                <i className="fas fa-map-marker-alt" /> {t("lc.aoi")}
-              </label>
+              <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                <label className="form-label fw-bold mb-0">
+                  <i className="fas fa-map-marker-alt" /> {t("lc.aoi")}
+                </label>
+                <div className="d-flex align-items-center gap-2">
+                  {!aoi && <small className="text-warning">{t("lc.aoiMissing")}</small>}
+                  {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
+                    <small className="text-warning"><i className="fas fa-triangle-exclamation" /> {t("lc.largeAoiShort")}</small>
+                  )}
+                  <InfoTip
+                    label={t("lc.moreInfo")}
+                    content={!aoi
+                      ? t("lc.chooseAoi")
+                      : aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2
+                        ? t("lc.aoiLargeHint", { area: aoiState.areaKm2.toFixed(0) })
+                        : t("lc.aoiHelp")}
+                  />
+                </div>
+              </div>
               {aoi ? (
                 <div className="alert alert-success py-2 mb-0" style={{ fontSize: ".8rem" }}>
                   <i className="fas fa-check-circle" /> {t("lc.aoiDrawn")} ({aoi.geometry.type})
                   {aoiState?.areaKm2 != null && <> &middot; {aoiState.areaKm2.toFixed(2)} km²</>}
                 </div>
-              ) : (
-                <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                  <i className="fas fa-exclamation-triangle" /> {t("lc.chooseAoi")}
-                </div>
-              )}
+              ) : null}
               <button
                 type="button"
                 className="btn btn-sm btn-outline-success w-100 mt-2"
@@ -577,13 +595,6 @@ export default function LcChangeModule() {
               >
                 <i className="bi bi-bounding-box-circles" /> {t("lc.selectDrawAoi")}
               </button>
-              {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
-                <div className="alert alert-warning py-2 mb-0 mt-2" style={{ fontSize: ".8rem" }}>
-                  <i className="fas fa-triangle-exclamation" /> AOI besar (
-                  {aoiState.areaKm2.toFixed(0)} km²) - analisis per tahun bisa lambat/timeout,
-                  apalagi untuk banyak tahun sekaligus. Pertimbangkan area lebih kecil.
-                </div>
-              )}
               {aoi && (
                 <button
                   type="button"
@@ -598,29 +609,37 @@ export default function LcChangeModule() {
             <hr />
 
             <div className="mb-3">
-              <label className="form-label fw-bold" htmlFor="lcChangeDataset">
-                <i className="fas fa-database" /> {t("lc.datasetLulc")}
-              </label>
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <label className="form-label fw-bold mb-0" htmlFor="lcChangeDataset">
+                  <i className="fas fa-database" /> {t("lc.datasetLulc")}
+                </label>
+                {datasetNote && <InfoTip label={t("lc.moreInfo")} content={datasetNote} />}
+              </div>
               <SearchableSelect
                 id="lcChangeDataset"
                 value={dataset}
                 onChange={(v) => onDatasetChange(v as LcDataset)}
                 options={datasetOptions.map((d) => ({ value: d.value, label: d.label }))}
               />
-              <small className="text-muted d-block mt-1">{datasetNote}</small>
             </div>
 
             <div className="mb-3">
-              <label className="form-label fw-bold">
-                <i className="fas fa-calendar-alt" /> {t("lc.analysisYears")}
-              </label>
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <label className="form-label fw-bold mb-0">
+                  <i className="fas fa-calendar-alt" /> {t("lc.analysisYears")}
+                </label>
+                <InfoTip label={t("lc.moreInfo")} content={t("lc.yearsHelp")} />
+              </div>
               <YearSelector years={years} minYear={minYear} maxYear={maxYear} onChange={setYears} />
             </div>
 
             <div className="mb-3">
-              <label className="form-label fw-bold">
-                <i className="fas fa-calendar" /> {t("lc.dateMode")}
-              </label>
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <label className="form-label fw-bold mb-0">
+                  <i className="fas fa-calendar" /> {t("lc.dateMode")}
+                </label>
+                <InfoTip label={t("lc.moreInfo")} content={dateModeHelp} />
+              </div>
               <div className="btn-group w-100" role="group">
                 <button
                   type="button"
@@ -644,12 +663,6 @@ export default function LcChangeModule() {
                   {t("lc.dateModeShort")}
                 </button>
               </div>
-
-              {dateMode === "year" && (
-                <small className="text-muted d-block mt-2">
-                  {t("lc.fullYearHint")}
-                </small>
-              )}
 
               {dateMode === "month" && (
                 <div className="mt-2">
@@ -698,34 +711,30 @@ export default function LcChangeModule() {
                       onChange={(e) => setTanggalEnd(e.target.value.slice(5))}
                     />
                   </div>
-                  <small className="text-muted d-block mt-1">
-                    {t("lc.partialDateHint")}
-                  </small>
                 </div>
               )}
 
-              {!isDynamicWorldCompatible && dateMode !== "year" && (
-                <small className="text-warning d-block mt-1">
-                  <i className="fas fa-triangle-exclamation" /> Dataset ini selalu memakai satu
-                  tahun penuh - jendela bulan/tanggal hanya berlaku untuk Dynamic World/GeoSave
-                  Copernicus.
-                </small>
-              )}
             </div>
 
             {isDynamicWorldCompatible && (
               <div className="mb-3">
-                <div className="form-check form-switch mb-1">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="lcDwThresholdSwitch"
-                    checked={dwThresholdEnabled}
-                    onChange={(e) => setDwThresholdEnabled(e.target.checked)}
+                <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                  <div className="form-check form-switch mb-0">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="lcDwThresholdSwitch"
+                      checked={dwThresholdEnabled}
+                      onChange={(e) => setDwThresholdEnabled(e.target.checked)}
+                    />
+                    <label className="form-check-label fw-bold" htmlFor="lcDwThresholdSwitch">
+                      <i className="fas fa-shield-halved" /> {t("lc.confidenceThreshold")}
+                    </label>
+                  </div>
+                  <InfoTip
+                    label={t("lc.moreInfo")}
+                    content={t(dwThresholdEnabled ? "lc.confidenceMaskHint" : "lc.confidenceDisabledHint")}
                   />
-                  <label className="form-check-label fw-bold" htmlFor="lcDwThresholdSwitch">
-                    <i className="fas fa-shield-halved" /> {t("lc.confidenceThreshold")}
-                  </label>
                 </div>
                 {dwThresholdEnabled && (
                   <>
@@ -743,15 +752,7 @@ export default function LcChangeModule() {
                         {Math.round(dwProbabilityThreshold * 100)}%
                       </span>
                     </div>
-                    <small className="text-muted d-block">
-                      {t("lc.confidenceMaskHint")}
-                    </small>
                   </>
-                )}
-                {!dwThresholdEnabled && (
-                  <small className="text-muted d-block">
-                    {t("lc.confidenceDisabledHint")}
-                  </small>
                 )}
               </div>
             )}
@@ -764,26 +765,26 @@ export default function LcChangeModule() {
               </div>
             )}
 
-            <button
-              className="btn btn-warning w-100 fw-bold"
-              disabled={running}
-              onClick={runAnalysis}
-            >
-              {running ? (
-                <>
-                  <i className="fas fa-spinner fa-spin" /> Menganalisis...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-play" /> {t("lc.run")}
-                </>
-              )}
-            </button>
-
-            <div className="mt-3 text-muted" style={{ fontSize: ".8rem" }}>
-              <i className="fas fa-clock" /> {t("lc.processingTime")}
-              <br />
-              <i className="fas fa-info-circle" /> {t("lc.requestPerYear")}
+            <div className="d-flex align-items-center gap-2">
+              <button
+                className="btn btn-warning flex-grow-1 fw-bold"
+                disabled={running}
+                onClick={runAnalysis}
+              >
+                {running ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" /> Menganalisis...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-play" /> {t("lc.run")}
+                  </>
+                )}
+              </button>
+              <InfoTip
+                label={t("lc.moreInfo")}
+                content={<>{t("lc.processingTime")}<br />{t("lc.requestPerYear")}</>}
+              />
             </div>
           </div>
         </div>

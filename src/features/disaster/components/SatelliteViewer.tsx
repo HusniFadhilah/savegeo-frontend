@@ -42,10 +42,10 @@ const DISASTER_ANALYSIS_PANE_Z_INDEX = 370;
 const DISASTER_IMAGERY_PANE = "disaster-imagery-pane";
 const DISASTER_IMAGERY_PANE_Z_INDEX = 350;
 
-type DynamicPostSource = "sentinel2" | "esri_wayback";
+type DynamicImagerySource = "sentinel2" | "esri_wayback";
 
-interface DynamicPostLayer {
-  source: DynamicPostSource;
+interface DynamicImageryLayer {
+  source: DynamicImagerySource;
   label: string;
   tileUrl: string;
   acquisitionDate: string;
@@ -83,6 +83,19 @@ function dateOnly(value: string | null | undefined): string | null {
 function todayIso(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+}
+
+function shiftIsoDate(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Search a bounded period immediately before the event for a dynamic pre image. */
+function preDateRange(event?: DisasterEventRecord): { startDate: string; endDate: string } {
+  const anchor = dateOnly(event?.start_date) ?? dateOnly(event?.event_date) ?? dateOnly(event?.end_date) ?? todayIso();
+  const endDate = shiftIsoDate(anchor, -1);
+  return { startDate: shiftIsoDate(endDate, -365), endDate };
 }
 
 function postDateRange(event?: DisasterEventRecord): { startDate: string; endDate: string } {
@@ -149,8 +162,65 @@ function viewerUrl(url: string | null): string | null {
     : url;
 }
 
-function nativeZoomForImagery(img: SatelliteImageryRecord | null): number {
-  return nativeZoomForResolution(img?.resolution_m);
+interface DynamicImageryRequest {
+  source: DynamicImagerySource;
+  phase: "pre" | "post";
+  aoi: AoiFeature;
+  range: { startDate: string; endDate: string };
+  targetDate: string;
+}
+
+async function loadDynamicImagery({ source, phase, aoi, range, targetDate }: DynamicImageryRequest): Promise<DynamicImageryLayer> {
+  const phaseLabel = phase === "pre" ? "pra-bencana" : "pasca-bencana";
+  if (source === "sentinel2") {
+    const scenes = await listImageryScenes({
+      aoi: { geojson: aoi },
+      satellite: "sentinel2",
+      startDate: range.startDate,
+      endDate: range.endDate,
+      maxCloudCover: 60,
+    });
+    const scene = scenes.scenes
+      .slice()
+      .sort((left, right) => right.acquired_at.localeCompare(left.acquired_at))[0];
+    if (!scene) throw new Error(`Scene Sentinel-2 ${phaseLabel} tidak ditemukan pada periode ini.`);
+
+    const tile = await getImagerySceneTile({
+      satellite: "sentinel2",
+      sceneId: scene.id,
+      aoi: { geojson: aoi },
+      forceMosaic: true,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      maxCloudCover: 60,
+      cloudMaskTechnique: "scl",
+    });
+    if (!tile.tile_url) throw new Error("Tile Sentinel-2 tidak tersedia.");
+    return {
+      source,
+      label: `Sentinel-2 - ${dateOnly(scene.acquired_at) ?? scene.acquired_at}`,
+      tileUrl: viewerUrl(tile.tile_url) ?? tile.tile_url,
+      acquisitionDate: dateOnly(scene.acquired_at) ?? scene.acquired_at,
+      resolutionM: tile.satellite?.resolution_m ?? scene.resolution_m ?? 10,
+      attribution: "Sentinel-2 - Google Earth Engine",
+    };
+  }
+
+  const scenes = await listEsriWaybackScenes(ESRI_WAYBACK_START_DATE, range.endDate, 2000);
+  const scene = selectEsriWaybackScene(scenes as WaybackScene[], targetDate);
+  if (!scene) throw new Error(`Snapshot Esri Wayback ${phaseLabel} tidak ditemukan.`);
+  return {
+    source,
+    label: `Esri Wayback - ${scene.release_label}`,
+    tileUrl: scene.tile_url,
+    acquisitionDate: scene.release_label,
+    resolutionM: null,
+    attribution: `Esri World Imagery Wayback - Rilis ${scene.release_label}`,
+  };
+}
+
+function historicalDateForSource(source: DynamicImagerySource | null, date: string | null): string | undefined {
+  return source === "esri_wayback" ? undefined : date ?? undefined;
 }
 
 function ViewerLayerPane() {
@@ -337,9 +407,9 @@ interface Props {
  * Reuses `SwipeCompareMap` directly for the Swipe mode, and reimplements
  * `lc-change/components/BeforeAfterMaps.tsx`'s split-view toggle pattern
  * (two independent `MapView`s) for Side-by-Side; Pre/Post-only render a
- * single `MapView` with one tile layer. Date pickers are plain dropdowns
- * populated only from `imagery.pre`/`imagery.post` (never a free date
- * input), per the contract doc.
+ * single `MapView` with one tile layer. Saved imagery remains selectable from
+ * the event record, while AOI-backed Sentinel-2 and Esri Wayback sources are
+ * available as dynamic alternatives.
  */
 export default function SatelliteViewer({
   event,
@@ -371,8 +441,12 @@ export default function SatelliteViewer({
   const [view, setView] = useState<ViewMode>("swipe");
   const [swipeOrientation, setSwipeOrientation] = useState<SwipeOrientation>("vertical");
   const [imageryOpacity, setImageryOpacity] = useState(0.9);
-  const [postSource, setPostSource] = useState<DynamicPostSource | null>(null);
-  const [dynamicPost, setDynamicPost] = useState<DynamicPostLayer | null>(null);
+  const [preSource, setPreSource] = useState<DynamicImagerySource | null>(null);
+  const [dynamicPre, setDynamicPre] = useState<DynamicImageryLayer | null>(null);
+  const [dynamicPreLoading, setDynamicPreLoading] = useState(false);
+  const [dynamicPreError, setDynamicPreError] = useState<string | null>(null);
+  const [postSource, setPostSource] = useState<DynamicImagerySource | null>(null);
+  const [dynamicPost, setDynamicPost] = useState<DynamicImageryLayer | null>(null);
   const [dynamicPostLoading, setDynamicPostLoading] = useState(false);
   const [dynamicPostError, setDynamicPostError] = useState<string | null>(null);
 
@@ -380,22 +454,69 @@ export default function SatelliteViewer({
   const aoiBounds = useMemo(() => aoiBoundsOf(aoi), [aoi]);
 
   const preImg = useMemo(
-    () => imagery.pre.find((i) => i.id === preId) ?? null,
-    [imagery.pre, preId],
+    () => (preSource ? null : imagery.pre.find((i) => i.id === preId) ?? null),
+    [imagery.pre, preId, preSource],
   );
   const postImg = useMemo(
     () => (postSource ? null : imagery.post.find((i) => i.id === postId) ?? null),
     [imagery.post, postId, postSource],
   );
+  const preRange = useMemo(() => preDateRange(event), [event]);
   const postRange = useMemo(() => postDateRange(event), [event]);
+  const preTile = dynamicPre?.tileUrl ?? viewerTileUrl(preImg);
+  const preDate = dynamicPre?.acquisitionDate ?? preImg?.acquisition_date ?? null;
+  const preResolutionM = dynamicPre?.resolutionM ?? preImg?.resolution_m ?? null;
+  const preAttribution = dynamicPre?.attribution ?? "Google Earth Engine";
   const postTile = dynamicPost?.tileUrl ?? viewerTileUrl(postImg);
   const postDate = dynamicPost?.acquisitionDate ?? postImg?.acquisition_date ?? null;
   const postResolutionM = dynamicPost?.resolutionM ?? postImg?.resolution_m ?? null;
   const postAttribution = dynamicPost?.attribution ?? "Google Earth Engine";
-  const preTile = viewerTileUrl(preImg);
-  const preNativeZoom = nativeZoomForImagery(preImg);
+  const preNativeZoom = nativeZoomForResolution(preResolutionM);
   const postNativeZoom = nativeZoomForResolution(postResolutionM);
+  const preSelection = preSource ? `source:${preSource}` : preId ? String(preId) : "";
   const postSelection = postSource ? `source:${postSource}` : postId ? String(postId) : "";
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!preSource) {
+      setDynamicPre(null);
+      setDynamicPreLoading(false);
+      setDynamicPreError(null);
+      return;
+    }
+    if (!aoiFeature) {
+      setDynamicPre(null);
+      setDynamicPreLoading(false);
+      setDynamicPreError("AOI tidak valid untuk memuat citra pra-bencana.");
+      return;
+    }
+
+    setDynamicPre(null);
+    setDynamicPreLoading(true);
+    setDynamicPreError(null);
+    const targetDate = preRange.endDate;
+
+    void loadDynamicImagery({
+      source: preSource,
+      phase: "pre",
+      aoi: aoiFeature,
+      range: preRange,
+      targetDate,
+    })
+      .then((layer) => {
+        if (!cancelled) setDynamicPre(layer);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setDynamicPreError(error instanceof Error ? error.message : "Gagal memuat citra pra-bencana.");
+      })
+      .finally(() => {
+        if (!cancelled) setDynamicPreLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aoiFeature, preRange, preSource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -536,18 +657,39 @@ export default function SatelliteViewer({
             <label className="form-label small fw-semibold mb-1">Citra Sebelum (Pre)</label>
             <select
               className="form-select form-select-sm"
-              value={preId ?? ""}
-              onChange={(e) => setPreId(e.target.value ? Number(e.target.value) : null)}
-              disabled={!imagery.pre.length}
+              value={preSelection}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.startsWith("source:")) {
+                  setPreId(null);
+                  setPreSource(value.slice("source:".length) as DynamicImagerySource);
+                } else {
+                  setPreSource(null);
+                  setPreId(value ? Number(value) : null);
+                }
+              }}
+              disabled={!imagery.pre.length && !aoiFeature}
             >
               {!imagery.pre.length && <option value="">Tidak tersedia</option>}
-              {imagery.pre.map((img) => (
-                <option key={img.id} value={img.id}>
-                  {imageryLabel(img)}
-                  {img.is_primary ? " (utama)" : ""}
-                </option>
-              ))}
+              {imagery.pre.length > 0 && (
+                <optgroup label="Citra tersimpan">
+                  {imagery.pre.map((img) => (
+                    <option key={img.id} value={img.id}>
+                      {imageryLabel(img)}
+                      {img.is_primary ? " (utama)" : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {aoiFeature && (
+                <optgroup label="Sumber tambahan · dipotong sesuai AOI">
+                  <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
+                  <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+                </optgroup>
+              )}
             </select>
+            {dynamicPreLoading && <div className="small text-muted mt-1" role="status">Memuat citra pra-bencana dan memotong sesuai AOI...</div>}
+            {dynamicPreError && <div className="small text-danger mt-1" role="alert">{dynamicPreError}</div>}
           </div>
           <div className="col-sm-6">
             <label className="form-label small fw-semibold mb-1">Citra Sesudah (Post)</label>
@@ -558,7 +700,7 @@ export default function SatelliteViewer({
                 const value = e.target.value;
                 if (value.startsWith("source:")) {
                   setPostId(null);
-                  setPostSource(value.slice("source:".length) as DynamicPostSource);
+                  setPostSource(value.slice("source:".length) as DynamicImagerySource);
                 } else {
                   setPostSource(null);
                   setPostId(value ? Number(value) : null);
@@ -590,7 +732,7 @@ export default function SatelliteViewer({
         </div>
 
         {(view === "pre" || view === "post") && (
-          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? preImg?.acquisition_date : postSource === "esri_wayback" ? undefined : postDate ?? undefined}>
+          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? historicalDateForSource(preSource, preDate) : historicalDateForSource(postSource, postDate)}>
             <BasemapSwitcher />
             <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
             <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
@@ -603,7 +745,7 @@ export default function SatelliteViewer({
               <TileLayer
                 url={preTile}
                 opacity={imageryOpacity}
-                attribution="Google Earth Engine"
+                attribution={preAttribution}
                 crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                 pane={DISASTER_IMAGERY_PANE}
                 bounds={aoiBounds}
@@ -638,7 +780,7 @@ export default function SatelliteViewer({
               firmsShowLabels={firmsShowLabels}
               firmsCluster={firmsCluster}
             />
-            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
+            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preResolutionM, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
             <FitToFeature feature={focusFeature} signal={focusSignal} />
           </MapView>
@@ -647,7 +789,7 @@ export default function SatelliteViewer({
         {view === "split" && (
           <div className="row g-2">
             <div className="col-md-6">
-              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl} historicalDate={preImg?.acquisition_date}>
+              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl} historicalDate={historicalDateForSource(preSource, preDate)}>
                 <BasemapSwitcher />
                 <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
                 <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
@@ -660,7 +802,7 @@ export default function SatelliteViewer({
                   <TileLayer
                     url={preTile}
                     opacity={imageryOpacity}
-                    attribution="Google Earth Engine"
+                    attribution={preAttribution}
                     crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
                     pane={DISASTER_IMAGERY_PANE}
                     bounds={aoiBounds}
@@ -683,12 +825,12 @@ export default function SatelliteViewer({
                   firmsShowLabels={firmsShowLabels}
                   firmsCluster={firmsCluster}
                 />
-                <RasterResolutionNotice layers={[{label: "Pre", resolutionM: preImg?.resolution_m, nativeZoom: preNativeZoom}]} />
+                <RasterResolutionNotice layers={[{label: "Pre", resolutionM: preResolutionM, nativeZoom: preNativeZoom}]} />
                 <FitToAoi aoi={aoi} />
                 <FitToFeature feature={focusFeature} signal={focusSignal} />
               </MapView>
               <div className="text-center small text-muted mt-1">
-                Sebelum {preImg ? `· ${preImg.acquisition_date}` : ""}
+                Sebelum {preDate ? `· ${preDate}` : ""}
               </div>
             </div>
             <div className="col-md-6">
@@ -733,7 +875,7 @@ export default function SatelliteViewer({
                 <FitToFeature feature={focusFeature} signal={focusSignal} />
               </MapView>
               <div className="text-center small text-muted mt-1">
-                Sesudah {postImg ? `· ${postImg.acquisition_date}` : ""}
+                Sesudah {postDate ? `· ${postDate}` : ""}
               </div>
             </div>
           </div>
@@ -744,9 +886,9 @@ export default function SatelliteViewer({
             id="disasterSatSwipeMap"
             beforeUrl={preTile}
             afterUrl={postTile}
-            beforeLabel={`Sebelum${preImg ? ` · ${preImg.acquisition_date}` : ""}`}
+            beforeLabel={`Sebelum${preDate ? ` · ${preDate}` : ""}`}
             afterLabel={`Sesudah${postDate ? ` · ${postDate}` : ""}`}
-            beforeAttribution="Google Earth Engine"
+            beforeAttribution={preAttribution}
             afterAttribution={postAttribution}
             orientation={swipeOrientation}
             beforeCrossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
@@ -754,11 +896,11 @@ export default function SatelliteViewer({
             onOrientationChange={setSwipeOrientation}
             opacity={imageryOpacity}
             maxZoom={DISASTER_SCENE_MAX_ZOOM}
-            beforeResolutionM={preImg?.resolution_m ?? undefined}
+            beforeResolutionM={preResolutionM ?? undefined}
             afterResolutionM={postResolutionM ?? undefined}
             beforeMaxNativeZoom={preNativeZoom}
             afterMaxNativeZoom={postNativeZoom}
-            historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? preImg?.acquisition_date}
+            historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? historicalDateForSource(preSource, preDate)}
             showGlobeControl={showGlobeControl}
             initialPercent={35}
             bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}

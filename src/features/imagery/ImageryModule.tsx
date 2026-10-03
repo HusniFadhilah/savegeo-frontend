@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
@@ -118,7 +118,30 @@ type SceneFootprintProperties = {
 type ScientificCapabilityKey = "hyperspectral" | "thermal" | "insar" | "ai";
 type ScientificSupport = Record<ScientificCapabilityKey, boolean>;
 
-function ScientificCapabilitiesPanel({ support }: { support: ScientificSupport }) {
+function ProviderFeatureAccordion({
+  title,
+  icon,
+  variant = "secondary",
+  children,
+}: {
+  title: string;
+  icon: string;
+  variant?: "primary" | "secondary";
+  children: ReactNode;
+}) {
+  return (
+    <details className={`card border-${variant} mb-3 imagery-provider-accordion`}>
+      <summary className="card-header py-2 d-flex align-items-center gap-2">
+        <i className={icon} aria-hidden="true" />
+        <strong><small>{title}</small></strong>
+        <i className="bi bi-chevron-down imagery-provider-accordion-chevron" aria-hidden="true" />
+      </summary>
+      <div className="card-body py-2">{children}</div>
+    </details>
+  );
+}
+
+function ScientificCapabilitiesPanel({ support, providerKey }: { support: ScientificSupport; providerKey: string }) {
   const t = useI18nStore((state) => state.t);
   const hasSupport = Object.values(support).some(Boolean);
   const [capabilities, setCapabilities] = useState<AdvancedImageryCapabilities | null>(null);
@@ -136,13 +159,12 @@ function ScientificCapabilitiesPanel({ support }: { support: ScientificSupport }
     ["ai", t("imagery.scientific.ai"), capabilities.ai.status],
   ].filter(([key]) => support[key as ScientificCapabilityKey]).map(([, label, status]) => [label, status] as const);
   if (!items.length) return null;
-  return <div className="card border-secondary mb-3">
-    <div className="card-header py-2"><i className="bi bi-cpu" /> <strong><small>{t("imagery.scientific.title")}</small></strong></div>
-    <div className="card-body py-2 small">
+  return <ProviderFeatureAccordion key={providerKey} title={t("imagery.scientific.title")} icon="bi bi-cpu">
+    <div className="small">
       {items.map(([label, status]) => <div key={label} className="d-flex justify-content-between align-items-center border-bottom py-1"><span>{label}</span><span className={`badge ${status === "ready" ? "text-bg-success" : "text-bg-secondary"}`}>{status}</span></div>)}
       <div className="text-muted mt-2">{t("imagery.scientific.hint")}</div>
     </div>
-  </div>;
+  </ProviderFeatureAccordion>;
 }
 
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
@@ -180,6 +202,43 @@ function FitToSceneOrAoi({
     const bounds = L.geoJSON(aoi as GeoJSON.Feature).getBounds();
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [36, 36], maxZoom });
   }, [aoi, focusKey, map, maxZoom, scene]);
+  return null;
+}
+
+function ImageryMapViewportReporter({
+  onChange,
+}: {
+  onChange: (region: AoiFeature | null) => void;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    const updateRegion = () => {
+      const size = map.getSize();
+      if (size.x < 64 || size.y < 64) return;
+      const bounds = map.getBounds();
+      if (!bounds.isValid()) return;
+      const west = Math.max(-180, bounds.getWest());
+      const east = Math.min(180, bounds.getEast());
+      const south = Math.max(-85, bounds.getSouth());
+      const north = Math.min(85, bounds.getNorth());
+      if (west >= east || south >= north) return;
+      onChange({
+        type: "Feature",
+        properties: { source: "map-viewport", name: "Map view" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+        },
+      });
+    };
+    updateRegion();
+    map.on("moveend", updateRegion);
+    map.on("resize", updateRegion);
+    return () => {
+      map.off("moveend", updateRegion);
+      map.off("resize", updateRegion);
+    };
+  }, [map, onChange]);
   return null;
 }
 
@@ -346,6 +405,8 @@ export default function ImageryModule() {
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
   const aoi: AoiFeature | null = aoiState?.feature ?? null;
+  const [mapViewportAoi, setMapViewportAoi] = useState<AoiFeature | null>(null);
+  const [sceneSearchRegion, setSceneSearchRegion] = useState<AoiFeature | null>(null);
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const handleAoiChange = useCallback(
@@ -528,7 +589,7 @@ export default function ImageryModule() {
           searchable: true,
           supports_time: true,
           visualization_only: true,
-        },
+        } as ImageryProvider["capabilities"],
       },
     }),
     [satellites],
@@ -550,6 +611,9 @@ export default function ImageryModule() {
       !isEsriWayback &&
       satelliteMeta.capabilities?.analytical !== false &&
       (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"),
+  );
+  const supportsCloudFilter = Boolean(
+    satelliteMeta?.cloud_property && satelliteMeta.capabilities?.supports_cloud_filter !== false,
   );
   // Browser GPU enhancement is meaningful for RGB scene tiles. SAR and
   // single-band concentration products use different visual semantics, while
@@ -609,6 +673,7 @@ export default function ImageryModule() {
     setCompareTileA(null);
     setCompareTileB(null);
     setCompareError(null);
+    setSceneSearchRegion(null);
     setCogAssetKey("visual");
     setCogBands("");
     setCogRescale("");
@@ -665,7 +730,12 @@ export default function ImageryModule() {
   }, [imageryProviders]);
 
   const loadSceneTile = useCallback(
-    async (scene: ImageryScene, assetKeyOverride?: string, forceMosaicOverride?: boolean) => {
+    async (
+      scene: ImageryScene,
+      assetKeyOverride?: string,
+      forceMosaicOverride?: boolean,
+      aoiOverride?: AoiFeature | null,
+    ) => {
       const requestId = ++tileRequestRef.current;
       renderOptionsKeyRef.current = renderOptionsKey;
       const effectiveCogAssetKey = assetKeyOverride
@@ -695,18 +765,19 @@ export default function ImageryModule() {
           return;
         }
         const mosaicQuery = mosaicQueryRef.current;
+        const tileAoi = aoi ?? aoiOverride ?? null;
         const mosaicEndDate = new Date(`${mosaicQuery.endDate}T00:00:00Z`);
         mosaicEndDate.setUTCDate(mosaicEndDate.getUTCDate() + 1);
         const res = await getImagerySceneTile({
           satellite,
           sceneId: scene.id,
-          aoi: aoi ? { geojson: aoi } : undefined,
-          autoMosaic: isSentinel2 && Boolean(aoi),
-          forceMosaic: isSentinel2 && Boolean(aoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
-          forceScene: isSentinel2 && Boolean(aoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
-          startDate: isSentinel2 && aoi ? mosaicQuery.startDate : undefined,
-          endDate: isSentinel2 && aoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
-          maxCloudCover: isSentinel2 && aoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
+          aoi: tileAoi ? { geojson: tileAoi } : undefined,
+          autoMosaic: isSentinel2 && Boolean(tileAoi),
+          forceMosaic: isSentinel2 && Boolean(tileAoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
+          forceScene: isSentinel2 && Boolean(tileAoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
+          startDate: isSentinel2 && tileAoi ? mosaicQuery.startDate : undefined,
+          endDate: isSentinel2 && tileAoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
+          maxCloudCover: isSentinel2 && tileAoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: tileSuperResolution,
@@ -747,8 +818,9 @@ export default function ImageryModule() {
   );
 
   const searchScenes = async () => {
-    if (!aoi && !isHimawari) {
-      setSearchError("Gambar AOI terlebih dahulu di peta.");
+    const searchRegion = aoi ?? mapViewportAoi;
+    if (!searchRegion && !isHimawari && !isEsriWayback) {
+      setSearchError("Peta belum siap. Tunggu peta selesai dimuat lalu coba lagi.");
       return;
     }
     if (!startDate || !endDate || (isHimawari ? startDate > endDate : startDate >= endDate)) {
@@ -760,6 +832,7 @@ export default function ImageryModule() {
     setSearching(true);
     setSceneResultsOpen(true);
     setSearchError(null);
+    setSceneSearchRegion(searchRegion);
       setSelectedSceneId(null);
       setHoverSceneId(null);
       setFocusSceneId(null);
@@ -793,7 +866,7 @@ export default function ImageryModule() {
             const inclusiveEnd = new Date(endDate);
             inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
             return listImageryScenes({
-              aoi: { geojson: aoi! },
+              aoi: { geojson: searchRegion! },
               satellite,
               startDate,
               endDate: isOpenHighResProvider ? endDate : inclusiveEnd.toISOString().slice(0, 10),
@@ -818,12 +891,17 @@ export default function ImageryModule() {
         // showing only the newest granule for an AOI that spans scene
         // footprints. A single returned granule still goes through the
         // backend's AOI-footprint check via autoMosaic.
-        const initialMosaicAvailable = isSentinel2 && Boolean(aoi) && scenesByNewest.length > 1;
+        const initialMosaicAvailable = isSentinel2 && Boolean(searchRegion) && scenesByNewest.length > 1;
         if (initialMosaicAvailable) {
           setMosaicRequestedMode(true);
           setSceneRequestedMode(false);
         }
-        await loadSceneTile(scenesByNewest[0], defaultAssetKey, initialMosaicAvailable ? true : undefined);
+        await loadSceneTile(
+          scenesByNewest[0],
+          defaultAssetKey,
+          initialMosaicAvailable ? true : undefined,
+          initialMosaicAvailable ? searchRegion : undefined,
+        );
       }
     } catch (err) {
       if (requestId !== searchRequestRef.current) return;
@@ -845,13 +923,14 @@ export default function ImageryModule() {
   };
 
   const loadMosaicTile = () => {
-    if (!isSentinel2 || !aoi || scenes.length === 0) return;
+    const mosaicRegion = aoi ?? sceneSearchRegion ?? mapViewportAoi;
+    if (!isSentinel2 || !mosaicRegion || scenes.length === 0) return;
     const anchorScene = [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1))[0];
     if (!anchorScene) return;
     setMosaicRequestedMode(true);
     setSceneRequestedMode(false);
     setViewMode("single");
-    void loadSceneTile(anchorScene, anchorScene.default_asset_key || "visual", true);
+    void loadSceneTile(anchorScene, anchorScene.default_asset_key || "visual", true, mosaicRegion);
   };
 
   const loadCompare = async () => {
@@ -995,7 +1074,9 @@ export default function ImageryModule() {
         if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > scenePageCount) throw new Error("Halaman scene di luar hasil yang telah dimuat.");
         setScenePage(value as number);
       } else if (action === "search_scenes" && target === "scenes.searchRequest") {
-        if (!aoi && !isHimawari) throw new Error("AOI diperlukan sebelum mencari scene.");
+        if (!aoi && !mapViewportAoi && !isHimawari && !isEsriWayback) {
+          throw new Error("Peta belum siap. Tunggu peta selesai dimuat lalu coba lagi.");
+        }
         if (searching) throw new Error("Pencarian scene masih berjalan.");
         await searchScenes();
       } else if (action === "show_scene" && target === "scenes.scene") {
@@ -1147,8 +1228,8 @@ export default function ImageryModule() {
                 <i className="fas fa-circle-info" /> Himawari mencakup area full-disk; AOI tidak diperlukan.
               </div>
             ) : (
-              <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-exclamation-triangle" /> {t("imagery.chooseAoi")}
+              <div className="alert alert-info py-2 mb-0" style={{ fontSize: ".8rem" }}>
+                <i className="fas fa-circle-info" /> Tanpa AOI, area peta yang terlihat dipakai untuk mencari scene.
               </div>
             )}
             <button type="button" className="btn btn-sm btn-outline-success w-100 mt-2" onClick={() => setAoiModalOpen(true)}>
@@ -1262,10 +1343,8 @@ export default function ImageryModule() {
             </div>
           )}
 
-          {supportsGpuEnhancement && <div className="mb-3">
-            <div className="card border-primary">
-              <div className="card-header py-2 d-flex align-items-center gap-2"><i className="bi bi-gpu-card" /> <strong><small>{t("imagery.gpu.title")}</small></strong></div>
-              <div className="card-body py-2">
+          {/* Keep sibling accordion keys distinct so provider changes cannot reuse stale panel DOM. */}
+          {supportsGpuEnhancement && <ProviderFeatureAccordion key={`gpu-${satellite}`} title={t("imagery.gpu.title")} icon="bi bi-gpu-card" variant="primary">
                 <div className="form-check form-switch"><input className="form-check-input" type="checkbox" id="imageryGpuEnhancement" checked={visualEnhancement} onChange={(event) => setVisualEnhancement(event.target.checked)} /><label className="form-check-label fw-semibold" htmlFor="imageryGpuEnhancement"><small>{t("imagery.gpu.enable")}</small></label></div>
                 <div className="row g-2 mt-1"><div className="col-7"><select className="form-select form-select-sm" value={gpuEnhancement.model} onChange={(event) => gpuEnhancement.setModel(event.target.value as "shader_x2" | "shader_x4")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.modelAria")}><option value="shader_x2">{t("imagery.gpu.shaderSafe")}</option><option value="shader_x4">{t("imagery.gpu.shaderStrong")}</option></select></div><div className="col-5"><select className="form-select form-select-sm" value={gpuEnhancement.quality} onChange={(event) => gpuEnhancement.setQuality(event.target.value as "low" | "medium" | "high")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.qualityAria")}><option value="low">{t("imagery.gpu.qualityLow")}</option><option value="medium">{t("imagery.gpu.qualityMedium")}</option><option value="high">{t("imagery.gpu.qualityHigh")}</option></select></div></div>
                 <div className="small mt-2" aria-live="polite">Status: <strong>{gpuEnhancement.status}</strong> · Backend: <strong>{gpuEnhancement.backend}</strong>{gpuEnhancement.capabilities?.webgpu ? " (WebGPU tersedia; shader memakai jalur WebGL2 yang kompatibel)" : ""}</div>
@@ -1275,14 +1354,10 @@ export default function ImageryModule() {
                 {visualEnhancement && gpuEnhancement.status === "fallback_original" && <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">GPU enhancement tidak tersedia pada perangkat ini. Citra original tetap ditampilkan.</div>}
                 {visualEnhancement && gpuEnhancement.status === "error" && <div className="alert alert-danger py-1 px-2 mt-2 mb-0 small">Model visual gagal dimuat. Citra original tetap ditampilkan.</div>}
                 <button type="button" className="btn btn-sm btn-outline-secondary mt-2" onClick={gpuEnhancement.clearCache}><i className="bi bi-trash3" /> Clear cache visual</button>
-              </div>
-            </div>
-          </div>}
+          </ProviderFeatureAccordion>}
 
-          {supportsSuperResolution && <div className="mb-3">
-            <label className="form-label fw-bold" htmlFor="imagerySuperResolution">
-              <i className="bi bi-stars" /> {t("imagery.interpolation")}
-            </label>
+          {supportsSuperResolution && <ProviderFeatureAccordion key={`interpolation-${satellite}`} title={t("imagery.interpolation")} icon="bi bi-stars">
+            <label className="form-label fw-semibold" htmlFor="imagerySuperResolution">Metode interpolasi</label>
             <SearchableSelect
               id="imagerySuperResolution"
               value={activeSuperResolution}
@@ -1294,13 +1369,11 @@ export default function ImageryModule() {
               ]}
             />
             <small className="text-muted d-block mt-1">{t("imagery.interpolationHint")}</small>
-          </div>}
+          </ProviderFeatureAccordion>}
 
           {isCogProvider && (
-            <div className="mb-3">
-              <label className="form-label fw-bold" htmlFor="imageryCogAsset">
-                <i className="bi bi-sliders" /> COG Render Settings
-              </label>
+            <ProviderFeatureAccordion key={`cog-${satellite}`} title="Pengaturan Tampilan COG" icon="bi bi-sliders">
+              <label className="form-label fw-semibold" htmlFor="imageryCogAsset">Aset citra</label>
               <SearchableSelect
                 id="imageryCogAsset"
                 value={cogAssetKey}
@@ -1343,21 +1416,20 @@ export default function ImageryModule() {
                   <i className="bi bi-download" /> Download Asset Aktif
                 </a>
               )}
-            </div>
+            </ProviderFeatureAccordion>
           )}
 
-          {supportsSamGeo && <SamGeoPanel scene={selectedScene} aoi={aoi}
-            assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
-            providerKey={satellite}
-            onResult={setSegmentation} />}
+          {supportsSamGeo && <ProviderFeatureAccordion key={`samgeo-${satellite}`} title="Segmentasi AI (SAMGeo)" icon="bi bi-stars">
+            <SamGeoPanel scene={selectedScene} aoi={aoi}
+              assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
+              providerKey={satellite}
+              onResult={setSegmentation} />
+          </ProviderFeatureAccordion>}
 
-          <ScientificCapabilitiesPanel support={scientificSupport} />
+          <ScientificCapabilitiesPanel support={scientificSupport} providerKey={satellite} />
 
           {!isHimawari && satelliteMeta?.visualization === "sar" && (
-            <div className="mb-3">
-              <label className="form-label fw-bold">
-                <i className="fas fa-satellite-dish" /> Mode Tampilan SAR
-              </label>
+            <ProviderFeatureAccordion key={`sar-${satellite}`} title="Mode Tampilan SAR" icon="bi bi-satellite-dish">
               <div className="btn-group btn-group-sm w-100" role="group">
                 <button
                   type="button"
@@ -1378,7 +1450,7 @@ export default function ImageryModule() {
                 Grayscale: intensitas pantulan VV saja. Komposit: R=VV, G=VH, B=selisih VV−VH (kombinasi umum untuk
                 membedakan tutupan lahan).
               </small>
-            </div>
+            </ProviderFeatureAccordion>
           )}
 
           <div className="mb-3">
@@ -1433,8 +1505,8 @@ export default function ImageryModule() {
             </div>
           )}
 
-          {!isHimawari && (satelliteMeta?.cloud_property ? (
-            <div className="mb-3">
+          {!isHimawari && supportsCloudFilter && (
+            <ProviderFeatureAccordion key={`cloud-${satellite}`} title={t("imagery.cloudFilter")} icon="bi bi-cloud">
               <div className="form-check form-switch mb-1">
                 <input
                   className="form-check-input"
@@ -1444,7 +1516,7 @@ export default function ImageryModule() {
                   onChange={(e) => setCloudFilterEnabled(e.target.checked)}
                 />
                 <label className="form-check-label fw-bold" htmlFor="imageryCloudFilterSwitch">
-                  <i className="fas fa-cloud" /> {t("imagery.cloudFilter")}
+                  <i className="fas fa-cloud" /> Terapkan filter awan
                 </label>
               </div>
               {cloudFilterEnabled && (
@@ -1485,15 +1557,8 @@ export default function ImageryModule() {
                   Nonaktif: semua scene ditampilkan apa adanya (termasuk yang sangat berawan) supaya bisa dinilai sendiri.
                 </small>
               )}
-            </div>
-          ) : (
-            satelliteMeta && (
-              <small className="text-muted d-block mb-3">
-                <i className="fas fa-circle-info" /> Sensor ini tidak punya properti tutupan awan per-scene - filter awan
-                tidak berlaku.
-              </small>
-            )
-          ))}
+            </ProviderFeatureAccordion>
+          )}
 
           <hr />
 
@@ -1650,7 +1715,7 @@ export default function ImageryModule() {
                                 type="button"
                                 className={`btn btn-sm ${tileRenderMode === "mosaic" || mosaicRequested ? "btn-success" : "btn-outline-success"}`}
                                 onClick={loadMosaicTile}
-                                disabled={!aoi || tileLoading}
+                                disabled={!(aoi || sceneSearchRegion || mapViewportAoi) || tileLoading}
                               >
                                 {tileLoading && mosaicRequested ? <i className="fas fa-spinner fa-spin me-1" /> : <i className="bi bi-layers me-1" />}
                                 Tampilkan Mosaik AOI
@@ -1840,6 +1905,7 @@ export default function ImageryModule() {
                   />
                 ) : (
                   <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={isHimawari ? undefined : selectedScene?.acquired_at?.slice(0, 10)} historicalAoi={isHimawari ? null : aoi}>
+                    <ImageryMapViewportReporter onChange={setMapViewportAoi} />
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <SceneFootprintLayer
@@ -1918,7 +1984,7 @@ export default function ImageryModule() {
                       />
                     )}
                     <FitToSceneOrAoi
-                      aoi={aoi}
+                      aoi={aoi ?? sceneSearchRegion}
                       focusKey={`${focusSceneId ?? "aoi"}:${focusNonce}`}
                       scene={focusScene}
                       maxZoom={sceneFocusMaxZoom}
@@ -2037,12 +2103,12 @@ export default function ImageryModule() {
                     beforeMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m))}
                     afterMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m))}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
-                    bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
+                    bounds={sceneSearchRegion ? L.geoJSON(sceneSearchRegion as GeoJSON.Feature).getBounds() : undefined}
                     clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
                   >
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <FitToSceneOrAoi
-                      aoi={aoi}
+                      aoi={aoi ?? sceneSearchRegion}
                       focusKey={compareSceneAId ?? "compare-aoi"}
                       scene={scenes.find((s) => s.id === compareSceneAId) ?? null}
                       maxZoom={sceneFocusMaxZoom}

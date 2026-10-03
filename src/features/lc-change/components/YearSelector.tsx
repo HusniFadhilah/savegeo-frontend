@@ -121,7 +121,6 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
           <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-1" onClick={addYear}>
             <i className="bi bi-plus-circle" /> {t("lc.addYear")}
           </button>
-          <small className="text-muted d-block mt-1">{t("lc.minimumTwoAuto")}</small>
         </div>
       )}
 
@@ -159,7 +158,6 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
             <span>{minYear}</span>
             <span>{maxYear}</span>
           </div>
-          <small className="text-muted d-block mt-1">{t("lc.sliderHint")}</small>
         </div>
       )}
     </div>

@@ -1,7 +1,6 @@
 import SegmentationComparison from "./components/SegmentationComparison";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { ApiError } from "@/services/apiClient";
 import type { AoiFeature } from "@/types/map";
 import {
@@ -94,7 +93,6 @@ export default function DisasterDashboard() {
   const { t } = useI18nStore();
   const { eventId } = useParams<{ eventId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout } = useUserAuthStore();
 
   const [detail, setDetail] = useState<DisasterEventDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
@@ -346,18 +344,6 @@ export default function DisasterDashboard() {
 
   return (
     <div className="disaster-shell disaster-detail-shell">
-      <div className="disaster-topbar">
-        <Link to="/pemetaan-bencana" className="btn btn-sm btn-outline-secondary">
-          <i className="bi bi-arrow-left" /> {t("disaster.detail.backToList")}
-        </Link>
-        <div className="disaster-topbar-actions">
-          <span>{user?.username}</span>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={logout}>
-            <i className="bi bi-box-arrow-right" /> {t("common.logout")}
-          </button>
-        </div>
-      </div>
-
       {/* 1. Header */}
       <section className="disaster-detail-hero">
         <div className="disaster-detail-title">

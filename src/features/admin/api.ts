@@ -77,6 +77,14 @@ export const deleteGeeCredential = (id: number) =>
 // ── ArcGIS ──────────────────────────────────────────────────────
 export const getArcgisStatus = () => apiClient.get<ArcgisStatusInfo>("/admin/arcgis/status", { auth: true });
 
+export const saveArcgisConfig = (payload: {
+  enabled: boolean;
+  portal_url: string;
+  auth_mode: "none" | "api_key";
+  api_key?: string;
+  request_timeout: number;
+}) => apiClient.put<{ message: string; status: ArcgisStatusInfo }>("/admin/arcgis/config", payload, { auth: true });
+
 // ── ML models ───────────────────────────────────────────────────
 export const listModels = (modelType?: string) =>
   apiClient.get<{ models: MlModel[] }>(`/admin/models${modelType ? `?model_type=${modelType}` : ""}`, {

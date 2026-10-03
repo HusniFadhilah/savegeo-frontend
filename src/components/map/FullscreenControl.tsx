@@ -3,18 +3,24 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
+interface Props {
+  /** Optional wrapper that owns overlays which must remain visible in fullscreen. */
+  fullscreenTarget?: () => HTMLElement | null;
+}
+
 /**
  * Native Fullscreen API toggle, added as a real Leaflet control (topleft)
  * so it stacks correctly with the zoom control and any draw toolbar already
  * occupying that corner, instead of overlapping them.
  */
-export default function FullscreenControl() {
+export default function FullscreenControl({ fullscreenTarget }: Props) {
   const map = useMap();
   const language = useI18nStore((state) => state.language);
   const t = useI18nStore.getState().t;
 
   useEffect(() => {
     const container = map.getContainer();
+    const getTarget = () => fullscreenTarget?.() ?? container;
 
     const control = new L.Control({ position: "topleft" });
     control.onAdd = () => {
@@ -28,9 +34,9 @@ export default function FullscreenControl() {
         L.DomEvent.preventDefault(e);
         L.DomEvent.stopPropagation(e);
         if (document.fullscreenElement) {
-          document.exitFullscreen();
+          void document.exitFullscreen();
         } else {
-          container.requestFullscreen();
+          void getTarget().requestFullscreen();
         }
       });
       L.DomEvent.disableClickPropagation(wrapper);
@@ -42,7 +48,7 @@ export default function FullscreenControl() {
     const updateIcon = () => {
       const icon = control.getContainer()?.querySelector("i");
       if (!icon) return;
-      const isFs = document.fullscreenElement === container;
+      const isFs = document.fullscreenElement === getTarget();
       icon.className = isFs ? "bi bi-fullscreen-exit" : "bi bi-arrows-fullscreen";
       const link = control.getContainer()?.querySelector(".fullscreen-control-btn");
       link?.setAttribute("title", isFs ? t("map.exitFullscreen") : t("map.fullscreen"));
@@ -53,7 +59,7 @@ export default function FullscreenControl() {
       document.removeEventListener("fullscreenchange", updateIcon);
       map.removeControl(control);
     };
-  }, [language, map, t]);
+  }, [fullscreenTarget, language, map, t]);
 
   return null;
 }

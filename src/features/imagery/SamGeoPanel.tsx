@@ -87,8 +87,7 @@ export default function SamGeoPanel({ scene, aoi, assetKey, bands, rescale, prov
     }
   }
 
-  return <section className="mb-3 border-top pt-3" aria-label={t("imagery.samgeo.title")}>
-    <div className="fw-bold mb-2"><i className="bi bi-bounding-box" /> {t("imagery.samgeo.title")}</div>
+  return <section aria-label={t("imagery.samgeo.title")}>
     <div className="small text-muted mb-2">{t("imagery.samgeo.meta")}</div>
     {!scene && <div className="small text-muted mb-2">{t("imagery.samgeo.availability")}</div>}
     {capability && !capability.available && <div role="status" className="alert alert-warning small py-2">{capability.message}</div>}

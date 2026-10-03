@@ -72,14 +72,21 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
   }
 
   if (results.carbon) {
-    tabs.push({
-      key: "carbon_estimated",
-      label: "Carbon Stock",
-      icon: "bi-tree",
-      tileUrl: results.carbon.carbon_estimated?.tile_url,
-      resolutionM: results.carbon.model_info?.scale,
-    });
-    if (showReference && results.carbon.carbon_reference?.tile_url) {
+    const referenceOnly =
+      results.carbon.model_info?.display_mode === "reference_only" ||
+      results.carbon.model_info?.model_name === "reference_only" ||
+      results.carbon.carbon_estimated?.inference_mode === "reference_only";
+
+    if (!referenceOnly && results.carbon.carbon_estimated?.tile_url) {
+      tabs.push({
+        key: "carbon_estimated",
+        label: "Carbon Stock",
+        icon: "bi-tree",
+        tileUrl: results.carbon.carbon_estimated.tile_url,
+        resolutionM: results.carbon.model_info?.scale,
+      });
+    }
+    if ((referenceOnly || showReference) && results.carbon.carbon_reference?.tile_url) {
       tabs.push({
         key: "carbon_reference",
         label: "Peta Referensi Asli",

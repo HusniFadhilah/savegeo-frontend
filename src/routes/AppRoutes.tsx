@@ -17,6 +17,7 @@ import EmbedPage from "@/pages/EmbedPage";
 import PluginManagerPage from "@/pages/PluginManagerPage";
 import DatasetViewerPage from "@/pages/DatasetViewerPage";
 import { KarhutlaDetailPage, KarhutlaIndexPage } from "@/features/karhutla/components";
+import DashboardShell from "@/components/layout/DashboardShell";
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -85,21 +86,21 @@ export default function AppRoutes() {
       <Route path="/dataset-viewer" element={<ProtectedAppRoute><DatasetViewerPage /></ProtectedAppRoute>} />
       <Route
         path="/pemetaan-bencana"
-        element={<ProtectedAppRoute><DisasterListPage /></ProtectedAppRoute>}
+        element={<ProtectedAppRoute><DashboardShell><DisasterListPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/karhutla"
-        element={<ProtectedAppRoute><KarhutlaIndexPage /></ProtectedAppRoute>}
+        element={<ProtectedAppRoute><DashboardShell><KarhutlaIndexPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/karhutla/:eventSlug"
-        element={<ProtectedAppRoute><KarhutlaDetailPage /></ProtectedAppRoute>}
+        element={<ProtectedAppRoute><DashboardShell><KarhutlaDetailPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/:eventId"
-        element={<ProtectedAppRoute><DisasterDashboard /></ProtectedAppRoute>}
+        element={<ProtectedAppRoute><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>}
       />
-      <Route path="/disaster/event/:eventId" element={<ProtectedAppRoute><DisasterDashboard /></ProtectedAppRoute>} />
+      <Route path="/disaster/event/:eventId" element={<ProtectedAppRoute><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>} />
       <Route path="*" element={<LandingPage />} />
     </Routes>
   );

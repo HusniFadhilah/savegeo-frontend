@@ -3,6 +3,7 @@ import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import InfoTip from "@/components/ui/InfoTip";
 import { ApiError } from "@/services/apiClient";
 import AoiPanel from "./components/AoiPanel";
 import AnalysisTypeSelector from "./components/AnalysisTypeSelector";
@@ -591,7 +592,16 @@ export default function CarbonModule() {
             <i className="bi bi-gear-fill me-1" /> {t("carbon.sidebar.settings")}
           </h5>
 
-          <AnalysisTypeSelector value={analysisType} onChange={setAnalysisType} />
+          <AnalysisTypeSelector
+            value={analysisType}
+            onChange={(nextType) => {
+              setAnalysisType(nextType);
+              if (nextType === "vegetation") {
+                setDirectLoadEnabled(false);
+                patchCarbon({ referenceOnly: false, loadOnly: false });
+              }
+            }}
+          />
 
           {(analysisType === "carbon" || analysisType === "combined") && (
             <CarbonParamsPanel
@@ -599,6 +609,14 @@ export default function CarbonModule() {
               onParamsChange={patchCarbon}
               selectedModel={selectedModel}
               onModelSelect={setSelectedModel}
+              directLoadEnabled={directLoadEnabled}
+              onDirectLoadChange={(enabled) => {
+                setDirectLoadEnabled(enabled);
+                if (enabled) {
+                  setDeltaEnabled(false);
+                  setVegTsEnabled(false);
+                }
+              }}
             />
           )}
 
@@ -733,7 +751,10 @@ export default function CarbonModule() {
 
           {vegTsEnabled && analysisType === "vegetation" && (
             <div className="mb-3">
-              <label className="form-label">{t("carbon.sidebar.indexSingle")}</label>
+              <div className="carbon-info-label">
+                <label className="form-label">{t("carbon.sidebar.indexSingle")}</label>
+                <InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.sidebar.vegTsHint")} />
+              </div>
               <select
                 id="vegTsIndex"
                 className="form-select form-select-sm"
@@ -746,7 +767,6 @@ export default function CarbonModule() {
                   </option>
                 ))}
               </select>
-              <small className="text-muted d-block mt-1">{t("carbon.sidebar.vegTsHint")}</small>
               {vegTsError && <div className="alert alert-danger py-1 px-2 mt-2 small">{vegTsError}</div>}
             </div>
           )}
@@ -759,7 +779,7 @@ export default function CarbonModule() {
             />
           )}
 
-          {(analysisType === "carbon" || analysisType === "landcover" || analysisType === "combined") && (
+          {analysisType === "landcover" && (
             <div className="form-check form-switch mb-2">
               <input
                 id="directDatasetLoad"
@@ -778,10 +798,10 @@ export default function CarbonModule() {
                   }
                 }}
               />
-              <label className="form-check-label small" htmlFor="directDatasetLoad">
-                <i className="bi bi-globe2 me-1" /> Tampilkan dataset global tanpa AOI/model
+              <label className="form-check-label small" htmlFor="directDatasetLoad" style={{ display: "inline" }}>
+                <i className="bi bi-globe2 me-1" /> {t("carbon.directLoadLabel")}
               </label>
-              <small className="text-muted d-block">Tahun mengikuti dataset yang dipilih; statistik baru dihitung setelah AOI dipilih.</small>
+              <span className="text-nowrap align-middle">&nbsp;<InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.directLoadHint")} /></span>
             </div>
           )}
 
@@ -841,7 +861,7 @@ export default function CarbonModule() {
                 {layer.target_pool === "soil_organic_carbon" && " Pool: karbon organik tanah."}
                 {layer.load_note ? ` ${layer.load_note}` : ""}
               </div>)}
-              Statistik dan total karbon memerlukan AOI.
+              Peta global dimuat. AOI tidak digunakan; statistik dan total tidak dihitung.
             </div>}
             <ResultsMapPanel
               aoi={aoi}
@@ -851,7 +871,7 @@ export default function CarbonModule() {
           visMax={visMax}
           visPalette={visPalette}
           legendBins={carbonLegendBins}
-          showReference={carbonParams.showReference}
+          showReference={carbonParams.showReference && !carbonParams.referenceOnly && !directLoadEnabled}
           mapKey={mapKey}
           analysisDate={`${year}-12-31`}
         />

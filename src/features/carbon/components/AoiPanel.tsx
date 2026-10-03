@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import InfoTip from "@/components/ui/InfoTip";
 import { interpolate } from "@/i18n/translations";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
@@ -280,9 +281,8 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
             />
           )}
           {activeTab === "draw" && (
-            <div className="alert alert-info py-2 small mb-0">
-              <i className="bi bi-info-circle me-1" />
-              {t("carbon.aoi.drawHint")}
+            <div className="carbon-help-corner">
+              <InfoTip align="end" label={t("carbon.params.moreInfo")} content={t("carbon.aoi.drawHint")} />
             </div>
           )}
           {activeTab === "upload" && (

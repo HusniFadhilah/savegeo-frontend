@@ -22,6 +22,8 @@ export interface ArcgisStatusInfo {
   can_reach_portal?: boolean | null;
   portal_error?: string | null;
   portal_name?: string | null;
+  portal_version?: string | number | null;
+  request_timeout?: number | null;
   message?: string | null;
   checked_at?: string | null;
 }

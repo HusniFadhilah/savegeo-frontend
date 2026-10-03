@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
-import { fetchProvinces } from "@/services/analysisService";
+import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/services/analysisService";
 import {
   fetchWildfireEvent,
   fetchWildfireEvents,
   fetchWildfireHotspots,
+  fetchWildfireRegionStatistics,
   syncWildfireHotspots,
 } from "@/features/disaster/api";
 import { FALLBACK_KALIMANTAN_TIMELINE, FALLBACK_WILDFIRE_EVENTS } from "./data";
@@ -22,7 +24,10 @@ import type {
   WildfireTimelineChart,
   WildfireTimelinePoint,
   WildfireTimelineSort,
+  WildfireRegionLevel,
+  WildfireRegionStatistic,
 } from "./types";
+import type { RegionOption } from "@/types/api";
 import type { FirmsHotspotFeature } from "@/features/disaster/types";
 import type { DisasterEventListItem } from "@/features/disaster/types";
 import WindArrowLayer from "./WindArrowLayer";
@@ -44,6 +49,13 @@ function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
           archived: "Archived",
         };
   return labels[status];
+}
+
+function matchRegionOption(options: RegionOption[], name: string): RegionOption | undefined {
+  const normalized = name.trim().toLocaleLowerCase();
+  return normalized
+    ? options.find((option) => option.name.trim().toLocaleLowerCase() === normalized)
+    : undefined;
 }
 
 function LanguageToggle() {
@@ -625,6 +637,15 @@ function HotspotMap({
   const hotspotEnabled = query.layers.includes("hotspot");
   const boundaryEnabled = query.layers.includes("boundary");
   const provinceCodeKey = event.province_codes.join(",");
+  const selectedRegion = query.villageCode
+    ? { level: "village" as const, code: query.villageCode }
+    : query.districtCode
+      ? { level: "district" as const, code: query.districtCode }
+      : query.cityCode
+        ? { level: "city" as const, code: query.cityCode }
+        : query.provinceCode
+          ? { level: "province" as const, code: query.provinceCode }
+          : null;
 
   useEffect(() => {
     if (!boundaryEnabled) {
@@ -634,25 +655,35 @@ function HotspotMap({
     }
     let cancelled = false;
     setBoundaryFailed(false);
-    fetchProvinces()
-      .then(async (provinces) => {
-        const selected = query.province
-          ? provinces.find((item) => item.name === query.province)
-          : null;
-        const codes = selected ? [selected.code] : provinceCodeKey.split(",").filter(Boolean);
-        const results = await Promise.allSettled(codes.map((code) => fetchRegionGeometry(code)));
-        const features = results.flatMap((result, index) => {
-          if (result.status !== "fulfilled") return [];
-          const geometry = result.value as GeoJSON.GeoJSON;
-          if (geometry.type === "FeatureCollection") return geometry.features;
-          if (geometry.type === "Feature") return [geometry];
-          return [
-            { type: "Feature", geometry, properties: { code: codes[index] } } as GeoJSON.Feature,
-          ];
-        });
-        if (!features.length) throw new Error("missing");
-        return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
-      })
+    const selectedBoundary = selectedRegion
+      ? fetchRegionGeometry(selectedRegion.level, selectedRegion.code).then((geometry) => {
+          const features = geometry.type === "FeatureCollection"
+            ? geometry.features
+            : geometry.type === "Feature"
+              ? [geometry]
+              : [{ type: "Feature", geometry, properties: { code: selectedRegion.code } } as GeoJSON.Feature];
+          return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
+        })
+      : (async () => {
+          const provinces = await fetchProvinces();
+          const legacyProvince = query.province
+            ? provinces.find((item) => item.name === query.province)
+            : null;
+          const codes = legacyProvince ? [legacyProvince.code] : provinceCodeKey.split(",").filter(Boolean);
+          const results = await Promise.allSettled(codes.map((code) => fetchRegionGeometry("province", code)));
+          const features = results.flatMap((result, index) => {
+            if (result.status !== "fulfilled") return [];
+            const geometry = result.value as GeoJSON.GeoJSON;
+            if (geometry.type === "FeatureCollection") return geometry.features;
+            if (geometry.type === "Feature") return [geometry];
+            return [
+              { type: "Feature", geometry, properties: { code: codes[index] } } as GeoJSON.Feature,
+            ];
+          });
+          if (!features.length) throw new Error("missing");
+          return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
+        })();
+    selectedBoundary
       .then((collection) => {
         if (!cancelled) setBoundary(collection);
       })
@@ -665,7 +696,7 @@ function HotspotMap({
     return () => {
       cancelled = true;
     };
-  }, [boundaryEnabled, provinceCodeKey, query.province]);
+  }, [boundaryEnabled, provinceCodeKey, query.province, selectedRegion?.code, selectedRegion?.level]);
 
   useEffect(() => {
     if (!viirsEnabled) {
@@ -676,7 +707,14 @@ function HotspotMap({
     let cancelled = false;
     const from = query.from || event.monitoring_from || event.start_date;
     const to = query.to || event.last_data_at?.slice(0, 10) || from;
-    fetchWildfireHotspots(event.slug, { from, to, sensor: "viirs", confidence: "low,nominal,high" })
+    fetchWildfireHotspots(event.slug, {
+      from,
+      to,
+      sensor: "viirs",
+      confidence: "low,nominal,high",
+      region_level: selectedRegion?.level,
+      region_code: selectedRegion?.code,
+    })
       .then((response) => {
         if (cancelled) return;
         setViirsAvailable(true);
@@ -700,6 +738,8 @@ function HotspotMap({
     query.from,
     query.to,
     viirsEnabled,
+    selectedRegion?.code,
+    selectedRegion?.level,
   ]);
 
   const windDate = query.from || event.monitoring_from || event.start_date;
@@ -718,6 +758,7 @@ function HotspotMap({
         preferCanvas
       >
         <BasemapSwitcher />
+        <FitBoundaryToMap boundary={boundary} focusKey={`${selectedRegion?.level ?? "event"}:${selectedRegion?.code ?? provinceCodeKey}`} />
         <WildfireLayerPanel
           query={query}
           onToggleLayer={onToggleLayer}
@@ -851,8 +892,23 @@ function HotspotMap({
     </div>
   );
 }
-async function fetchRegionGeometry(code: string) {
-  return apiClient.get<GeoJSON.GeoJSON>(`/regions/provinces/${encodeURIComponent(code)}/geometry`);
+async function fetchRegionGeometry(level: WildfireRegionLevel, code: string) {
+  if (level === "province") {
+    return apiClient.get<GeoJSON.GeoJSON>(`/regions/provinces/${encodeURIComponent(code)}/geometry`);
+  }
+  return apiClient.get<GeoJSON.GeoJSON>(
+    `/regions/geometry?endpoint=${level}&code=${encodeURIComponent(code)}`,
+  );
+}
+
+function FitBoundaryToMap({ boundary, focusKey }: { boundary: GeoJSON.GeoJSON | null; focusKey: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!boundary) return;
+    const bounds = L.geoJSON(boundary as GeoJSON.GeoJsonObject).getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+  }, [boundary, focusKey, map]);
+  return null;
 }
 
 export function KarhutlaDetailPage() {
@@ -868,7 +924,6 @@ export function KarhutlaDetailPage() {
   const [timeline, setTimeline] = useState<WildfireTimelinePoint[]>([]);
   const [query, setQuery] = useState(() => parseWildfireQuery(searchParams.toString()));
   const [loading, setLoading] = useState(true);
-  const [boundaryDrawerOpen, setBoundaryDrawerOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [dataRevision, setDataRevision] = useState(0);
@@ -879,7 +934,37 @@ export function KarhutlaDetailPage() {
   );
   const [timelineChart, setTimelineChart] = useState<WildfireTimelineChart>("bar");
   const [timelineSort, setTimelineSort] = useState<WildfireTimelineSort>("date-asc");
+  const [provinceOptions, setProvinceOptions] = useState<RegionOption[]>([]);
+  const [cityOptions, setCityOptions] = useState<RegionOption[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<RegionOption[]>([]);
+  const [villageOptions, setVillageOptions] = useState<RegionOption[]>([]);
+  const [regionOptionsLoading, setRegionOptionsLoading] = useState(false);
+  const [cityOptionsLoading, setCityOptionsLoading] = useState(false);
+  const [districtOptionsLoading, setDistrictOptionsLoading] = useState(false);
+  const [villageOptionsLoading, setVillageOptionsLoading] = useState(false);
+  const [regionOptionsError, setRegionOptionsError] = useState<string | null>(null);
+  const [regionStatistics, setRegionStatistics] = useState<WildfireRegionStatistic[]>([]);
+  const [regionStatisticsLoading, setRegionStatisticsLoading] = useState(false);
+  const [regionStatisticsError, setRegionStatisticsError] = useState<string | null>(null);
   const confidenceKey = query.confidence.join(",");
+  const regionStatisticsLevel: WildfireRegionLevel = query.districtCode
+    ? "village"
+    : query.cityCode
+      ? "district"
+      : query.provinceCode
+        ? "city"
+        : "province";
+  const regionStatisticsParentCode = query.districtCode || query.cityCode || query.provinceCode || undefined;
+  const selectedRegion = query.villageCode
+    ? { level: "village" as const, code: query.villageCode }
+    : query.districtCode
+      ? { level: "district" as const, code: query.districtCode }
+      : query.cityCode
+        ? { level: "city" as const, code: query.cityCode }
+        : query.provinceCode
+          ? { level: "province" as const, code: query.provinceCode }
+          : null;
+  const eventProvinceCodesKey = (event?.province_codes ?? []).join(",");
 
   useEffect(() => {
     fetchWildfireEvent(slug)
@@ -887,17 +972,123 @@ export function KarhutlaDetailPage() {
       .catch(() => undefined);
   }, [slug]);
   useEffect(() => {
+    if (!event) return undefined;
+    let cancelled = false;
+    setRegionOptionsLoading(true);
+    setRegionOptionsError(null);
+    fetchProvinces(event.slug === "kalimantan-2026" ? "Kalimantan" : undefined)
+      .then((options) => {
+        if (cancelled) return;
+        const allowedCodes = new Set(event.province_codes ?? []);
+        setProvinceOptions(allowedCodes.size ? options.filter((option) => allowedCodes.has(option.code)) : options);
+      })
+      .catch(() => {
+        if (!cancelled) setRegionOptionsError("Daftar provinsi tidak dapat dimuat.");
+      })
+      .finally(() => {
+        if (!cancelled) setRegionOptionsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [event?.slug, eventProvinceCodesKey]);
+  useEffect(() => {
+    if (!query.province || query.provinceCode) return;
+    const option = matchRegionOption(provinceOptions, query.province);
+    if (!option) return;
+    const next = { ...query, provinceCode: option.code };
+    setQuery(next);
+    setSearchParams(writeWildfireQuery(searchParams, next), { replace: true });
+  }, [provinceOptions, query, searchParams, setSearchParams]);
+  useEffect(() => {
+    setCityOptions([]);
+    setDistrictOptions([]);
+    setVillageOptions([]);
+    if (!query.provinceCode) {
+      setCityOptionsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setCityOptionsLoading(true);
+    setRegionOptionsError(null);
+    fetchCities(query.provinceCode)
+      .then((options) => { if (!cancelled) setCityOptions(options); })
+      .catch(() => { if (!cancelled) setRegionOptionsError("Daftar kabupaten/kota tidak dapat dimuat."); })
+      .finally(() => { if (!cancelled) setCityOptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [query.provinceCode]);
+  useEffect(() => {
+    if (!query.city || query.cityCode) return;
+    const option = matchRegionOption(cityOptions, query.city);
+    if (!option) return;
+    const next = { ...query, cityCode: option.code };
+    setQuery(next);
+    setSearchParams(writeWildfireQuery(searchParams, next), { replace: true });
+  }, [cityOptions, query, searchParams, setSearchParams]);
+  useEffect(() => {
+    setDistrictOptions([]);
+    setVillageOptions([]);
+    if (!query.cityCode) {
+      setDistrictOptionsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setDistrictOptionsLoading(true);
+    setRegionOptionsError(null);
+    fetchDistricts(query.cityCode)
+      .then((options) => { if (!cancelled) setDistrictOptions(options); })
+      .catch(() => { if (!cancelled) setRegionOptionsError("Daftar kecamatan tidak dapat dimuat."); })
+      .finally(() => { if (!cancelled) setDistrictOptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [query.cityCode]);
+  useEffect(() => {
+    if (!query.district || query.districtCode) return;
+    const option = matchRegionOption(districtOptions, query.district);
+    if (!option) return;
+    const next = { ...query, districtCode: option.code };
+    setQuery(next);
+    setSearchParams(writeWildfireQuery(searchParams, next), { replace: true });
+  }, [districtOptions, query, searchParams, setSearchParams]);
+  useEffect(() => {
+    setVillageOptions([]);
+    if (!query.districtCode) {
+      setVillageOptionsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setVillageOptionsLoading(true);
+    setRegionOptionsError(null);
+    fetchVillages(query.districtCode)
+      .then((options) => { if (!cancelled) setVillageOptions(options); })
+      .catch(() => { if (!cancelled) setRegionOptionsError("Daftar kelurahan/desa tidak dapat dimuat."); })
+      .finally(() => { if (!cancelled) setVillageOptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [query.districtCode]);
+  useEffect(() => {
+    if (!query.village || query.villageCode) return;
+    const option = matchRegionOption(villageOptions, query.village);
+    if (!option) return;
+    const next = { ...query, villageCode: option.code };
+    setQuery(next);
+    setSearchParams(writeWildfireQuery(searchParams, next), { replace: true });
+  }, [query, searchParams, setSearchParams, villageOptions]);
+  useEffect(() => {
     if (!event) return;
     const from = query.from || event.monitoring_from;
     const to =
       query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
     let cancelled = false;
     setLoading(true);
+    setDataError(null);
+    setMapNotice(null);
+    setSummary(null);
+    setFeatures([]);
+    setTimeline([]);
     fetchWildfireHotspots(event.slug, {
       from,
       to,
       sensor: query.sensor === "all" ? undefined : query.sensor,
       confidence: confidenceKey,
+      region_level: selectedRegion?.level,
+      region_code: selectedRegion?.code,
     })
       .then((hotspotResponse) => {
         if (cancelled) return;
@@ -927,7 +1118,33 @@ export function KarhutlaDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [event, query.from, query.to, query.sensor, confidenceKey, language]);
+  }, [event, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code]);
+  useEffect(() => {
+    if (!event) return;
+    let cancelled = false;
+    const from = query.from || event.monitoring_from;
+    const to = query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    setRegionStatisticsLoading(true);
+    setRegionStatisticsError(null);
+    setRegionStatistics([]);
+    fetchWildfireRegionStatistics(event.slug, {
+      level: regionStatisticsLevel,
+      parent_code: regionStatisticsParentCode,
+      from,
+      to,
+      sensor: query.sensor === "all" ? undefined : query.sensor,
+      confidence: confidenceKey,
+    })
+      .then((response) => { if (!cancelled) setRegionStatistics(response.regions); })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setRegionStatistics([]);
+          setRegionStatisticsError(error instanceof ApiError ? error.message : "Statistik wilayah tidak dapat dimuat.");
+        }
+      })
+      .finally(() => { if (!cancelled) setRegionStatisticsLoading(false); });
+    return () => { cancelled = true; };
+  }, [event, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision]);
   const syncData = async () => {
     setSyncing(true);
     setSyncError(null);
@@ -954,6 +1171,35 @@ export function KarhutlaDetailPage() {
     setQuery(merged);
     setSearchParams(writeWildfireQuery(searchParams, merged), { replace: true });
   };
+  const regionStatisticCode = (region: WildfireRegionStatistic) => {
+    const options = regionStatisticsLevel === "province"
+      ? provinceOptions
+      : regionStatisticsLevel === "city"
+        ? cityOptions
+        : regionStatisticsLevel === "district"
+          ? districtOptions
+          : villageOptions;
+    return region.code || matchRegionOption(options, region.name)?.code;
+  };
+  const selectRegionStatistic = (region: WildfireRegionStatistic) => {
+    const code = regionStatisticCode(region);
+    if (!code) return;
+    if (regionStatisticsLevel === "province") {
+      updateQuery({
+        province: region.name, provinceCode: code,
+        city: "", cityCode: "", district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+      });
+    } else if (regionStatisticsLevel === "city") {
+      updateQuery({
+        city: region.name, cityCode: code,
+        district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+      });
+    } else if (regionStatisticsLevel === "district") {
+      updateQuery({ district: region.name, districtCode: code, village: "", villageCode: "", hotspot: "" });
+    } else {
+      updateQuery({ village: region.name, villageCode: code, hotspot: "" });
+    }
+  };
   if (!event)
     return (
       <div className="wildfire-shell">
@@ -962,6 +1208,9 @@ export function KarhutlaDetailPage() {
       </div>
     );
   const activeSummary = summary ?? summaryFromEvent(event);
+  const summaryUnavailable = Boolean(
+    selectedRegion && (dataError || (loading && summary == null)),
+  );
   // When the API has no daily timeline yet, the fallback histogram contains
   // the event total. Include that total in the scale so its inline height
   // stays within 0–100% instead of becoming 697000% for 6,970 hotspots.
@@ -974,9 +1223,9 @@ export function KarhutlaDetailPage() {
     timelineStart;
   const sourceTimeline = timeline.length
     ? timeline
-    : dataError && event.slug === "kalimantan-2026"
+    : !selectedRegion && dataError && event.slug === "kalimantan-2026"
       ? FALLBACK_KALIMANTAN_TIMELINE
-      : activeSummary.total_hotspots > 0
+      : !selectedRegion && activeSummary.total_hotspots > 0
         ? [{ date: timelineStart, count: activeSummary.total_hotspots }]
         : [];
   const timelineData = completeTimeline(sourceTimeline, timelineStart, timelineEnd);
@@ -1091,33 +1340,132 @@ export function KarhutlaDetailPage() {
             </label>
           ))}
         </div>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-primary wildfire-mobile-filter"
-          onClick={() => setBoundaryDrawerOpen((open) => !open)}
-        >
-          <i className="bi bi-sliders" /> {t("wildfire.actions.filters")}
-        </button>
       </div>
-      {boundaryDrawerOpen && (
-        <div className="wildfire-advanced-drawer">
-          <label>
-            {t("wildfire.filters.province")}
-            <input
-              value={query.province}
-              onChange={(e) => updateQuery({ province: e.target.value, city: "" })}
-              placeholder={t("wildfire.filters.provincePlaceholder")}
-            />
-          </label>
-          <label>
-            {t("wildfire.filters.city")}
-            <input
-              value={query.city}
-              onChange={(e) => updateQuery({ city: e.target.value })}
-              placeholder={t("wildfire.filters.cityPlaceholder")}
-            />
-          </label>
-        </div>
+      {event.province_codes.length > 0 && (
+        <section className="wildfire-region-workspace" aria-label="Filter wilayah dan statistik hotspot">
+          <div className="wildfire-region-filter-panel">
+            <div className="wildfire-region-panel-heading">
+              <div>
+                <h2><i className="bi bi-geo-alt" aria-hidden="true" /> Filter wilayah</h2>
+                <span>Pilih batas administrasi untuk menyaring peta dan statistik hotspot.</span>
+              </div>
+              <button
+                type="button"
+                className="wildfire-region-reset"
+                onClick={() => updateQuery({
+                  province: "", provinceCode: "", city: "", cityCode: "",
+                  district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+                })}
+                disabled={!selectedRegion && !query.province && !query.city && !query.district && !query.village}
+              >
+                Hapus filter
+              </button>
+            </div>
+            <div className="wildfire-region-filter-grid">
+              <label>
+                Provinsi
+                <select
+                  value={query.provinceCode || provinceOptions.find((option) => option.name === query.province)?.code || ""}
+                  disabled={regionOptionsLoading}
+                  onChange={(event) => {
+                    const option = provinceOptions.find((item) => item.code === event.target.value);
+                    updateQuery({
+                      province: option?.name ?? "", provinceCode: option?.code ?? "",
+                      city: "", cityCode: "", district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+                    });
+                  }}
+                >
+                  <option value="">Semua provinsi Kalimantan</option>
+                  {provinceOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                </select>
+              </label>
+              <label>
+                Kabupaten/kota
+                <select
+                  value={query.cityCode}
+                  disabled={!query.provinceCode || cityOptionsLoading}
+                  onChange={(event) => {
+                    const option = cityOptions.find((item) => item.code === event.target.value);
+                    updateQuery({
+                      city: option?.name ?? "", cityCode: option?.code ?? "",
+                      district: "", districtCode: "", village: "", villageCode: "", hotspot: "",
+                    });
+                  }}
+                >
+                  <option value="">{cityOptionsLoading ? "Memuat kabupaten/kota…" : "Semua kabupaten/kota"}</option>
+                  {cityOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                </select>
+              </label>
+              <label>
+                Kecamatan
+                <select
+                  value={query.districtCode}
+                  disabled={!query.cityCode || districtOptionsLoading}
+                  onChange={(event) => {
+                    const option = districtOptions.find((item) => item.code === event.target.value);
+                    updateQuery({ district: option?.name ?? "", districtCode: option?.code ?? "", village: "", villageCode: "", hotspot: "" });
+                  }}
+                >
+                  <option value="">{districtOptionsLoading ? "Memuat kecamatan…" : "Semua kecamatan"}</option>
+                  {districtOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                </select>
+              </label>
+              <label>
+                Kelurahan/desa
+                <select
+                  value={query.villageCode}
+                  disabled={!query.districtCode || villageOptionsLoading}
+                  onChange={(event) => {
+                    const option = villageOptions.find((item) => item.code === event.target.value);
+                    updateQuery({ village: option?.name ?? "", villageCode: option?.code ?? "", hotspot: "" });
+                  }}
+                >
+                  <option value="">{villageOptionsLoading ? "Memuat kelurahan/desa…" : "Semua kelurahan/desa"}</option>
+                  {villageOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
+                </select>
+              </label>
+            </div>
+            {regionOptionsError && <div className="wildfire-region-error" role="status">{regionOptionsError}</div>}
+          </div>
+          <div className="wildfire-region-statistics">
+            <div className="wildfire-region-panel-heading">
+              <div>
+                <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
+                <span>
+                  {query.district || query.city || query.province || "Seluruh Kalimantan"} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
+                </span>
+              </div>
+              {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
+            </div>
+            {regionStatisticsError ? (
+              <div className="wildfire-region-error" role="alert">{regionStatisticsError}</div>
+            ) : (
+              <div className="wildfire-region-table-wrap">
+                <table className="wildfire-region-table">
+                  <thead><tr><th>Wilayah</th><th>Jumlah hotspot</th><th>Keyakinan tinggi</th></tr></thead>
+                  <tbody>
+                    {regionStatisticsLoading && regionStatistics.length === 0 ? (
+                      <tr><td colSpan={3}>Memuat statistik batas wilayah…</td></tr>
+                    ) : regionStatistics.length === 0 ? (
+                      <tr><td colSpan={3}>Belum ada data hotspot pada wilayah dan filter ini.</td></tr>
+                    ) : regionStatistics.map((region, index) => (
+                      <tr key={`${region.code}:${region.name}:${index}`}>
+                        <td>
+                          <button type="button" className="wildfire-region-stat-link" onClick={() => selectRegionStatistic(region)} disabled={!regionStatisticCode(region)}>
+                            {region.name}<i className="bi bi-arrow-down-right" aria-hidden="true" />
+                          </button>
+                        </td>
+                        <td>{formatNumber(region.hotspot_count, language)}</td>
+                        <td>{formatNumber(region.high_confidence_count, language)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif SP3STAB. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
+          </div>
+        </section>
       )}
       {loading && (
         <div className="wildfire-filter-loading" role="status" aria-live="polite">
@@ -1131,10 +1479,12 @@ export function KarhutlaDetailPage() {
             <span>
               {loading
                 ? t("wildfire.loading")
-                : `${formatNumber(activeSummary.total_hotspots, language)} ${t("wildfire.stats.hotspots")}`}
+                : summaryUnavailable
+                  ? `— ${t("wildfire.stats.hotspots")}`
+                  : `${formatNumber(activeSummary.total_hotspots, language)} ${t("wildfire.stats.hotspots")}`}
             </span>
             <span>
-              {activeSummary.latest_acquisition_time
+              {!summaryUnavailable && activeSummary.latest_acquisition_time
                 ? `${t("wildfire.latestAcquisition")}: ${formatDate(activeSummary.latest_acquisition_time, language, true)}`
                 : ""}
             </span>
@@ -1284,21 +1634,21 @@ export function KarhutlaDetailPage() {
           <div className="wildfire-stat-grid">
             <Stat
               label={t("wildfire.stats.hotspots")}
-              value={formatNumber(activeSummary.total_hotspots, language)}
+              value={summaryUnavailable ? "—" : formatNumber(activeSummary.total_hotspots, language)}
               tone="orange"
               icon="bi-fire"
               loading={loading && summary == null}
             />
             <Stat
               label={t("wildfire.stats.highConfidence")}
-              value={formatNumber(activeSummary.high_confidence_hotspots, language)}
+              value={summaryUnavailable ? "—" : formatNumber(activeSummary.high_confidence_hotspots, language)}
               tone="red"
               icon="bi-shield-check"
               loading={loading && summary == null}
             />
             <Stat
               label={t("wildfire.stats.regions")}
-              value={formatNumber(activeSummary.affected_regions, language)}
+              value={summaryUnavailable ? "—" : formatNumber(activeSummary.affected_regions, language)}
               tone="teal"
               icon="bi-geo-alt"
               loading={loading && summary == null}
@@ -1306,7 +1656,7 @@ export function KarhutlaDetailPage() {
             <Stat
               label={t("wildfire.stats.burnedArea")}
               value={
-                activeSummary.burned_area_ha == null
+                summaryUnavailable || activeSummary.burned_area_ha == null
                   ? "—"
                   : `${formatNumber(activeSummary.burned_area_ha, language)} ha`
               }
@@ -1317,26 +1667,30 @@ export function KarhutlaDetailPage() {
           </div>
           <section className="wildfire-side-card">
             <h2>{t("wildfire.analysis.title")}</h2>
-            <div className="wildfire-confidence-bars">
-              <Bar
-                label={t("wildfire.confidence.high")}
-                count={activeSummary.high_confidence_hotspots}
-                total={activeSummary.total_hotspots}
-                color="high"
-              />
-              <Bar
-                label={t("wildfire.confidence.nominal")}
-                count={activeSummary.nominal_confidence_hotspots}
-                total={activeSummary.total_hotspots}
-                color="nominal"
-              />
-              <Bar
-                label={t("wildfire.confidence.low")}
-                count={activeSummary.low_confidence_hotspots}
-                total={activeSummary.total_hotspots}
-                color="low"
-              />
-            </div>
+            {summaryUnavailable ? (
+              <p>Ringkasan tingkat keyakinan tidak tersedia untuk wilayah terpilih.</p>
+            ) : (
+              <div className="wildfire-confidence-bars">
+                <Bar
+                  label={t("wildfire.confidence.high")}
+                  count={activeSummary.high_confidence_hotspots}
+                  total={activeSummary.total_hotspots}
+                  color="high"
+                />
+                <Bar
+                  label={t("wildfire.confidence.nominal")}
+                  count={activeSummary.nominal_confidence_hotspots}
+                  total={activeSummary.total_hotspots}
+                  color="nominal"
+                />
+                <Bar
+                  label={t("wildfire.confidence.low")}
+                  count={activeSummary.low_confidence_hotspots}
+                  total={activeSummary.total_hotspots}
+                  color="low"
+                />
+              </div>
+            )}
           </section>
           <section className="wildfire-side-card">
             <h2>{t("wildfire.sources.title")}</h2>

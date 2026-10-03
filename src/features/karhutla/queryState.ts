@@ -6,7 +6,13 @@ export interface WildfireQueryState {
   sensor: string;
   confidence: WildfireConfidence[];
   province: string;
+  provinceCode: string;
   city: string;
+  cityCode: string;
+  district: string;
+  districtCode: string;
+  village: string;
+  villageCode: string;
   layers: string[];
   basemap: string;
   lat: number | null;
@@ -21,7 +27,13 @@ export const DEFAULT_WILDFIRE_QUERY: WildfireQueryState = {
   sensor: "all",
   confidence: ["low", "nominal", "high"],
   province: "",
+  provinceCode: "",
   city: "",
+  cityCode: "",
+  district: "",
+  districtCode: "",
+  village: "",
+  villageCode: "",
   layers: ["hotspot", "boundary"],
   basemap: "",
   lat: null,
@@ -61,7 +73,13 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
     sensor: SENSOR_VALUES.has(params.get("sensor") ?? "") ? (params.get("sensor") ?? "all") : "all",
     confidence: confidence.length ? [...new Set(confidence)] : DEFAULT_WILDFIRE_QUERY.confidence,
     province: params.get("province") ?? "",
+    provinceCode: params.get("province_code") ?? "",
     city: params.get("city") ?? "",
+    cityCode: params.get("city_code") ?? "",
+    district: params.get("district") ?? "",
+    districtCode: params.get("district_code") ?? "",
+    village: params.get("village") ?? "",
+    villageCode: params.get("village_code") ?? "",
     layers: layers.filter((layer) =>
       [
         "hotspot",
@@ -101,7 +119,13 @@ export function writeWildfireQuery(
     sensor: state.sensor === "all" ? null : state.sensor,
     confidence: state.confidence.length === 3 ? null : state.confidence.join(","),
     province: state.province || null,
+    province_code: state.provinceCode || null,
     city: state.city || null,
+    city_code: state.cityCode || null,
+    district: state.district || null,
+    district_code: state.districtCode || null,
+    village: state.village || null,
+    village_code: state.villageCode || null,
     layers: state.layers.join(",") === "hotspot,boundary" ? null : state.layers.join(","),
     basemap: state.basemap || null,
     lat: state.lat == null ? null : state.lat.toFixed(4),

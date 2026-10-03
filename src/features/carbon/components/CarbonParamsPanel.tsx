@@ -17,12 +17,15 @@ import type {
   ClipMode,
 } from "@/features/carbon/types";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import InfoTip from "@/components/ui/InfoTip";
 
 interface Props {
   params: CarbonParams;
   onParamsChange: (patch: Partial<CarbonParams>) => void;
   selectedModel: CarbonModelListItem | null;
   onModelSelect: (model: CarbonModelListItem | null) => void;
+  directLoadEnabled: boolean;
+  onDirectLoadChange: (enabled: boolean) => void;
 }
 
 function groupByAlgorithm(models: CarbonModelListItem[]) {
@@ -126,6 +129,8 @@ export default function CarbonParamsPanel({
   onParamsChange,
   selectedModel,
   onModelSelect,
+  directLoadEnabled,
+  onDirectLoadChange,
 }: Props) {
   const t = useI18nStore((s) => s.t);
   const language = useI18nStore((s) => s.language);
@@ -253,6 +258,7 @@ export default function CarbonParamsPanel({
 
   const datasetMeta = datasets.find((d) => d.value === params.referenceDataset);
   const canReferenceOnly = Boolean(datasetMeta?.referenceOnlyCapable || (datasetMeta?.source === "fallback" && !datasetMeta.requiresConfiguration));
+  const analysisMode = directLoadEnabled ? "global" : params.referenceOnly ? "reference_aoi" : "model";
   const grouped = groupByAlgorithm(models);
   const geeCount = models.filter((m) => m.metadata_json?.gee_deployable).length;
 
@@ -260,56 +266,88 @@ export default function CarbonParamsPanel({
 
   return (
     <div id="carbonParams">
-      <h6 className="mb-3">
-        <i className="bi bi-tree me-1" /> {t("carbon.params.title")}
-      </h6>
-      <div className="alert alert-info py-2">
-        <small>
-          <i className="bi bi-info-circle me-1" />
-          {t("carbon.params.intro")}
-        </small>
+      <div className="carbon-info-heading">
+        <h6>
+          <i className="bi bi-tree me-1" /> {t("carbon.params.title")}
+        </h6>
+        <InfoTip align="end" label={t("carbon.params.moreInfo")} content={t("carbon.params.intro")} />
       </div>
 
-      {canReferenceOnly && (
-        <label className="form-check mb-2">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            checked={params.referenceOnly}
-            onChange={(event) => {
-              const enabled = event.target.checked;
-              onParamsChange({ referenceOnly: enabled, loadOnly: enabled ? params.loadOnly : false, modelName: enabled ? null : params.modelName });
-              if (enabled) onModelSelect(null);
-            }}
+      <div className="mb-3">
+        <div className="carbon-info-label">
+          <label className="form-label" htmlFor="carbonAnalysisMode">{t("carbon.params.analysisMode")}</label>
+          <InfoTip
+            label={t("carbon.params.moreInfo")}
+            content={t(analysisMode === "global"
+              ? "carbon.params.globalModeHint"
+              : analysisMode === "reference_aoi"
+                ? "carbon.params.referenceOnlyHint"
+                : "carbon.params.modelModeHint")}
           />
-          <span className="form-check-label small">Hitung dataset referensi langsung pada AOI (tanpa model)</span>
-        </label>
-      )}
-      {params.referenceOnly && (
+        </div>
+        <select
+          id="carbonAnalysisMode"
+          className="form-select"
+          value={analysisMode}
+          onChange={(event) => {
+            const mode = event.target.value;
+            if (mode === "global") {
+              onParamsChange({ referenceOnly: false, loadOnly: false });
+              onDirectLoadChange(true);
+            } else if (mode === "reference_aoi") {
+              onDirectLoadChange(false);
+              onParamsChange({ referenceOnly: true, loadOnly: false, modelName: null });
+              onModelSelect(null);
+            } else {
+              onDirectLoadChange(false);
+              onParamsChange({ referenceOnly: false, loadOnly: false });
+            }
+          }}
+        >
+          <option value="model" disabled={models.length === 0 && !modelsLoading}>{t("carbon.params.modelMode")}</option>
+          {canReferenceOnly && <option value="reference_aoi">{t("carbon.params.referenceOnlyMode")}</option>}
+          <option value="global">{t("carbon.params.globalMode")}</option>
+        </select>
+      </div>
+      {analysisMode === "reference_aoi" && (
         <>
-          <div className="alert alert-info py-2 mb-2">
-            <small><i className="bi bi-info-circle me-1" />Model terlatih disembunyikan karena hasil akan dihitung langsung dari dataset referensi.</small>
+          <div className="carbon-help-toggle-row mb-3">
+            <label className="form-check">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={params.loadOnly}
+                onChange={(event) => onParamsChange({ loadOnly: event.target.checked })}
+              />
+              <span className="form-check-label small">{t("carbon.params.loadOnlyLabel")}</span>
+            </label>
+            <InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.params.loadOnlyHint")} />
           </div>
-          <label className="form-check mb-3">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              checked={params.loadOnly}
-              onChange={(event) => onParamsChange({ loadOnly: event.target.checked })}
-            />
-            <span className="form-check-label small">Hanya muat layer, tanpa statistik dan total</span>
-            <small className="text-muted d-block ms-4">Menghindari reduceRegion dan perhitungan luas untuk AOI besar.</small>
-          </label>
         </>
       )}
 
       <div className="mb-3">
-        <label className="form-label">
-          <i className="bi bi-database me-1" /> {t("carbon.params.referenceDataset")}
-        </label>
+        <div className="carbon-info-label">
+          <label className="form-label">
+            <i className="bi bi-database me-1" /> {t("carbon.params.referenceDataset")}
+          </label>
+          {datasetMeta && <InfoTip label={t("carbon.params.moreInfo")} content={datasetMeta.description} />}
+        </div>
         <SearchableSelect
           value={params.referenceDataset}
-          onChange={(v) => onParamsChange({ referenceDataset: v })}
+          onChange={(v) => {
+            const nextDataset = datasets.find((dataset) => dataset.value === v);
+            const nextSupportsReferenceOnly = Boolean(
+              nextDataset?.referenceOnlyCapable ||
+              (nextDataset?.source === "fallback" && !nextDataset.requiresConfiguration),
+            );
+            onParamsChange({
+              referenceDataset: v,
+              ...(params.referenceOnly && !nextSupportsReferenceOnly
+                ? { referenceOnly: false, loadOnly: false }
+                : {}),
+            });
+          }}
           options={datasets.map((d) => ({
             value: d.value,
             label: d.deprecated ? `${d.label} · legacy` : d.label,
@@ -355,23 +393,14 @@ export default function CarbonParamsPanel({
         {!datasetsLoading && datasets.length === 0 && (
           <small className="text-muted d-block mt-1">{t("carbon.params.noDatasets")}</small>
         )}
-        {datasetMeta && (
-          <small className="text-muted d-block mt-1">
-            <i className="bi bi-info-circle me-1" />
-            {datasetMeta.description}
-          </small>
-        )}
       </div>
 
-      <div className="mb-3" style={params.referenceOnly ? { display: "none" } : undefined}>
-        <label className="form-label">
-          <i className="bi bi-cpu me-1" /> {t("carbon.params.trainedModel")}
-        </label>
-        <div className="alert alert-info py-2 mb-2">
-          <small>
-            <i className="bi bi-info-circle me-1" />
-            {t("carbon.params.modelIntro")}
-          </small>
+      <div className="mb-3" style={analysisMode !== "model" ? { display: "none" } : undefined}>
+        <div className="carbon-info-label">
+          <label className="form-label">
+            <i className="bi bi-cpu me-1" /> {t("carbon.params.trainedModel")}
+          </label>
+          <InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.params.modelIntro")} />
         </div>
         <SearchableSelect
           value={params.modelName ?? ""}
@@ -528,7 +557,20 @@ export default function CarbonParamsPanel({
       </div>
 
       <div className="mb-3">
-        <label className="form-label">{params.referenceOnly ? "Tahun dataset referensi" : t("carbon.params.datasetYear")}</label>
+        <div className="carbon-info-label">
+          <label className="form-label">{params.referenceOnly ? t("carbon.referenceYearLabel") : t("carbon.params.datasetYear")}</label>
+          {params.referenceOnly && (
+            <InfoTip
+              label={t("carbon.params.moreInfo")}
+              content={params.loadOnly
+                ? t("carbon.params.loadOnlyHint")
+                : t("carbon.params.referenceOnlySummary", {
+                    name: datasetMeta?.label || params.referenceDataset,
+                    year: params.datasetYear,
+                  })}
+            />
+          )}
+        </div>
         <select
           className="form-select"
           id="carbonDatasetYear"
@@ -543,15 +585,7 @@ export default function CarbonParamsPanel({
         </select>
       </div>
 
-      {params.referenceOnly ? (
-        <div className="alert alert-success py-2 mb-3">
-          <small>
-            <i className="bi bi-check-circle me-1" />
-            Dataset <strong>{datasetMeta?.label || params.referenceDataset}</strong> akan dihitung langsung pada AOI
-            menggunakan tahun <strong>{params.datasetYear}</strong>.
-          </small>
-        </div>
-      ) : (
+      {analysisMode === "model" && (
         <>
           <div className="mb-3">
             <label className="form-label">{t("carbon.params.dateRange")}</label>
@@ -601,7 +635,12 @@ export default function CarbonParamsPanel({
           </div>
 
           <div className="mb-3">
-            <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
+            <div className="carbon-info-label">
+              <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
+              {techniques[params.cloudMaskTechnique] && (
+                <InfoTip label={t("carbon.params.moreInfo")} content={techniques[params.cloudMaskTechnique].description} />
+              )}
+            </div>
             <select
               className="form-select"
               value={params.cloudMaskTechnique}
@@ -614,17 +653,20 @@ export default function CarbonParamsPanel({
                 </option>
               ))}
             </select>
-            {techniques[params.cloudMaskTechnique] && (
-              <small className="text-muted d-block mt-1">{techniques[params.cloudMaskTechnique].description}</small>
-            )}
           </div>
         </>
       )}
 
-      <div className="mb-3">
-        <label className="form-label">
-          <i className="bi bi-scissors me-1" /> {t("carbon.params.displayMode")}
-        </label>
+      {analysisMode !== "global" && <div className="mb-3">
+        <div className="carbon-info-label">
+          <label className="form-label">
+            <i className="bi bi-scissors me-1" /> {t("carbon.params.displayMode")}
+          </label>
+          <InfoTip
+            label={t("carbon.params.moreInfo")}
+            content={params.clipMode === "clipped" ? t("carbon.params.clippedDesc") : t("carbon.params.fullTilesDesc")}
+          />
+        </div>
         <div className="btn-group w-100" role="group">
           {(["clipped", "full"] as ClipMode[]).map((mode) => (
             <button
@@ -638,13 +680,9 @@ export default function CarbonParamsPanel({
             </button>
           ))}
         </div>
-        <small className="text-muted d-block mt-1">
-          <i className="bi bi-info-circle me-1" />
-          {params.clipMode === "clipped" ? t("carbon.params.clippedDesc") : t("carbon.params.fullTilesDesc")}
-        </small>
-      </div>
+      </div>}
 
-      <div className="form-check mb-2">
+      {analysisMode === "model" && selectedModel && <div className="carbon-help-toggle-row form-check mb-2">
         <input
           className="form-check-input"
           type="checkbox"
@@ -655,10 +693,11 @@ export default function CarbonParamsPanel({
         <label className="form-check-label" htmlFor="showReference">
           <i className="bi bi-database me-1" /> {t("carbon.params.showReference")}
         </label>
-        <small className="text-muted d-block ms-4">
-          Peta referensi asli ditampilkan sebagai layer pembanding, terpisah dari prediksi model.
-        </small>
-      </div>
+        <InfoTip
+          label={t("carbon.params.moreInfo")}
+          content={t(params.referenceOnly ? "carbon.params.referenceOnlyMapHint" : "carbon.params.showReferenceHint")}
+        />
+      </div>}
     </div>
   );
 }

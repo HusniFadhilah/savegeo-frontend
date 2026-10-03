@@ -88,6 +88,23 @@ export interface WildfireHotspotsResponse {
   };
 }
 
+export type WildfireRegionLevel = "province" | "city" | "district" | "village";
+
+export interface WildfireRegionStatistic {
+  code: string;
+  name: string;
+  hotspot_count: number;
+  high_confidence_count: number;
+}
+
+export interface WildfireRegionStatisticsResponse {
+  level: WildfireRegionLevel;
+  parent_code: string | null;
+  total_hotspots: number;
+  regions: WildfireRegionStatistic[];
+  attribution: string;
+}
+
 export interface WildfireFilters {
   search: string;
   year: string;

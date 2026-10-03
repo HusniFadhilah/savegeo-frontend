@@ -3,6 +3,7 @@ import type { CloudMaskTechnique, CloudMaskTechniqueInfo, SatelliteProvider, Veg
 import { VEGETATION_INDICES } from "@/features/vegetation/indices";
 import { getCloudMaskTechniques, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import InfoTip from "@/components/ui/InfoTip";
 
 interface Props {
   params: VegetationParams;
@@ -151,7 +152,14 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       </div>
 
       <div className="mb-3">
-        <label className="form-label">{t("imagery.cloudTechnique")}</label>
+        <div className="carbon-info-label">
+          <label className="form-label">{t("imagery.cloudTechnique")}</label>
+          {isLandsat ? (
+            <InfoTip label={t("carbon.params.moreInfo")} content={t("imagery.landsatCloudHint")} />
+          ) : (
+            activeTechnique && <InfoTip label={t("carbon.params.moreInfo")} content={activeTechnique.description} />
+          )}
+        </div>
         <select
           className="form-select"
           value={params.cloudMaskTechnique}
@@ -164,13 +172,6 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
             </option>
           ))}
         </select>
-        {isLandsat ? (
-          <small className="text-muted d-block mt-1">
-            {t("imagery.landsatCloudHint")}
-          </small>
-        ) : (
-          activeTechnique && <small className="text-muted d-block mt-1">{activeTechnique.description}</small>
-        )}
       </div>
 
       <div className="mb-3">

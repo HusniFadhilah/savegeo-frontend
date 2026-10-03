@@ -411,6 +411,26 @@ body {
   background-color: #f5f7fa;
 }
 
+/* Standalone disaster routes use the same application chrome as Carbon while
+   keeping their own feature-specific page surfaces and map layouts. */
+.content-wrapper-disaster-route {
+  min-width: 0;
+}
+
+.dashboard-main-disaster-route {
+  min-width: 0;
+  padding: 0;
+}
+
+.dashboard-main-disaster-route > .disaster-shell,
+.dashboard-main-disaster-route > .wildfire-shell {
+  min-height: 100%;
+}
+
+.dashboard-main-disaster-route > .wildfire-shell {
+  min-height: calc(100vh - 56px);
+}
+
 .dashboard-main {
   flex: 1 0 auto;
 }

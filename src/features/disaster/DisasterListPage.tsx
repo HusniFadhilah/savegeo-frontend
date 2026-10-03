@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { env } from "@/config/env";
 import { useConfigStore } from "@/hooks/useConfigStore";
-import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/features/admin/components/SearchableSelect";
@@ -74,7 +73,6 @@ function resolveThumbnailUrl(thumbnail: string | null | undefined): string | nul
  * draft/unpublished events).
  */
 export default function DisasterListPage() {
-  const { user, logout } = useUserAuthStore();
   const { t } = useI18nStore();
   const { getInt } = useConfigStore();
   const yearMin = getInt("year.min", 2015);
@@ -170,19 +168,6 @@ export default function DisasterListPage() {
 
   return (
     <div className="disaster-shell disaster-list-shell">
-      <div className="disaster-topbar">
-        <Link to="/carbon-estimation" className="disaster-brand">
-          <img src="images/savegeo-logo.svg" alt="SAVEGEO" />
-          <span>SAVEGEO</span>
-        </Link>
-        <div className="disaster-topbar-actions">
-          <span>{user?.username}</span>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={logout}>
-            <i className="bi bi-box-arrow-right" /> Logout
-          </button>
-        </div>
-      </div>
-
       <section className="disaster-list-hero">
         <div>
           <span className="disaster-eyebrow">{t("disaster.list.eyebrow")}</span>

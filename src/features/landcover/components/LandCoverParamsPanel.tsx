@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
 import type { LandCoverDatasetCatalog, LandCoverDatasetOption, LandCoverParams } from "@/features/landcover/types";
 import SearchableMultiSelect from "@/components/ui/SearchableMultiSelect";
+import InfoTip from "@/components/ui/InfoTip";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
@@ -170,7 +171,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         </select>
       </div>
 
-      <div className="form-check mb-3">
+      <div className="carbon-help-toggle-row form-check mb-3">
         <input
           className="form-check-input"
           type="checkbox"
@@ -180,14 +181,15 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         />
         <label className="form-check-label" htmlFor="includeImprobableClasses">
           {t("landcover.includeRare")}
-          <small className="text-muted d-block">
-            {t("landcover.includeRareHint")}
-          </small>
         </label>
+        <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.includeRareHint")} />
       </div>
 
       <div className="mb-3">
-        <label className="form-label">{t("landcover.dateMode")}</label>
+        <div className="carbon-info-label">
+          <label className="form-label">{t("landcover.dateMode")}</label>
+          {dateMode === "date" && <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.dateSpecificHint")} />}
+        </div>
         <div className="btn-group w-100" role="group" aria-label="Mode tanggal analisis LULC">
           {(["year", "month", "date"] as const).map((mode) => (
             <button
@@ -205,9 +207,12 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
 
       {dateMode === "year" && (
         <div className="mb-3">
-          <label className="form-label">
-            {t("landcover.monthRange")} <span className="text-muted">(Dynamic World)</span>
-          </label>
+          <div className="carbon-info-label">
+            <label className="form-label">
+              {t("landcover.monthRange")} <span className="text-muted">(Dynamic World)</span>
+            </label>
+            <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.fullYearHint")} />
+          </div>
           <div className="d-flex gap-2">
             <select
               className="form-select"
@@ -235,15 +240,15 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
               ))}
             </select>
           </div>
-          <small className="text-muted">
-            {t("landcover.fullYearHint")}
-          </small>
         </div>
       )}
 
       {dateMode === "month" && (
         <div className="mb-3">
-          <label className="form-label">{t("landcover.selectMonth")}</label>
+          <div className="carbon-info-label">
+            <label className="form-label">{t("landcover.selectMonth")}</label>
+            <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.monthHint")} />
+          </div>
           <select
             className="form-select"
             id="lcSelectedMonth"
@@ -256,9 +261,6 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
               </option>
             ))}
           </select>
-          <small className="text-muted d-block mt-1">
-            {t("landcover.monthHint")}
-          </small>
         </div>
       )}
 
@@ -285,11 +287,6 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
                 onChange={(e) => onParamsChange({ endDate: e.target.value })}
               />
             </div>
-          </div>
-          <div className="alert alert-info py-2 px-2 mt-2 mb-0 small">
-            <i className="bi bi-info-circle me-1" />
-            <strong>Dynamic World/GeoSave Copernicus</strong> mendukung tanggal spesifik. Dataset
-            tahunan menggunakan tahun dari tanggal mulai.
           </div>
         </div>
       )}

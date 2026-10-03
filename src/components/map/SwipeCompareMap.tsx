@@ -408,6 +408,7 @@ export default function SwipeCompareMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const restorePanRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const getFullscreenTarget = useCallback(() => containerRef.current, []);
   const draggingRef = useRef(false);
   const frameRef = useRef<number>();
   const markAfterPaneReady = useCallback(() => setAfterPaneReady(true), []);
@@ -476,6 +477,7 @@ export default function SwipeCompareMap({
         center={center}
         zoom={zoom}
         maxZoom={maxZoom}
+        fullscreenTarget={getFullscreenTarget}
         showGlobeControl={showGlobeControl}
         historicalDate={historicalDate}
         onMapReady={(map) => {

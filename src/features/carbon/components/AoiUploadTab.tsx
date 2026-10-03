@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import InfoTip from "@/components/ui/InfoTip";
 import { interpolate } from "@/i18n/translations";
 import type { AoiFeature } from "@/types/map";
 
@@ -158,7 +159,9 @@ export default function AoiUploadTab({ onApply }: Props) {
           }}
         />
       </div>
-      <small className="text-muted d-block mt-1">{t("carbon.aoiUpload.formatHint")}</small>
+      <div className="carbon-help-corner">
+        <InfoTip align="end" label={t("carbon.params.moreInfo")} content={t("carbon.aoiUpload.formatHint")} />
+      </div>
       {status && (
         <div className={`alert alert-${status.type} py-2 mt-2 mb-0 small`}>{status.text}</div>
       )}

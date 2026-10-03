@@ -23,7 +23,7 @@ import type {
   FirmsSourceId,
   FirmsSourcesResponse,
 } from "./types";
-import type { WildfireEventsResponse, WildfireHotspotsResponse } from "@/features/karhutla/types";
+import type { WildfireEventsResponse, WildfireHotspotsResponse, WildfireRegionStatisticsResponse } from "@/features/karhutla/types";
 
 /**
  * Disaster-mapping API calls. Two families live in this file:
@@ -254,6 +254,15 @@ export function fetchWildfireSummary(slug: string, query: Record<string, string 
 export function fetchWildfireHotspots(slug: string, query: Record<string, string | number | undefined> = {}) {
   return userGet<WildfireHotspotsResponse>(
     `/disasters/wildfires/events/${encodeURIComponent(slug)}/hotspots${buildQuery(query)}`,
+  );
+}
+
+export function fetchWildfireRegionStatistics(
+  slug: string,
+  query: Record<string, string | number | undefined>,
+) {
+  return userGet<WildfireRegionStatisticsResponse>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/region-statistics${buildQuery(query)}`,
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import RichText from "@/components/ui/RichText";
+import InfoTip from "@/components/ui/InfoTip";
 import type { AoiFeature } from "@/types/map";
 
 interface Props {
@@ -50,9 +51,12 @@ export default function AoiCoordinateTab({ onApply, lat, lon, onLatChange, onLon
 
   return (
     <div>
-      <div className="alert alert-info py-2 small mb-3">
-        <i className="bi bi-info-circle me-1" />
-        <RichText text={t("carbon.aoiCoord.info")} />
+      <div className="carbon-help-corner">
+        <InfoTip
+          align="end"
+          label={t("carbon.params.moreInfo")}
+          content={<RichText text={t("carbon.aoiCoord.info")} />}
+        />
       </div>
       <div className="row">
         <div className="col-md-4 mb-3">

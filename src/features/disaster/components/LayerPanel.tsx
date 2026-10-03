@@ -17,6 +17,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   change_detection: "Change Detection",
   segmentation: "Satellite imagery / Segmentation",
   water_inundation: "Water / Inundation",
+  land_cover: "Land Cover",
   building_exposure: "Building Exposure",
   road_exposure: "Road Exposure",
   landcover_impact: "Landcover Impact",
@@ -26,8 +27,28 @@ const CATEGORY_LABELS: Record<string, string> = {
   damage_assessment: "Damage Candidate",
 };
 
+const LAYER_LABELS: Record<string, string> = {
+  dynamic_world_v1: "Dynamic World",
+  earthquake_building_segmentation_v1: "Building segmentation",
+  earthquake_road_impact_v1: "Road impact",
+};
+
 function categoryLabel(category: string): string {
-  return CATEGORY_LABELS[category] || category;
+  const normalized = category.toLowerCase();
+  return CATEGORY_LABELS[normalized] || normalized.replace(/[_-]+/g, " ");
+}
+
+function layerInfo(entry: DisasterAnalysisEntry): string {
+  return [
+    !entry.available && entry.availability_reason?.length
+      ? `Belum tersedia: ${entry.availability_reason.join("; ")}`
+      : !entry.available
+        ? "Layer ini belum tersedia."
+        : null,
+    entry.damage_model === false ? "Indikator/paparan; bukan kerusakan terkonfirmasi." : null,
+    entry.validation_status === "review_required" ? "Perlu ditinjau sebelum publikasi." : null,
+    ...(entry.limitations ?? []).slice(0, 2),
+  ].filter(Boolean).join(" ");
 }
 
 /**
@@ -96,12 +117,20 @@ export default function LayerPanel({
                   disabled={!entry.available}
                   onChange={() => onToggleAnalysis(entry.model_id)}
                 />
-                <label className="form-check-label small" htmlFor={`layer-${entry.model_id}`}>
-                  {entry.user_label}
-                  {!entry.available && <span className="text-muted ms-1">(Belum tersedia)</span>}
+                <label className={`form-check-label small ${entry.available ? "" : "text-muted"}`} htmlFor={`layer-${entry.model_id}`}>
+                  {LAYER_LABELS[entry.model_id] ?? entry.user_label}
                 </label>
-                {entry.damage_model === false && <div className="text-muted ms-4 small">Indikator/paparan; bukan kerusakan terkonfirmasi</div>}
-                {entry.validation_status === "review_required" && <div className="text-warning ms-4 small">Review required sebelum publikasi</div>}
+                {layerInfo(entry) && (
+                  <button
+                    type="button"
+                    className="btn p-0 border-0 text-secondary"
+                    style={{ lineHeight: 1, flex: "0 0 auto" }}
+                    title={layerInfo(entry)}
+                    aria-label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}: ${layerInfo(entry)}`}
+                  >
+                    <i className="bi bi-info-circle" aria-hidden="true" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

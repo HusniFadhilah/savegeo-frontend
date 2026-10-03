@@ -35,6 +35,8 @@ interface Props {
   zoom?: number;
   maxZoom?: number;
   className?: string;
+  /** Optional ancestor to fullscreen when sibling overlays must stay visible. */
+  fullscreenTarget?: () => HTMLElement | null;
   /** Render the shared 3D/globe shortcut for this map instance. */
   showGlobeControl?: boolean;
   /** Analysis date used to select an Esri Wayback snapshot for the basemap. */
@@ -94,7 +96,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, fullscreenTarget, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false }: Props) {
   const t = useI18nStore((state) => state.t);
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
@@ -155,7 +157,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
         <Pane name="historical-imagery" style={{ zIndex: 250, pointerEvents: "none" }} />
-        <FullscreenControl />
+        <FullscreenControl fullscreenTarget={fullscreenTarget} />
         <ZoomScaleControl />
         <ImageryAttribution />
         <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />

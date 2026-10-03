@@ -1,5 +1,30 @@
 .swipe-label-horizontal { bottom: auto; }
 
+.swipe-compare-wrap:fullscreen,
+.swipe-compare-wrap:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.swipe-compare-wrap:fullscreen > .map-view-shell,
+.swipe-compare-wrap:fullscreen > .map-view-shell > div:first-child,
+.swipe-compare-wrap:fullscreen .leaflet-container,
+.swipe-compare-wrap:-webkit-full-screen > .map-view-shell,
+.swipe-compare-wrap:-webkit-full-screen > .map-view-shell > div:first-child,
+.swipe-compare-wrap:-webkit-full-screen .leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.swipe-compare-wrap:fullscreen .swipe-label,
+.swipe-compare-wrap:-webkit-full-screen .swipe-label {
+  bottom: 12px;
+}
+
 .swipe-status {
   position: absolute;
   top: 50px;
