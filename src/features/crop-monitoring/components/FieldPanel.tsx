@@ -6,6 +6,7 @@ import { useAoiStore } from "@/hooks/useAoiStore";
 import { useFieldStore } from "@/hooks/useFieldStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
+import CropPanelAccordion from "./CropPanelAccordion";
 import type { AoiState } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
 import type { Commodity, Field } from "../types";
@@ -115,11 +116,8 @@ export default function FieldPanel({ commodities }: Props) {
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-header">
-        <i className="bi bi-geo-alt-fill me-1" /> {t("crop.field.title")}
-      </div>
-      <div className="card-body">
+    <>
+      <CropPanelAccordion title={t("crop.field.title")} icon="bi-geo-alt-fill" defaultOpen>
         <ul className="nav nav-tabs mb-3">
           <li className="nav-item">
             <button type="button" className={`nav-link ${activeTab === "existing" ? "active" : ""}`} onClick={() => setActiveTab("existing")}>
@@ -245,8 +243,7 @@ export default function FieldPanel({ commodities }: Props) {
             </button>
           </div>
         )}
-      </div>
-
+      </CropPanelAccordion>
       <AoiPickerModal
         open={aoiModalOpen}
         id="cropFieldAoiModalMap"
@@ -256,6 +253,6 @@ export default function FieldPanel({ commodities }: Props) {
         onAoiChange={handleModalAoiChange}
         onClose={() => setAoiModalOpen(false)}
       />
-    </div>
+    </>
   );
 }

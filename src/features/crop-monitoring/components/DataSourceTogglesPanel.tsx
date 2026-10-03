@@ -1,5 +1,6 @@
 import type { SubAnalysisKey, WeatherProvider } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import CropPanelAccordion from "./CropPanelAccordion";
 
 interface Props {
   sentinel1Enabled: boolean;
@@ -53,11 +54,7 @@ export default function DataSourceTogglesPanel({
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-header">
-        <i className="bi bi-sliders me-1" /> {t("crop.sources.title")}
-      </div>
-      <div className="card-body">
+    <CropPanelAccordion title={t("crop.sources.title")} icon="bi-sliders">
         <label className="form-label">{t("crop.sources.imagery")}</label>
         <div className="form-check">
           <input
@@ -110,7 +107,6 @@ export default function DataSourceTogglesPanel({
             </label>
           </div>
         ))}
-      </div>
-    </div>
+    </CropPanelAccordion>
   );
 }

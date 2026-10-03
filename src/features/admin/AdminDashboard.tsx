@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { hasAdminPermission } from "@/auth/access";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import type { Language } from "@/i18n/translations";
 import "@/styles/admin.css";
 import { AdminContext, type ToastType } from "./AdminContext";
 import type { AdminSection } from "./types";
@@ -139,6 +140,8 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
   const [titleKey, subtitleKey] = TITLES[section];
   const initials = (user?.username ?? "AD").slice(0, 2).toUpperCase();
   const canReinitializeEe = hasAdminPermission(user, "credential.write");
+  const eeStatusLabel = eeInitialized === null ? t("admin.checking") : eeInitialized ? t("admin.eeActive") : t("admin.eeOffline");
+  const eeStatusIcon = eeInitialized === null ? "bi-cloud-arrow-down-fill" : eeInitialized ? "bi-cloud-check-fill" : "bi-cloud-slash-fill";
 
   return (
     <AdminContext.Provider value={{ notify, refreshHealth, eeInitialized }}>
@@ -202,16 +205,25 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
                 </div>
               </div>
               <div className="topbar-right">
-                <div className="admin-language-switch" role="group" aria-label={t("language.label")}>
-                  <button type="button" className={`btn-sm ${language === "id" ? "active" : ""}`} onClick={() => setLanguage("id")} aria-pressed={language === "id"}>ID</button>
-                  <button type="button" className={`btn-sm ${language === "en" ? "active" : ""}`} onClick={() => setLanguage("en")} aria-pressed={language === "en"}>EN</button>
+                <div className="admin-language-switch">
+                  <select
+                    className="admin-language-select"
+                    value={language}
+                    onChange={(event) => setLanguage(event.currentTarget.value as Language)}
+                    aria-label={t("language.label")}
+                    title={t("language.label")}
+                  >
+                    <option value="id">ID</option>
+                    <option value="en">EN</option>
+                  </select>
                 </div>
-                <div className={`ee-badge ${eeInitialized ? "ok" : "fail"}`}>
-                  <div className="ee-dot" />
-                  <span>{eeInitialized === null ? t("admin.checking") : eeInitialized ? t("admin.eeActive") : t("admin.eeOffline")}</span>
+                <div className={`ee-badge ${eeInitialized ? "ok" : "fail"}`} role="status" aria-label={eeStatusLabel} title={eeStatusLabel}>
+                  <div className="ee-dot" aria-hidden="true" />
+                  <i className={`bi ${eeStatusIcon} ee-status-icon`} aria-hidden="true" />
+                  <span className="ee-badge-label">{eeStatusLabel}</span>
                 </div>
-                {canReinitializeEe && <button type="button" className="btn-sm" disabled={reiniting} onClick={handleReinit}>
-                  <i className="bi bi-arrow-repeat" /> {t("admin.reinitEe")}
+                {canReinitializeEe && <button type="button" className="btn-sm ee-reinit-btn" disabled={reiniting} onClick={handleReinit} aria-label={t("admin.reinitEe")} title={t("admin.reinitEe")}>
+                  <i className="bi bi-arrow-repeat" aria-hidden="true" /> <span className="ee-reinit-label">{t("admin.reinitEe")}</span>
                 </button>}
               </div>
             </div>

@@ -1,5 +1,6 @@
 import type { CropMonitoringPeriodMode } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import CropPanelAccordion from "./CropPanelAccordion";
 
 interface Props {
   mode: CropMonitoringPeriodMode;
@@ -41,11 +42,7 @@ export default function MonitoringPeriodPanel({
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-header">
-        <i className="bi bi-calendar-range me-1" /> {t("crop.period.monitoringTitle")}
-      </div>
-      <div className="card-body">
+    <CropPanelAccordion title={t("crop.period.monitoringTitle")} icon="bi-calendar-range">
         <div className="mb-2">
           <label className="form-label">{t("crop.period.mode")}</label>
           <select className="form-select form-select-sm" value={mode} onChange={(e) => onModeChange(e.target.value as CropMonitoringPeriodMode)}>
@@ -99,7 +96,6 @@ export default function MonitoringPeriodPanel({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </CropPanelAccordion>
   );
 }

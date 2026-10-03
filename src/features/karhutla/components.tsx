@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import MapView from "@/components/map/MapView";
+import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber } from "@/hooks/useI18nStore";
@@ -376,8 +377,9 @@ function OverviewValueSkeleton({ label, loadingLabel }: { label: string; loading
 
 function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
   const navigate = useNavigate();
+  const mapShellRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="wildfire-summary-map" aria-label="Peta ringkasan kejadian karhutla">
+    <div ref={mapShellRef} className="wildfire-summary-map" aria-label="Peta ringkasan kejadian karhutla">
       <MapContainer
         center={[-1.7, 113.4]}
         zoom={4}
@@ -407,6 +409,7 @@ function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
           </CircleMarker>
         ))}
       </MapContainer>
+      <MapHeightResizeHandle mapShellRef={mapShellRef} />
     </div>
   );
 }

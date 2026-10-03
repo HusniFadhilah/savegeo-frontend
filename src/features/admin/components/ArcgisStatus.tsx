@@ -109,11 +109,11 @@ export default function ArcgisStatus() {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label" htmlFor="arcgis-portal-url">{t("admin.arcgis.portalField")}</label>
-                <input id="arcgis-portal-url" className="form-control" type="url" required value={portalUrl} onChange={(event) => setPortalUrl(event.target.value)} placeholder="https://www.arcgis.com" />
+                <input id="arcgis-portal-url" className="form-control form-control-sm" type="url" required value={portalUrl} onChange={(event) => setPortalUrl(event.target.value)} placeholder="https://www.arcgis.com" />
               </div>
               <div className="col-md-6">
                 <label className="form-label" htmlFor="arcgis-auth-mode">{t("admin.arcgis.authModeField")}</label>
-                <select id="arcgis-auth-mode" className="form-select" value={authMode} onChange={(event) => setAuthMode(event.target.value as AuthMode)}>
+                <select id="arcgis-auth-mode" className="form-select form-select-sm" value={authMode} onChange={(event) => setAuthMode(event.target.value as AuthMode)}>
                   <option value="none">{t("admin.arcgis.publicMode")}</option>
                   <option value="api_key">API key</option>
                 </select>
@@ -121,13 +121,13 @@ export default function ArcgisStatus() {
               {authMode === "api_key" && (
                 <div className="col-md-8">
                   <label className="form-label" htmlFor="arcgis-api-key">{t("admin.arcgis.keyField")}</label>
-                  <input id="arcgis-api-key" className="form-control" type="password" autoComplete="new-password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={status?.configured ? t("admin.arcgis.keyPlaceholderConfigured") : t("admin.arcgis.keyPlaceholder")} />
+                  <input id="arcgis-api-key" className="form-control form-control-sm" type="password" autoComplete="new-password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={status?.configured ? t("admin.arcgis.keyPlaceholderConfigured") : t("admin.arcgis.keyPlaceholder")} />
                   <div className="form-text">{t("admin.arcgis.keyHint")}</div>
                 </div>
               )}
               <div className="col-md-4">
                 <label className="form-label" htmlFor="arcgis-timeout">{t("admin.arcgis.timeoutField")}</label>
-                <input id="arcgis-timeout" className="form-control" type="number" min={1} max={120} value={requestTimeout} onChange={(event) => setRequestTimeout(Number(event.target.value))} />
+                <input id="arcgis-timeout" className="form-control form-control-sm" type="number" min={1} max={120} value={requestTimeout} onChange={(event) => setRequestTimeout(Number(event.target.value))} />
               </div>
             </div>
             <div className="d-flex justify-content-end mt-3">

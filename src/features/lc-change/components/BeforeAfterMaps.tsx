@@ -60,8 +60,10 @@ interface Props {
   changeMapError: string | null;
   startMonth?: number;
   endMonth?: number;
-  startDate?: string;
-  endDate?: string;
+  startDateA?: string;
+  endDateA?: string;
+  startDateB?: string;
+  endDateB?: string;
   dwProbabilityThreshold?: number;
 }
 
@@ -84,8 +86,10 @@ export default function BeforeAfterMaps({
   changeMapError,
   startMonth = 1,
   endMonth = 12,
-  startDate,
-  endDate,
+  startDateA,
+  endDateA,
+  startDateB,
+  endDateB,
   dwProbabilityThreshold,
 }: Props) {
   const { t, language } = useI18nStore();
@@ -121,12 +125,19 @@ export default function BeforeAfterMaps({
         longitude,
         start_month: startMonth,
         end_month: endMonth,
-        ...(startDate && endDate ? { start_date: startDate, end_date: endDate } : {}),
         ...(dwProbabilityThreshold != null ? { dw_probability_threshold: dwProbabilityThreshold } : {}),
       };
       const results = await Promise.all([
-        identifyLandCoverPoint({ ...base, year: yearA }),
-        identifyLandCoverPoint({ ...base, year: yearB }),
+        identifyLandCoverPoint({
+          ...base,
+          year: yearA,
+          ...(startDateA && endDateA ? { start_date: startDateA, end_date: endDateA } : {}),
+        }),
+        identifyLandCoverPoint({
+          ...base,
+          year: yearB,
+          ...(startDateB && endDateB ? { start_date: startDateB, end_date: endDateB } : {}),
+        }),
       ]);
       if (requestId === inspectRequestRef.current) setInspectResults(results);
     } catch (error) {
@@ -239,7 +250,7 @@ export default function BeforeAfterMaps({
       {view === "split" && (
         <div className="row g-2">
           <div className="col-md-6">
-            <MapView id="lcChangeBeforeMap" showGlobeControl historicalDate={startDate ?? (yearA != null ? `${yearA}-12-31` : undefined)}>
+            <MapView id="lcChangeBeforeMap" showGlobeControl historicalDate={endDateA ?? (yearA != null ? `${yearA}-12-31` : undefined)}>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
@@ -251,7 +262,7 @@ export default function BeforeAfterMaps({
             <MapLegend title={t("lc.landCoverYear", { year: yearA ?? "" })} entries={beforeLegend} />
           </div>
           <div className="col-md-6">
-            <MapView id="lcChangeAfterMap" showGlobeControl={false} historicalDate={endDate ?? (yearB != null ? `${yearB}-12-31` : undefined)}>
+            <MapView id="lcChangeAfterMap" showGlobeControl={false} historicalDate={endDateB ?? (yearB != null ? `${yearB}-12-31` : undefined)}>
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
@@ -299,7 +310,7 @@ export default function BeforeAfterMaps({
             orientation={swipeOrientation}
             onOrientationChange={setSwipeOrientation}
             opacity={opacity}
-            historicalDate={endDate ?? startDate ?? (yearB != null ? `${yearB}-12-31` : yearA != null ? `${yearA}-12-31` : undefined)}
+            historicalDate={endDateB ?? endDateA ?? (yearB != null ? `${yearB}-12-31` : yearA != null ? `${yearA}-12-31` : undefined)}
             bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
             clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
           >

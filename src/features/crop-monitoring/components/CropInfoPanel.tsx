@@ -3,6 +3,7 @@ import { useFieldStore } from "@/hooks/useFieldStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { updateField } from "../api";
 import { ApiError } from "@/services/apiClient";
+import CropPanelAccordion from "./CropPanelAccordion";
 import type { Commodity, Field, UpdateFieldPayload } from "../types";
 
 interface Props {
@@ -39,12 +40,11 @@ export default function CropInfoPanel({ commodities, field }: Props) {
   const disabled = !field;
 
   return (
-    <div className="card mb-3">
-      <div className="card-header">
-        <i className="bi bi-clipboard-data me-1" /> {t("crop.info.title")}
-        {saving && <span className="spinner-border spinner-border-sm ms-2" />}
-      </div>
-      <div className="card-body">
+    <CropPanelAccordion
+      title={t("crop.info.title")}
+      icon="bi-clipboard-data"
+      headerTrailing={saving && <span className="spinner-border spinner-border-sm" />}
+    >
         {disabled && (
           <div className="alert alert-secondary py-2 small mb-0">
             {t("crop.info.selectHint")}
@@ -103,7 +103,6 @@ export default function CropInfoPanel({ commodities, field }: Props) {
             {error && <div className="alert alert-danger py-1 px-2 mt-2 small mb-0">{error}</div>}
           </>
         )}
-      </div>
-    </div>
+    </CropPanelAccordion>
   );
 }

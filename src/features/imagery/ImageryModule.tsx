@@ -408,6 +408,7 @@ export default function ImageryModule() {
   const [mapViewportAoi, setMapViewportAoi] = useState<AoiFeature | null>(null);
   const [sceneSearchRegion, setSceneSearchRegion] = useState<AoiFeature | null>(null);
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
+  const [settingsCollapsed, setSettingsCollapsed] = useState(false);
 
   const handleAoiChange = useCallback(
     (feature: AoiFeature | null) => {
@@ -1205,11 +1206,35 @@ export default function ImageryModule() {
         </div>
       </section>
 
-      <div className="row g-3">
-        <div className="col-lg-3">
-        <div className="sidebar">
+      <div className={`row g-3 analysis-settings-layout ${settingsCollapsed ? "settings-collapsed" : ""}`}>
+        {settingsCollapsed ? (
+          <div className="col-lg-auto analysis-settings-rail">
+            <button
+              type="button"
+              className="analysis-settings-expand"
+              onClick={() => setSettingsCollapsed(false)}
+              aria-expanded={!settingsCollapsed}
+              aria-label="Buka panel citra satelit"
+              title="Buka panel citra satelit"
+            >
+              <i className="bi bi-chevron-double-right" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <div className="col-lg-3">
+        <div className="sidebar analysis-settings-panel">
+          <button
+            type="button"
+            className="analysis-settings-collapse btn-light"
+            onClick={() => setSettingsCollapsed(true)}
+            aria-expanded={!settingsCollapsed}
+            aria-label="Sembunyikan panel citra satelit"
+            title="Sembunyikan panel citra satelit"
+          >
+            <i className="bi bi-chevron-double-left" aria-hidden="true" />
+          </button>
           <h5 className="mb-3">
-            <i className="fas fa-camera" /> {t("imagery.sidebarTitle")}
+            <i className="bi bi-camera-fill" aria-hidden="true" /> {t("imagery.sidebarTitle")}
           </h5>
           <p className="text-muted small">
             {t("imagery.sidebarDescription")}
@@ -1243,6 +1268,37 @@ export default function ImageryModule() {
           </div>
 
           <hr />
+
+          <div className="mb-3">
+            <label className="form-label fw-bold">
+              <i className="fas fa-calendar" /> {t("imagery.dateRange")}
+            </label>
+            <div className="d-flex align-items-center gap-2">
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate}
+              />
+              <span className="text-muted">–</span>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                max={todayIso()}
+              />
+            </div>
+            <small className="text-muted">
+              {isHimawari
+                ? "Frame full-disk yang saat ini tersedia dari JMA akan dicari pada tanggal UTC yang dipilih."
+                : isEsriWayback
+                  ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
+                  : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
+            </small>
+          </div>
 
           <div className="mb-3">
             <label className="form-label fw-bold" htmlFor="imagerySatellite">
@@ -1453,37 +1509,6 @@ export default function ImageryModule() {
             </ProviderFeatureAccordion>
           )}
 
-          <div className="mb-3">
-            <label className="form-label fw-bold">
-              <i className="fas fa-calendar" /> {t("imagery.dateRange")}
-            </label>
-            <div className="d-flex align-items-center gap-2">
-              <input
-                type="date"
-                className="form-control form-control-sm"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                max={endDate}
-              />
-              <span className="text-muted">–</span>
-              <input
-                type="date"
-                className="form-control form-control-sm"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate}
-                max={todayIso()}
-              />
-            </div>
-            <small className="text-muted">
-              {isHimawari
-                ? "Frame full-disk yang saat ini tersedia dari JMA akan dicari pada tanggal UTC yang dipilih."
-                : isEsriWayback
-                  ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
-                  : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
-            </small>
-          </div>
-
           {isHimawari && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="himawariOpacity">
@@ -1586,8 +1611,9 @@ export default function ImageryModule() {
           )}
         </div>
       </div>
+        )}
 
-      <div className="col-lg-9">
+      <div className={settingsCollapsed ? "col" : "col-lg-9"}>
         {isHimawari && (
           <div className="card border-info mb-3">
             <div className="card-body d-flex align-items-start gap-3">

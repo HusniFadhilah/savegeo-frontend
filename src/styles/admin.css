@@ -319,6 +319,25 @@
   border-color: var(--green, #1f7a36);
 }
 
+.admin-panel .admin-language-select {
+  min-width: 62px;
+  height: 30px;
+  padding: 3px 20px 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background-color: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-panel .admin-language-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .admin-panel .ee-badge {
   display: flex;
   align-items: center;
@@ -328,6 +347,10 @@
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid;
+}
+
+.admin-panel .ee-status-icon {
+  display: none;
 }
 
 .admin-panel .ee-badge.ok {
@@ -1509,6 +1532,58 @@
   .admin-panel .three-col,
   .admin-panel .four-col {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 1024px) {
+  .admin-panel .topbar-left > div:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .admin-panel .topbar-title,
+  .admin-panel .topbar-sub {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-panel .topbar-right {
+    flex: none;
+    gap: 6px;
+  }
+
+  .admin-panel .admin-language-select {
+    min-width: 60px;
+    height: 34px;
+  }
+
+  .admin-panel .ee-badge {
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .admin-panel .ee-dot,
+  .admin-panel .ee-badge-label,
+  .admin-panel .ee-reinit-label {
+    display: none;
+  }
+
+  .admin-panel .ee-status-icon {
+    display: inline-block;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .admin-panel .ee-reinit-btn {
+    display: inline-flex;
+    align-items: center;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+    padding: 0;
   }
 }
 

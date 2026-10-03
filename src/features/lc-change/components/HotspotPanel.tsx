@@ -16,11 +16,11 @@ interface Props {
   yearB: number | null;
   startMonth: number;
   endMonth: number;
-  /** "Mode Tanggal Analisis: Tanggal" - explicit day-level window (Dynamic World
-   * only; re-yeared per from_year/to_year on the backend). undefined = use
-   * startMonth/endMonth instead (Tahun/Bulan modes). */
-  startDate?: string;
-  endDate?: string;
+  /** Dynamic World date range clipped to each compared year. */
+  startDateA?: string;
+  endDateA?: string;
+  startDateB?: string;
+  endDateB?: string;
 }
 
 const AOI_STYLE = { color: "#94a3b8", weight: 1, dashArray: "4 3", fillOpacity: 0 };
@@ -60,7 +60,18 @@ function FlyToHotspot({ target }: { target: LcHotspot | null }) {
  * transition and (Dynamic World only) confidence; clicking a row or a
  * polygon on the map flies to/highlights it.
  */
-export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, endMonth, startDate, endDate }: Props) {
+export default function HotspotPanel({
+  aoi,
+  dataset,
+  yearA,
+  yearB,
+  startMonth,
+  endMonth,
+  startDateA,
+  endDateA,
+  startDateB,
+  endDateB,
+}: Props) {
   const [minAreaHa, setMinAreaHa] = useState(1);
   const [topN, setTopN] = useState(20);
   const [running, setRunning] = useState(false);
@@ -83,7 +94,14 @@ export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, e
         to_year: yearB,
         start_month: startMonth,
         end_month: endMonth,
-        ...(startDate && endDate ? { start_date: startDate, end_date: endDate } : {}),
+        ...(startDateA && endDateA && startDateB && endDateB
+          ? {
+              from_start_date: startDateA,
+              from_end_date: endDateA,
+              to_start_date: startDateB,
+              to_end_date: endDateB,
+            }
+          : {}),
         min_area_ha: minAreaHa,
         top_n: topN,
       });
@@ -102,7 +120,7 @@ export default function HotspotPanel({ aoi, dataset, yearA, yearB, startMonth, e
     setResult(null);
     setSelected(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aoi, dataset, yearA, yearB, startMonth, endMonth, startDate, endDate]);
+  }, [aoi, dataset, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB]);
 
   const hotspots = result?.hotspots ?? [];
   const maxArea = useMemo(() => Math.max(1, ...hotspots.map((h) => h.area_ha)), [hotspots]);

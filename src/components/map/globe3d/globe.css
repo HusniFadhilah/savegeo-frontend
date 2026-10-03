@@ -5,21 +5,88 @@
 .cesium-globe .cesium-viewer-bottom { max-width: calc(100% - 8px); background: #071a2ccc; }
 .cesium-globe .cesium-credit-textContainer { font-size: 11px; }
 .globe-controls { position: absolute; top: 8px; left: 10px; display: flex; flex-wrap: wrap; gap: 0; max-width: calc(100% - 160px); z-index: 3; }
-.globe-controls button, .globe-panels summary, .user-location-control summary, .location-panel button, .globe-settings select { min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid #ccc; border-radius: 0; background: #fff; color: #1f2937; cursor: pointer; }
+.globe-controls button,
+.globe-panels summary,
+.user-location-control summary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 0;
+  background: #fff;
+  color: #1f2937;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.globe-controls button:nth-child(6) { width: 48px; min-width: 48px; }
+.globe-controls button i { font-size: 0.86rem; line-height: 1; }
+.location-panel button, .globe-settings select { min-width: 40px; min-height: 36px; padding: 6px; border: 1px solid #ccc; border-radius: 0; background: #fff; color: #1f2937; cursor: pointer; }
 .globe-controls button + button { border-left-width: 0; }
 .globe-panels { position: absolute; top: 8px; right: 10px; display: grid; gap: 0; z-index: 4; max-width: min(280px, calc(100% - 20px)); }
 .globe-panels details, .globe-panels .user-location-control { color: #1f2937; background: #fff; border: 1px solid #ccc; border-radius: 0; }
-.globe-panels > details > summary, .globe-panels > .user-location-control > summary { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; font-size: 0; list-style: none; }
+.globe-panels > details > summary, .globe-panels > .user-location-control > summary { display: flex; align-items: center; justify-content: center; width: 38px; min-width: 38px; font-size: 0; list-style: none; }
 .globe-panels > details > summary::-webkit-details-marker, .globe-panels > .user-location-control > summary::-webkit-details-marker { display: none; }
 .globe-panels > details > summary::marker, .globe-panels > .user-location-control > summary::marker { content: ""; }
-.globe-panels > details > summary i, .globe-panels > .user-location-control > summary i { font-size: 1.05rem; line-height: 1; }
+.globe-panels > details > summary i, .globe-panels > .user-location-control > summary i { font-size: 0.9rem; line-height: 1; }
 .globe-panels > :first-child { border-radius: 5px 5px 0 0; }
 .globe-panels > :last-child { border-radius: 0 0 5px 5px; }
 .globe-panels > details + .user-location-control { border-top-width: 0; }
 .globe-panels summary { background: transparent; color: inherit; }
-.globe-settings-body, .location-panel { padding: 10px; max-height: min(45vh, 320px); overflow: auto; width: min(260px, 75vw); }
-.globe-settings-body label, .location-panel label { display: flex; align-items: center; gap: 8px; min-height: 44px; flex-wrap: wrap; }
-.globe-settings-body p, .location-panel p { font-size: 12px; margin: 4px 0; }
+.globe-settings-body, .location-panel {
+  box-sizing: border-box;
+  width: min(260px, 75vw);
+  max-height: min(45vh, 320px);
+  padding: 8px 10px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
+}
+.globe-settings-body { font-size: 13px; line-height: 1.4; }
+.globe-settings-body select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 5px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.globe-settings-body label, .location-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  flex-wrap: nowrap;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.globe-settings-body label:has(input[type="range"]) {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  padding: 3px 0 5px;
+}
+.globe-settings-body input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: 0 0 14px;
+}
+.globe-settings-body input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 2px 0;
+}
+.globe-settings-body p, .location-panel p { font-size: 11px; line-height: 1.4; margin: 2px 0 6px; }
 .globe-status { pointer-events: none; position: absolute; bottom: 32px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 4px; color: white; font-size: 11px; }
 .globe-status span { padding: 3px 6px; background: #102338dd; border-radius: 3px; }
 .map-view-shell { position: relative; }

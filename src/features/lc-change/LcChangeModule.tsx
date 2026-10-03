@@ -30,31 +30,37 @@ const AOI_TIMEOUT_RISK_KM2 = 500;
 
 /**
  * "Mode Tanggal Analisis" (Tahun/Bulan/Tanggal) - 3 mockups the user provided.
- * Only Dynamic World actually honors month/day-level windows on the backend
+ * Only Dynamic World actually honors partial date windows on the backend
  * (analyze_landcover: every other dataset ignores start_month/end_month and
  * start_date/end_date, always using the full calendar year - see the "Berlaku
  * untuk Dynamic World" note already on the month range control). "Tahun" =
  * full Jan-Dec (no extra params beyond `year`); "Bulan" = existing month-range
- * selects; "Tanggal" = explicit day-level start/end, re-yeared per year by the
- * backend (`_reyear_date`)/derived from the date itself (`analyze_landcover`).
+ * selects; "Tanggal" = absolute start/end dates clipped to each selected year.
  */
 type DateMode = "year" | "month" | "date";
 
-/** MM-DD (no year - re-yeared per analyzed year, both by this component and the backend). */
-const DEFAULT_TANGGAL_START = "01-01";
-const DEFAULT_TANGGAL_END = "12-31";
+/** Dynamic World's first available image in GOOGLE/DYNAMICWORLD/V1. */
+const DYNAMIC_WORLD_START_DATE = "2015-06-27";
 const DYNAMIC_WORLD_COMPATIBLE_DATASETS = new Set([
   "Dynamic_World",
   "GeoSave_Copernicus_DynamicWorld",
 ]);
 
-/** Builds a real YYYY-MM-DD for a given calendar year from a "MM-DD" fragment, for sending to the backend or a native date input. */
-function tanggalToIso(year: number, monthDay: string): string {
-  return `${year}-${monthDay}`;
+function localDateIso(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-/** Native <input type="date"> needs a full date; year is cosmetic here (backend/this component only look at month/day). */
-const TANGGAL_INPUT_YEAR = 2000;
+/** Clip a selected absolute date range to one calendar year. */
+function dateRangeForYear(year: number, start: string, end: string): { start: string; end: string } | null {
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const clippedStart = start > yearStart ? start : yearStart;
+  const clippedEnd = end < yearEnd ? end : yearEnd;
+  return clippedStart <= clippedEnd ? { start: clippedStart, end: clippedEnd } : null;
+}
 
 /**
  * Land Cover Change module - before/after year comparison with a transition
@@ -87,8 +93,10 @@ export default function LcChangeModule() {
   const { getInt } = useConfigStore();
   const { showLoading, setLoadingProgress, hideLoading } = useUiStore();
 
-  const maxYear = getInt("year.max", new Date().getFullYear());
-  const minYear = getInt("year.min", 2015);
+  const maxYear = new Date().getFullYear();
+  const minYear = Math.min(getInt("year.min", 2015), maxYear - 1);
+  const initialYearFrom = Math.max(minYear, Math.min(query.yearFrom ?? maxYear - 1, maxYear - 1));
+  const initialYearTo = Math.max(initialYearFrom + 1, Math.min(query.yearTo ?? maxYear, maxYear));
 
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
@@ -116,15 +124,15 @@ export default function LcChangeModule() {
     [setAoiState],
   );
   const [dataset, setDataset] = useState<LcDataset>((query.dataset as LcDataset) || "Dynamic_World");
-  const [years, setYears] = useState<number[]>([query.yearFrom ?? maxYear - 1, query.yearTo ?? maxYear]);
-  // A two-year comparison should default to the complete annual Dynamic
-  // World composite. A one-month window is opt-in and can legitimately have
-  // no scenes for an AOI/year pair.
+  const [years, setYears] = useState<number[]>([initialYearFrom, initialYearTo]);
+  // Default to Dynamic World's complete available date coverage, clipped to
+  // each selected year (full historical years plus the current YTD window).
   const [startMonth, setStartMonth] = useState(query.monthFrom ?? 1);
   const [endMonth, setEndMonth] = useState(query.monthTo ?? 12);
-  const [dateMode, setDateMode] = useState<DateMode>("year");
-  const [tanggalStart, setTanggalStart] = useState(DEFAULT_TANGGAL_START);
-  const [tanggalEnd, setTanggalEnd] = useState(DEFAULT_TANGGAL_END);
+  const [dateMode, setDateMode] = useState<DateMode>("date");
+  const [tanggalStart, setTanggalStart] = useState(DYNAMIC_WORLD_START_DATE);
+  const [tanggalEnd, setTanggalEnd] = useState(() => localDateIso());
+  const todayDate = localDateIso();
   // Dynamic World per-pixel confidence threshold (audit #8) - undefined = no
   // threshold (backend still returns confidence stats using its own 0.5
   // diagnostic default; this only controls whether low-confidence pixels get
@@ -255,6 +263,12 @@ export default function LcChangeModule() {
       ? `${dataset}:${yearA}:${yearB}:${dateMode}:${startMonth}:${endMonth}:${tanggalStart}:${tanggalEnd}`
       : null;
   const changeMapData = changeMapCacheKey ? (changeMapCache[changeMapCacheKey] ?? null) : null;
+  const dateRangeA = dateMode === "date" && isDynamicWorldCompatible && yearA != null
+    ? dateRangeForYear(yearA, tanggalStart, tanggalEnd)
+    : null;
+  const dateRangeB = dateMode === "date" && isDynamicWorldCompatible && yearB != null
+    ? dateRangeForYear(yearB, tanggalStart, tanggalEnd)
+    : null;
 
   // Fetch the changed-pixel map for the current pair whenever it's needed
   // (matrix/netchange/timeseries tabs don't need it - only fetch lazily when
@@ -266,7 +280,8 @@ export default function LcChangeModule() {
       tab !== "maps" ||
       changeMapCache[changeMapCacheKey] ||
       yearA == null ||
-      yearB == null
+      yearB == null ||
+      (dateMode === "date" && isDynamicWorldCompatible && (!dateRangeA || !dateRangeB))
     ) {
       return;
     }
@@ -280,12 +295,14 @@ export default function LcChangeModule() {
       to_year: yearB,
       start_month: startMonth,
       end_month: endMonth,
-      // Single day-level window, re-yeared by the backend per from_year/to_year
-      // (_reyear_date) - not per-year like the main analyze_landcover call.
-      ...(dateMode === "date"
+      // Dynamic World dates are clipped to each comparison year, so a
+      // historical full year can be compared with the current YTD window.
+      ...(dateRangeA && dateRangeB
         ? {
-            start_date: tanggalToIso(yearA, tanggalStart),
-            end_date: tanggalToIso(yearB, tanggalEnd),
+            from_start_date: dateRangeA.start,
+            from_end_date: dateRangeA.end,
+            to_start_date: dateRangeB.start,
+            to_end_date: dateRangeB.end,
           }
         : {}),
       ...(isDynamicWorldCompatible && dwThresholdEnabled
@@ -317,21 +334,22 @@ export default function LcChangeModule() {
   const dateParamsForYear = useCallback(
     (
       year: number,
-    ): { start_month: number; end_month: number; start_date?: string; end_date?: string } => {
+    ): { start_month: number; end_month: number; start_date?: string; end_date?: string } | null => {
       if (dateMode === "year") return { start_month: 1, end_month: 12 };
-      if (dateMode === "date") {
-        const sd = tanggalToIso(year, tanggalStart);
-        const ed = tanggalToIso(year, tanggalEnd);
+      if (dateMode === "date" && isDynamicWorldCompatible) {
+        const range = dateRangeForYear(year, tanggalStart, tanggalEnd);
+        if (!range) return null;
         return {
-          start_month: Number(tanggalStart.slice(0, 2)),
-          end_month: Number(tanggalEnd.slice(0, 2)),
-          start_date: sd,
-          end_date: ed,
+          start_month: Number(range.start.slice(5, 7)),
+          end_month: Number(range.end.slice(5, 7)),
+          start_date: range.start,
+          end_date: range.end,
         };
       }
+      if (dateMode === "date") return { start_month: 1, end_month: 12 };
       return { start_month: startMonth, end_month: endMonth };
     },
-    [dateMode, tanggalStart, tanggalEnd, startMonth, endMonth],
+    [dateMode, isDynamicWorldCompatible, tanggalStart, tanggalEnd, startMonth, endMonth],
   );
 
   const runAnalysis = async () => {
@@ -339,9 +357,15 @@ export default function LcChangeModule() {
       setRunError("Gambar AOI terlebih dahulu di peta.");
       return;
     }
-    const uniqueYears = [...new Set(years)].sort((a, b) => a - b);
+    const uniqueYears = [...new Set(years)]
+      .sort((a, b) => a - b)
+      .filter((year) => dateMode !== "date" || !isDynamicWorldCompatible || dateParamsForYear(year) != null);
     if (uniqueYears.length < 2) {
-      setRunError("Pilih minimal 2 tahun yang berbeda.");
+      setRunError(
+        dateMode === "date" && isDynamicWorldCompatible
+          ? "Rentang tanggal harus mencakup minimal 2 tahun analisis yang dipilih."
+          : "Pilih minimal 2 tahun yang berbeda.",
+      );
       return;
     }
 
@@ -364,7 +388,7 @@ export default function LcChangeModule() {
           aoi: { geojson: aoi },
           year,
           datasets: [dataset],
-          ...dateParamsForYear(year),
+          ...(dateParamsForYear(year) ?? { start_month: 1, end_month: 12 }),
           ...(isDynamicWorldCompatible && dwThresholdEnabled
             ? { dw_probability_threshold: dwProbabilityThreshold }
             : {}),
@@ -696,19 +720,23 @@ export default function LcChangeModule() {
 
               {dateMode === "date" && (
                 <div className="mt-2">
-                  <div className="d-flex align-items-center gap-2">
+                  <div className="d-flex align-items-center gap-2 lc-date-range-controls">
                     <input
                       type="date"
-                      className="form-control form-control-sm"
-                      value={tanggalToIso(TANGGAL_INPUT_YEAR, tanggalStart)}
-                      onChange={(e) => setTanggalStart(e.target.value.slice(5))}
+                      className="form-control form-control-sm lc-date-range-input"
+                      min={DYNAMIC_WORLD_START_DATE}
+                      max={tanggalEnd || todayDate}
+                      value={tanggalStart}
+                      onChange={(e) => { if (e.target.value) setTanggalStart(e.target.value); }}
                     />
                     <span className="text-muted">–</span>
                     <input
                       type="date"
-                      className="form-control form-control-sm"
-                      value={tanggalToIso(TANGGAL_INPUT_YEAR, tanggalEnd)}
-                      onChange={(e) => setTanggalEnd(e.target.value.slice(5))}
+                      className="form-control form-control-sm lc-date-range-input"
+                      min={tanggalStart || DYNAMIC_WORLD_START_DATE}
+                      max={todayDate}
+                      value={tanggalEnd}
+                      onChange={(e) => { if (e.target.value) setTanggalEnd(e.target.value); }}
                     />
                   </div>
                 </div>
@@ -1002,8 +1030,10 @@ export default function LcChangeModule() {
                       changeMapError={changeMapError}
                       startMonth={startMonth}
                       endMonth={endMonth}
-                      startDate={dateMode === "date" && yearA != null ? tanggalToIso(yearA, tanggalStart) : undefined}
-                      endDate={dateMode === "date" && yearB != null ? tanggalToIso(yearB, tanggalEnd) : undefined}
+                      startDateA={dateRangeA?.start}
+                      endDateA={dateRangeA?.end}
+                      startDateB={dateRangeB?.start}
+                      endDateB={dateRangeB?.end}
                       dwProbabilityThreshold={isDynamicWorldCompatible && dwThresholdEnabled ? dwProbabilityThreshold : undefined}
                     />
                   )}
@@ -1015,16 +1045,10 @@ export default function LcChangeModule() {
                       yearB={yearB}
                       startMonth={startMonth}
                       endMonth={endMonth}
-                      startDate={
-                        dateMode === "date" && yearA != null
-                          ? tanggalToIso(yearA, tanggalStart)
-                          : undefined
-                      }
-                      endDate={
-                        dateMode === "date" && yearB != null
-                          ? tanggalToIso(yearB, tanggalEnd)
-                          : undefined
-                      }
+                      startDateA={dateRangeA?.start}
+                      endDateA={dateRangeA?.end}
+                      startDateB={dateRangeB?.start}
+                      endDateB={dateRangeB?.end}
                     />
                   )}
                 </div>

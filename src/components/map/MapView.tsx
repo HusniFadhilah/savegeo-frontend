@@ -5,6 +5,7 @@ import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import FullscreenControl from "@/components/map/FullscreenControl";
+import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import ImageryAttribution from "@/components/map/ImageryAttribution";
 import HistoricalImageryControl, { HistoricalAoiClipController } from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
@@ -97,6 +98,7 @@ function ResultPaneSetup() {
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
 export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, fullscreenTarget, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false }: Props) {
+  const mapShellRef = useRef<HTMLDivElement>(null);
   const t = useI18nStore((state) => state.t);
   const { basemaps } = useBasemaps();
   const query = useGlobeQuery();
@@ -120,7 +122,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
   }, [defaultBasemap, activeBasemapId]);
 
   return (
-    <div className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId, historicalImageryDate, setHistoricalImageryDate }}>
+    <div ref={mapShellRef} className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId, historicalImageryDate, setHistoricalImageryDate }}>
       <MapContainer
         id={id}
         center={center ?? INDONESIA_CENTER}
@@ -167,6 +169,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
     </BasemapContext.Provider></div>
     {globe ? <div className="map-globe-overlay"><GlobeView id={`${id}-globe`} basemapId={activeBasemapId ?? undefined} center={center} zoom={zoom} aoi={globeAoi?.type === "geojson" && globeAoi.data.type === "Feature" ? globeAoi.data : null} layers={analysisLayers} onViewChange={() => writeGlobeQuery({ view: "single" })} onBasemapChange={setActiveBasemapId} /></div> :
       active && <div className="map-flat-controls">{showGlobeControl && <button type="button" onClick={() => writeGlobeQuery({ view: "3d" }, true)} aria-label={t("map.switchToGlobe")} title={t("map.switchToGlobe")}>3D</button>}<UserLocationControl /></div>}
+      <MapHeightResizeHandle mapShellRef={mapShellRef} />
     </div>
   );
 }

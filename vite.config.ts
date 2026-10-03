@@ -5,6 +5,11 @@ import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   define: { CESIUM_BASE_URL: JSON.stringify("/cesium/") },
+  optimizeDeps: {
+    // Globe3DView is lazy-loaded; pre-bundle Cesium before the first globe click
+    // so Vite doesn't invalidate optimized dependency URLs mid-session.
+    include: ["cesium"],
+  },
   plugins: [react(), viteStaticCopy({ targets: ["Workers", "ThirdParty", "Assets", "Widgets"].map(dir => ({ src: `node_modules/cesium/Build/Cesium/${dir}`, dest: "cesium", rename: { stripBase: 4 } })) })],
   resolve: {
     alias: {

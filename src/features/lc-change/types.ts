@@ -73,8 +73,12 @@ export interface LcChangeMapParams {
   to_year: number;
   start_month: number;
   end_month: number;
-  /** Same day-level window as LcAnalyzeParams, reapplied to both from_year and
-   * to_year (only the month/day portion is used - see backend _reyear_date). */
+  /** Separate clipped date windows for the from and to years. */
+  from_start_date?: string;
+  from_end_date?: string;
+  to_start_date?: string;
+  to_end_date?: string;
+  /** Legacy shared day-level window, re-yeared by the backend. */
   start_date?: string;
   end_date?: string;
   /** Dynamic World only - min per-pixel class probability to keep (0-1). */
@@ -139,7 +143,12 @@ export interface LcHotspotParams {
   min_area_ha?: number;
   /** Cap on ranked results returned (default 20, max 100). */
   top_n?: number;
-  /** Same day-level window as LcChangeMapParams (reapplied per from_year/to_year). */
+  /** Separate clipped date windows for the from and to years. */
+  from_start_date?: string;
+  from_end_date?: string;
+  to_start_date?: string;
+  to_end_date?: string;
+  /** Legacy shared day-level window, re-yeared by the backend. */
   start_date?: string;
   end_date?: string;
   /** Dynamic World only - min per-pixel class probability to keep (0-1). */

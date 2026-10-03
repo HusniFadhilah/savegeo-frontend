@@ -1,0 +1,60 @@
+.cm-page .cm-panel-accordion > .cm-panel-accordion-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.cm-page .cm-panel-accordion > .cm-panel-accordion-summary::-webkit-details-marker,
+.cm-page .cm-panel-accordion > .cm-panel-accordion-summary::marker {
+  display: none;
+  content: "";
+}
+
+.cm-page .cm-panel-accordion > .cm-panel-accordion-summary:hover {
+  background: linear-gradient(135deg, #28712d, #205f4c) !important;
+}
+
+.cm-page .cm-panel-accordion > .cm-panel-accordion-summary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+}
+
+.cm-page .cm-panel-accordion:not([open]) > .cm-panel-accordion-summary {
+  border-radius: 8px !important;
+}
+
+.cm-page .cm-panel-accordion[open] > .cm-panel-accordion-summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.cm-page .cm-panel-accordion-title {
+  min-width: 0;
+  font-weight: 700;
+}
+
+.cm-page .cm-panel-accordion-trailing {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cm-page .cm-panel-accordion-chevron {
+  flex: none;
+  margin-left: auto;
+  transition: transform 0.18s ease;
+}
+
+.cm-page .cm-panel-accordion[open] > .cm-panel-accordion-summary .cm-panel-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-page .cm-panel-accordion-chevron {
+    transition: none;
+  }
+}

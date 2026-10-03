@@ -77,6 +77,7 @@ export default function CarbonModule() {
   const initialQuery = useMemo(() => typeof window !== "undefined" ? parseCarbonQuery(window.location.search) : { mode: "carbon" as const }, []);
   const [year, setYear] = useState(initialQuery.year ?? yearMax);
   const [zoom, setZoom] = useState(10);
+  const [settingsCollapsed, setSettingsCollapsed] = useState(false);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
   const [analysisType, setAnalysisType] = useState<AnalysisType>(initialQuery.mode === "landcover_change" ? "landcover" : initialQuery.mode);
@@ -585,11 +586,35 @@ export default function CarbonModule() {
         </div>
       </section>
 
-      <div className="row g-3 align-items-start">
-        <div className="col-lg-3">
-        <div className="sidebar">
+      <div className={`row g-3 align-items-start analysis-settings-layout ${settingsCollapsed ? "settings-collapsed" : ""}`}>
+        {settingsCollapsed ? (
+          <div className="col-lg-auto analysis-settings-rail">
+            <button
+              type="button"
+              className="analysis-settings-expand"
+              onClick={() => setSettingsCollapsed(false)}
+              aria-expanded={!settingsCollapsed}
+              aria-label="Buka panel pengaturan"
+              title="Buka panel pengaturan"
+            >
+              <i className="bi bi-chevron-double-right" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <div className="col-lg-3">
+        <div className="sidebar analysis-settings-panel">
+          <button
+            type="button"
+            className="analysis-settings-collapse btn-light"
+            onClick={() => setSettingsCollapsed(true)}
+            aria-expanded={!settingsCollapsed}
+            aria-label="Sembunyikan panel pengaturan"
+            title="Sembunyikan panel pengaturan"
+          >
+            <i className="bi bi-chevron-double-left" aria-hidden="true" />
+          </button>
           <h5 className="mb-3">
-            <i className="bi bi-gear-fill me-1" /> {t("carbon.sidebar.settings")}
+            <i className="bi bi-gear-fill" aria-hidden="true" /> {t("carbon.sidebar.settings")}
           </h5>
 
           <AnalysisTypeSelector
@@ -826,8 +851,9 @@ export default function CarbonModule() {
           )}
         </div>
       </div>
+        )}
 
-      <div className="col-lg-9">
+      <div className={settingsCollapsed ? "col" : "col-lg-9"}>
         <AoiPanel aoi={aoi} onAoiChange={setAoi} />
 
         {runError && (
