@@ -34,6 +34,8 @@ export interface ImageryProvider {
   source_kind?: ImagerySourceKind;
   stac_collection?: string;
   visualization: ImageryVisualization;
+  /** GEE date-range AOI mosaic is available for this provider. */
+  supports_mosaic?: boolean;
   /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
   color_mode?: "natural" | "false_color";
   description?: string;
@@ -122,7 +124,7 @@ export interface ImagerySceneTileResponse {
   tile_url: string;
   satellite: ImageryProvider;
   super_resolution?: ImagerySuperResolutionResult | null;
-  /** "mosaic" when a large Sentinel-2 AOI was filled from the date range. */
+  /** "mosaic" when the AOI was filled from the provider's date range. */
   render_mode?: "scene" | "mosaic";
   scene_count?: number;
   aoi_larger_than_scene?: boolean;
@@ -156,13 +158,13 @@ export interface GetSceneTileParams {
   satellite: string;
   sceneId: string;
   aoi?: AoiPayload;
-  /** Automatically mosaic Sentinel-2 when the AOI exceeds the selected granule footprint. */
+  /** Automatically mosaic when the AOI exceeds the selected granule footprint. */
   autoMosaic?: boolean;
-  /** Explicitly select the Sentinel-2 AOI mosaic group from the scene table. */
+  /** Explicitly select the provider's AOI mosaic group from the scene table. */
   forceMosaic?: boolean;
   /** Keep a scene-row click on the exact granule, even when the AOI is larger. */
   forceScene?: boolean;
-  /** Date range and scene-level cloud filter used by the automatic Sentinel-2 mosaic. */
+  /** Date range and scene-level cloud filter used by the automatic mosaic. */
   startDate?: string;
   endDate?: string;
   maxCloudCover?: number;

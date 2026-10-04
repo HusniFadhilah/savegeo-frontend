@@ -1,5 +1,5 @@
 import type { BasemapDefinition } from "@/types/map";
-import { nasaGibsBlackMarbleTileUrl, nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
+import { nasaGibsBlackMarbleTileUrl, nasaGibsCityLights2012TileUrl, nasaGibsTrueColorTileUrl } from "@/features/imagery/nasaGibs";
 
 /**
  * Static fallback basemaps, used whenever GET /api/basemaps is unreachable
@@ -96,8 +96,8 @@ export function withNasaGibsBasemap(basemaps: BasemapDefinition[]): BasemapDefin
   };
   const viirsNight: BasemapDefinition = {
     id: "nasa-gibs-viirs-night",
-    name: "NASA GIBS VIIRS Day/Night 2012 composite",
-    url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg",
+    name: "NASA GIBS VIIRS Earth at Night 2012 composite",
+    url: nasaGibsCityLights2012TileUrl(),
     attribution: '<a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" target="_blank" rel="noreferrer">NASA Global Imagery Browse Services (GIBS)</a> - VIIRS Earth at Night 2012 composite',
     maxZoom: 22,
     maxNativeZoom: 8,
@@ -106,7 +106,7 @@ export function withNasaGibsBasemap(basemaps: BasemapDefinition[]): BasemapDefin
   };
   const blackMarble: BasemapDefinition = {
     id: "nasa-gibs-black-marble",
-    name: "NASA GIBS VIIRS Black Marble 2016",
+    name: "NASA GIBS VIIRS Black Marble (snapshot 2016)",
     url: nasaGibsBlackMarbleTileUrl(2016),
     attribution: '<a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" target="_blank" rel="noreferrer">NASA Global Imagery Browse Services (GIBS)</a> - VIIRS Black Marble 2016',
     maxZoom: 22,

@@ -314,7 +314,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
           <option value="current-basemap">Basemap terkini · {activeBasemapName}</option>
           <option value="esri-wayback">Esri Wayback · mosaik resolusi tinggi</option>
           <option value="nasa-gibs">NASA GIBS - MODIS Terra True Color (harian)</option>
-          <option value="nasa-black-marble">NASA GIBS · Black Marble (2012, 2016)</option>
+          <option value="nasa-black-marble">NASA GIBS · Black Marble (snapshot 2012/2016)</option>
           <option value="nasa-viirs-night">NASA GIBS - VIIRS Day/Night harian (sejak 2016)</option>
           <option value="eox-cloudless">EOX · Sentinel-2 Cloudless (tahunan)</option>
         </select>
@@ -350,12 +350,12 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
         {analysisDate && analysisDate !== nasaTimelineDate && <p className="map-history-note">Tanggal analisis berada di luar rentang arsip; menampilkan <strong>{nasaTimelineDate}</strong>.</p>}
       </> : historySource === "nasa-black-marble" ? <>
         <div className="map-history-body map-history-nasa-body">
-          <div className="map-history-nasa-selected-date"><small>Tahun komposit</small><strong>{blackMarbleYear}</strong></div>
+          <div className="map-history-nasa-selected-date"><small>Snapshot komposit</small><strong>{blackMarbleYear}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
               <button type="button" aria-label="Snapshot Black Marble sebelumnya" disabled={blackMarbleIndex === 0}
                 onClick={() => chooseBlackMarbleIndex(blackMarbleIndex - 1)}>‹</button>
-              <input type="range" aria-label="Linimasa Black Marble" aria-valuetext={String(blackMarbleYear)} min={0}
+              <input type="range" aria-label="Snapshot Black Marble" aria-valuetext={`Komposit ${blackMarbleYear}`} min={0}
                 max={NASA_GIBS_BLACK_MARBLE_YEARS.length - 1} step={1} value={blackMarbleIndex}
                 onChange={event => chooseBlackMarbleIndex(Number(event.target.value))} />
               <button type="button" aria-label="Snapshot Black Marble berikutnya" disabled={blackMarbleIndex === NASA_GIBS_BLACK_MARBLE_YEARS.length - 1}
@@ -366,7 +366,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
             </div>
           </div>
         </div>
-        <p className="map-history-note">NASA Black Marble tersedia sebagai komposit untuk 2012 dan 2016. Produk Earth at Night 2012 adalah komposit tetap, bukan arsip tahunan.</p>
+        <p className="map-history-note">Black Marble adalah peta cahaya malam antropogenik berbasis VIIRS, bukan peta jalan atau batas administrasi. NASA GIBS menyediakan dua snapshot komposit—2012 dan 2016—bukan arsip tahunan; untuk citra malam harian pilih VIIRS Day/Night.</p>
       </> : historySource === "eox-cloudless" ? <>
         <div className="map-history-body map-history-nasa-body">
           <div className="map-history-nasa-selected-date"><small>Tahun mosaik</small><strong>{eoxYear}</strong></div>

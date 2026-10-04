@@ -105,6 +105,8 @@ const LEGACY_LANDSAT_DEFAULT_RANGES: Record<string, [string, string]> = {
   landsat4: ["1993-05-25", "1993-06-24"],
   landsat5: ["2012-04-05", "2012-05-05"],
   landsat7: ["2023-12-20", "2024-01-19"],
+  alos_avnir2: ["2006-04-26", "2011-04-18"],
+  alos_palsar_yearly: ["2015-01-01", "2024-01-01"],
 };
 type ViewMode = "single" | "compare";
 type DemLayerMode = "none" | "dem" | "3d";
@@ -389,9 +391,9 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
 
 /**
  * Raw satellite imagery browser - pick an exact scene by its real acquisition
- * date+time and view it as true-color RGB. Large Sentinel-2 AOIs are filled
- * automatically with a date-range mosaic while the selected scene remains
- * the provenance anchor.
+ * date+time and view it with the provider's configured visualization. Large
+ * AOIs can be filled automatically with a date-range mosaic while the
+ * selected scene remains the provenance anchor.
  * Answers the user's direct request: "bagaimana bisa melihat citra satelit
  * utk tanggal beserta jam tertentu, tanpa harus land cover?" - every other
  * module (Vegetation/Carbon/LC-Change) always composites over a date range
@@ -598,7 +600,7 @@ export default function ImageryModule() {
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
   const isHimawari = satellite === HIMAWARI_PROVIDER_KEY;
-  const isSentinel2 = satellite === "sentinel2" || satellite === "sentinel2_l1c";
+  const isMosaicProvider = Boolean(satelliteMeta?.supports_mosaic);
   const isCogProvider = Boolean(
     satelliteMeta?.source_kind &&
       ["maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac"].includes(satelliteMeta.source_kind),
@@ -688,7 +690,10 @@ export default function ImageryModule() {
       setEndDate(todayIso());
     }
     const legacyRange = LEGACY_LANDSAT_DEFAULT_RANGES[satellite];
-    if (legacyRange) {
+    if (satellite === "alos2_palsar2_scansar") {
+      setStartDate("2014-08-04");
+      setEndDate(todayIso());
+    } else if (legacyRange) {
       setStartDate(legacyRange[0]);
       setEndDate(legacyRange[1]);
     }
@@ -710,6 +715,7 @@ export default function ImageryModule() {
     "USGS / Landsat",
     "Sentinel-3",
     "ASTER",
+    "ALOS / JAXA",
     "Sentinel-1",
     "Sentinel-5P",
     "VIIRS",
@@ -773,12 +779,12 @@ export default function ImageryModule() {
           satellite,
           sceneId: scene.id,
           aoi: tileAoi ? { geojson: tileAoi } : undefined,
-          autoMosaic: isSentinel2 && Boolean(tileAoi),
-          forceMosaic: isSentinel2 && Boolean(tileAoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
-          forceScene: isSentinel2 && Boolean(tileAoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
-          startDate: isSentinel2 && tileAoi ? mosaicQuery.startDate : undefined,
-          endDate: isSentinel2 && tileAoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
-          maxCloudCover: isSentinel2 && tileAoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
+          autoMosaic: isMosaicProvider && Boolean(tileAoi),
+          forceMosaic: isMosaicProvider && Boolean(tileAoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
+          forceScene: isMosaicProvider && Boolean(tileAoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
+          startDate: isMosaicProvider && tileAoi ? mosaicQuery.startDate : undefined,
+          endDate: isMosaicProvider && tileAoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
+          maxCloudCover: isMosaicProvider && tileAoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: tileSuperResolution,
@@ -810,7 +816,7 @@ export default function ImageryModule() {
       isHimawari,
       isCogProvider,
       isEsriWayback,
-      isSentinel2,
+      isMosaicProvider,
       renderOptionsKey,
       sarMode,
       satellite,
@@ -887,12 +893,10 @@ export default function ImageryModule() {
       if (scenesByNewest[0]) {
         const defaultAssetKey = scenesByNewest[0].default_asset_key || "visual";
         setCogAssetKey(defaultAssetKey);
-        // Prefer the AOI mosaic for the first Sentinel-2 render whenever the
-        // search returned multiple matching granules. This avoids briefly
-        // showing only the newest granule for an AOI that spans scene
-        // footprints. A single returned granule still goes through the
-        // backend's AOI-footprint check via autoMosaic.
-        const initialMosaicAvailable = isSentinel2 && Boolean(searchRegion) && scenesByNewest.length > 1;
+        // Prefer the AOI mosaic for supported providers whenever the search
+        // returned multiple matching granules. A single returned granule
+        // still goes through the backend's AOI-footprint check via autoMosaic.
+        const initialMosaicAvailable = isMosaicProvider && Boolean(searchRegion) && scenesByNewest.length > 1;
         if (initialMosaicAvailable) {
           setMosaicRequestedMode(true);
           setSceneRequestedMode(false);
@@ -925,7 +929,7 @@ export default function ImageryModule() {
 
   const loadMosaicTile = () => {
     const mosaicRegion = aoi ?? sceneSearchRegion ?? mapViewportAoi;
-    if (!isSentinel2 || !mosaicRegion || scenes.length === 0) return;
+    if (!isMosaicProvider || !mosaicRegion || scenes.length === 0) return;
     const anchorScene = [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1))[0];
     if (!anchorScene) return;
     setMosaicRequestedMode(true);
@@ -1726,14 +1730,14 @@ export default function ImageryModule() {
                       </tr>
                     </thead>
                     <tbody>
-                      {isSentinel2 && (
+                      {isMosaicProvider && (
                         <tr className={tileRenderMode === "mosaic" || mosaicRequested ? "table-success" : "table-light"}>
                           <td colSpan={3}>
                             <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                               <div>
                                 <strong><i className="bi bi-grid-3x3-gap me-1" /> Grup Mosaik AOI</strong>
                                 <small className="text-muted d-block">
-                                  Gabungkan scene Sentinel-2 yang ditemukan untuk mengisi AOI.
+                                  Gabungkan scene {satelliteMeta?.name ?? "provider ini"} yang ditemukan untuk mengisi AOI.
                                   {tileRenderMode === "mosaic" ? ` Aktif: ${tileSceneCount} scene.` : ""}
                                 </small>
                               </div>
@@ -1887,8 +1891,8 @@ export default function ImageryModule() {
             {!tileLoading && tileUrl && tileRenderMode === "mosaic" && (
               <div className="alert alert-info py-2 mb-3 small">
                 <i className="bi bi-grid-3x3-gap me-1" />
-                AOI lebih besar dari satu scene Sentinel-2. Menampilkan mosaik {tileSceneCount} scene
-                pada rentang tanggal dan filter awan yang dipilih.
+                Menampilkan mosaik {satelliteMeta?.name ?? "provider ini"} dari {tileSceneCount} scene
+                pada rentang tanggal yang dipilih{supportsCloudFilter ? " dan filter awan yang dipilih." : "."}
               </div>
             )}
 

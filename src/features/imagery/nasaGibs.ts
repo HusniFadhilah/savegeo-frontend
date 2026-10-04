@@ -49,6 +49,11 @@ export function nasaGibsTrueColorTileUrl(date: string): string {
   return `https://gibs-a.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
 }
 
+/** Static Earth-at-Night 2012 composite; it has no time dimension. */
+export function nasaGibsCityLights2012TileUrl(): string {
+  return "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
+}
+
 export function nasaGibsViirsNightTileUrl(date: string): string {
   return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_ENCC/default/${date}/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`;
 }

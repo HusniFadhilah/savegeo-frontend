@@ -49,7 +49,7 @@ export function listImageryScenes(params: ListScenesParams) {
   }, { auth: "app" });
 }
 
-/** POST /imagery/scene-tile - one scene tile, with automatic Sentinel-2 AOI mosaic when requested. */
+/** POST /imagery/scene-tile - one scene tile, with optional provider AOI mosaic. */
 export function getImagerySceneTile(params: GetSceneTileParams) {
   return apiClient.post<ImagerySceneTileResponse>("/imagery/scene-tile", {
     satellite: params.satellite,

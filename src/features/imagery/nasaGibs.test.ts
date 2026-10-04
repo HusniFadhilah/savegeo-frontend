@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampNasaGibsDate, nasaGibsBlackMarbleTileUrl, NASA_GIBS_BLACK_MARBLE_YEARS, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE, nasaGibsDateAt, nasaGibsDateIndex, nasaGibsTimelineTicks, nasaGibsTrueColorTileUrl, nasaGibsViirsNightTileUrl } from "./nasaGibs";
+import { clampNasaGibsDate, nasaGibsBlackMarbleTileUrl, nasaGibsCityLights2012TileUrl, NASA_GIBS_BLACK_MARBLE_YEARS, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE, nasaGibsDateAt, nasaGibsDateIndex, nasaGibsTimelineTicks, nasaGibsTrueColorTileUrl, nasaGibsViirsNightTileUrl } from "./nasaGibs";
 
 describe("NASA GIBS historical imagery", () => {
   it("creates a date-addressed MODIS Terra WMTS tile template", () => {
@@ -24,6 +24,12 @@ describe("NASA GIBS historical imagery", () => {
       "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2012-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png",
     );
     expect(nasaGibsBlackMarbleTileUrl(2016)).toContain("/2016-01-01/");
+  });
+
+  it("uses the default time key for the static Earth at Night 2012 composite", () => {
+    expect(nasaGibsCityLights2012TileUrl()).toBe(
+      "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg",
+    );
   });
 
   it("limits dates to valid dates in the archive", () => {

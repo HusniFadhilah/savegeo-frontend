@@ -15,7 +15,7 @@ describe("NASA GIBS basemap", () => {
     const blackMarble = basemaps.find((item) => item.id === "nasa-gibs-black-marble");
     const blueMarble = basemaps.find((item) => item.id === "nasa-gibs-blue-marble");
 
-    expect(nightLights?.url).toContain("VIIRS_CityLights_2012/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg");
+    expect(nightLights?.url).toContain("VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg");
     expect(nightLights?.maxNativeZoom).toBe(8);
     expect(blackMarble?.url).toContain("VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png");
     expect(blackMarble?.name).toContain("Black Marble");
