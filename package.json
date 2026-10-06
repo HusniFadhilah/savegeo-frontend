@@ -14,7 +14,7 @@
     "i18n:audit": "node scripts/audit-i18n.mjs",
     "i18n:check": "node scripts/audit-i18n.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=2"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",

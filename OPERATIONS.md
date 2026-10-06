@@ -42,14 +42,14 @@ Production deployment secrets:
 | `SSH_KNOWN_HOSTS` | SSH host fingerprints |
 | `SSH_PASSWORD` | Production SSH password |
 
-Doltinuku deployment secrets:
+STAGING deployment secrets:
 
 | Secret | Purpose |
 |---|---|
-| `SFTP_DOLTINUKU_SERVER` | Doltinuku hostname/IP |
-| `SFTP_DOLTINUKU_PORT` | SFTP/SSH port |
-| `SFTP_DOLTINUKU_USERNAME` | SFTP/SSH user |
-| `SFTP_DOLTINUKU_PASSWORD` | SFTP/SSH and sudo password |
+| `SFTP_STAGING_SERVER` | STAGING hostname/IP |
+| `SFTP_STAGING_PORT` | SFTP/SSH port |
+| `SFTP_STAGING_USERNAME` | SFTP/SSH user |
+| `SFTP_STAGING_PASSWORD` | SFTP/SSH and sudo password |
 
 AI review uses `OCR_LLM_URL`, `OCR_LLM_AUTH_TOKEN`, `OCR_LLM_MODEL`, and optional `OCR_LLM_USE_ANTHROPIC`.
 
@@ -61,7 +61,7 @@ AI review uses `OCR_LLM_URL`, `OCR_LLM_AUTH_TOKEN`, `OCR_LLM_MODEL`, and optiona
 4. The `dist/` artifact is uploaded to the target server.
 5. Apache/Nginx is reloaded and public URLs are checked.
 
-Production and Doltinuku workflows are independent and use separate secrets.
+Production and STAGING workflows are independent and use separate secrets.
 
 ## Reverse proxy contract
 

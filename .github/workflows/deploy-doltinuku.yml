@@ -77,10 +77,10 @@ jobs:
     permissions:
       contents: read
     env:
-      DOLTINUKU_SERVER: ${{ secrets.SFTP_DOLTINUKU_SERVER }}
-      DOLTINUKU_USERNAME: ${{ secrets.SFTP_DOLTINUKU_USERNAME }}
-      DOLTINUKU_PASSWORD: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
-      DOLTINUKU_SSH_PORT: ${{ secrets.SFTP_DOLTINUKU_PORT }}
+      DOLTINUKU_SERVER: ${{ secrets.SFTP_STAGING_SERVER }}
+      DOLTINUKU_USERNAME: ${{ secrets.SFTP_STAGING_USERNAME }}
+      DOLTINUKU_PASSWORD: ${{ secrets.SFTP_STAGING_PASSWORD }}
+      DOLTINUKU_SSH_PORT: ${{ secrets.SFTP_STAGING_PORT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,7 +100,7 @@ jobs:
         run: nc -z -w 15 "$DOLTINUKU_SERVER" "${DOLTINUKU_SSH_PORT:-22}"
       - name: Upload frontend build
         env:
-          SSHPASS: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
+          SSHPASS: ${{ secrets.SFTP_STAGING_PASSWORD }}
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/savegeo-frontend-dist.tar.gz"
@@ -112,7 +112,7 @@ jobs:
             "$DOLTINUKU_USERNAME@$DOLTINUKU_SERVER:/tmp/savegeo-frontend-dist.tar.gz"
       - name: Reload web server and verify domains
         env:
-          SSHPASS: ${{ secrets.SFTP_DOLTINUKU_PASSWORD }}
+          SSHPASS: ${{ secrets.SFTP_STAGING_PASSWORD }}
         run: |
           set -euo pipefail
           {
