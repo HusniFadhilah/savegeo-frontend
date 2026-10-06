@@ -171,7 +171,19 @@ export const CAT_COLORS: Record<string, string> = {
 // from this module keep working unchanged.
 export { INDUSTRY_LABEL, INDUSTRY_OPTIONS, COMPANY_SOURCE_LABEL as SOURCE_LABEL } from "@/types/api";
 
-export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cc" | "cf" | "us" | "co" | "ds" | "sp" | "gd" | "ri" | "profile";
+export type AdminSection = "ov" | "ge" | "ag" | "ml" | "cc" | "cf" | "us" | "vf" | "co" | "ds" | "sp" | "gd" | "ri" | "profile";
+
+export interface ViewerFeatureSetting {
+  code: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface ViewerFeatureSettingsResponse {
+  configured: boolean;
+  features: ViewerFeatureSetting[];
+}
 
 export interface CarbonCalibrationDataset {
   id: number;

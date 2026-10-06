@@ -9,6 +9,7 @@ import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import ImageryAttribution from "@/components/map/ImageryAttribution";
 import HistoricalImageryControl, { HistoricalAoiClipController } from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
+import MapExportControl from "@/components/map/MapExportControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import {
   BASEMAP_REFERENCE_PANE,
@@ -161,6 +162,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <Pane name="historical-imagery" style={{ zIndex: 250, pointerEvents: "none" }} />
         <FullscreenControl fullscreenTarget={fullscreenTarget} />
         <ZoomScaleControl />
+        <MapExportControl mapTitle={id} enabled={active && !globe} />
         <ImageryAttribution />
         <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />
         {historicalAoi && <HistoricalAoiClipController aoi={historicalAoi} />}

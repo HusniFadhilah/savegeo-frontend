@@ -5,13 +5,17 @@ import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
+import { isViewerRole } from "@/auth/access";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { useUserAuthStore } from "@/hooks/useUserAuthStore";
+import { useViewerFeatures, type ViewerFeatureCode } from "@/hooks/useViewerFeatures";
 
-const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
-  { id: "carbon", icon: "bi-tree-fill", labelKey: "sidebar.carbon" },
-  { id: "lc-change", icon: "bi-arrow-left-right", labelKey: "sidebar.landChangeShort" },
-  { id: "imagery", icon: "bi-camera", labelKey: "sidebar.imagery" },
-  { id: "disaster", icon: "bi-activity", labelKey: "sidebar.disaster" },
-  { id: "crop-monitoring", icon: "bi-flower2", labelKey: "sidebar.cropMonitoring" },
+const MENU: { id: DashboardModule; icon: string; labelKey: string; features?: ViewerFeatureCode[] }[] = [
+  { id: "carbon", icon: "bi-tree-fill", labelKey: "sidebar.carbon", features: ["app.feature.carbon_stock", "app.feature.land_cover", "app.feature.vegetation_indices"] },
+  { id: "lc-change", icon: "bi-arrow-left-right", labelKey: "sidebar.landChangeShort", features: ["app.feature.land_cover_change"] },
+  { id: "imagery", icon: "bi-camera", labelKey: "sidebar.imagery", features: ["app.feature.satellite_exploration"] },
+  { id: "disaster", icon: "bi-activity", labelKey: "sidebar.disaster", features: ["app.feature.disaster_mapping"] },
+  { id: "crop-monitoring", icon: "bi-flower2", labelKey: "sidebar.cropMonitoring", features: ["app.feature.crop_monitoring"] },
   { id: "guide", icon: "bi-journal-text", labelKey: "sidebar.guide" },
   { id: "about", icon: "bi-info-circle-fill", labelKey: "sidebar.about" },
 ];
@@ -19,6 +23,13 @@ const MENU: { id: DashboardModule; icon: string; labelKey: string }[] = [
 export default function Sidebar() {
   const { activeModule, setActiveModule, sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar } = useUiStore();
   const { language, setLanguage, t } = useI18nStore();
+  const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
+  const adminRole = useAuthStore((state) => state.user?.role);
+  const features = useViewerFeatures((state) => state.features);
+  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const visibleMenu = MENU.filter((item) =>
+    !isViewerPrincipal || !item.features || item.features.some((feature) => features?.includes(feature)),
+  );
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -88,7 +99,7 @@ export default function Sidebar() {
           </button>
         </div>
         <ul className="sidebar-menu">
-          {MENU.map((item) => (
+          {visibleMenu.map((item) => (
             <li key={item.id}>
               <a
                 className={`sidebar-menu-item ${activeModule === item.id ? "active" : ""}`}

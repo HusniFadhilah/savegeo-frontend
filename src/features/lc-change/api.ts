@@ -21,7 +21,7 @@ import type {
 
 /** POST /analyze/landcover - one request per year, single dataset in the array. */
 export function analyzeLandCoverYear(params: LcAnalyzeParams) {
-  return runAnalysisJob<LcAnalyzeResponse>("landcover", params, { timeoutMs: 650_000 });
+  return runAnalysisJob<LcAnalyzeResponse>("landcover_change", params, { timeoutMs: 650_000 });
 }
 
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */

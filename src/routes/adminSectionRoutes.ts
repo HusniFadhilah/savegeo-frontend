@@ -10,6 +10,7 @@ export const ADMIN_SECTION_PATHS: Record<AdminSection, string> = {
   cc: "/admin/carbon-calibration",
   cf: "/admin/system-config",
   us: "/admin/users",
+  vf: "/admin/viewer-features",
   co: "/admin/company-boundaries",
   ds: "/admin/disasters",
   sp: "/admin/satellite-providers",
@@ -46,6 +47,10 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   us: {
     title: "Admin Users | SaveGeo",
     description: "Kelola akun, role, dan akses administrator SaveGeo.",
+  },
+  vf: {
+    title: "Viewer Feature Access | SaveGeo",
+    description: "Configure module access for all Viewer accounts.",
   },
   co: {
     title: "Company Boundaries Admin | SaveGeo",

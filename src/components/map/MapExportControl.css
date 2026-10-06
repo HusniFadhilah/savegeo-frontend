@@ -1,0 +1,150 @@
+.savegeo-map-export {
+  position: absolute;
+  z-index: 1001;
+  top: 10px;
+  left: 52px;
+  pointer-events: auto;
+  color: #19313b;
+  font:
+    13px/1.4 Arial,
+    sans-serif;
+}
+
+.savegeo-map-export__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #c4d2d8;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 5px #142b3530;
+  color: #183f4f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.savegeo-map-export__trigger:hover,
+.savegeo-map-export__trigger[aria-expanded="true"] {
+  background: #edf7f2;
+  border-color: #54856c;
+}
+
+.savegeo-map-export__menu {
+  position: absolute;
+  top: 43px;
+  left: 0;
+  width: min(330px, calc(100vw - 80px));
+  max-height: min(75vh, 620px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #c7d4d9;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 8px 28px #102a3530;
+}
+
+.savegeo-map-export__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #173f52;
+  font-size: 14px;
+}
+
+.savegeo-map-export__header button {
+  border: 0;
+  background: transparent;
+  color: #51656d;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.savegeo-map-export__label,
+.savegeo-map-export__section-title {
+  display: block;
+  margin: 9px 0 5px;
+  color: #52656d;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.savegeo-map-export__menu input {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #c7d4d9;
+  border-radius: 5px;
+  color: #19313b;
+  font: inherit;
+}
+
+.savegeo-map-export__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #19313b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.savegeo-map-export__item:hover:not(:disabled) {
+  background: #edf5f7;
+}
+.savegeo-map-export__item:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.savegeo-map-export__item i {
+  width: 18px;
+  color: #24724f;
+  text-align: center;
+}
+
+.savegeo-map-export__hint,
+.savegeo-map-export__message {
+  margin: 9px 0 0;
+  padding: 8px;
+  border-radius: 5px;
+  background: #f0f5f6;
+  color: #53666d;
+  font-size: 11px;
+}
+
+.savegeo-map-export__message {
+  background: #fff4df;
+  color: #70500e;
+}
+.savegeo-map-export__status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 2px 0;
+  color: #24724f;
+  font-size: 11px;
+}
+
+@media (max-width: 576px) {
+  .savegeo-map-export {
+    left: 50px;
+  }
+  .savegeo-map-export__trigger span {
+    display: none;
+  }
+  .savegeo-map-export__trigger {
+    width: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+}

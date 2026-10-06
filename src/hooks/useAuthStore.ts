@@ -3,6 +3,7 @@ import type { AdminUser } from "@/types/api";
 import { authService } from "@/services/authService";
 import { ApiError, setUnauthorizedHandler } from "@/services/apiClient";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useViewerFeatures } from "@/hooks/useViewerFeatures";
 
 interface AuthState {
   user: AdminUser | null;
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   error: null,
   login: async (username, password) => {
+    useViewerFeatures.getState().reset();
     set({ isLoading: true, error: null });
     try {
       await authService.login(username, password);
@@ -44,6 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
   logout: () => {
+    useViewerFeatures.getState().reset();
     void authService.logout();
     set({ user: null, isAuthenticated: false });
   },
@@ -62,6 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 void useAuthStore.getState().initialize();
 
 setUnauthorizedHandler(() => {
+  useViewerFeatures.getState().reset();
   useAuthStore.setState({ user: null, isAuthenticated: false, error: useI18nStore.getState().t("errors.sessionExpired") });
 });
 

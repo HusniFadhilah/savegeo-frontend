@@ -16,14 +16,12 @@ import ModelRegistry from "./components/ModelRegistry";
 import CarbonCalibration from "./components/CarbonCalibration";
 import ConfigEditor from "./components/ConfigEditor";
 import AdminUsers from "./components/AdminUsers";
+import ViewerFeatureSettings from "./components/ViewerFeatureSettings";
 import CompanyBoundaries from "./components/CompanyBoundaries";
 import SatelliteProviders from "./components/SatelliteProviders";
 import DisasterManagement from "./components/disaster/DisasterManagement";
 import AdminProfile from "./components/AdminProfile";
 import CloudDatasetPanel from "@/features/geospatial/CloudDatasetPanel";
-import { lazy, Suspense } from "react";
-
-const ResearchInformation = lazy(() => import("./components/ResearchInformation"));
 
 const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string; permission?: string }[] }[] = [
   { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview", permission: "config.read" }] },
@@ -36,6 +34,7 @@ const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: strin
       { id: "cc", icon: "bi-tree-fill", labelKey: "admin.menu.calibration", permission: "calibration.read" },
       { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config", permission: "config.read" },
       { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users", permission: "users.read" },
+      { id: "vf", icon: "bi-toggles", labelKey: "admin.menu.viewerFeatures", permission: "viewer_features.manage" },
       { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites", permission: "satellite.read" },
     ],
   },
@@ -65,6 +64,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   cc: ["admin.title.calibration", "admin.subtitle.calibration"],
   cf: ["admin.title.config", "admin.subtitle.config"],
   us: ["admin.title.users", "admin.subtitle.users"],
+  vf: ["admin.title.viewerFeatures", "admin.subtitle.viewerFeatures"],
   sp: ["admin.title.satellites", "admin.subtitle.satellites"],
   co: ["admin.title.companies", "admin.subtitle.companies"],
   ds: ["admin.title.disasters", "admin.subtitle.disasters"],
@@ -242,6 +242,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "cc" && <CarbonCalibration />}
               {section === "cf" && <ConfigEditor />}
               {section === "us" && <AdminUsers />}
+              {section === "vf" && <ViewerFeatureSettings />}
               {section === "sp" && <SatelliteProviders />}
               {section === "co" && <CompanyBoundaries />}
               {section === "ds" && <DisasterManagement />}

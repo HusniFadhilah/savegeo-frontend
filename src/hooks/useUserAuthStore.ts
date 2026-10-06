@@ -6,6 +6,7 @@ import {
   type AppUser,
 } from "@/services/userAuthService";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useViewerFeatures } from "@/hooks/useViewerFeatures";
 
 function friendlyAuthError(err: unknown, fallbackKey: string): string {
   const raw = err instanceof ApiError ? err.message.toLowerCase() : "";
@@ -40,6 +41,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
   isLoading: true,
   error: null,
   login: async (username, password) => {
+    useViewerFeatures.getState().reset();
     set({ isLoading: true, error: null });
     try {
       await userAuthService.login(username, password);
@@ -52,6 +54,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
     }
   },
   register: async (username, email, password) => {
+    useViewerFeatures.getState().reset();
     set({ isLoading: true, error: null });
     try {
       await userAuthService.register(username, email, password);
@@ -64,6 +67,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
     }
   },
   logout: () => {
+    useViewerFeatures.getState().reset();
     void userAuthService.logout();
     set({ user: null, isAuthenticated: false });
   },
@@ -82,6 +86,7 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
 void useUserAuthStore.getState().initialize();
 
 setUserUnauthorizedHandler(() => {
+  useViewerFeatures.getState().reset();
   useUserAuthStore.setState({ user: null, isAuthenticated: false, error: useI18nStore.getState().t("errors.sessionExpired") });
 });
 

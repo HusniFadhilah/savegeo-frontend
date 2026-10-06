@@ -36,6 +36,7 @@ export async function runAnalysisJob<T>(
     | "geotiff"
     | "vegetation"
     | "landcover"
+    | "landcover_change"
     | "landcover_transition"
     | "landcover_change_map"
     | "landcover_hotspots"

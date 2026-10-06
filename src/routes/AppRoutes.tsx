@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import AppLoginPage from "@/pages/AppLoginPage";
 import RegisterUserPage from "@/pages/RegisterUserPage";
@@ -18,6 +18,24 @@ import PluginManagerPage from "@/pages/PluginManagerPage";
 import DatasetViewerPage from "@/pages/DatasetViewerPage";
 import { KarhutlaDetailPage, KarhutlaIndexPage } from "@/features/karhutla/components";
 import DashboardShell from "@/components/layout/DashboardShell";
+import NoFeatureAccessPage from "@/pages/NoFeatureAccessPage";
+import { VIEWER_FEATURE_CODES } from "@/auth/viewerFeatures";
+
+function CarbonEstimationRoute() {
+  const location = useLocation();
+  if (new URLSearchParams(location.search).get("mode") === "landcover_change") {
+    return <Navigate to={`/land-cover-change${location.search}`} replace />;
+  }
+  return (
+    <ProtectedAppRoute anyFeature={[
+      "app.feature.carbon_stock",
+      "app.feature.land_cover",
+      "app.feature.vegetation_indices",
+    ]}>
+      <DashboardPage module="carbon" />
+    </ProtectedAppRoute>
+  );
+}
 
 /**
  * Gates `/pemetaan-bencana*` behind the user auth store, mirroring exactly
@@ -49,6 +67,7 @@ export default function AppRoutes() {
     { path: "/admin/carbon-calibration", section: "cc" },
     { path: "/admin/system-config", section: "cf" },
     { path: "/admin/users", section: "us" },
+    { path: "/admin/viewer-features", section: "vf" },
     { path: "/admin/satellite-providers", section: "sp" },
     { path: "/admin/company-boundaries", section: "co" },
     { path: "/admin/disasters", section: "ds" },
@@ -70,38 +89,48 @@ export default function AppRoutes() {
         <Route
           key={route.path}
           path={route.path}
-          element={<ProtectedAppRoute><DashboardPage module={route.module} /></ProtectedAppRoute>}
+          element={route.path === "/carbon-estimation" ? <CarbonEstimationRoute /> : <ProtectedAppRoute
+            anyFeature={route.module === "carbon" ? [
+              "app.feature.carbon_stock",
+              "app.feature.land_cover",
+              "app.feature.vegetation_indices",
+            ] : route.module === "lc-change" ? ["app.feature.land_cover_change"] :
+              route.module === "imagery" ? ["app.feature.satellite_exploration"] :
+              route.module === "disaster" ? ["app.feature.disaster_mapping"] :
+              route.module === "crop-monitoring" ? ["app.feature.crop_monitoring"] : undefined}
+          ><DashboardPage module={route.module} /></ProtectedAppRoute>}
         />
       ))}
       {adminRoutes.map((route) => (
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
       ))}
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/workflow" element={<WorkflowBuilderPage />} />
-      <Route path="/workflow/new" element={<WorkflowBuilderPage />} />
-      <Route path="/workflow/:id/edit" element={<WorkflowBuilderPage />} />
-      <Route path="/workflow/:id/run" element={<WorkflowBuilderPage />} />
+      <Route path="/no-features" element={<ProtectedAppRoute><NoFeatureAccessPage /></ProtectedAppRoute>} />
+      <Route path="/workflow" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />
+      <Route path="/workflow/new" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />
+      <Route path="/workflow/:id/edit" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />
+      <Route path="/workflow/:id/run" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />
       <Route path="/embed/workflow/:workflowId" element={<EmbedPage />} />
       <Route path="/embed/map/:mapId" element={<EmbedPage />} />
-      <Route path="/settings/plugins" element={<PluginManagerPage />} />
-      <Route path="/dataset-viewer" element={<ProtectedAppRoute><DatasetViewerPage /></ProtectedAppRoute>} />
+      <Route path="/settings/plugins" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><PluginManagerPage /></ProtectedAppRoute>} />
+      <Route path="/dataset-viewer" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><DatasetViewerPage /></ProtectedAppRoute>} />
       <Route
         path="/pemetaan-bencana"
-        element={<ProtectedAppRoute><DashboardShell><DisasterListPage /></DashboardShell></ProtectedAppRoute>}
+        element={<ProtectedAppRoute feature="app.feature.disaster_mapping"><DashboardShell><DisasterListPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/karhutla"
-        element={<ProtectedAppRoute><DashboardShell><KarhutlaIndexPage /></DashboardShell></ProtectedAppRoute>}
+        element={<ProtectedAppRoute feature="app.feature.disaster_mapping"><DashboardShell><KarhutlaIndexPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/karhutla/:eventSlug"
-        element={<ProtectedAppRoute><DashboardShell><KarhutlaDetailPage /></DashboardShell></ProtectedAppRoute>}
+        element={<ProtectedAppRoute feature="app.feature.disaster_mapping"><DashboardShell><KarhutlaDetailPage /></DashboardShell></ProtectedAppRoute>}
       />
       <Route
         path="/pemetaan-bencana/:eventId"
-        element={<ProtectedAppRoute><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>}
+        element={<ProtectedAppRoute feature="app.feature.disaster_mapping"><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>}
       />
-      <Route path="/disaster/event/:eventId" element={<ProtectedAppRoute><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>} />
+      <Route path="/disaster/event/:eventId" element={<ProtectedAppRoute feature="app.feature.disaster_mapping"><DashboardShell><DisasterDashboard /></DashboardShell></ProtectedAppRoute>} />
       <Route path="*" element={<LandingPage />} />
     </Routes>
   );

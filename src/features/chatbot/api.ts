@@ -51,6 +51,7 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
   const res = await fetch(`${env.apiBaseUrl}/agent/control`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(payload),
     signal: args.signal,
   });

@@ -77,13 +77,19 @@ export default function CloudDatasetPanel({ module }: Props) {
   const runQuery = async () => {
     setBusy(true); setNotice("");
     try {
+      if (!selected) throw new Error(t("cloud.noDatasets"));
       const service = getSpatialQueryService(); await service.initialize();
       const local = selected && localFiles.find((item) => item.reference.id === selected.id);
       if (local) await service.registerFile(local.file, local.reference.name);
       setRows(await service.query(query)); setNotice(t("cloud.browser"));
-    } catch {
+    } catch (queryError) {
+      if (!selected || localFiles.some((item) => item.reference.id === selected.id)) {
+        setNotice(queryError instanceof Error ? queryError.message : t("spatial.operationFailed"));
+        setBusy(false);
+        return;
+      }
       try {
-        const job = await apiClient.post<{ id: string }>("/geospatial/query", { sql: query, params: [], limit: 1000 }, { auth: "app" });
+        const job = await apiClient.post<{ id: string }>("/geospatial/query", { datasetId: selected.id, sql: query, params: [], limit: 1000 }, { auth: "app" });
         setRows([]); setNotice(`${t("cloud.server")} · ${job.id}`);
       } catch (fallbackError) { setNotice(fallbackError instanceof Error ? fallbackError.message : t("spatial.operationFailed")); }
     } finally { setBusy(false); }

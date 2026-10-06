@@ -245,6 +245,7 @@ export function checkCarbonDatasetHealth(refresh = false) {
 }
 
 export interface DirectReferenceLayer {
+  analysis_kind?: "carbon" | "landcover";
   dataset: string;
   dataset_name: string;
   tile_url?: string | null;

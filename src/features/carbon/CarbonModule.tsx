@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { isViewerRole } from "@/auth/access";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { useUserAuthStore } from "@/hooks/useUserAuthStore";
+import { useViewerFeatures } from "@/hooks/useViewerFeatures";
+import { getAllowedCarbonModes } from "@/auth/viewerFeatures";
 import InfoTip from "@/components/ui/InfoTip";
 import { ApiError } from "@/services/apiClient";
 import AoiPanel from "./components/AoiPanel";
@@ -61,6 +66,14 @@ export default function CarbonModule() {
   const showLoading = useUiStore((s) => s.showLoading);
   const setLoadingProgress = useUiStore((s) => s.setLoadingProgress);
   const hideLoading = useUiStore((s) => s.hideLoading);
+  const adminRole = useAuthStore((state) => state.user?.role);
+  const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
+  const viewerFeatures = useViewerFeatures((state) => state.features);
+  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const availableAnalysisTypes: AnalysisType[] = useMemo(
+    () => getAllowedCarbonModes(isViewerPrincipal ? viewerFeatures : null),
+    [isViewerPrincipal, viewerFeatures],
+  );
 
   useEffect(() => {
     if (!configReady) void configLoad();
@@ -75,12 +88,19 @@ export default function CarbonModule() {
   const carbonLegendBins = getInt("carbon.legend_bins", 6);
 
   const initialQuery = useMemo(() => typeof window !== "undefined" ? parseCarbonQuery(window.location.search) : { mode: "carbon" as const }, []);
+  const requestedType: AnalysisType = initialQuery.mode === "landcover_change" ? "landcover" : initialQuery.mode;
+  const initialType = availableAnalysisTypes.includes(requestedType) ? requestedType : (availableAnalysisTypes[0] ?? "carbon");
   const [year, setYear] = useState(initialQuery.year ?? yearMax);
   const [zoom, setZoom] = useState(10);
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
-  const [analysisType, setAnalysisType] = useState<AnalysisType>(initialQuery.mode === "landcover_change" ? "landcover" : initialQuery.mode);
+  const [analysisType, setAnalysisType] = useState<AnalysisType>(initialType);
+  useEffect(() => {
+    if (availableAnalysisTypes.length && !availableAnalysisTypes.includes(analysisType)) {
+      setAnalysisType(availableAnalysisTypes[0]);
+    }
+  }, [analysisType, availableAnalysisTypes]);
 
   const [carbonPartial, setCarbonPartial] = useState<CarbonPartial>({
     startMonth: 1,
@@ -294,7 +314,10 @@ export default function CarbonModule() {
       try {
         const directLayers = [];
         if (analysisType === "carbon" || analysisType === "combined") {
-          directLayers.push(await loadDirectCarbonReferenceLayer(carbonParams.referenceDataset, carbonParams.datasetYear, visMin, visMax));
+          directLayers.push({
+            ...(await loadDirectCarbonReferenceLayer(carbonParams.referenceDataset, carbonParams.datasetYear, visMin, visMax)),
+            analysis_kind: "carbon" as const,
+          });
         }
         if (analysisType === "landcover" || analysisType === "combined") {
           const selectedDatasets = lcParams.datasets.length ? lcParams.datasets : ["Dynamic_World"];
@@ -304,7 +327,7 @@ export default function CarbonModule() {
             startDate: lcParams.dateMode === "date" ? lcParams.startDate : undefined,
             endDate: lcParams.dateMode === "date" ? lcParams.endDate : undefined,
           })));
-          directLayers.push(...loaded);
+          directLayers.push(...loaded.map((layer) => ({ ...layer, analysis_kind: "landcover" as const })));
         }
         setResults({ direct: directLayers });
         setProcessingTimes({ total: "direct" });
@@ -401,6 +424,9 @@ export default function CarbonModule() {
     window._onSaveGeoAnalysisDone?.();
   }
 
+  const handleRunAnalysisRef = useRef(handleRunAnalysis);
+  handleRunAnalysisRef.current = handleRunAnalysis;
+
   useEffect(() => registerUiCommands("carbon", {
     read: () => ({
       analysisType,
@@ -428,14 +454,14 @@ export default function CarbonModule() {
     execute: async ({ action, target, parameters }) => {
       const value = parameters?.value;
       if (action === "set_analysis_type" && target === "carbon.analysisType") {
-        if (!["carbon", "vegetation", "landcover", "combined"].includes(String(value))) throw new Error("Jenis analisis tidak tersedia.");
+        if (!availableAnalysisTypes.includes(value as AnalysisType)) throw new Error("Jenis analisis tidak tersedia untuk akun ini.");
         setAnalysisType(value as AnalysisType);
         return;
       }
       if (action === "run_analysis" && target === "carbon.analysis") {
         if (!aoi && !directLoadEnabled) throw new Error("AOI diperlukan sebelum menjalankan analisis.");
         if (running) throw new Error("Analisis masih berjalan.");
-        await handleRunAnalysis();
+        await handleRunAnalysisRef.current();
         return;
       }
       if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul karbon.`);
@@ -523,7 +549,7 @@ export default function CarbonModule() {
         throw new Error(`Target ${target} tidak didukung oleh modul karbon.`);
       }
     },
-  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, handleRunAnalysis]);
+  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, viewerFeatures, isViewerPrincipal, availableAnalysisTypes]);
 
   const reportContext: ReportContext | null = aoi
     ? {
@@ -619,7 +645,9 @@ export default function CarbonModule() {
 
           <AnalysisTypeSelector
             value={analysisType}
+            availableTypes={availableAnalysisTypes}
             onChange={(nextType) => {
+              if (!availableAnalysisTypes.includes(nextType)) return;
               setAnalysisType(nextType);
               if (nextType === "vegetation") {
                 setDirectLoadEnabled(false);

@@ -28,6 +28,45 @@ import CropMonitoringResultsMapPanel from "./components/CropMonitoringResultsMap
 
 const CURRENT_YEAR = new Date().getFullYear();
 
+function sanitizeExportData(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeExportData);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !/(tile.?url|download.?url|access.?token|authorization|password)/i.test(key))
+      .map(([key, item]) => [key, sanitizeExportData(item)]),
+  );
+}
+
+function flattenExportData(value: unknown, prefix = "", rows: Array<[string, unknown]> = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => flattenExportData(item, `${prefix}[${index}]`, rows));
+  } else if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (!entries.length) rows.push([prefix, ""]);
+    else entries.forEach(([key, item]) => flattenExportData(item, prefix ? `${prefix}.${key}` : key, rows));
+  } else {
+    rows.push([prefix, value ?? ""]);
+  }
+  return rows;
+}
+
+function csvCell(value: unknown) {
+  const text = typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadTextFile(content: string, mimeType: string, filename: string) {
+  const url = URL.createObjectURL(new Blob(["\uFEFF", content], { type: mimeType }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
 /**
  * Top-level Crop Monitoring module: a left workflow panel (Field ->
  * Crop Info -> Monitoring Period -> Data Sources -> Run) and a right results
@@ -188,6 +227,37 @@ export default function CropMonitoringModule() {
     setResult((prev) => (prev ? { ...prev, sub_analyses: { ...prev.sub_analyses, flood } } : prev));
   }
 
+  function exportCropResults(format: "json" | "csv") {
+    if (!result) return;
+    const exportedAt = new Date().toISOString();
+    const payload = sanitizeExportData({
+      application: "SAVEGEO Crop Monitoring",
+      exported_at: exportedAt,
+      parameters: {
+        field_id: result.field.id,
+        field_name: result.field.name,
+        period: result.period,
+        index: timeseriesIndex,
+        sub_analyses: subAnalyses,
+        sentinel1_enabled: sentinel1Enabled,
+        sentinel2_enabled: sentinel2Enabled,
+        weather_source: weatherSource,
+      },
+      result,
+    });
+    const basename = `savegeo_crop_${(result.field.name || "field").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "field"}_${exportedAt.slice(0, 10)}`;
+    if (format === "json") {
+      downloadTextFile(JSON.stringify(payload, null, 2), "application/json;charset=utf-8", `${basename}.json`);
+      return;
+    }
+    const rows = flattenExportData(payload);
+    downloadTextFile(
+      ["parameter,nilai", ...rows.map(([key, value]) => `${csvCell(key)},${csvCell(value)}`)].join("\r\n"),
+      "text/csv;charset=utf-8",
+      `${basename}.csv`,
+    );
+  }
+
   const sub = result?.sub_analyses;
   const activeCommodity = commodities.find((c) => c.key === selectedField?.commodity);
   const fieldFeature = aoi?.feature ?? null;
@@ -305,8 +375,16 @@ export default function CropMonitoringModule() {
         {result && sub && (
           <>
             <div className="card mb-3 cm-summary-card">
-              <div className="card-header">
-                <i className="bi bi-speedometer2 me-1" /> {t("crop.summary")}
+              <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i className="bi bi-speedometer2 me-1" /> {t("crop.summary")}</span>
+                <div className="btn-group btn-group-sm" role="group" aria-label="Ekspor hasil crop monitoring">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => exportCropResults("json")}>
+                    <i className="bi bi-filetype-json me-1" /> JSON
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => exportCropResults("csv")}>
+                    <i className="bi bi-filetype-csv me-1" /> CSV
+                  </button>
+                </div>
               </div>
               <div className="card-body">
                 <div className="cm-summary-grid">

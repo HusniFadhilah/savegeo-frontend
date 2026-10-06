@@ -3,6 +3,7 @@ import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, useMap } from "r
 import L from "leaflet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import MapView from "@/components/map/MapView";
+import MapExportControl from "@/components/map/MapExportControl";
 import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -389,6 +390,7 @@ function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
         doubleClickZoom={false}
         className="savegeo-map"
       >
+        <MapExportControl mapTitle="Ringkasan Karhutla" />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap contributors"

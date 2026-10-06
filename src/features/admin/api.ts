@@ -25,6 +25,7 @@ import type {
   DisasterAuditLogEntry,
   CarbonCalibrationDataset,
   CarbonCalibrationFile,
+  ViewerFeatureSettingsResponse,
 } from "./types";
 
 /**
@@ -200,6 +201,14 @@ export const changePassword = (oldPassword: string, newPassword: string) =>
   );
 
 export const listRoles = () => apiClient.get<{ roles: AdminRole[] }>("/admin/roles", { auth: true });
+
+export const getViewerFeatureSettings = () =>
+  apiClient.get<ViewerFeatureSettingsResponse>("/admin/roles/viewer-features", { auth: true });
+
+export const saveViewerFeatureSettings = (enabledFeatures: string[]) =>
+  apiClient.put<ViewerFeatureSettingsResponse>("/admin/roles/viewer-features", {
+    enabled_features: enabledFeatures,
+  }, { auth: true });
 
 export const createAdminUser = (payload: {
   username: string;
