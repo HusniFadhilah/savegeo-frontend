@@ -7,7 +7,7 @@ import MapExportControl from "@/components/map/MapExportControl";
 import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { useI18nStore } from "@/hooks/useI18nStore";
-import { formatDate, formatNumber } from "@/hooks/useI18nStore";
+import { formatDate, formatNumber, translate } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/services/analysisService";
 import {
@@ -18,6 +18,7 @@ import {
   syncWildfireHotspots,
 } from "@/features/disaster/api";
 import { FALLBACK_KALIMANTAN_TIMELINE, FALLBACK_WILDFIRE_EVENTS } from "./data";
+import { isConfirmedWildfireEventForRoute } from "./eventAvailability";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type {
   WildfireEvent,
@@ -924,6 +925,10 @@ export function KarhutlaDetailPage() {
   const [event, setEvent] = useState<WildfireEvent | null>(
     FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === slug) ?? null,
   );
+  const [eventLookup, setEventLookup] = useState<{
+    slug: string;
+    status: "loading" | "ready" | "unavailable";
+  }>(() => ({ slug, status: "loading" }));
   const [summary, setSummary] = useState<WildfireSummary | null>(null);
   const [features, setFeatures] = useState<FirmsHotspotFeature[]>([]);
   const [timeline, setTimeline] = useState<WildfireTimelinePoint[]>([]);
@@ -951,6 +956,8 @@ export function KarhutlaDetailPage() {
   const [regionStatistics, setRegionStatistics] = useState<WildfireRegionStatistic[]>([]);
   const [regionStatisticsLoading, setRegionStatisticsLoading] = useState(false);
   const [regionStatisticsError, setRegionStatisticsError] = useState<string | null>(null);
+  const currentEventLookupStatus = eventLookup.slug === slug ? eventLookup.status : "loading";
+  const eventBackedByApi = isConfirmedWildfireEventForRoute(event?.slug, slug, currentEventLookupStatus);
   const confidenceKey = query.confidence.join(",");
   const regionStatisticsLevel: WildfireRegionLevel = query.districtCode
     ? "village"
@@ -972,9 +979,24 @@ export function KarhutlaDetailPage() {
   const eventProvinceCodesKey = (event?.province_codes ?? []).join(",");
 
   useEffect(() => {
+    let cancelled = false;
+    setEventLookup({ slug, status: "loading" });
+    setEvent(FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === slug) ?? null);
     fetchWildfireEvent(slug)
-      .then((response) => setEvent(adaptLegacyEvent(response.event)))
-      .catch(() => undefined);
+      .then((response) => {
+        if (cancelled) return;
+        const apiEvent = adaptLegacyEvent(response.event);
+        if (apiEvent.slug !== slug) {
+          setEventLookup({ slug, status: "unavailable" });
+          return;
+        }
+        setEvent(apiEvent);
+        setEventLookup({ slug, status: "ready" });
+      })
+      .catch(() => {
+        if (!cancelled) setEventLookup({ slug, status: "unavailable" });
+      });
+    return () => { cancelled = true; };
   }, [slug]);
   useEffect(() => {
     if (!event) return undefined;
@@ -1077,6 +1099,16 @@ export function KarhutlaDetailPage() {
   }, [query, searchParams, setSearchParams, villageOptions]);
   useEffect(() => {
     if (!event) return;
+    if (currentEventLookupStatus === "loading") return;
+    if (!eventBackedByApi) {
+      setLoading(false);
+      setDataError(translate("wildfire.errors.eventUnavailable", language));
+      setMapNotice(null);
+      setSummary(summaryFromEvent(event));
+      setFeatures([]);
+      setTimeline([]);
+      return;
+    }
     const from = query.from || event.monitoring_from;
     const to =
       query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
@@ -1123,9 +1155,20 @@ export function KarhutlaDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [event, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code]);
   useEffect(() => {
     if (!event) return;
+    if (currentEventLookupStatus === "loading") {
+      setRegionStatisticsLoading(true);
+      setRegionStatisticsError(null);
+      return;
+    }
+    if (!eventBackedByApi) {
+      setRegionStatistics([]);
+      setRegionStatisticsLoading(false);
+      setRegionStatisticsError(null);
+      return;
+    }
     let cancelled = false;
     const from = query.from || event.monitoring_from;
     const to = query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
@@ -1149,7 +1192,7 @@ export function KarhutlaDetailPage() {
       })
       .finally(() => { if (!cancelled) setRegionStatisticsLoading(false); });
     return () => { cancelled = true; };
-  }, [event, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision]);
   const syncData = async () => {
     setSyncing(true);
     setSyncError(null);
@@ -1213,6 +1256,10 @@ export function KarhutlaDetailPage() {
       </div>
     );
   const activeSummary = summary ?? summaryFromEvent(event);
+  const eventApiUnavailable = currentEventLookupStatus === "unavailable" && !eventBackedByApi;
+  const regionStatisticsNotice = regionStatisticsError ?? (
+    eventApiUnavailable ? t("wildfire.errors.regionStatisticsUnavailable") : null
+  );
   const summaryUnavailable = Boolean(
     selectedRegion && (dataError || (loading && summary == null)),
   );
@@ -1610,8 +1657,8 @@ export function KarhutlaDetailPage() {
                 </div>
                 {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
               </div>
-              {regionStatisticsError ? (
-                <div className="wildfire-region-error" role="alert">{regionStatisticsError}</div>
+              {regionStatisticsNotice ? (
+                <div className="wildfire-region-error" role="alert">{regionStatisticsNotice}</div>
               ) : (
                 <div className="wildfire-region-table-wrap">
                   <table className="wildfire-region-table">

@@ -37,6 +37,54 @@ const STAC_EXAMPLES = [
   { name: "Planetary Computer - NAIP (Amerika Serikat)", url: "https://planetarycomputer.microsoft.com/api/stac/v1", collection: "naip" },
 ];
 
+const SATELLITE_PREVIEW_ASSETS = {
+  sentinel2: {
+    thumbnail: "/images/satellite-examples/sentinel2.jpg",
+    alt: "Contoh citra Sentinel-2 dari Tonga",
+    description: "Contoh nyata · Tonga, 2016 · Copernicus/ESA · CC BY-SA 3.0 IGO",
+  },
+  landsat8: {
+    thumbnail: "/images/satellite-examples/landsat8.jpg",
+    alt: "Contoh citra Landsat 8 Earth as Art dari USGS",
+    description: "Contoh nyata · Earth as Art · USGS · Public Domain",
+  },
+  landsat9: {
+    thumbnail: "/images/satellite-examples/landsat9.png",
+    alt: "Contoh citra Landsat 9 di Amazon, Peru",
+    description: "Contoh nyata · Amazon, Peru · Landsat 9 / NASA",
+  },
+  iceye: {
+    thumbnail: "/images/satellite-examples/iceye.png",
+    alt: "Contoh quicklook radar SAR dari ICEYE",
+    description: "Contoh quicklook SAR · ICEYE Open Data · CC BY 4.0",
+  },
+  planet: {
+    thumbnail: "/images/satellite-examples/planet.png",
+    alt: "Contoh citra PlanetScope dari Nepal",
+    description: "PlanetScope · Nepal, 28 Sep 2026 · © Planet · CC BY-NC 4.0",
+  },
+  vantor: {
+    thumbnail: "/images/satellite-examples/vantor.jpg",
+    alt: "Contoh citra Vantor dari Nepal",
+    description: "Vantor Open Data · Nepal, 2026 · CC BY-NC 4.0",
+  },
+} as const;
+
+function getSatellitePreview(key: string, group: string) {
+  const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (normalizedKey.includes("sentinel2") || group === "Sentinel-2") {
+    return SATELLITE_PREVIEW_ASSETS.sentinel2;
+  }
+  if (normalizedKey.includes("landsat8")) return SATELLITE_PREVIEW_ASSETS.landsat8;
+  if (normalizedKey.includes("landsat9")) return SATELLITE_PREVIEW_ASSETS.landsat9;
+  if (normalizedKey.includes("iceye")) return SATELLITE_PREVIEW_ASSETS.iceye;
+  if (normalizedKey.includes("planet")) return SATELLITE_PREVIEW_ASSETS.planet;
+  if (normalizedKey.includes("vantor") || normalizedKey.includes("maxar")) {
+    return SATELLITE_PREVIEW_ASSETS.vantor;
+  }
+  return undefined;
+}
+
 const AOI_STYLE = { color: "#0d6efd", weight: 2, fillOpacity: 0.05 };
 const SCENE_TILE_MAX_NATIVE_ZOOM = 19;
 const SCENE_TILE_MAX_ZOOM = 23;
@@ -718,13 +766,22 @@ export default function ImageryModule() {
       })
       // Resolution shown right in the option label (user request) - lets you
       // compare sensors at a glance without selecting each one first.
-      .map((s) => ({
-        value: s.key,
-        label: s.key === ESRI_WAYBACK_PROVIDER_KEY
-          ? `${s.name} · sub-meter/variasi`
-          : `${s.name} · ${s.resolution_m == null ? "resolusi mengikuti produk" : formatResolution(s.resolution_m)}`,
-        group: s.group,
-      }));
+      .map((s) => {
+        const preview = getSatellitePreview(s.key, s.group);
+        return {
+          value: s.key,
+          label: s.key === ESRI_WAYBACK_PROVIDER_KEY
+            ? `${s.name} · sub-meter/variasi`
+            : `${s.name} · ${s.resolution_m == null ? "resolusi mengikuti produk" : formatResolution(s.resolution_m)}`,
+          group: s.group,
+          ...(preview && {
+            thumbnail: preview.thumbnail,
+            thumbnailAlt: preview.alt,
+            thumbnailTitle: preview.description,
+            description: preview.description,
+          }),
+        };
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageryProviders]);
 

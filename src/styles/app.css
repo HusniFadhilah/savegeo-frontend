@@ -84,6 +84,40 @@
   cursor: pointer;
 }
 
+.sg-ssel-option--thumbnail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 7px 10px;
+}
+
+.sg-ssel-opt-thumbnail {
+  display: block;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 5px;
+  background: #e9eef2;
+}
+
+.sg-ssel-opt-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sg-ssel-option--thumbnail .sg-ssel-opt-label {
+  line-height: 1.25;
+}
+
+.sg-ssel-option--thumbnail .sg-ssel-opt-desc {
+  margin-top: 3px;
+  font-size: 0.69rem;
+  line-height: 1.25;
+}
+
 .sg-ssel-option:last-child {
   border-bottom: none;
 }

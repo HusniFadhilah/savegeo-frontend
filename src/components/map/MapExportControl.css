@@ -5,9 +5,12 @@
   left: 52px;
   pointer-events: auto;
   color: #19313b;
-  font:
-    13px/1.4 Arial,
-    sans-serif;
+  font: 13px/1.4 "Montserrat", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.savegeo-map-export button,
+.savegeo-map-export input {
+  font-family: inherit;
 }
 
 .savegeo-map-export__trigger {

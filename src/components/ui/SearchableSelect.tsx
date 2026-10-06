@@ -16,6 +16,10 @@ export interface SearchableSelectOption {
   value: string;
   label: string;
   description?: string;
+  /** Optional sample image shown to the left of the option text. */
+  thumbnail?: string;
+  thumbnailAlt?: string;
+  thumbnailTitle?: string;
   /** Optional group header shown above consecutive options sharing the same value. */
   group?: string;
 }
@@ -144,15 +148,28 @@ export default function SearchableSelect({
               <div key={opt.value}>
                 {showGroup && <div className="sg-ssel-opt-group">{opt.group}</div>}
                 <div
-                  className={`sg-ssel-option ${idx === activeIdx ? "active" : ""} ${opt.value === value ? "selected" : ""}`}
+                  className={`sg-ssel-option ${opt.thumbnail ? "sg-ssel-option--thumbnail" : ""} ${idx === activeIdx ? "active" : ""} ${opt.value === value ? "selected" : ""}`}
                   onMouseEnter={() => setActiveIdx(idx)}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     commit(opt.value);
                   }}
                 >
-                  <div className="sg-ssel-opt-label">{opt.label}</div>
-                  {opt.description && <div className="sg-ssel-opt-desc">{opt.description}</div>}
+                  {opt.thumbnail && (
+                    <img
+                      className="sg-ssel-opt-thumbnail"
+                      src={opt.thumbnail}
+                      alt={opt.thumbnailAlt ?? ""}
+                      title={opt.thumbnailTitle ?? opt.description ?? opt.label}
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                    />
+                  )}
+                  <div className={opt.thumbnail ? "sg-ssel-opt-content" : undefined}>
+                    <div className="sg-ssel-opt-label">{opt.label}</div>
+                    {opt.description && <div className="sg-ssel-opt-desc">{opt.description}</div>}
+                  </div>
                 </div>
               </div>
             );

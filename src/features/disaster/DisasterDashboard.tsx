@@ -83,11 +83,10 @@ const EMPTY_FIRMS_LAYER: FirmsLayerState = {
 
 /**
  * Item D.14/D.48 of the redesign spec: single event view. Assembled from the
- * 4 independent `GET /disasters/{id}/*` calls the contract doc documents
- * (detail, layers [= satellite + analyses], statistics, hotspots) - each
- * loads/fails independently so one slow/broken section never blocks the
- * rest of the page, matching the pattern already used across this app's
- * other multi-section modules (carbon/lc-change).
+ * `GET /disasters/{id}` confirms the event first. Its layers, statistics,
+ * and hotspots then load independently so one slow/broken section never
+ * blocks the rest of the page, matching the pattern already used across
+ * this app's other multi-section modules (carbon/lc-change).
  */
 export default function DisasterDashboard() {
   const { t } = useI18nStore();
@@ -119,6 +118,13 @@ export default function DisasterDashboard() {
   const [focusSignal, setFocusSignal] = useState(0);
   const [firmsLayer, setFirmsLayer] = useState<FirmsLayerState>(EMPTY_FIRMS_LAYER);
 
+  // Only load event subresources after the event itself has been confirmed.
+  // This prevents stale, unpublished, or mistyped IDs from generating a
+  // cascade of expected 404s for layers/statistics/hotspots.
+  const readyEventId = detail && String(detail.event.id) === String(eventId)
+    ? detail.event.id
+    : null;
+
   const [additionalSourcesOpen, setAdditionalSourcesOpen] = useState(false);
   const [sources, setSources] = useState<DisasterSourcesMap | null>(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
@@ -133,6 +139,7 @@ export default function DisasterDashboard() {
   useEffect(() => {
     if (!eventId) return;
     let cancelled = false;
+    setDetail(null);
     setFirmsLayer(EMPTY_FIRMS_LAYER);
     setDetailLoading(true);
     setDetailError(null);
@@ -172,11 +179,17 @@ export default function DisasterDashboard() {
   }, [detail, isKarhutla, searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (!eventId) return;
+    if (readyEventId == null) {
+      setLayers(null);
+      setLayersError(null);
+      setLayersLoading(false);
+      setCheckedAnalyses(new Set());
+      return;
+    }
     let cancelled = false;
     setLayersLoading(true);
     setLayersError(null);
-    fetchDisasterLayers(eventId)
+    fetchDisasterLayers(readyEventId)
       .then((res) => {
         if (cancelled) return;
         setLayers(res);
@@ -192,14 +205,19 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [readyEventId]);
 
   useEffect(() => {
-    if (!eventId) return;
+    if (readyEventId == null) {
+      setStatistics(null);
+      setStatsError(null);
+      setStatsLoading(false);
+      return;
+    }
     let cancelled = false;
     setStatsLoading(true);
     setStatsError(null);
-    fetchDisasterStatistics(eventId)
+    fetchDisasterStatistics(readyEventId)
       .then((res) => {
         if (!cancelled) setStatistics(res);
       })
@@ -213,14 +231,19 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [readyEventId]);
 
   useEffect(() => {
-    if (!eventId) return;
+    if (readyEventId == null) {
+      setHotspots([]);
+      setHotspotsError(null);
+      setHotspotsLoading(false);
+      return;
+    }
     let cancelled = false;
     setHotspotsLoading(true);
     setHotspotsError(null);
-    fetchDisasterHotspots(eventId)
+    fetchDisasterHotspots(readyEventId)
       .then((res) => {
         if (!cancelled) setHotspots(res.hotspots ?? []);
       })
@@ -234,7 +257,7 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [readyEventId]);
 
   const toggleAnalysis = (modelId: string) => {
     setCheckedAnalyses((prev) => {

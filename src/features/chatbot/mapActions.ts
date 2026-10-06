@@ -22,7 +22,21 @@ export function registerMap(role: MapRole, map: L.Map | null): void {
   else delete registry[role];
 }
 
+function isMountedMap(map: L.Map | undefined): map is L.Map {
+  if (!map) return false;
+  try {
+    return map.getContainer().isConnected;
+  } catch {
+    return false;
+  }
+}
+
 export function getActiveMap(): L.Map | null {
+  // MapContainer removes its Leaflet instance when its route unmounts. A
+  // stored instance can still exist in this registry, but calling getCenter
+  // or flyTo after removal may dereference Leaflet's destroyed map pane.
+  if (!isMountedMap(registry.results)) delete registry.results;
+  if (!isMountedMap(registry.aoi)) delete registry.aoi;
   return registry.results || registry.aoi || null;
 }
 
