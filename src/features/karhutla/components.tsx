@@ -35,6 +35,7 @@ import type { FirmsHotspotFeature } from "@/features/disaster/types";
 import type { DisasterEventListItem } from "@/features/disaster/types";
 import WindArrowLayer from "./WindArrowLayer";
 import WildfireLayerPanel from "./WildfireLayerPanel";
+import CamsFireEmissionsPanel from "./CamsFireEmissionsPanel";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels =
@@ -1537,6 +1538,7 @@ export function KarhutlaDetailPage() {
             syncError={syncError}
             dataRevision={dataRevision}
           />
+          <CamsFireEmissionsPanel slug={slug} eventConfirmed={eventBackedByApi} />
           <div className={`wildfire-timeline-panel${loading ? " is-loading" : ""}`} aria-busy={loading}>
             <div className="wildfire-panel-heading">
               <div>

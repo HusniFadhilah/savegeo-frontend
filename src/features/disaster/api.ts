@@ -245,6 +245,12 @@ export function fetchWildfireEvent(slug: string) {
   );
 }
 
+export function fetchWildfireCamsCapabilities(slug: string) {
+  return userGet<import("@/features/karhutla/types").WildfireCamsCapabilities>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/capabilities`,
+  );
+}
+
 export function fetchWildfireSummary(slug: string, query: Record<string, string | undefined> = {}) {
   return userGet<import("@/features/karhutla/types").WildfireSummary>(
     `/disasters/wildfires/events/${encodeURIComponent(slug)}/summary${buildQuery(query)}`,

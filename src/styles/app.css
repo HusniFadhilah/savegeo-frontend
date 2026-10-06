@@ -8617,3 +8617,163 @@ html[data-theme="dark"] .analysis-settings-expand:hover,
 .dark-mode .analysis-settings-expand:hover {
   background: #15803d;
 }
+
+.wildfire-cams-panel {
+  margin: 1rem 0;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.85rem;
+  background: #fff;
+  color: #1f2937;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+}
+
+.wildfire-cams-panel details > summary {
+  display: flex;
+  min-height: 4.2rem;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.wildfire-cams-panel details > summary::-webkit-details-marker { display: none; }
+.wildfire-cams-panel details > summary:focus-visible {
+  outline: 3px solid #7c3aed;
+  outline-offset: -3px;
+}
+
+.wildfire-cams-summary__icon,
+.wildfire-cams-product__icon {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 2.6rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: #f3e8ff;
+  color: #7e22ce;
+  font-size: 1.25rem;
+}
+
+.wildfire-cams-summary__copy { display: grid; gap: 0.12rem; }
+.wildfire-cams-summary__copy strong { font-size: 0.98rem; }
+.wildfire-cams-summary__copy small { color: #64748b; }
+.wildfire-cams-summary__tag {
+  margin-left: auto;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #d8b4fe;
+  border-radius: 999px;
+  background: #faf5ff;
+  color: #6b21a8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.wildfire-cams-summary__chevron { color: #64748b; transition: transform 160ms ease; }
+.wildfire-cams-panel details[open] .wildfire-cams-summary__chevron { transform: rotate(180deg); }
+
+.wildfire-cams-panel__body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.wildfire-cams-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0.85rem 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #fcd34d;
+  border-radius: 0.65rem;
+  background: #fffbeb;
+  color: #713f12;
+  font-size: 0.88rem;
+}
+.wildfire-cams-status--error { justify-content: space-between; border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+.wildfire-cams-status--error button { border: 0; background: transparent; color: inherit; font-weight: 700; text-decoration: underline; }
+.wildfire-cams-disclaimer { margin: 0 0 0.85rem; color: #475569; font-size: 0.86rem; }
+.wildfire-cams-product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.wildfire-cams-product {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: linear-gradient(160deg, #fff 0%, #faf5ff 100%);
+}
+.wildfire-cams-product__heading { display: flex; align-items: flex-start; gap: 0.65rem; }
+.wildfire-cams-product__heading h3 { margin: 0; font-size: 0.96rem; font-weight: 750; }
+.wildfire-cams-product__heading p { margin: 0.2rem 0 0; color: #64748b; font-size: 0.81rem; }
+.wildfire-cams-metadata { display: grid; gap: 0.45rem; margin: 0; }
+.wildfire-cams-metadata > div { display: grid; grid-template-columns: minmax(6rem, 0.36fr) minmax(0, 1fr); gap: 0.4rem; font-size: 0.78rem; }
+.wildfire-cams-metadata dt { color: #64748b; font-weight: 650; }
+.wildfire-cams-metadata dd { margin: 0; overflow-wrap: anywhere; }
+.wildfire-cams-variable-list { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.wildfire-cams-variable-list li { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: 0.1rem 0.4rem; font-size: 0.76rem; }
+.wildfire-cams-variable-list li strong { color: #7e22ce; }
+.wildfire-cams-variable-list li code { grid-column: 2; color: #64748b; font-size: 0.7rem; }
+.wildfire-cams-variable-list li small { grid-column: 2; color: #64748b; font-size: 0.69rem; }
+.wildfire-cams-product__note { margin: 0; color: #475569; font-size: 0.8rem; line-height: 1.45; }
+.wildfire-cams-unavailable {
+  align-self: flex-start;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.78rem;
+  opacity: 1;
+}
+.wildfire-cams-product > a { align-self: flex-start; color: #6b21a8; font-size: 0.8rem; font-weight: 700; }
+.wildfire-cams-product > small { color: #64748b; font-size: 0.72rem; }
+.wildfire-cams-attribution { margin: 0.85rem 0 0; color: #64748b; font-size: 0.76rem; }
+
+html[data-theme="dark"] .wildfire-cams-panel,
+.dark-mode .wildfire-cams-panel { border-color: #475569; background: #111827; color: #e5e7eb; }
+html[data-theme="dark"] .wildfire-cams-panel details > summary:focus-visible,
+.dark-mode .wildfire-cams-panel details > summary:focus-visible { outline-color: #c084fc; }
+html[data-theme="dark"] .wildfire-cams-summary__copy small,
+html[data-theme="dark"] .wildfire-cams-disclaimer,
+html[data-theme="dark"] .wildfire-cams-product__heading p,
+html[data-theme="dark"] .wildfire-cams-product__note,
+html[data-theme="dark"] .wildfire-cams-metadata dt,
+html[data-theme="dark"] .wildfire-cams-product > small,
+html[data-theme="dark"] .wildfire-cams-attribution,
+.dark-mode .wildfire-cams-summary__copy small,
+.dark-mode .wildfire-cams-disclaimer,
+.dark-mode .wildfire-cams-product__heading p,
+.dark-mode .wildfire-cams-product__note,
+.dark-mode .wildfire-cams-metadata dt,
+.dark-mode .wildfire-cams-product > small,
+.dark-mode .wildfire-cams-attribution { color: #cbd5e1; }
+html[data-theme="dark"] .wildfire-cams-panel__body,
+.dark-mode .wildfire-cams-panel__body { border-color: #334155; }
+html[data-theme="dark"] .wildfire-cams-product,
+.dark-mode .wildfire-cams-product { border-color: #475569; background: linear-gradient(160deg, #172033 0%, #241638 100%); }
+html[data-theme="dark"] .wildfire-cams-summary__tag,
+.dark-mode .wildfire-cams-summary__tag { border-color: #7e22ce; background: #2e1065; color: #f3e8ff; }
+html[data-theme="dark"] .wildfire-cams-status,
+.dark-mode .wildfire-cams-status { border-color: #854d0e; background: #422006; color: #fef3c7; }
+html[data-theme="dark"] .wildfire-cams-status--error,
+.dark-mode .wildfire-cams-status--error { border-color: #991b1b; background: #450a0a; color: #fecaca; }
+html[data-theme="dark"] .wildfire-cams-unavailable,
+.dark-mode .wildfire-cams-unavailable { border-color: #475569; background: #1e293b; color: #cbd5e1; }
+html[data-theme="dark"] .wildfire-cams-product > a,
+.dark-mode .wildfire-cams-product > a { color: #d8b4fe; }
+html[data-theme="dark"] .wildfire-cams-variable-list li strong,
+.dark-mode .wildfire-cams-variable-list li strong { color: #d8b4fe; }
+html[data-theme="dark"] .wildfire-cams-variable-list li code,
+html[data-theme="dark"] .wildfire-cams-variable-list li small,
+.dark-mode .wildfire-cams-variable-list li small,
+.dark-mode .wildfire-cams-variable-list li code { color: #cbd5e1; }
+
+@media (max-width: 720px) {
+  .wildfire-cams-panel details > summary { gap: 0.55rem; padding-inline: 0.75rem; }
+  .wildfire-cams-summary__copy small { max-width: 13rem; font-size: 0.75rem; }
+  .wildfire-cams-product-grid { grid-template-columns: 1fr; }
+  .wildfire-cams-panel__body { padding-inline: 0.75rem; }
+}

@@ -105,6 +105,57 @@ export interface WildfireRegionStatisticsResponse {
   attribution: string;
 }
 
+export interface WildfireCamsProduct {
+  id: string;
+  label: string;
+  dataset_id: string;
+  source_url: string;
+  provider: string;
+  license: string;
+  doi: string;
+  resolution_degrees: number;
+  spatial_coverage: string;
+  time_basis: string;
+  products?: Array<{
+    version: string;
+    coverage_start: string;
+    coverage_end: string | null;
+    temporal_steps: string[];
+    notes: string;
+  }>;
+  variables: Record<string, {
+    label: string;
+    symbol: string;
+    source_name: string;
+    unit: string;
+    kind: string;
+    temporal_resolution_hours?: number;
+    vertical_product?: string;
+  }>;
+  method: string;
+  data_kind: string;
+  initialization_hours_utc?: number[];
+  forecast_horizon_hours?: number;
+  single_level_step_hours?: number;
+}
+
+export interface WildfireCamsCapabilities {
+  status:
+    | "invalid_configuration"
+    | "needs_credentials"
+    | "needs_terms_acceptance"
+    | "upstream_validation_blocked";
+  credentials_configured: boolean;
+  terms_accepted_by_operator: boolean;
+  provider_ready: false;
+  data_available: false;
+  blocked_reason: string;
+  integration_stage: string;
+  products: WildfireCamsProduct[];
+  attribution: string;
+  disclaimer: string;
+}
+
 export interface WildfireFilters {
   search: string;
   year: string;
