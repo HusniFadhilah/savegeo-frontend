@@ -18,7 +18,8 @@ import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
-import { getImageryAdvancedCapabilities, getImageryDemTile, getImageryProviders, getImagerySceneTile, getImageryStacSourceUrl, listImageryScenes } from "./api";
+import { getImageryAdvancedCapabilities, getImageryAssetUrl, getImageryDemTile, getImageryProviders, getImagerySceneTile, listImageryScenes } from "./api";
+import { getImageryUiCapabilities } from "./providerCapabilities";
 import type { AdvancedImageryCapabilities, DemTileResponse, ImageryProvider, ImageryScene, ImagerySuperResolutionMode, SarMode } from "./types";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, type WaybackScene } from "./wayback";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
@@ -331,7 +332,7 @@ function formatResolution(value?: number | null): string {
 }
 
 
-function sceneResolution(scene: ImageryScene | undefined, assetKey: string, fallback?: number) {
+function sceneResolution(scene: ImageryScene | undefined, assetKey: string, fallback?: number | null) {
   return scene?.assets?.find(asset => asset.key === assetKey)?.resolution_m ?? scene?.resolution_m ?? fallback;
 }
 
@@ -600,33 +601,22 @@ export default function ImageryModule() {
   const satelliteMeta = imageryProviders[satellite];
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
   const isHimawari = satellite === HIMAWARI_PROVIDER_KEY;
-  const isMosaicProvider = Boolean(satelliteMeta?.supports_mosaic);
-  const isCogProvider = Boolean(
-    satelliteMeta?.source_kind &&
-      ["maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac"].includes(satelliteMeta.source_kind),
-  );
-  const isOpenHighResProvider = Boolean(
-    satelliteMeta?.source_kind &&
-      ["oam_stac", "maxar_open_data_stac", "planet_open_data_stac", "planet_stac", "vantor_stac", "iceye_stac", "generic_stac", "big_ctsrt"].includes(satelliteMeta.source_kind),
-  );
-  const supportsSuperResolution = Boolean(
-    satelliteMeta &&
-      !isEsriWayback &&
-      satelliteMeta.capabilities?.analytical !== false &&
-      (!satelliteMeta.source_kind || satelliteMeta.source_kind === "gee"),
-  );
-  const supportsCloudFilter = Boolean(
-    satelliteMeta?.cloud_property && satelliteMeta.capabilities?.supports_cloud_filter !== false,
-  );
+  const providerUi = getImageryUiCapabilities(satelliteMeta);
+  const isMosaicProvider = providerUi.mosaic;
+  const isCogProvider = providerUi.cog;
+  const supportsSceneMetadata = providerUi.sceneMetadata;
+  const supportsCompare = providerUi.compare;
+  const supportsPreview = providerUi.preview;
+  const supportsSearch = providerUi.search;
+  const supportsDownload = providerUi.download;
+  const supportsAnalyticalTools = providerUi.analysis;
+  const supportsBandControls = providerUi.bands;
+  const supportsSuperResolution = providerUi.superResolution && !isEsriWayback;
+  const supportsCloudFilter = providerUi.cloudFilter;
   // Browser GPU enhancement is meaningful for RGB scene tiles. SAR and
   // single-band concentration products use different visual semantics, while
   // Wayback is already a basemap archive rather than an analytic scene.
-  const supportsGpuEnhancement = Boolean(
-    satelliteMeta &&
-      satelliteMeta.visualization === "rgb" &&
-      !isEsriWayback &&
-      satelliteMeta.capabilities?.analytical !== false,
-  );
+  const supportsGpuEnhancement = providerUi.visualEnhancement && !isEsriWayback;
   const effectiveVisualEnhancement = visualEnhancement && supportsGpuEnhancement;
   const supportsSamGeo = Boolean(isCogProvider && satelliteMeta?.capabilities?.supports_ai);
   const scientificSupport: ScientificSupport = {
@@ -644,7 +634,7 @@ export default function ImageryModule() {
     isEsriWayback
       ? SCENE_TILE_MAX_NATIVE_ZOOM
       : nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === selectedSceneId), cogAssetKey, satelliteMeta?.resolution_m));
-  const sceneFocusMaxZoom = isOpenHighResProvider ? 21 : Math.min(sceneTileMaxNativeZoom, 17);
+  const sceneFocusMaxZoom = supportsSceneMetadata ? 21 : Math.min(sceneTileMaxNativeZoom, 17);
   useEffect(() => {
     invalidateCompare();
     setCompareTileA(null);
@@ -730,7 +720,9 @@ export default function ImageryModule() {
       // compare sensors at a glance without selecting each one first.
       .map((s) => ({
         value: s.key,
-        label: s.key === ESRI_WAYBACK_PROVIDER_KEY ? `${s.name} · sub-meter/variasi` : `${s.name} · ${formatResolution(s.resolution_m)}`,
+        label: s.key === ESRI_WAYBACK_PROVIDER_KEY
+          ? `${s.name} · sub-meter/variasi`
+          : `${s.name} · ${s.resolution_m == null ? "resolusi mengikuti produk" : formatResolution(s.resolution_m)}`,
         group: s.group,
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -784,7 +776,7 @@ export default function ImageryModule() {
           forceScene: isMosaicProvider && Boolean(tileAoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
           startDate: isMosaicProvider && tileAoi ? mosaicQuery.startDate : undefined,
           endDate: isMosaicProvider && tileAoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
-          maxCloudCover: isMosaicProvider && tileAoi && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
+          maxCloudCover: isMosaicProvider && tileAoi && supportsCloudFilter && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
           superResolution: tileSuperResolution,
@@ -821,10 +813,15 @@ export default function ImageryModule() {
       sarMode,
       satellite,
       sceneTilesById,
+      supportsCloudFilter,
     ],
   );
 
   const searchScenes = async () => {
+    if (!supportsSearch) {
+      setSearchError(satelliteMeta?.configuration_message ?? "Provider ini belum memiliki adapter pencarian yang tersedia.");
+      return;
+    }
     const searchRegion = aoi ?? mapViewportAoi;
     if (!searchRegion && !isHimawari && !isEsriWayback) {
       setSearchError("Peta belum siap. Tunggu peta selesai dimuat lalu coba lagi.");
@@ -876,10 +873,10 @@ export default function ImageryModule() {
               aoi: { geojson: searchRegion! },
               satellite,
               startDate,
-              endDate: isOpenHighResProvider ? endDate : inclusiveEnd.toISOString().slice(0, 10),
-              maxCloudCover: cloudFilterEnabled ? maxCloudCover : undefined,
+              endDate: supportsSceneMetadata ? endDate : inclusiveEnd.toISOString().slice(0, 10),
+              maxCloudCover: supportsCloudFilter && cloudFilterEnabled ? maxCloudCover : undefined,
               stacCatalogUrl: satelliteMeta?.source_kind === "generic_stac" ? stacCatalogUrl.trim() : undefined,
-              stacCollections: isCogProvider ? stacCollections.trim() || undefined : undefined,
+              stacCollections: satelliteMeta?.source_kind === "generic_stac" ? stacCollections.trim() || undefined : undefined,
             });
           })();
       if (requestId !== searchRequestRef.current) return;
@@ -890,7 +887,7 @@ export default function ImageryModule() {
       }
       setTruncated(res.truncated);
       setSearched(true);
-      if (scenesByNewest[0]) {
+      if (scenesByNewest[0] && supportsPreview) {
         const defaultAssetKey = scenesByNewest[0].default_asset_key || "visual";
         setCogAssetKey(defaultAssetKey);
         // Prefer the AOI mosaic for supported providers whenever the search
@@ -907,6 +904,9 @@ export default function ImageryModule() {
           initialMosaicAvailable ? true : undefined,
           initialMosaicAvailable ? searchRegion : undefined,
         );
+      } else if (scenesByNewest[0]) {
+        setSelectedSceneId(scenesByNewest[0].id);
+        setTileError(satelliteMeta?.configuration_message ?? "Provider ini belum menyediakan preview scene.");
       }
     } catch (err) {
       if (requestId !== searchRequestRef.current) return;
@@ -924,6 +924,12 @@ export default function ImageryModule() {
     if (isCogProvider) setCogAssetKey(nextAssetKey);
     setMosaicRequestedMode(false);
     setSceneRequestedMode(true);
+    if (!supportsPreview) {
+      setSelectedSceneId(scene.id);
+      setTileUrl(null);
+      setTileError(satelliteMeta?.configuration_message ?? "Provider ini belum menyediakan preview scene.");
+      return;
+    }
     void loadSceneTile(scene, nextAssetKey);
   };
 
@@ -1124,8 +1130,10 @@ export default function ImageryModule() {
     [focusSceneId, scenes, selectedScene],
   );
   const selectedSceneAssets = selectedScene?.assets ?? [];
-  const activeCogAsset = selectedSceneAssets.find((asset) => asset.key === cogAssetKey) ?? selectedSceneAssets[0] ?? null;
-  const activeCogDownloadUrl = selectedScene && activeCogAsset ? getImageryStacSourceUrl(selectedScene.id, activeCogAsset.key) : null;
+  const activeCogAsset = selectedSceneAssets.find((asset) => asset.key === (selectedScene?.default_asset_key || cogAssetKey)) ?? selectedSceneAssets[0] ?? null;
+  const activeCogDownloadUrl = selectedScene && activeCogAsset && supportsDownload
+    ? getImageryAssetUrl(selectedScene.id, activeCogAsset.key, satellite)
+    : null;
   const footprintData = useMemo(
     () => sceneFootprintFeatureCollection(sortedScenes, selectedSceneId, hoverSceneId),
     [hoverSceneId, selectedSceneId, sortedScenes],
@@ -1318,7 +1326,12 @@ export default function ImageryModule() {
               <>
                 {satelliteMeta.configuration_status && satelliteMeta.configuration_status !== "connected" && (
                   <div className="alert alert-warning py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
-                    <i className="fas fa-lock" /> Provider berlisensi belum siap: {satelliteMeta.configuration_status === "not_configured" ? "isi URL STAC dan credential di backend." : "lengkapi konfigurasi backend."}
+                    <i className="fas fa-lock" /> {satelliteMeta.configuration_message ?? `Provider berlisensi belum siap (${satelliteMeta.configuration_status}). Lengkapi konfigurasi backend.`}
+                  </div>
+                )}
+                {satelliteMeta.configuration_status === "connected" && satelliteMeta.configuration_message && (
+                  <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
+                    <i className="fas fa-circle-info" /> {satelliteMeta.configuration_message}
                   </div>
                 )}
                 <small className="text-muted d-block mt-1">
@@ -1326,7 +1339,7 @@ export default function ImageryModule() {
                     ? "Resolusi bervariasi (sering sub-meter hingga beberapa meter) · arsip rilis basemap sejak 2014"
                     : isHimawari
                       ? "Cakupan full-disk Asia-Pasifik · frame baru kira-kira tiap 10 menit · sejak 2015"
-                      : `${satelliteMeta.resolution_m}m · revisit ~${satelliteMeta.revisit_days} hari · sejak ${satelliteMeta.start_year}`}
+                      : [satelliteMeta.resolution_m == null ? null : formatResolution(satelliteMeta.resolution_m), satelliteMeta.revisit_days == null ? null : `revisit ~${satelliteMeta.revisit_days} hari`, satelliteMeta.start_year == null ? null : `sejak ${satelliteMeta.start_year}`].filter(Boolean).join(" · ") || "Resolusi, revisit, dan cakupan mengikuti produk/metadata scene."}
                 </small>
                 {isEsriWayback && (
                   <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
@@ -1387,7 +1400,7 @@ export default function ImageryModule() {
             </div>
           )}
 
-          {isCogProvider && (
+          {satelliteMeta?.source_kind === "generic_stac" && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="imageryStacCollections">
                 <i className="bi bi-collection" /> Koleksi STAC
@@ -1431,7 +1444,7 @@ export default function ImageryModule() {
             <small className="text-muted d-block mt-1">{t("imagery.interpolationHint")}</small>
           </ProviderFeatureAccordion>}
 
-          {isCogProvider && (
+          {isCogProvider && supportsBandControls && (
             <ProviderFeatureAccordion key={`cog-${satellite}`} title="Pengaturan Tampilan COG" icon="bi bi-sliders">
               <label className="form-label fw-semibold" htmlFor="imageryCogAsset">Aset citra</label>
               <SearchableSelect
@@ -1597,7 +1610,7 @@ export default function ImageryModule() {
             </div>
           )}
 
-          <button className="btn btn-warning w-100 fw-bold" disabled={searching} onClick={searchScenes}>
+          <button className="btn btn-warning w-100 fw-bold" disabled={searching || !supportsSearch} onClick={searchScenes}>
             {searching ? (
               <>
                 <i className="fas fa-spinner fa-spin" /> Mencari...
@@ -1685,13 +1698,15 @@ export default function ImageryModule() {
                 >
                   Satu Scene
                 </button>
-                <button
-                  type="button"
-                  className={`btn text-white ${viewMode === "compare" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setViewMode("compare")}
-                >
-                  <i className="fas fa-arrows-alt-h" /> {t("imagery.compareTwo")}
-                </button>
+                {supportsCompare && (
+                  <button
+                    type="button"
+                    className={`btn text-white ${viewMode === "compare" ? "btn-primary" : "btn-outline-secondary"}`}
+                    onClick={() => setViewMode("compare")}
+                  >
+                    <i className="fas fa-arrows-alt-h" /> {t("imagery.compareTwo")}
+                  </button>
+                )}
               </div>
             </div>
             <div id="imagerySceneResultsBody" hidden={!sceneResultsOpen}>
@@ -1718,7 +1733,7 @@ export default function ImageryModule() {
                     <thead className="table-primary sticky-top">
                       <tr>
                         <th>Tanggal &amp; Jam Akuisisi (UTC)</th>
-                        {(isOpenHighResProvider || isHimawari) && (
+                        {(supportsSceneMetadata || isHimawari) && (
                           <>
                             <th>Resolusi</th>
                             <th>Platform</th>
@@ -1767,7 +1782,7 @@ export default function ImageryModule() {
                             {formatAcquired(scene.acquired_at)}
                             {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
-                          {(isOpenHighResProvider || isHimawari) && (
+                          {(supportsSceneMetadata || isHimawari) && (
                             <>
                               <td>{formatResolution(scene.resolution_m)}</td>
                               <td>{scene.platform ?? "-"}</td>
@@ -1793,7 +1808,7 @@ export default function ImageryModule() {
                               >
                                 <i className="bi bi-zoom-in" />
                               </button>
-                              {scene.download_url && (
+                              {supportsDownload && scene.download_url && (
                                 <a
                                   className="btn btn-outline-secondary"
                                   href={scene.download_url}
@@ -1864,7 +1879,7 @@ export default function ImageryModule() {
                 <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Akuisisi (UTC)</span><strong>{formatAcquired(selectedScene.acquired_at)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Tutupan awan</span><strong>{selectedScene.cloud_cover_pct == null ? "Tidak tersedia / tidak relevan" : `${selectedScene.cloud_cover_pct}%`}</strong></div>
-                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.key}` : "Asset tile provider"}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.title || activeCogAsset.key}` : "Asset tile provider"}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Attribution / lisensi</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? "Gunakan sesuai ketentuan sumber."}</span></div>
               </div>
               {isEsriWayback && <div className="alert alert-info py-1 px-2 mt-2 mb-0">Tanggal di atas adalah tanggal rilis Wayback (referensi visual), bukan jaminan tanggal akuisisi sensor.</div>}
@@ -1963,6 +1978,8 @@ export default function ImageryModule() {
                                 ? "Vantor/Maxar Open Data"
                               : satelliteMeta?.source_kind === "planet_open_data_stac"
                                   ? "Planet Open Data"
+                                  : satelliteMeta?.source_kind === "oneatlas_data_api"
+                                    ? "Airbus OneAtlas Data"
                                   : satelliteMeta?.source_kind === "planet_stac"
                                     ? "Planet commercial"
                                     : satelliteMeta?.source_kind === "vantor_stac"
@@ -2058,7 +2075,7 @@ export default function ImageryModule() {
                     )}
                   </div>
                 )}
-                {selectedScene && <ImageryToolsPanel scene={selectedScene} aoi={aoi} assetKey={cogAssetKey}
+                {selectedScene && supportsAnalyticalTools && <ImageryToolsPanel scene={selectedScene} aoi={aoi} assetKey={cogAssetKey}
                   activeNasaLayerUrl={nasaTimeLayerUrl} storyMap={storyMap}
                   onNasaLayer={setNasaTimeLayerUrl} onStory={setStoryMap} mapMode={mapMode} onMapMode={setMapMode} />}
                 {storyMap && <a className="btn btn-sm btn-outline-success mt-2" download="story-map.geojson"
@@ -2070,7 +2087,7 @@ export default function ImageryModule() {
           </>
         )}
 
-        {viewMode === "compare" && searched && (
+        {viewMode === "compare" && supportsCompare && searched && (
           <>
             <div className="card mb-3">
               <div className="card-header py-2">
@@ -2128,8 +2145,8 @@ export default function ImageryModule() {
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
                     maxNativeZoom={sceneTileMaxNativeZoom}
-                    beforeResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m)}
-                    afterResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m)}
+                    beforeResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m) ?? undefined}
+                    afterResolutionM={sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m) ?? undefined}
                     beforeMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m))}
                     afterMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m))}
                     maxZoom={SCENE_TILE_MAX_ZOOM}

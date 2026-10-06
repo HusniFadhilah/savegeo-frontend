@@ -13,6 +13,8 @@ export type ImagerySourceKind =
   | "planet_stac"
   | "vantor_stac"
   | "iceye_stac"
+  | "oneatlas_data_api"
+  | "blacksky_spectra"
   | "generic_stac"
   | "himawari"
   | "big_ctsrt";
@@ -39,9 +41,10 @@ export interface ImageryProvider {
   /** "rgb" only - "natural" (true color) or "false_color" (e.g. ASTER: NIR-Red-Green, since it has no blue band). Absent for non-rgb visualizations. */
   color_mode?: "natural" | "false_color";
   description?: string;
-  resolution_m: number;
-  revisit_days: number;
-  start_year: number;
+  /** Provider defaults are null when products vary or official metadata is not confirmed. */
+  resolution_m: number | null;
+  revisit_days: number | null;
+  start_year: number | null;
   /** GEE scene-level property name for cloud %, or null if this sensor has no such concept (SAR, gas products, night-lights) - drives whether the cloud-filter UI shows at all. */
   cloud_property: string | null;
   /** "single_band" only - physical unit of the mapped quantity (e.g. "mol/m²", "ppb", "nW/cm²/sr"). */
@@ -50,6 +53,7 @@ export interface ImageryProvider {
   cloud_mask_techniques?: string[] | null;
   license?: string;
   configuration_status?: "connected" | "not_configured" | "incomplete_configuration" | string;
+  configuration_message?: string;
   stac_configured?: boolean;
   credential_configured?: boolean;
   capabilities?: {
@@ -65,6 +69,13 @@ export interface ImageryProvider {
     requires_authentication: boolean;
     commercial: boolean;
     open_data: boolean;
+    /** Capabilities are the UI source of truth; absent flags retain legacy behavior. */
+    supports_preview?: boolean;
+    supports_compare?: boolean;
+    supports_mosaic?: boolean;
+    supports_visual_enhancement?: boolean;
+    supports_scene_metadata?: boolean;
+    preview_kind?: "gee" | "cog" | "provider_tiles" | "direct_xyz" | null;
   };
 }
 

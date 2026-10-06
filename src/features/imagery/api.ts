@@ -74,6 +74,14 @@ export function getImageryStacSourceUrl(sceneId: string, assetKey: string) {
   return `${env.apiBaseUrl}/imagery/stac-source?item_url=${encodeURIComponent(sceneId)}&asset_key=${encodeURIComponent(assetKey)}`;
 }
 
+/** Asset downloads always go through a SAVEGEO route; commercial refs are opaque scene ids. */
+export function getImageryAssetUrl(sceneId: string, assetKey: string, providerKey?: string) {
+  if (providerKey && ["planet_commercial", "vantor_commercial", "iceye_commercial"].includes(providerKey)) {
+    return `${env.apiBaseUrl}/imagery/commercial-source?provider_key=${encodeURIComponent(providerKey)}&scene_id=${encodeURIComponent(sceneId)}&asset_key=${encodeURIComponent(assetKey)}`;
+  }
+  return getImageryStacSourceUrl(sceneId, assetKey);
+}
+
 /** POST /imagery/dem-tile - DEMNAS terrain tile for the imagery browser, with SRTM fallback clearly flagged. */
 export function getImageryDemTile(params: GetDemTileParams) {
   return apiClient.post<DemTileResponse>("/imagery/dem-tile", {
