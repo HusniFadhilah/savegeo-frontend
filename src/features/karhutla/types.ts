@@ -204,3 +204,26 @@ export interface CamsArchive {
     frames: CamsFrame[];
   }>;
 }
+
+export interface CamsAggregateSummary {
+  valid_cell_count: number;
+  missing_cell_count: number;
+  maximum: number | null;
+  area_weighted_mean: number | null;
+  integrated_mass_kg: number | null;
+  unit: string;
+  duration_seconds: number | null;
+  area_km2: number;
+}
+
+export interface CamsGridAggregate extends GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon> {
+  features: Array<GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { value: number; unit: string }>>;
+  summary: CamsAggregateSummary;
+  maximum: number;
+  unit: string;
+}
+
+export interface CamsAreaAggregate {
+  summary: CamsAggregateSummary;
+  unit: string;
+}

@@ -257,6 +257,18 @@ export function fetchWildfireCamsArchive(slug: string) {
   );
 }
 
+export function fetchWildfireCamsAggregate(
+  slug: string,
+  layerId: string,
+  frameId: string,
+  payload: { mode: "area"; geometry: GeoJSON.Feature | GeoJSON.Geometry } | { mode: "grid"; bbox: [number, number, number, number] },
+) {
+  return userPost<import("@/features/karhutla/types").CamsGridAggregate | import("@/features/karhutla/types").CamsAreaAggregate>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/aggregate/${encodeURIComponent(layerId)}/${encodeURIComponent(frameId)}`,
+    payload,
+  );
+}
+
 export function fetchWildfireSummary(slug: string, query: Record<string, string | undefined> = {}) {
   return userGet<import("@/features/karhutla/types").WildfireSummary>(
     `/disasters/wildfires/events/${encodeURIComponent(slug)}/summary${buildQuery(query)}`,

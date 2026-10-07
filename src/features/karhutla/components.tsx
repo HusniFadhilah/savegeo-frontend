@@ -820,7 +820,7 @@ function HotspotMap({
             : [event.center_lat, event.center_lon]
         }
         zoom={query.zoom ?? event.default_zoom}
-        showGlobeControl={false}
+        showGlobeControl
         historicalDate={windDate}
         preferCanvas
       >
