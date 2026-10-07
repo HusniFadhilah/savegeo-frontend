@@ -144,12 +144,13 @@ export interface WildfireCamsCapabilities {
     | "invalid_configuration"
     | "needs_credentials"
     | "needs_terms_acceptance"
-    | "upstream_validation_blocked";
+    | "upstream_validation_blocked"
+    | "ready";
   credentials_configured: boolean;
   terms_accepted_by_operator: boolean;
-  provider_ready: false;
-  data_available: false;
-  blocked_reason: string;
+  provider_ready: boolean;
+  data_available: boolean;
+  blocked_reason: string | null;
   integration_stage: string;
   products: WildfireCamsProduct[];
   attribution: string;
@@ -163,4 +164,43 @@ export interface WildfireFilters {
   province: string;
   severity: string;
   sort: "latest" | "hotspots" | "region";
+}
+
+export interface CamsSummary {
+  unit: string;
+  valid_cell_count: number;
+  missing_cell_count: number;
+  integrated_mass_kg?: number | null;
+  area_weighted_mean?: number | null;
+  maximum?: number | null;
+}
+
+export interface CamsFrame {
+  id: string;
+  version: string;
+  valid_at: string;
+  interval_end: string | null;
+  forecast_reference_time: string | null;
+  leadtime_hours: number | null;
+  is_forecast: boolean;
+  sha256: string;
+  summary: CamsSummary;
+  regions: Array<{ code: string; name: string; summary: CamsSummary }>;
+  provenance: { source_url: string; source_unit: string; source_valid_at: string; retrieved_at: string; fire_only: boolean };
+}
+
+export interface CamsArchive {
+  event_slug: string;
+  updated_at: string;
+  bbox: [number, number, number, number];
+  layers: Record<string, {
+    product: string;
+    variable: string;
+    source_unit: string;
+    display_unit: string;
+    palette: string[];
+    resolution_degrees: number;
+    maximum: number;
+    frames: CamsFrame[];
+  }>;
 }

@@ -8628,7 +8628,7 @@ html[data-theme="dark"] .analysis-settings-expand:hover,
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
 }
 
-.wildfire-cams-panel details > summary {
+.wildfire-cams-panel > details > summary {
   display: flex;
   min-height: 4.2rem;
   align-items: center;
@@ -8638,8 +8638,8 @@ html[data-theme="dark"] .analysis-settings-expand:hover,
   list-style: none;
 }
 
-.wildfire-cams-panel details > summary::-webkit-details-marker { display: none; }
-.wildfire-cams-panel details > summary:focus-visible {
+.wildfire-cams-panel > details > summary::-webkit-details-marker { display: none; }
+.wildfire-cams-panel > details > summary:focus-visible {
   outline: 3px solid #7c3aed;
   outline-offset: -3px;
 }
@@ -8732,10 +8732,42 @@ html[data-theme="dark"] .analysis-settings-expand:hover,
 .wildfire-cams-product > small { color: #64748b; font-size: 0.72rem; }
 .wildfire-cams-attribution { margin: 0.85rem 0 0; color: #64748b; font-size: 0.76rem; }
 
+.cams-archive { display: grid; gap: 0.8rem; font-size: 0.85rem; }
+.cams-archive-controls { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr; gap: 0.65rem; }
+.cams-archive-controls label { display: grid; gap: 0.3rem; font-weight: 600; min-width: 0; }
+.cams-archive-controls select, .cams-archive-controls input { width: 100%; min-width: 0; padding: 0.45rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1e293b; font: inherit; }
+.cams-archive-heading, .cams-archive-playback, .cams-archive-downloads { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.cams-archive-map { position: relative; border-radius: 10px; overflow: hidden; }
+.cams-archive-map .savegeo-map { height: 420px; min-height: 320px; }
+.cams-archive-legend { position: absolute; right: 12px; bottom: 30px; z-index: 500; width: 210px; padding: 10px; border-radius: 8px; background: rgba(15,23,42,0.92); color: #f8fafc; font-size: 0.75rem; pointer-events: none; }
+.cams-archive-legend > div { height: 12px; border-radius: 4px; margin: 7px 0 3px; }
+.cams-archive-legend > span { display: flex; justify-content: space-between; }
+.cams-archive-playback > input { flex: 1; min-width: 130px; }
+.cams-archive-playback label { display: flex; align-items: center; gap: 0.5rem; }
+.cams-archive-playback label input { width: 95px; }
+.cams-archive button { border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.35rem 0.7rem; background: transparent; color: inherit; }
+.cams-archive-note { display: flex; gap: 0.5rem; align-items: flex-start; color: #64748b; }
+.cams-archive-note details { flex: 1; }
+.cams-archive-note summary { cursor: pointer; list-style: none; width: max-content; }
+.cams-archive-note p { margin: 0.4rem 0 0; }
+.cams-archive-chart { width: 100%; height: 110px; border-bottom: 1px solid #cbd5e1; }
+.cams-archive-chart rect { cursor: pointer; }
+.cams-archive-chart-labels { display: flex; justify-content: space-between; font-size: 0.72rem; }
+.cams-archive-regions summary { cursor: pointer; font-weight: 600; }
+.cams-archive-regions table { width: 100%; margin-top: 0.5rem; }
+.cams-archive-regions th, .cams-archive-regions td { padding: 0.4rem; text-align: left; border-bottom: 1px solid #cbd5e1; }
+.cams-archive-regions th:last-child, .cams-archive-regions td:last-child { text-align: right; }
+.cams-archive-downloads { justify-content: flex-start; }
+.dark-mode .cams-archive-controls select, .dark-mode .cams-archive-controls input,
+html[data-theme="dark"] .cams-archive-controls select, html[data-theme="dark"] .cams-archive-controls input { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+.dark-mode .cams-archive-note, html[data-theme="dark"] .cams-archive-note { color: #94a3b8; }
+@media (max-width: 900px) { .cams-archive-controls { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .cams-archive-heading { align-items: flex-start; flex-direction: column; } .cams-archive-playback label { width: 100%; } .cams-archive-map .savegeo-map { height: 330px; } }
+
 html[data-theme="dark"] .wildfire-cams-panel,
 .dark-mode .wildfire-cams-panel { border-color: #475569; background: #111827; color: #e5e7eb; }
-html[data-theme="dark"] .wildfire-cams-panel details > summary:focus-visible,
-.dark-mode .wildfire-cams-panel details > summary:focus-visible { outline-color: #c084fc; }
+html[data-theme="dark"] .wildfire-cams-panel > details > summary:focus-visible,
+.dark-mode .wildfire-cams-panel > details > summary:focus-visible { outline-color: #c084fc; }
 html[data-theme="dark"] .wildfire-cams-summary__copy small,
 html[data-theme="dark"] .wildfire-cams-disclaimer,
 html[data-theme="dark"] .wildfire-cams-product__heading p,
@@ -8772,7 +8804,7 @@ html[data-theme="dark"] .wildfire-cams-variable-list li small,
 .dark-mode .wildfire-cams-variable-list li code { color: #cbd5e1; }
 
 @media (max-width: 720px) {
-  .wildfire-cams-panel details > summary { gap: 0.55rem; padding-inline: 0.75rem; }
+  .wildfire-cams-panel > details > summary { gap: 0.55rem; padding-inline: 0.75rem; }
   .wildfire-cams-summary__copy small { max-width: 13rem; font-size: 0.75rem; }
   .wildfire-cams-product-grid { grid-template-columns: 1fr; }
   .wildfire-cams-panel__body { padding-inline: 0.75rem; }

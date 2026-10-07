@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { fetchWildfireCamsCapabilities } from "@/features/disaster/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { WildfireCamsCapabilities, WildfireCamsProduct } from "./types";
+
+const CamsArchiveMap = lazy(() => import("./CamsArchiveMap"));
 
 type Props = {
   slug: string;
@@ -10,6 +12,8 @@ type Props = {
 
 function statusTranslationKey(status: WildfireCamsCapabilities["status"]): string {
   switch (status) {
+    case "ready":
+      return "wildfire.cams.status.ready";
     case "needs_credentials":
       return "wildfire.cams.status.needsCredentials";
     case "needs_terms_acceptance":
@@ -21,7 +25,7 @@ function statusTranslationKey(status: WildfireCamsCapabilities["status"]): strin
   }
 }
 
-function ProductCard({ product, t }: { product: WildfireCamsProduct; t: (key: string) => string }) {
+function ProductCard({ product, t, available = false }: { product: WildfireCamsProduct; t: (key: string) => string; available?: boolean }) {
   const isGfas = product.id === "gfas";
   const versionText = (product.products ?? [])
     .map((item) => `${item.version} (${item.coverage_start} – ${item.coverage_end ?? t("wildfire.cams.present")})`)
@@ -64,9 +68,9 @@ function ProductCard({ product, t }: { product: WildfireCamsProduct; t: (key: st
       <p className="wildfire-cams-product__note">
         {isGfas ? t("wildfire.cams.gfas.note") : t("wildfire.cams.ifs.note")}
       </p>
-      <button className="wildfire-cams-unavailable" type="button" disabled>
+      {!available && <button className="wildfire-cams-unavailable" type="button" disabled>
         <i className="bi bi-lock" aria-hidden="true" /> {t("wildfire.cams.visualizationUnavailable")}
-      </button>
+      </button>}
       <a href={product.source_url} target="_blank" rel="noreferrer">
         {t("wildfire.cams.openCatalog")} <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
       </a>
@@ -159,10 +163,15 @@ export default function CamsFireEmissionsPanel({ slug, eventConfirmed }: Props) 
                 <i className="bi bi-info-circle" aria-hidden="true" />
                 <span>{t(statusTranslationKey(capabilities.status))}</span>
               </div>
-              <p className="wildfire-cams-disclaimer">{t("wildfire.cams.disclaimer")}</p>
-              <div className="wildfire-cams-product-grid">
-                {capabilities.products.map((product) => <ProductCard key={product.id} product={product} t={t} />)}
-              </div>
+              {capabilities.data_available ? <>
+                {expanded && <Suspense fallback={<p role="status">{t("wildfire.cams.loading")}</p>}><CamsArchiveMap slug={slug} /></Suspense>}
+                <details><summary>{t("wildfire.cams.methodology")}</summary>
+                  <div className="wildfire-cams-product-grid">{capabilities.products.map((product) => <ProductCard key={product.id} product={product} t={t} available />)}</div>
+                </details>
+              </> : <>
+                <p className="wildfire-cams-disclaimer">{t("wildfire.cams.disclaimer")}</p>
+                <div className="wildfire-cams-product-grid">{capabilities.products.map((product) => <ProductCard key={product.id} product={product} t={t} />)}</div>
+              </>}
               <p className="wildfire-cams-attribution">{capabilities.attribution}. {capabilities.disclaimer}</p>
             </>
           ) : (
