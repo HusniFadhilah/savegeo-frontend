@@ -201,8 +201,29 @@ export interface CamsArchive {
     palette: string[];
     resolution_degrees: number;
     maximum: number;
+    rendering?: { minimum: number; maximum: number; interpolation: "bilinear" | "nearest" };
     frames: CamsFrame[];
   }>;
+}
+
+export interface CamsPointSample {
+  layer_id: string;
+  frame_id: string;
+  product: string;
+  valid_at: string;
+  interval_end: string | null;
+  is_forecast: boolean;
+  forecast_reference_time: string | null;
+  leadtime_hours: number | null;
+  data_available: boolean;
+  reason: "outside_coverage" | "nodata" | null;
+  value: number | null;
+  unit: string;
+  source_value: number | null;
+  source_unit: string;
+  center: { lat: number; lon: number } | null;
+  cell_area_km2: number | null;
+  mass_tonnes: number | null;
 }
 
 export interface CamsAggregateSummary {

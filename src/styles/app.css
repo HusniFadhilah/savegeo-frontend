@@ -8776,6 +8776,19 @@ html[data-theme="dark"] .analysis-settings-expand:hover,
 .wildfire-cams-attribution { margin: 0.85rem 0 0; color: #64748b; font-size: 0.76rem; }
 
 .cams-archive { display: grid; gap: 0.8rem; font-size: 0.85rem; }
+.cams-point-popup .leaflet-popup-content-wrapper, .cams-point-popup .leaflet-popup-tip { background: #1b2025; color: #f1f5f9; }
+.cams-point-popup .leaflet-popup-content { margin: 16px 18px; line-height: 1.5; }
+.cams-point-popup a.leaflet-popup-close-button { color: #cbd5e1; }
+.cams-point-content section + section { border-top: 1px solid #39424c; margin-top: 12px; padding-top: 12px; }
+.cams-point-content h4 { margin: 0 18px 10px 0; color: #b9c7d6; font-size: .8rem; font-weight: 600; }
+.cams-point-label { display: block; margin: 10px 0 3px; color: #9aa9ba; font-size: .67rem; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; }
+.cams-point-content strong { display: block; font-size: .85rem; }
+.cams-point-content .cams-point-value { font-size: 1.1rem; }
+.cams-point-content small { display: block; margin-top: 4px; color: #aab9c9; font-size: .7rem; }
+.cams-point-content p { margin: 4px 0; }
+.cams-point-content footer { border-top: 1px solid #39424c; padding-top: 9px; margin-top: 12px; color: #b9c7d6; font-size: .72rem; }
+.cams-point-forecast { display: block; color: #f8cb86; }
+.cams-point-content .cams-point-note { margin-top: 12px; font-size: .65rem; }
 .cams-archive-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem; }
 .cams-archive-controls label { display: grid; gap: 0.3rem; font-weight: 600; min-width: 0; }
 .cams-archive-controls select, .cams-archive-controls input { width: 100%; min-width: 0; padding: 0.45rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1e293b; font: inherit; }

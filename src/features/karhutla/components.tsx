@@ -39,6 +39,7 @@ import type { DisasterEventListItem } from "@/features/disaster/types";
 import WindArrowLayer from "./WindArrowLayer";
 import WildfireLayerPanel from "./WildfireLayerPanel";
 import CamsFireEmissionsPanel from "./CamsFireEmissionsPanel";
+import CamsPointProbe from "./CamsPointProbe";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels =
@@ -842,6 +843,7 @@ function HotspotMap({
         {boundary && query.layers.includes("boundary") && (
           <GeoJSON
             data={boundary as GeoJSON.GeoJsonObject}
+            interactive={false}
             style={{ color: "#43d9b2", weight: 2, fillOpacity: 0.05 }}
           />
         )}
@@ -849,11 +851,14 @@ function HotspotMap({
         {camsLayersToRender.map(({ archiveId, frame, opacity }) => (
           <TileLayer
             key={`${archiveId}-${frame.id}`}
-            url={`${camsTileUrl}/${archiveId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}`}
+            url={`${camsTileUrl}/${archiveId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}&render=2`}
             opacity={opacity}
+            zIndex={archiveId === "organic_aod" ? 210 : 220}
+            maxNativeZoom={14}
             attribution="CAMS / ECMWF · ADS · CC-BY 4.0"
           />
         ))}
+        <CamsPointProbe slug={event.slug} layers={camsLayersToRender.map(({ archiveId, frame }) => ({ layerId: archiveId, frameId: frame.id }))} />
         {viirsEnabled &&
           viirsAvailable &&
           viirsFeatures.map((feature) => {
@@ -863,6 +868,7 @@ function HotspotMap({
                 key={`viirs-${feature.properties.source}-${feature.properties.acq_datetime_utc}-${lat}-${lng}`}
                 center={[lat, lng]}
                 radius={6}
+                bubblingMouseEvents={false}
                 pathOptions={{
                   color: "#7c3aed",
                   fillColor: "#a78bfa",
@@ -902,6 +908,7 @@ function HotspotMap({
                 key={`${feature.properties.source}-${feature.properties.acq_datetime_utc}-${index}`}
                 center={[lat, lng]}
                 radius={selected ? 9 : 5}
+                bubblingMouseEvents={false}
                 pathOptions={{
                   color: highConfidence ? "#ff4d6d" : "#ffd166",
                   fillColor: highConfidence ? "#ff4d6d" : "#ffd166",
@@ -976,7 +983,7 @@ function HotspotMap({
               <strong>{t(labelKey)}</strong>
               <small>{new Date(frame.valid_at).toLocaleDateString(language === "id" ? "id-ID" : "en-GB", { timeZone: "UTC" })} UTC</small>
               <span className="wildfire-cams-map-legend__gradient" style={{ background: `linear-gradient(to right, ${layer.palette.map((color) => `#${color}`).join(",")})` }} />
-              <small>0 — {layer.maximum.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 3 })} {layer.display_unit}</small>
+              <small>0 — {(layer.rendering?.maximum ?? layer.maximum).toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 3 })}{layer.maximum > (layer.rendering?.maximum ?? layer.maximum) ? "+" : ""} {layer.display_unit}</small>
             </div>
           ))}
         </div>

@@ -9,6 +9,7 @@ vi.mock("@/features/disaster/api", () => ({ fetchWildfireCamsArchive: getArchive
 vi.mock("@/hooks/useI18nStore", () => ({ useI18nStore: () => ({ language: "en", t: (key: string) => key }) }));
 vi.mock("@/components/map/MapView", () => ({ default: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
 vi.mock("@/components/map/BasemapSwitcher", () => ({ default: () => null }));
+vi.mock("./CamsPointProbe", () => ({ default: () => null }));
 vi.mock("react-leaflet", () => ({ TileLayer: ({ url }: { url: string }) => <div data-testid="tile-url">{url}</div> }));
 const frame = (id: string, date: string, kg: number | null): CamsFrame => ({
   id, valid_at: `${date}T00:00:00Z`, interval_end: null, version: "1.4.2", sha256: "a".repeat(64),

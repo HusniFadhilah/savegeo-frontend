@@ -8,6 +8,7 @@ import { fetchWildfireCamsAggregate, fetchWildfireCamsArchive } from "@/features
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { AoiFeature } from "@/types/map";
 import type { CamsAggregateSummary, CamsArchive, CamsAreaAggregate, CamsFrame, CamsGridAggregate, CamsSummary } from "./types";
+import CamsPointProbe from "./CamsPointProbe";
 
 function summaryValue(summary: CamsSummary): number | null {
   if (summary.integrated_mass_kg !== undefined) return summary.integrated_mass_kg === null ? null : summary.integrated_mass_kg / 1000;
@@ -252,15 +253,16 @@ export default function CamsArchiveMap({ slug, onSelectionChange }: {
       <div className="cams-archive-map">
         <MapView id={`cams-${slug}`} center={[(archive.bbox[1] + archive.bbox[3]) / 2, (archive.bbox[0] + archive.bbox[2]) / 2]} zoom={6} maxZoom={12} showGlobeControl={false}>
           <BasemapSwitcher />
-          {aggregationMode !== "grid" && <TileLayer key={`${layerId}-${frame.id}`} url={`${apiPrefix}/tiles/${layerId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}`} opacity={opacity}
+          {aggregationMode !== "grid" && <TileLayer key={`${layerId}-${frame.id}`} url={`${apiPrefix}/tiles/${layerId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}&render=2`} opacity={opacity}
             attribution="CAMS / ECMWF · ADS · CC-BY 4.0" eventHandlers={{ tileerror: () => setTileError(true) }} />}
           {aggregationMode === "grid" && <GridAggregationLayer slug={slug} layerId={layerId} frameId={frame.id} palette={layer.palette} onResult={handleGridResult} />}
           {aggregationMode === "area" && <AoiDrawingTools onChange={setCustomArea} />}
+          {aggregationMode !== "area" && <CamsPointProbe slug={slug} layers={[{ layerId, frameId: frame.id }]} />}
         </MapView>
         <div className="cams-archive-legend">
           <strong>{layer.display_unit}</strong>
           <div style={{ background: `linear-gradient(to right, ${layer.palette.map((color) => `#${color}`).join(",")})` }} />
-          <span>0 <b>{number(layer.maximum)}</b></span>
+          <span>0 <b>{number(layer.rendering?.maximum ?? layer.maximum)}{layer.maximum > (layer.rendering?.maximum ?? layer.maximum) ? "+" : ""}</b></span>
         </div>
       </div>
       {aggregationMode === "grid" && <div className="cams-aggregation-result" role={gridError ? "alert" : "status"}>

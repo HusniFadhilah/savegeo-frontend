@@ -257,6 +257,12 @@ export function fetchWildfireCamsArchive(slug: string) {
   );
 }
 
+export function fetchWildfireCamsPoint(slug: string, layerId: string, frameId: string, lat: number, lon: number) {
+  return userGet<import("@/features/karhutla/types").CamsPointSample>(
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/point/${encodeURIComponent(layerId)}/${encodeURIComponent(frameId)}${buildQuery({ lat, lon })}`,
+  );
+}
+
 export function fetchWildfireCamsAggregate(
   slug: string,
   layerId: string,
