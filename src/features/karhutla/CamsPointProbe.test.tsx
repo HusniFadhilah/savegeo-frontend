@@ -50,7 +50,8 @@ describe("CAMS point popup", () => {
     expect(screen.getByText("0.4 AOD 550 nm")).toBeTruthy();
     expect(screen.getAllByText("2.450° S, 114.250° E")).toHaveLength(2);
     expect(screen.getByText("wildfire.cams.forecast · +24 h")).toBeTruthy();
-    expect(mocks.fetchPoint).toHaveBeenCalledWith("kalimantan-2026", "burnt_carbon", "gfas", -2.4, 114.2);
+    expect(mocks.fetchPoint).toHaveBeenNthCalledWith(1, "kalimantan-2026", "burnt_carbon", "gfas", -2.4, 114.2, "event");
+    expect(mocks.fetchPoint).toHaveBeenNthCalledWith(2, "kalimantan-2026", "organic_aod", "aod", -2.4, 114.2, "event");
   });
   it("ignores a slow earlier click and clears when frames change or layers are disabled", async () => {
     let finishFirst!: (value: CamsPointSample) => void;
