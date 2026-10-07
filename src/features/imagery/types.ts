@@ -32,6 +32,7 @@ export interface ImageryProvider {
   provider: string;
   /** Dropdown subgroup label (e.g. "Optik", "Radar (SAR)", "Atmosfer (Gas)", "Malam Hari (Night Lights)"). */
   group: string;
+  display_order?: number;
   gee_collection: string;
   source_kind?: ImagerySourceKind;
   stac_collection?: string;

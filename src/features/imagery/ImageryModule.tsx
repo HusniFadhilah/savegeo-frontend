@@ -899,7 +899,7 @@ export default function ImageryModule() {
     return Object.values(imageryProviders)
       .sort((a, b) => {
         const gi = GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group);
-        return gi !== 0 ? gi : a.name.localeCompare(b.name);
+        return gi !== 0 ? gi : (a.display_order ?? 0) - (b.display_order ?? 0) || a.name.localeCompare(b.name);
       })
       // Resolution shown right in the option label (user request) - lets you
       // compare sensors at a glance without selecting each one first.

@@ -11,6 +11,7 @@ import type {
   AdminUserRow,
   AdminRole,
   SatelliteProviderRow,
+  ImageryProviderAdminRow,
   DisasterEvent,
   DisasterEventDetail,
   DisasterAoi,
@@ -286,6 +287,29 @@ export const saveSatelliteProvider = (key: string, patch: Partial<SatelliteProvi
 /** Removes the DB override row - the provider reverts to its static registry default. */
 export const resetSatelliteProvider = (key: string) =>
   apiClient.delete<{ message: string }>(`/admin/satellite-providers/${encodeURIComponent(key)}`, { auth: true });
+
+export const listImageryProvidersAdmin = () =>
+  apiClient.get<{ providers: ImageryProviderAdminRow[] }>("/admin/imagery-providers", { auth: true });
+
+export const saveImageryProvider = (key: string, patch: Partial<ImageryProviderAdminRow>) =>
+  apiClient.put<{ message: string; provider: ImageryProviderAdminRow }>(
+    `/admin/imagery-providers/${encodeURIComponent(key)}`,
+    patch,
+    { auth: true },
+  );
+
+export const saveImageryProviderConnection = (
+  key: string,
+  payload: { fields?: Record<string, string>; credential?: string; clear_credential?: boolean },
+) =>
+  apiClient.put<{ message: string; connection: ImageryProviderAdminRow["connection"] }>(
+    `/admin/imagery-providers/${encodeURIComponent(key)}/connection`,
+    payload,
+    { auth: true },
+  );
+
+export const resetImageryProvider = (key: string) =>
+  apiClient.delete<{ message: string }>(`/admin/imagery-providers/${encodeURIComponent(key)}`, { auth: true });
 
 export const importCompaniesFromGFW = (dataset: string) =>
   apiClient.post<{ imported: number; skipped: number; error?: string }>(

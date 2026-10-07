@@ -4,9 +4,11 @@
 
 1. Install Node.js 20 LTS.
 2. Run `npm ci`.
-3. Create `.env.local` with `VITE_API_BASE_URL=http://localhost:8086/api`.
+3. Create `.env.local` with `VITE_API_BASE_URL=/api`.
 4. Start the app with `npm run dev`.
 5. Open `http://localhost:5501`.
+
+Vite proxies `/api` and `/disaster-thumbnails` to the backend on port `8086` during local development.
 
 Production builds must use `VITE_API_BASE_URL=/api` so browser requests remain same-origin.
 

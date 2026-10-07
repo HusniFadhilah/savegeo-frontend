@@ -231,6 +231,35 @@ export interface SatelliteProviderRow {
   has_override: boolean;
 }
 
+export interface ImageryProviderConnection {
+  supported: boolean;
+  fields?: Record<string, string>;
+  credential_configured?: boolean;
+  can_write_credential?: boolean;
+  status?: "connected" | "incomplete_configuration" | "not_configured" | "blocked";
+  connector_available?: boolean;
+  note?: string | null;
+}
+
+export interface ImageryProviderAdminRow {
+  key: string;
+  name: string;
+  provider: string;
+  group: string;
+  source_kind: string;
+  visualization: string;
+  gee_collection: string;
+  cloud_property?: string | null;
+  resolution_m: number | null;
+  revisit_days: number | null;
+  start_year: number | null;
+  description: string;
+  is_active: boolean;
+  display_order: number;
+  has_override: boolean;
+  connection: ImageryProviderConnection;
+}
+
 // ── Disaster Intelligence Dashboard (Admin) ─────────────────────────
 // Mirrors savegeo/backend/docs/disaster-redesign-contract.md section A response
 // shapes 1:1 (each model's `.to_dict()`). Do not rename fields without checking

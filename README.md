@@ -23,7 +23,7 @@ npm ci
 Buat `.env.local`:
 
 ```dotenv
-VITE_API_BASE_URL=http://localhost:8086/api
+VITE_API_BASE_URL=/api
 VITE_APP_NAME=SAVEGEO
 VITE_APP_ENV=development
 ```
@@ -32,7 +32,7 @@ Nilai `VITE_` bersifat publik karena di-inline ke bundle browser. Jangan masukka
 
 ## Menjalankan Frontend
 
-Pastikan backend berjalan di port `8086`, lalu:
+Pastikan backend berjalan di port `8086`. Vite meneruskan request `/api` dan `/disaster-thumbnails` ke backend, sehingga browser tetap memakai origin `http://localhost:5501`. Jalankan:
 
 ```powershell
 npm run dev

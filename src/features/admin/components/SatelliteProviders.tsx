@@ -4,6 +4,7 @@ import type { SatelliteProviderRow } from "../types";
 import { useAdmin } from "../AdminContext";
 import TablePagination from "@/components/ui/TablePagination";
 import BulkTableToolbar from "./BulkTableToolbar";
+import ImageryProviders from "./ImageryProviders";
 
 const PAGE_SIZE = 10;
 
@@ -40,7 +41,7 @@ function toEditable(row: SatelliteProviderRow): EditableFields {
  * paging happen client-side over the already-fetched rows rather than via
  * useServerTable.
  */
-export default function SatelliteProviders() {
+function VegetationProvidersTable() {
   const { notify } = useAdmin();
   const [rows, setRows] = useState<SatelliteProviderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,6 +330,35 @@ export default function SatelliteProviders() {
           searchPlaceholder="Cari key, nama, provider..."
         />
       </div>
+    </div>
+  );
+}
+
+export default function SatelliteProviders() {
+  const [catalog, setCatalog] = useState<"imagery" | "vegetation">("imagery");
+  return (
+    <div>
+      <div className="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Katalog penyedia satelit">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={catalog === "imagery"}
+          className={`btn-sm ${catalog === "imagery" ? "primary" : ""}`}
+          onClick={() => setCatalog("imagery")}
+        >
+          Katalog citra satelit
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={catalog === "vegetation"}
+          className={`btn-sm ${catalog === "vegetation" ? "primary" : ""}`}
+          onClick={() => setCatalog("vegetation")}
+        >
+          Analisis vegetasi
+        </button>
+      </div>
+      {catalog === "imagery" ? <ImageryProviders /> : <VegetationProvidersTable />}
     </div>
   );
 }

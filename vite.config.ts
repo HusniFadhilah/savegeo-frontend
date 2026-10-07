@@ -18,6 +18,16 @@ export default defineConfig({
   },
   server: {
     port: 5501,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8086",
+        changeOrigin: true,
+      },
+      "/disaster-thumbnails": {
+        target: "http://127.0.0.1:8086",
+        changeOrigin: true,
+      },
+    },
     watch: {
       usePolling: true,
       interval: 300,
