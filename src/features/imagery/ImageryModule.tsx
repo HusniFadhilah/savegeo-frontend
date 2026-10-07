@@ -38,10 +38,80 @@ const STAC_EXAMPLES = [
 ];
 
 const SATELLITE_PREVIEW_ASSETS = {
+  esriWayback: {
+    thumbnail: "/images/satellite-examples/esri-wayback.jpg",
+    alt: "Contoh tile Esri World Imagery Wayback di Jakarta",
+    description: "Wayback Jakarta · rilis 5 Agu 2026 · Esri & mitra",
+  },
+  bigCtsrt: {
+    thumbnail: "/images/satellite-examples/big-ctsrt.jpg",
+    alt: "Citra tegak CTSRT 2022 dari wilayah Solo, Jawa Tengah",
+    description: "Solo, Jawa Tengah · CTSRT 2022 · Badan Informasi Geospasial",
+  },
+  himawari: {
+    thumbnail: "/images/satellite-examples/himawari9.jpg",
+    alt: "Cuaca full-disk Himawari-9 di sekitar Asia Timur",
+    description: "JMA Himawari-9 · 7 Okt 2026, 00:20 UTC",
+  },
   sentinel2: {
     thumbnail: "/images/satellite-examples/sentinel2.jpg",
     alt: "Contoh citra Sentinel-2 dari Tonga",
     description: "Contoh nyata · Tonga, 2016 · Copernicus/ESA · CC BY-SA 3.0 IGO",
+  },
+  sentinel1: {
+    thumbnail: "/images/satellite-examples/sentinel1.jpg",
+    alt: "Komposit radar Sentinel-1 untuk banjir di Emilia-Romagna",
+    description: "Emilia-Romagna · 2024 · Copernicus Sentinel-1 SAR",
+  },
+  sentinel3: {
+    thumbnail: "/images/satellite-examples/sentinel3.jpg",
+    alt: "Bloom fitoplankton dari Sentinel-3 OLCI di lepas Brittany",
+    description: "Brittany · 11 Mei 2024 · Sentinel-3 OLCI / EUMETSAT",
+  },
+  sentinel5pNo2: {
+    thumbnail: "/images/satellite-examples/sentinel5p-no2.jpg",
+    alt: "Konsentrasi nitrogen dioksida Sentinel-5P di Eropa",
+    description: "NO₂ · Eropa, 22 Mar 2022 · Copernicus Sentinel-5P",
+  },
+  sentinel5pCo: {
+    thumbnail: "/images/satellite-examples/sentinel5p-co.jpg",
+    alt: "Konsentrasi karbon monoksida Sentinel-5P dari kebakaran Siberia",
+    description: "CO · Siberia, 1 Agu 2021 · Copernicus Sentinel-5P",
+  },
+  sentinel5pCh4: {
+    thumbnail: "/images/satellite-examples/sentinel5p-ch4.jpg",
+    alt: "Pengukuran metana Sentinel-5P di area tambang batu bara Shanxi",
+    description: "CH₄ · Shanxi, 2018 & 2020 · ESA/TROPOMI",
+  },
+  sentinel5pO3: {
+    thumbnail: "/images/satellite-examples/sentinel5p-o3.jpg",
+    alt: "Peta kolom ozon global dari Sentinel-5P",
+    description: "O₃ · global, 5 Mei 2024 · DLR/BIRA/TROPOMI",
+  },
+  sentinel5pAerosol: {
+    thumbnail: "/images/satellite-examples/sentinel5p-aerosol.jpg",
+    alt: "Indeks aerosol Sentinel-5P dari asap kebakaran California",
+    description: "Aerosol · California, 30 Agu 2021 · ESA/TROPOMI",
+  },
+  aster: {
+    thumbnail: "/images/satellite-examples/aster.jpg",
+    alt: "Komposit false-color ASTER di Gunung St. Helens",
+    description: "Gunung St. Helens · 15 Mar 2005 · NASA/ASTER",
+  },
+  landsat4: {
+    thumbnail: "/images/satellite-examples/landsat4.jpg",
+    alt: "Citra Landsat 4 first-light di sekitar Danau Erie",
+    description: "Danau Erie · 25 Jul 1982 · USGS/NASA Landsat 4",
+  },
+  landsat5: {
+    thumbnail: "/images/satellite-examples/landsat5.jpg",
+    alt: "Komposit inframerah Landsat 5 di Gunung Kosciuszko",
+    description: "Kosciuszko · 8 Feb 1991 · NASA Landsat 5",
+  },
+  landsat7: {
+    thumbnail: "/images/satellite-examples/landsat7.jpg",
+    alt: "Scene Landsat 7 di Lake District, Inggris",
+    description: "Lake District · 7 Mei 2000 · NASA Landsat 7",
   },
   landsat8: {
     thumbnail: "/images/satellite-examples/landsat8.jpg",
@@ -68,15 +138,82 @@ const SATELLITE_PREVIEW_ASSETS = {
     alt: "Contoh citra Vantor dari Nepal",
     description: "Vantor Open Data · Nepal, 2026 · CC BY-NC 4.0",
   },
+  airbusOneAtlas: {
+    thumbnail: "/images/satellite-examples/airbus-oneatlas.jpg",
+    alt: "Citra Pléiades Neo di terminal industri Ingleside, Texas",
+    description: "Ingleside, Texas · 3 Nov 2021 · Pléiades Neo · Airbus DS",
+  },
+  blackskySpectra: {
+    thumbnail: "/images/satellite-examples/blacksky-spectra.jpg",
+    alt: "Scene BlackSky di pelabuhan Port Elizabeth dengan anotasi aktivitas",
+    description: "Port Elizabeth · 10 Agu 2020 · BlackSky Spectra",
+  },
+  alosAvnir2: {
+    thumbnail: "/images/satellite-examples/alos-avnir2.jpg",
+    alt: "Citra optik ALOS AVNIR-2 di sekitar Gunung Fuji",
+    description: "Gunung Fuji · 28 Nov 2010 · JAXA ALOS/AVNIR-2",
+  },
+  alosPalsar: {
+    thumbnail: "/images/satellite-examples/alos-palsar.jpg",
+    alt: "Citra radar ALOS PALSAR di Indonesia",
+    description: "Indonesia · scene PALSAR 2009 · JAXA/METI",
+  },
+  alos2Palsar2: {
+    thumbnail: "/images/satellite-examples/alos2-palsar2.jpg",
+    alt: "Citra radar ALOS-2 PALSAR-2 di Kyushu, Jepang",
+    description: "Kyushu · 28 Agu 2019 · JAXA ALOS-2/PALSAR-2",
+  },
+  viirs: {
+    thumbnail: "/images/satellite-examples/viirs-nightlights.jpg",
+    alt: "Komposit lampu malam VIIRS di Indonesia",
+    description: "Lampu malam · komposit 2012 · NASA/NOAA VIIRS",
+  },
+  openAerialMap: {
+    thumbnail: "/images/satellite-examples/openaerialmap-freetown.jpg",
+    alt: "Scene UAV OpenAerialMap dari Freetown, Sierra Leone",
+    description: "Freetown · 16 Apr 2025 · HOT · CC BY-SA 4.0",
+  },
 } as const;
 
+// Keep generic STAC and credentialed commercial feeds without a fixed sample;
+// their thumbnails depend on a user catalog or a licensed provider scene.
 function getSatellitePreview(key: string, group: string) {
   const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (normalizedKey.includes("sentinel2") || group === "Sentinel-2") {
     return SATELLITE_PREVIEW_ASSETS.sentinel2;
   }
+  if (normalizedKey.includes("esriwayback") || group === "Basemap Historis") {
+    return SATELLITE_PREVIEW_ASSETS.esriWayback;
+  }
+  if (normalizedKey.includes("bigctsrt") || group === "BIG / CTSRT") {
+    return SATELLITE_PREVIEW_ASSETS.bigCtsrt;
+  }
+  if (normalizedKey.includes("himawari") || group === "Cuaca Geostasioner") {
+    return SATELLITE_PREVIEW_ASSETS.himawari;
+  }
+  if (normalizedKey.includes("sentinel1")) return SATELLITE_PREVIEW_ASSETS.sentinel1;
+  if (normalizedKey.includes("sentinel3")) return SATELLITE_PREVIEW_ASSETS.sentinel3;
+  if (normalizedKey.includes("sentinel5pno2")) return SATELLITE_PREVIEW_ASSETS.sentinel5pNo2;
+  if (normalizedKey.includes("sentinel5pco")) return SATELLITE_PREVIEW_ASSETS.sentinel5pCo;
+  if (normalizedKey.includes("sentinel5pch4")) return SATELLITE_PREVIEW_ASSETS.sentinel5pCh4;
+  if (normalizedKey.includes("sentinel5po3")) return SATELLITE_PREVIEW_ASSETS.sentinel5pO3;
+  if (normalizedKey.includes("sentinel5paerosol")) return SATELLITE_PREVIEW_ASSETS.sentinel5pAerosol;
+  if (normalizedKey.includes("sentinel5p")) return SATELLITE_PREVIEW_ASSETS.sentinel5pNo2;
+  if (normalizedKey.includes("aster")) return SATELLITE_PREVIEW_ASSETS.aster;
+  if (normalizedKey.includes("landsat4")) return SATELLITE_PREVIEW_ASSETS.landsat4;
+  if (normalizedKey.includes("landsat5")) return SATELLITE_PREVIEW_ASSETS.landsat5;
+  if (normalizedKey.includes("landsat7")) return SATELLITE_PREVIEW_ASSETS.landsat7;
   if (normalizedKey.includes("landsat8")) return SATELLITE_PREVIEW_ASSETS.landsat8;
   if (normalizedKey.includes("landsat9")) return SATELLITE_PREVIEW_ASSETS.landsat9;
+  if (normalizedKey.includes("alos2palsar2")) return SATELLITE_PREVIEW_ASSETS.alos2Palsar2;
+  if (normalizedKey.includes("alospalsar")) return SATELLITE_PREVIEW_ASSETS.alosPalsar;
+  if (normalizedKey.includes("alosavnir2")) return SATELLITE_PREVIEW_ASSETS.alosAvnir2;
+  if (normalizedKey.includes("viirs")) return SATELLITE_PREVIEW_ASSETS.viirs;
+  if (normalizedKey.includes("openaerialmap")) return SATELLITE_PREVIEW_ASSETS.openAerialMap;
+  if (normalizedKey.includes("airbus") || normalizedKey.includes("oneatlas")) {
+    return SATELLITE_PREVIEW_ASSETS.airbusOneAtlas;
+  }
+  if (normalizedKey.includes("blacksky")) return SATELLITE_PREVIEW_ASSETS.blackskySpectra;
   if (normalizedKey.includes("iceye")) return SATELLITE_PREVIEW_ASSETS.iceye;
   if (normalizedKey.includes("planet")) return SATELLITE_PREVIEW_ASSETS.planet;
   if (normalizedKey.includes("vantor") || normalizedKey.includes("maxar")) {

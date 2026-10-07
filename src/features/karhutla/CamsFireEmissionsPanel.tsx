@@ -8,6 +8,7 @@ const CamsArchiveMap = lazy(() => import("./CamsArchiveMap"));
 type Props = {
   slug: string;
   eventConfirmed: boolean;
+  onSelectionChange?: (layerId: "burnt_carbon" | "organic_aod", frameId: string, opacity: number) => void;
 };
 
 function statusTranslationKey(status: WildfireCamsCapabilities["status"]): string {
@@ -79,7 +80,7 @@ function ProductCard({ product, t, available = false }: { product: WildfireCamsP
   );
 }
 
-export default function CamsFireEmissionsPanel({ slug, eventConfirmed }: Props) {
+export default function CamsFireEmissionsPanel({ slug, eventConfirmed, onSelectionChange }: Props) {
   const { t } = useI18nStore();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -164,7 +165,7 @@ export default function CamsFireEmissionsPanel({ slug, eventConfirmed }: Props) 
                 <span>{t(statusTranslationKey(capabilities.status))}</span>
               </div>
               {capabilities.data_available ? <>
-                {expanded && <Suspense fallback={<p role="status">{t("wildfire.cams.loading")}</p>}><CamsArchiveMap slug={slug} /></Suspense>}
+                {expanded && <Suspense fallback={<p role="status">{t("wildfire.cams.loading")}</p>}><CamsArchiveMap slug={slug} onSelectionChange={onSelectionChange} /></Suspense>}
                 <details><summary>{t("wildfire.cams.methodology")}</summary>
                   <div className="wildfire-cams-product-grid">{capabilities.products.map((product) => <ProductCard key={product.id} product={product} t={t} available />)}</div>
                 </details>

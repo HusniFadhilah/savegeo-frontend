@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { WildfireQueryState } from "./queryState";
 
-type LayerTab = "hotspot" | "overlays" | "fdrs";
+type LayerTab = "hotspot" | "overlays" | "cams" | "fdrs";
 
 interface Props {
   query: WildfireQueryState;
@@ -10,6 +10,8 @@ interface Props {
   onSync: () => void;
   syncing: boolean;
   syncError: string | null;
+  camsStatus: "idle" | "loading" | "ready" | "empty" | "error";
+  onRetryCams: () => void;
 }
 
 interface LayerOption {
@@ -104,6 +106,8 @@ export default function WildfireLayerPanel({
   onSync,
   syncing,
   syncError,
+  camsStatus,
+  onRetryCams,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<LayerTab>("hotspot");
@@ -152,6 +156,7 @@ export default function WildfireLayerPanel({
               [
                 ["hotspot", "Hotspot"],
                 ["overlays", "Overlays"],
+                ["cams", "CAMS"],
                 ["fdrs", "FDRS"],
               ] as const
             ).map(([id, label]) => (
@@ -221,6 +226,42 @@ export default function WildfireLayerPanel({
                   onChange={() => onToggleLayer(option.id)}
                 />
               ))}
+            </div>
+          )}
+
+          {tab === "cams" && (
+            <div className="wildfire-layer-list" role="tabpanel">
+              <LayerCheckbox
+                option={{
+                  id: "cams-gfas",
+                  label: "Emisi karbon kebakaran · GFAS",
+                  description: "CAMS / ECMWF · frame terbaru yang tersedia",
+                  available: true,
+                }}
+                checked={query.layers.includes("cams-gfas")}
+                onChange={() => onToggleLayer("cams-gfas")}
+              />
+              <LayerCheckbox
+                option={{
+                  id: "cams-aod",
+                  label: "Aerosol organik · CAMS",
+                  description: "CAMS / ECMWF · optical depth",
+                  available: true,
+                }}
+                checked={query.layers.includes("cams-aod")}
+                onChange={() => onToggleLayer("cams-aod")}
+              />
+              <div className="wildfire-layer-note" role={camsStatus === "error" ? "alert" : "status"}>
+                <i className={`bi ${camsStatus === "error" || camsStatus === "empty" ? "bi-exclamation-triangle" : camsStatus === "loading" ? "bi-arrow-repeat wildfire-spin" : "bi-info-circle"}`} aria-hidden="true" />
+                <span>
+                  {camsStatus === "loading" ? "Memuat arsip CAMS…" :
+                    camsStatus === "error" ? "Arsip CAMS tidak dapat dimuat." :
+                      camsStatus === "empty" ? "Arsip CAMS belum memiliki raster untuk ditampilkan." :
+                      camsStatus === "ready" ? "Tanggal dan opasitas mengikuti kontrol arsip CAMS." :
+                        "Pilih layer untuk menampilkan raster CAMS pada peta."}
+                  {camsStatus === "error" && <> <button type="button" className="wildfire-layer-retry" onClick={onRetryCams}>Coba lagi</button></>}
+                </span>
+              </div>
             </div>
           )}
 

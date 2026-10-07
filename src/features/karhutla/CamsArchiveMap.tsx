@@ -16,7 +16,10 @@ function filterCamsFrames(frames: CamsFrame[], from: string, to: string): CamsFr
   return frames.filter((frame) => (!from || frame.valid_at.slice(0, 10) >= from) && (!to || frame.valid_at.slice(0, 10) <= to));
 }
 
-export default function CamsArchiveMap({ slug }: { slug: string }) {
+export default function CamsArchiveMap({ slug, onSelectionChange }: {
+  slug: string;
+  onSelectionChange?: (layerId: "burnt_carbon" | "organic_aod", frameId: string, opacity: number) => void;
+}) {
   const { t, language } = useI18nStore();
   const [archive, setArchive] = useState<CamsArchive | null>(null);
   const [error, setError] = useState(false);
@@ -48,6 +51,11 @@ export default function CamsArchiveMap({ slug }: { slug: string }) {
   const frame = frames.find((item) => item.id === selectedId) ?? frames.filter((item) => !item.is_forecast).at(-1) ?? frames.at(-1);
   const index = frame ? frames.indexOf(frame) : 0;
   const frameId = frame?.id;
+  useEffect(() => {
+    if (frameId && (layerId === "burnt_carbon" || layerId === "organic_aod")) {
+      onSelectionChange?.(layerId, frameId, opacity);
+    }
+  }, [frameId, layerId, opacity, onSelectionChange]);
   useEffect(() => { setTileError(false); }, [frameId, layerId]);
   useEffect(() => {
     if (!playing || frames.length < 2) return undefined;

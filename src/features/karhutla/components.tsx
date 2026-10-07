@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -6,12 +6,14 @@ import MapView from "@/components/map/MapView";
 import MapExportControl from "@/components/map/MapExportControl";
 import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
+import { env } from "@/config/env";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { formatDate, formatNumber, translate } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/services/analysisService";
 import {
   fetchWildfireEvent,
+  fetchWildfireCamsArchive,
   fetchWildfireEvents,
   fetchWildfireHotspots,
   fetchWildfireRegionStatistics,
@@ -29,6 +31,7 @@ import type {
   WildfireTimelineSort,
   WildfireRegionLevel,
   WildfireRegionStatistic,
+  CamsArchive,
 } from "./types";
 import type { RegionOption } from "@/types/api";
 import type { FirmsHotspotFeature } from "@/features/disaster/types";
@@ -623,7 +626,16 @@ interface HotspotMapProps {
   syncing: boolean;
   syncError: string | null;
   dataRevision: number;
+  camsSelection: CamsMapSelection;
 }
+
+type CamsArchiveLayerId = "burnt_carbon" | "organic_aod";
+type CamsMapSelection = Partial<Record<CamsArchiveLayerId, { frameId: string; opacity: number }>>;
+
+const CAMS_MAP_LAYERS = [
+  { queryId: "cams-gfas", archiveId: "burnt_carbon" as const, labelKey: "wildfire.cams.layer.burnt_carbon" },
+  { queryId: "cams-aod", archiveId: "organic_aod" as const, labelKey: "wildfire.cams.layer.organic_aod" },
+] as const;
 
 function HotspotMap({
   event,
@@ -635,15 +647,63 @@ function HotspotMap({
   syncing,
   syncError,
   dataRevision,
+  camsSelection,
 }: HotspotMapProps) {
+  const { t, language } = useI18nStore();
   const [boundary, setBoundary] = useState<GeoJSON.GeoJSON | null>(null);
   const [boundaryFailed, setBoundaryFailed] = useState(false);
   const [viirsFeatures, setViirsFeatures] = useState<FirmsHotspotFeature[]>([]);
   const [viirsAvailable, setViirsAvailable] = useState<boolean | null>(null);
+  const [camsArchive, setCamsArchive] = useState<CamsArchive | null>(null);
+  const [camsArchiveSlug, setCamsArchiveSlug] = useState<string | null>(null);
+  const [camsArchiveLoading, setCamsArchiveLoading] = useState(false);
+  const [camsArchiveError, setCamsArchiveError] = useState(false);
+  const [camsArchiveRetry, setCamsArchiveRetry] = useState(0);
   const viirsEnabled = query.layers.includes("viirs");
   const hotspotEnabled = query.layers.includes("hotspot");
   const boundaryEnabled = query.layers.includes("boundary");
+  const camsEnabled = CAMS_MAP_LAYERS.some((item) => query.layers.includes(item.queryId));
+  const camsArchiveHasFrames = CAMS_MAP_LAYERS.some((item) => (camsArchive?.layers[item.archiveId]?.frames.length ?? 0) > 0);
+  const camsStatus = camsArchiveLoading ? "loading" : camsArchiveError ? "error" : camsArchiveSlug === event.slug ? camsArchiveHasFrames ? "ready" : "empty" : "idle";
+  const camsLayersToRender = camsArchiveSlug === event.slug && camsArchive
+    ? CAMS_MAP_LAYERS.flatMap((item) => {
+        if (!query.layers.includes(item.queryId)) return [];
+        const layer = camsArchive.layers[item.archiveId];
+        if (!layer?.frames.length) return [];
+        const savedFrameId = camsSelection[item.archiveId]?.frameId;
+        const frame = layer.frames.find((candidate) => candidate.id === savedFrameId)
+          ?? layer.frames.filter((candidate) => !candidate.is_forecast).at(-1)
+          ?? layer.frames.at(-1);
+        return frame ? [{ ...item, layer, frame, opacity: camsSelection[item.archiveId]?.opacity ?? 0.75 }] : [];
+      })
+    : [];
   const provinceCodeKey = event.province_codes.join(",");
+
+  useEffect(() => {
+    if (!camsEnabled) {
+      setCamsArchiveLoading(false);
+      return undefined;
+    }
+    if (camsArchiveSlug === event.slug) return undefined;
+    let cancelled = false;
+    setCamsArchiveLoading(true);
+    setCamsArchiveError(false);
+    fetchWildfireCamsArchive(event.slug)
+      .then((archive) => {
+        if (cancelled) return;
+        setCamsArchive(archive);
+        setCamsArchiveSlug(event.slug);
+      })
+      .catch(() => {
+        if (!cancelled) setCamsArchiveError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setCamsArchiveLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [camsEnabled, event.slug, camsArchiveSlug, camsArchiveRetry]);
+
+  const camsTileUrl = `${env.apiBaseUrl}/disasters/wildfires/events/${encodeURIComponent(event.slug)}/emissions/tiles`;
   const selectedRegion = query.villageCode
     ? { level: "village" as const, code: query.villageCode }
     : query.districtCode
@@ -773,6 +833,11 @@ function HotspotMap({
           onSync={onSync}
           syncing={syncing}
           syncError={syncError}
+          camsStatus={camsStatus}
+          onRetryCams={() => {
+            setCamsArchiveError(false);
+            setCamsArchiveRetry((value) => value + 1);
+          }}
         />
         {boundary && query.layers.includes("boundary") && (
           <GeoJSON
@@ -781,6 +846,14 @@ function HotspotMap({
           />
         )}
         {query.layers.includes("wind") && <WindArrowLayer bbox={event.bbox} date={windDate} />}
+        {camsLayersToRender.map(({ archiveId, frame, opacity }) => (
+          <TileLayer
+            key={`${archiveId}-${frame.id}`}
+            url={`${camsTileUrl}/${archiveId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}`}
+            opacity={opacity}
+            attribution="CAMS / ECMWF · ADS · CC-BY 4.0"
+          />
+        ))}
         {viirsEnabled &&
           viirsAvailable &&
           viirsFeatures.map((feature) => {
@@ -896,6 +969,18 @@ function HotspotMap({
           </span>
         )}
       </div>
+      {camsLayersToRender.length > 0 && (
+        <div className="wildfire-cams-map-legend" aria-label="Legenda layer CAMS">
+          {camsLayersToRender.map(({ archiveId, labelKey, layer, frame }) => (
+            <div className="wildfire-cams-map-legend__item" key={archiveId}>
+              <strong>{t(labelKey)}</strong>
+              <small>{new Date(frame.valid_at).toLocaleDateString(language === "id" ? "id-ID" : "en-GB", { timeZone: "UTC" })} UTC</small>
+              <span className="wildfire-cams-map-legend__gradient" style={{ background: `linear-gradient(to right, ${layer.palette.map((color) => `#${color}`).join(",")})` }} />
+              <small>0 — {layer.maximum.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 3 })} {layer.display_unit}</small>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -938,6 +1023,7 @@ export function KarhutlaDetailPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [dataRevision, setDataRevision] = useState(0);
+  const [camsSelection, setCamsSelection] = useState<CamsMapSelection>({});
   const [dataError, setDataError] = useState<string | null>(null);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
   const [timelinePreset, setTimelinePreset] = useState<TimelinePreset>(() =>
@@ -978,6 +1064,14 @@ export function KarhutlaDetailPage() {
           ? { level: "province" as const, code: query.provinceCode }
           : null;
   const eventProvinceCodesKey = (event?.province_codes ?? []).join(",");
+
+  useEffect(() => {
+    setCamsSelection({});
+  }, [slug]);
+
+  const handleCamsSelectionChange = useCallback((layerId: CamsArchiveLayerId, frameId: string, opacity: number) => {
+    setCamsSelection((current) => ({ ...current, [layerId]: { frameId, opacity } }));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1537,8 +1631,13 @@ export function KarhutlaDetailPage() {
             syncing={syncing}
             syncError={syncError}
             dataRevision={dataRevision}
+            camsSelection={camsSelection}
           />
-          <CamsFireEmissionsPanel slug={slug} eventConfirmed={eventBackedByApi} />
+          <CamsFireEmissionsPanel
+            slug={slug}
+            eventConfirmed={eventBackedByApi}
+            onSelectionChange={handleCamsSelectionChange}
+          />
           <div className={`wildfire-timeline-panel${loading ? " is-loading" : ""}`} aria-busy={loading}>
             <div className="wildfire-panel-heading">
               <div>

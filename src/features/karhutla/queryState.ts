@@ -95,6 +95,8 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
         "suppression",
         "groundcheck",
         "peat-water",
+        "cams-gfas",
+        "cams-aod",
       ].includes(layer),
     ),
     basemap: params.get("basemap") ?? "",
