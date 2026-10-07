@@ -1,3 +1,4 @@
+import { useAnalysisJobStore } from "./analysisJobStore";
 import { apiClient, ApiError } from "@/services/apiClient";
 
 type AnalysisJobStatus = "queued" | "running" | "succeeded" | "failed";
@@ -52,17 +53,28 @@ export async function runAnalysisJob<T>(
     { timeoutMs: JOB_REQUEST_TIMEOUT_MS, auth: "app" },
   );
 
+  useAnalysisJobStore.getState().update({ job_id: job.job_id, type, status: job.status });
+
   while (Date.now() - started < options.timeoutMs) {
     await wait(pollIntervalMs);
-    const status = await apiClient.get<JobStatusResponse<T>>(
-      job.status_url,
-      { timeoutMs: JOB_REQUEST_TIMEOUT_MS, auth: "app" },
-    );
+    const status = await apiClient.get<JobStatusResponse<T>>(job.status_url, {
+      timeoutMs: JOB_REQUEST_TIMEOUT_MS,
+      auth: "app",
+    });
+    useAnalysisJobStore
+      .getState()
+      .update({ job_id: job.job_id, type, status: status.status, error: status.error });
     if (status.status === "succeeded" && status.result !== undefined) return status.result;
     if (status.status === "failed") {
       throw new ApiError(status.error || "Analysis job failed", status.http_status || 500, status);
     }
   }
 
-  throw new ApiError("Request timed out", 0, { job_id: job.job_id, type });
+  throw new ApiError(
+    "Waktu tunggu habis; job " +
+      job.job_id +
+      " mungkin masih berjalan. Periksa status sebelum menjalankan ulang.",
+    0,
+    { job_id: job.job_id, type },
+  );
 }

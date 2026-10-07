@@ -128,6 +128,14 @@ export default function CropMonitoringModule() {
   const [result, setResult] = useState<CropMonitoringResult | null>(null);
   const [lastPeriod, setLastPeriod] = useState<CropMonitoringPeriodInput | undefined>(undefined);
 
+  useEffect(() => {
+    setResult(null);
+    const field = useFieldStore.getState().selectedField;
+    if (field && JSON.stringify(field.geojson) !== JSON.stringify(aoi?.feature.geometry)) {
+      useFieldStore.getState().clearSelection();
+    }
+  }, [aoi?.feature]);
+
   function buildPeriod(): CropMonitoringPeriodInput | null {
     if (periodMode !== "custom") return { mode: periodMode };
     if (!customStart || !customEnd) return null;
@@ -181,6 +189,9 @@ export default function CropMonitoringModule() {
   useEffect(() => registerUiCommands("crop", {
     read: () => ({
       fieldId: selectedField?.id ?? null,
+      availableFieldIds: useFieldStore.getState().fields.map(f => f.id),
+      fields: useFieldStore.getState().fields.map(f => ({ id: f.id, name: f.name, commodity: f.commodity })),
+      commodities: commodities.map(c => ({ ...c })),
       commodity: selectedField?.commodity ?? null,
       periodMode,
       startDate: customStart || null,
@@ -194,7 +205,11 @@ export default function CropMonitoringModule() {
     }),
     execute: async ({ action, target, parameters }) => {
       const value = parameters?.value;
-      if (action === "set_parameter" && target === "crop.index") {
+      if (action === "select_field" && target === "crop.field") {
+        const id = parameters?.field_id;
+        if (typeof id !== "number" || !useFieldStore.getState().fields.some(f => f.id === id)) throw new Error("Field tidak tersedia.");
+        await useFieldStore.getState().selectField(id);
+      } else if (action === "set_parameter" && target === "crop.index") {
         if (typeof value !== "string" || !["NDVI", "EVI", "SAVI", "NDMI", "NDRE", "GNDVI"].includes(value)) throw new Error("Indeks tanaman tidak tersedia.");
         setTimeseriesIndex(value);
       } else if (action === "set_parameter" && target === "crop.periodMode") {

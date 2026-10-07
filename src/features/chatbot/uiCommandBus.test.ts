@@ -30,3 +30,18 @@ describe("UI command bus", () => {
       .rejects.toThrow(/belum menyediakan kontrol/);
   });
 });
+
+describe("analysis completion contract", () => {
+  it("reports backend failures even when an earlier result exists", async () => {
+    const dispose = registerUiCommands("carbon", { read: () => ({ hasResult: true, error: "Scene unavailable" }), execute: async () => {} });
+    try {
+      await expect(executeUiCommand({ action: "run_analysis", target: "carbon.analysis" })).rejects.toThrow("Scene unavailable");
+    } finally { dispose(); }
+  });
+  it("rejects completion without a backend result", async () => {
+    const dispose = registerUiCommands("carbon", { read: () => ({ hasResult: false }), execute: async () => {} });
+    try {
+      await expect(executeUiCommand({ action: "run_analysis", target: "carbon.analysis" })).rejects.toThrow(/tanpa hasil/);
+    } finally { dispose(); }
+  });
+});

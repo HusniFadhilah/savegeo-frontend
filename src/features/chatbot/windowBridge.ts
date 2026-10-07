@@ -1,23 +1,5 @@
-/**
- * Bridge to the rest of the SaveGeo app.
- *
- * The legacy vanilla-JS chatbot (frontend-nextjs2/public/savegeo-chatbot.js)
- * read shared classic-script globals (`currentAOI`, `map`, `L`, `window.
- * switchModule`, `window.setAOIFromGeoJSON`, ...) directly, and always
- * guarded every call with `typeof window.X === 'function'` so the widget
- * degraded gracefully instead of throwing when a given module hadn't wired
- * that hook up yet.
- *
- * This Vite/React rewrite has NO such globals yet - map state lives in local
- * component state (see components/map/AoiDrawingTools.tsx), and there is no
- * `window.currentAOI`/`window.map`/`window.switchModule` etc. anywhere in the
- * app. Per the migration notes (frontend-nextjs2/MIGRATION.md, "Known
- * follow-ups") this is an accepted, expected gap: the same defensive
- * typeof-checked bridge is kept here so that as soon as another module
- * exposes these globals (or a future integration pass wires them up), the
- * chatbot's map/AOI/analysis actions start working with zero changes to this
- * file. Until then, those specific actions silently no-op.
- */
+import { useAnalysisJobStore } from "@/services/analysisJobStore";
+/** Assistant context reads the shared AOI and registered React module state. Legacy result globals remain adapters for existing modules. */
 
 import L from "leaflet";
 import { useUiStore } from "@/hooks/useUiStore";
@@ -84,7 +66,10 @@ declare global {
     API_BASE_URL?: string;
     config?: { api?: { baseUrl?: string } };
     _onSaveGeoAnalysisDone?: (() => void) | null;
-    $?: (el: unknown) => { trigger: (...args: unknown[]) => unknown; val: (v?: unknown) => unknown };
+    $?: (el: unknown) => {
+      trigger: (...args: unknown[]) => unknown;
+      val: (v?: unknown) => unknown;
+    };
   }
 }
 
@@ -100,6 +85,8 @@ export function getAppValue<K extends keyof Window>(name: K): Window[K] | undefi
 /** Context adapter - reads active AOI / current year from shared globals or DOM, defensively. */
 export const SaveGeoContext = {
   getActiveAOI(): GeoJSON.GeoJSON | null {
+    const active = useAoiStore.getState().aoi;
+    if (active) return active.feature;
     const aoi = getAppValue("currentAOI");
     if (aoi && aoi.geojson) return aoi.geojson;
     const drawn = getAppValue("drawnItems");
@@ -113,7 +100,7 @@ export const SaveGeoContext = {
   },
   getActiveAOIName(): string | null {
     const aoi = getAppValue("currentAOI");
-    return (aoi && aoi.name) || useAoiStore.getState().aoi?.name || null;
+    return useAoiStore.getState().aoi?.name || (aoi && aoi.name) || null;
   },
   getCurrentYear(): number {
     const sp = document.getElementById("yearValue");
@@ -128,7 +115,12 @@ export const SaveGeoContext = {
     }
     return new Date().getFullYear();
   },
-  addMapLayer(layer: { url?: string; tile_url?: string; name?: string; opacity?: number }): boolean {
+  addMapLayer(layer: {
+    url?: string;
+    tile_url?: string;
+    name?: string;
+    opacity?: number;
+  }): boolean {
     const m = getAppValue("map");
     const Lf = getAppValue("L");
     if (!m || !Lf) return false;
@@ -136,7 +128,10 @@ export const SaveGeoContext = {
       const url = layer.url || layer.tile_url;
       if (!url) return false;
       const name = layer.name || `chatbot_layer_${Date.now()}`;
-      const tl = Lf.tileLayer(url, { opacity: layer.opacity != null ? layer.opacity : 0.8, maxZoom: 20 });
+      const tl = Lf.tileLayer(url, {
+        opacity: layer.opacity != null ? layer.opacity : 0.8,
+        maxZoom: 20,
+      });
       tl.addTo(m);
       const layers = getAppValue("geeTileLayers");
       if (layers) layers[name] = tl;
@@ -170,40 +165,61 @@ export function getPageState() {
   const hasTransition = !!ar.landcover_transition;
 
   const carbonStats =
-    (carbonData.statistics as Record<string, unknown>) || (carbonData.stats as Record<string, unknown>) || {};
+    (carbonData.statistics as Record<string, unknown>) ||
+    (carbonData.stats as Record<string, unknown>) ||
+    {};
   const vegStats =
-    (vegData.statistics as Record<string, unknown>) || (vegData.stats as Record<string, unknown>) || {};
+    (vegData.statistics as Record<string, unknown>) ||
+    (vegData.stats as Record<string, unknown>) ||
+    {};
   const carbonUi = readUiCommandState("carbon");
   const changeUi = readUiCommandState("lc_change");
   const resultsUi = readUiCommandState("results");
   const scenesUi = readUiCommandState("scenes");
   const cropUi = readUiCommandState("crop");
   const disasterUi = readUiCommandState("disaster");
-  const cropSummaryUi = cropUi ? Object.fromEntries(Object.entries(cropUi).filter(([key]) => key !== "result")) : null;
-  const disasterSummaryUi = disasterUi ? Object.fromEntries(Object.entries(disasterUi).filter(([key]) => key !== "result")) : null;
+  const cropSummaryUi = cropUi
+    ? Object.fromEntries(Object.entries(cropUi).filter(([key]) => key !== "result"))
+    : null;
+  const disasterSummaryUi = disasterUi
+    ? Object.fromEntries(Object.entries(disasterUi).filter(([key]) => key !== "result"))
+    : null;
   const map = getActiveMap();
   const center = map?.getCenter();
 
   return {
     route: window.location.pathname,
+    jobs: useAnalysisJobStore.getState().jobs,
     current_module: currentModule,
     map: {
       center: center ? [center.lat, center.lng] : null,
       zoom: map?.getZoom() ?? null,
     },
-    ui: { carbon: carbonUi, lc_change: changeUi, results: resultsUi, scenes: scenesUi, crop: cropSummaryUi, disaster: disasterSummaryUi },
+    ui: {
+      carbon: carbonUi,
+      lc_change: changeUi,
+      results: resultsUi,
+      scenes: scenesUi,
+      crop: cropSummaryUi,
+      disaster: disasterSummaryUi,
+    },
     has_aoi: !!SaveGeoContext.getActiveAOI(),
     aoi_name: SaveGeoContext.getActiveAOIName(),
-    selected_year: typeof carbonUi?.analysisYear === "number" ? carbonUi.analysisYear : SaveGeoContext.getCurrentYear(),
+    selected_year:
+      typeof carbonUi?.analysisYear === "number"
+        ? carbonUi.analysisYear
+        : SaveGeoContext.getCurrentYear(),
     selected_carbon_dataset:
       (typeof carbonUi?.referenceDataset === "string" ? carbonUi.referenceDataset : null) ||
-      (document.getElementById("carbonReferenceDataset") as HTMLSelectElement | null)?.value || null,
+      (document.getElementById("carbonReferenceDataset") as HTMLSelectElement | null)?.value ||
+      null,
     selected_carbon_model:
       (document.getElementById("carbonModelSelect") as HTMLSelectElement | null)?.value || null,
     available_carbon_datasets: optionValues("carbonReferenceDataset"),
     available_carbon_models: optionValues("carbonModelSelect"),
     available_landcover_datasets: Array.isArray(changeUi?.availableDatasets)
-      ? changeUi.availableDatasets as string[] : optionValues("landcoverDatasetSelect"),
+      ? (changeUi.availableDatasets as string[])
+      : optionValues("landcoverDatasetSelect"),
     analysis_results: {
       carbon: hasCarbon,
       landcover: hasLandcover,
@@ -262,21 +278,25 @@ export function buildGeoAiContext(): GeoAiContext {
   const sharedAoi = useAoiStore.getState().aoi;
 
   const preferLc = activeModule === "lc-change" && !!lcState?.aoi;
-  const aoi = preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || sharedAoi?.feature || null;
-  const aoiName = preferLc ? "AOI (LC-Change)" : carbonAoi?.name || sharedAoi?.name || null;
-  const areaKm2 = !preferLc ? carbonAoi?.areaKm2 ?? sharedAoi?.areaKm2 ?? null : null;
+  const aoi =
+    sharedAoi?.feature || (preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || null);
+  const aoiName = sharedAoi?.name || (preferLc ? "AOI (LC-Change)" : carbonAoi?.name || null);
+  const areaKm2 = sharedAoi?.areaKm2 ?? (!preferLc ? (carbonAoi?.areaKm2 ?? null) : null);
 
   const ar = getAppValue("analysisResults") || {};
-  const disasterResult = readUiCommandState("disaster")?.result as Record<string, unknown> | undefined;
-  const period = preferLc && lcState?.from_year && lcState?.to_year
-    ? `${lcState.from_year}-${lcState.to_year}`
-    : String(SaveGeoContext.getCurrentYear());
+  const disasterResult = readUiCommandState("disaster")?.result as
+    Record<string, unknown> | undefined;
+  const period =
+    preferLc && lcState?.from_year && lcState?.to_year
+      ? `${lcState.from_year}-${lcState.to_year}`
+      : String(SaveGeoContext.getCurrentYear());
 
   return {
     aoi,
     aoi_name: aoiName,
     area_ha: areaKm2 != null ? Math.round(areaKm2 * 100 * 100) / 100 : null,
     bbox: aoi ? bboxOfGeoJSON(aoi) : null,
+    jobs: useAnalysisJobStore.getState().jobs,
     current_module: activeModule.replace("-", "_"),
     period,
     selected_year: SaveGeoContext.getCurrentYear(),
@@ -290,7 +310,8 @@ export function buildGeoAiContext(): GeoAiContext {
       landcover: (ar.landcover as Record<string, unknown>) || null,
       landcover_transition: lcState?.transition || null,
       crop: (readUiCommandState("crop")?.result as Record<string, unknown>) || null,
-      disaster: disasterResult && Object.values(disasterResult).some(Boolean) ? disasterResult : null,
+      disaster:
+        disasterResult && Object.values(disasterResult).some(Boolean) ? disasterResult : null,
     },
   };
 }

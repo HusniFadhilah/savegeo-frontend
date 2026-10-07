@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import TablePagination from "@/components/ui/TablePagination";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useAdmin } from "../AdminContext";
@@ -53,6 +54,7 @@ export default function AdminUsers() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const canAssignFullAccess = hasAdminPermission(me, "secret.write");
+  const canManageViewerFeatures = hasAdminPermission(me, "viewer_features.manage");
 
   useEffect(() => {
     listRoles()
@@ -162,6 +164,15 @@ export default function AdminUsers() {
       <div className="card-header-custom">
         <span>{t("admin.users.title")}</span>
         <div style={{ display: "flex", gap: 6 }}>
+          {canManageViewerFeatures ? (
+            <Link
+              to="/admin/viewer-features"
+              className="btn-sm"
+              style={{ textDecoration: "none" }}
+            >
+              <i className="bi bi-toggles" aria-hidden="true" /> {t("admin.menu.viewerFeatures")}
+            </Link>
+          ) : null}
           <button type="button" className="btn-sm primary" onClick={openCreate}>
             <i className="bi bi-plus-lg" /> {t("admin.users.add")}
           </button>

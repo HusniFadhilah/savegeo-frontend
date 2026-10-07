@@ -1,3 +1,4 @@
+import { registerVisibleMap } from "@/features/chatbot/mapActions";
 import { MapActivityContext } from "./MapActivityContext";
 import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MapContainer, Pane, TileLayer, useMap } from "react-leaflet";
@@ -63,6 +64,13 @@ function InvalidateOnResize() {
       clearTimeout(t);
     };
   }, [map]);
+  return null;
+}
+
+function ChatMapRegistration() {
+  const map = useMap();
+  const active = useContext(MapActivityContext);
+  useEffect(() => registerVisibleMap(map, active), [map, active]);
   return null;
 }
 
@@ -159,6 +167,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <InvalidateOnResize />
         <ReadyNotifier onMapReady={onMapReady} />
         <ResultPaneSetup />
+        <ChatMapRegistration />
         <Pane name="historical-imagery" style={{ zIndex: 250, pointerEvents: "none" }} />
         <FullscreenControl fullscreenTarget={fullscreenTarget} />
         <ZoomScaleControl />

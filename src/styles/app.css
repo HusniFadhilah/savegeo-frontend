@@ -7907,6 +7907,10 @@ body:has(.wildfire-detail-shell) .leaflet-container:not(#wildfire-detail-map) {
 .wildfire-layer-tabs button:focus-visible { color: #087f5b; }
 .wildfire-layer-tabs button.is-active { border-bottom-color: #f0a900; color: #d49300; }
 .wildfire-layer-list { display: grid; gap: .05rem; padding: .55rem .65rem .7rem; }
+.wildfire-cams-scope { display: flex; gap: .8rem; margin: 0 .35rem .3rem; padding: .3rem 0 .45rem; border: 0; border-bottom: 1px solid #e7efeb; }
+.wildfire-cams-scope legend { margin-bottom: .25rem; color: #62776c; font-size: .64rem; font-weight: 700; }
+.wildfire-cams-scope label { display: inline-flex; align-items: center; gap: .3rem; color: #40584e; font-size: .68rem; cursor: pointer; }
+.wildfire-cams-scope input { width: .85rem; height: .85rem; margin: 0; accent-color: #0d8b61; }
 .wildfire-layer-option {
   display: flex;
   align-items: flex-start;
@@ -7971,6 +7975,12 @@ html[data-theme="dark"] .wildfire-layer-tabs,
 .dark-mode .wildfire-layer-tabs { border-color: #315245; }
 html[data-theme="dark"] .wildfire-layer-tabs button,
 .dark-mode .wildfire-layer-tabs button { color: #a9beb4; }
+html[data-theme="dark"] .wildfire-cams-scope,
+.dark-mode .wildfire-cams-scope { border-color: #315245; }
+html[data-theme="dark"] .wildfire-cams-scope label,
+html[data-theme="dark"] .wildfire-cams-scope legend,
+.dark-mode .wildfire-cams-scope label,
+.dark-mode .wildfire-cams-scope legend { color: #b4c8bf; }
 html[data-theme="dark"] .wildfire-layer-option:hover:not(.is-disabled),
 .dark-mode .wildfire-layer-option:hover:not(.is-disabled) { background: #203c30; }
 html[data-theme="dark"] .wildfire-layer-option-copy small,

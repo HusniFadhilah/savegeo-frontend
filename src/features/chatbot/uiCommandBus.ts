@@ -1,6 +1,7 @@
 import { getActiveMap } from "./mapActions";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
+import { resolveAoi } from "./aoiCommands";
 
 /** Commands are handled by the React module that owns the state. The assistant
  * never receives a DOM selector or an arbitrary callback to invoke. */
@@ -43,15 +44,33 @@ export async function executeUiCommand(command: UiCommand): Promise<Record<strin
     throw new Error("Format perintah UI tidak valid.");
   }
   const namespace = command.target.split(".")[0];
+  if (namespace === "aoi") {
+    if (command.action !== "select_aoi" || command.target !== "aoi.active")
+      throw new Error("Perintah AOI tidak dikenal.");
+    const state = await resolveAoi(command.parameters?.query);
+    verifyExpected(command, state);
+    return state;
+  }
   if (namespace === "map") {
     const map = getActiveMap();
     if (!map) throw new Error("Peta belum tersedia pada layar.");
-    if (command.action !== "set_map_view" || command.target !== "map.main") throw new Error("Perintah peta tidak dikenal.");
+    if (command.action !== "set_map_view" || command.target !== "map.main")
+      throw new Error("Perintah peta tidak dikenal.");
     const center = command.parameters?.center;
     const zoom = command.parameters?.zoom;
-    if (!Array.isArray(center) || center.length !== 2 || !center.every((n) => typeof n === "number" && Number.isFinite(n)) ||
-      center[0] < -90 || center[0] > 90 || center[1] < -180 || center[1] > 180 ||
-      typeof zoom !== "number" || !Number.isFinite(zoom) || zoom < map.getMinZoom() || zoom > map.getMaxZoom()) {
+    if (
+      !Array.isArray(center) ||
+      center.length !== 2 ||
+      !center.every((n) => typeof n === "number" && Number.isFinite(n)) ||
+      center[0] < -90 ||
+      center[0] > 90 ||
+      center[1] < -180 ||
+      center[1] > 180 ||
+      typeof zoom !== "number" ||
+      !Number.isFinite(zoom) ||
+      zoom < map.getMinZoom() ||
+      zoom > map.getMaxZoom()
+    ) {
       throw new Error("Koordinat atau zoom peta tidak valid.");
     }
     map.setView(center as [number, number], zoom);
@@ -60,10 +79,20 @@ export async function executeUiCommand(command: UiCommand): Promise<Record<strin
     return state;
   }
   if (namespace === "navigation") {
-    if (command.action !== "open_module" || command.target !== "navigation.module") throw new Error("Perintah navigasi tidak dikenal.");
+    if (command.action !== "open_module" || command.target !== "navigation.module")
+      throw new Error("Perintah navigasi tidak dikenal.");
     const module = command.parameters?.value;
-    const allowed: DashboardModule[] = ["carbon", "lc-change", "imagery", "disaster", "crop-monitoring", "guide", "about"];
-    if (typeof module !== "string" || !allowed.some((item) => item === module)) throw new Error("Modul tidak tersedia.");
+    const allowed: DashboardModule[] = [
+      "carbon",
+      "lc-change",
+      "imagery",
+      "disaster",
+      "crop-monitoring",
+      "guide",
+      "about",
+    ];
+    if (typeof module !== "string" || !allowed.some((item) => item === module))
+      throw new Error("Modul tidak tersedia.");
     useUiStore.getState().setActiveModule(module as DashboardModule);
     window.history.pushState(null, "", getDashboardModulePath(module as DashboardModule));
     window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
@@ -71,19 +100,53 @@ export async function executeUiCommand(command: UiCommand): Promise<Record<strin
     verifyExpected(command, state);
     return state;
   }
+  const moduleForNamespace: Record<string, DashboardModule> = {
+    carbon: "carbon",
+    lc_change: "lc-change",
+    scenes: "imagery",
+    crop: "crop-monitoring",
+    disaster: "disaster",
+  };
+  if (!handlers.has(namespace) && moduleForNamespace[namespace]) {
+    await executeUiCommand({
+      action: "open_module",
+      target: "navigation.module",
+      parameters: { value: moduleForNamespace[namespace] },
+    });
+    const deadline = Date.now() + 8000;
+    while (!handlers.has(namespace) && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const handler = handlers.get(namespace);
   if (!handler) throw new Error(`Modul ${namespace} belum menyediakan kontrol chatbot.`);
-  await handler.execute(command);
+  if (command.action === "set_provider") {
+    const deadline = Date.now() + 10000;
+    while (
+      !(handlers.get(namespace)?.read().availableProviders as unknown[] | undefined)?.length &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  await (handlers.get(namespace) ?? handler).execute(command);
   // React batches state updates; let the owner commit before reading back.
   await new Promise((resolve) => setTimeout(resolve, 0));
   const state = handlers.get(namespace)?.read() ?? handler.read();
-  if (["run_analysis", "search_scenes", "show_scene"].includes(command.action) && typeof state.error === "string" && state.error) {
+  if (
+    ["run_analysis", "search_scenes", "show_scene"].includes(command.action) &&
+    typeof state.error === "string" &&
+    state.error
+  ) {
     throw new Error(state.error);
   }
   if (command.action === "run_analysis" && state.hasResult !== true) {
     throw new Error("Analisis selesai tanpa hasil yang dapat ditampilkan.");
   }
-  if (command.action === "show_scene" && command.parameters?.visible === true && state.sceneVisible !== true) {
+  if (
+    command.action === "show_scene" &&
+    command.parameters?.visible === true &&
+    state.sceneVisible !== true
+  ) {
     throw new Error("Scene tidak berhasil ditampilkan pada peta.");
   }
   verifyExpected(command, state);

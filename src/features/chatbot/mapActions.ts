@@ -15,11 +15,24 @@ import { RESULT_PANE } from "@/config/mapPanes";
 export type MapRole = "aoi" | "results";
 
 const registry: Partial<Record<MapRole, L.Map>> = {};
+const visibleMaps = new Set<L.Map>();
+const trackedMaps = new Set<L.Map>();
+let highlightOwner: L.Map | null = null;
 let highlightLayer: L.GeoJSON | null = null;
 
 export function registerMap(role: MapRole, map: L.Map | null): void {
   if (map) registry[role] = map;
   else delete registry[role];
+}
+
+export function registerVisibleMap(map: L.Map, active: boolean): () => void {
+  trackedMaps.add(map);
+  if (active) visibleMaps.add(map);
+  else visibleMaps.delete(map);
+  return () => {
+    visibleMaps.delete(map);
+    trackedMaps.delete(map);
+  };
 }
 
 function isMountedMap(map: L.Map | undefined): map is L.Map {
@@ -32,6 +45,11 @@ function isMountedMap(map: L.Map | undefined): map is L.Map {
 }
 
 export function getActiveMap(): L.Map | null {
+  for (const map of [...visibleMaps].reverse()) {
+    if (isMountedMap(map)) return map;
+    visibleMaps.delete(map);
+  }
+  if (trackedMaps.size > 0) return null;
   // MapContainer removes its Leaflet instance when its route unmounts. A
   // stored instance can still exist in this registry, but calling getCenter
   // or flyTo after removal may dereference Leaflet's destroyed map pane.
@@ -46,7 +64,10 @@ export function zoomToLocation(lat: number, lng: number, zoom = 13): void {
   map.flyTo([lat, lng], zoom, { duration: 1.2 });
 }
 
-export function zoomToFeature(geometry: GeoJSON.Geometry | GeoJSON.Feature, options?: { maxZoom?: number }): void {
+export function zoomToFeature(
+  geometry: GeoJSON.Geometry | GeoJSON.Feature,
+  options?: { maxZoom?: number },
+): void {
   const map = getActiveMap();
   if (!map) return;
   try {
@@ -69,14 +90,20 @@ export function highlightPolygon(
   if (!map) return;
 
   if (highlightLayer) {
-    map.removeLayer(highlightLayer);
+    highlightOwner?.removeLayer(highlightLayer);
     highlightLayer = null;
   }
 
   try {
+    highlightOwner = map;
     highlightLayer = L.geoJSON(geometry as GeoJSON.GeoJSON, {
       pane: map.getPane(RESULT_PANE) ? RESULT_PANE : undefined,
-      style: { color: options?.color || "#facc15", weight: 3, fillColor: "#facc15", fillOpacity: 0.25 },
+      style: {
+        color: options?.color || "#facc15",
+        weight: 3,
+        fillColor: "#facc15",
+        fillOpacity: 0.25,
+      },
     }).addTo(map);
     if (options?.label) highlightLayer.bindTooltip(options.label, { permanent: false });
     if (options?.zoomTo !== false) zoomToFeature(geometry);
@@ -87,6 +114,7 @@ export function highlightPolygon(
 
 export function clearHighlight(): void {
   const map = getActiveMap();
-  if (map && highlightLayer) map.removeLayer(highlightLayer);
+  if (map && highlightLayer) highlightOwner?.removeLayer(highlightLayer);
+  highlightOwner = null;
   highlightLayer = null;
 }

@@ -1,3 +1,6 @@
+import { useAoiStore } from "@/hooks/useAoiStore";
+import { AoiChoiceRequired, selectAoi, type AoiCandidate } from "../aoiCommands";
+import { useAnalysisJobStore } from "@/services/analysisJobStore";
 import { useEffect, useRef, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { ChatSession } from "@/types/api";
@@ -5,7 +8,12 @@ import { chatbotApi } from "../api";
 import { runActions, type ActionRunContext } from "../actionExecutor";
 import { CHAT_I18N } from "../i18n";
 import { buildSuggestedPrompts } from "../suggestedPrompts";
-import { captureMapScreenshot, getAppValue, getPageState, buildGeoAiContext } from "../windowBridge";
+import {
+  captureMapScreenshot,
+  getAppValue,
+  getPageState,
+  buildGeoAiContext,
+} from "../windowBridge";
 import {
   aoiFeatureFromGeoJSON,
   aoiNameFromGeoJSON,
@@ -30,7 +38,18 @@ import type {
 } from "../types";
 
 export const DEFAULT_FILE_ACCEPT = "image/*,.pdf,.txt,.csv,.json,.geojson,.kml,.md,.docx,.zip,.shp";
-const ALLOWED_EXTENSIONS = [".pdf", ".txt", ".csv", ".json", ".geojson", ".kml", ".md", ".docx", ".zip", ".shp"];
+const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".txt",
+  ".csv",
+  ".json",
+  ".geojson",
+  ".kml",
+  ".md",
+  ".docx",
+  ".zip",
+  ".shp",
+];
 const DEFAULT_MAX_FILE_MB = 5;
 const DEFAULT_STATUS = "Siap membantu analisis";
 
@@ -69,6 +88,12 @@ export function useChatSession() {
   const [sessionSearch, setSessionSearch] = useState("");
   const [sessionId, setSessionIdState] = useState<number | null>(null);
 
+  const executionRef = useRef(false);
+  const consumedCardsRef = useRef(new Set<string>());
+  const aoiChoicesRef = useRef(
+    new Map<string, { candidates: AoiCandidate[]; actions: ChatAction[]; cardEntryId?: string }>(),
+  );
+  const activeAoiName = useAoiStore((s) => s.aoi?.name);
   const isOpenRef = useRef(isOpen);
   const isLoadingRef = useRef(isLoading);
   const sessionIdRef = useRef<number | null>(null);
@@ -111,16 +136,15 @@ export function useChatSession() {
       prev.map((e) => (e.id === id && e.kind === "confirmCard" ? { ...e, ...patch } : e)),
     );
   }
-  function updateChoiceCard(
-    id: string,
-    patch: Partial<Extract<LogEntry, { kind: "choiceCard" }>>,
-  ) {
+  function updateChoiceCard(id: string, patch: Partial<Extract<LogEntry, { kind: "choiceCard" }>>) {
     setLog((prev) =>
       prev.map((e) => (e.id === id && e.kind === "choiceCard" ? { ...e, ...patch } : e)),
     );
   }
   function updateAoiOffer(id: string, patch: Partial<Extract<LogEntry, { kind: "aoiOffer" }>>) {
-    setLog((prev) => prev.map((e) => (e.id === id && e.kind === "aoiOffer" ? { ...e, ...patch } : e)));
+    setLog((prev) =>
+      prev.map((e) => (e.id === id && e.kind === "aoiOffer" ? { ...e, ...patch } : e)),
+    );
   }
 
   function resetToWelcome() {
@@ -187,13 +211,20 @@ export function useChatSession() {
         }
         if (parsed && typeof parsed.message !== "undefined") {
           if (parsed.message) {
-            newLog.push({ id: makeId("msg"), kind: "message", role: "assistant", text: parsed.message });
+            newLog.push({
+              id: makeId("msg"),
+              kind: "message",
+              role: "assistant",
+              text: parsed.message,
+            });
           }
           const warnings = normalizeWarnings(parsed.warnings);
           if (warnings.length) newLog.push({ id: makeId("warn"), kind: "warnings", warnings });
           if (parsed.cards?.length) {
             registerHotspotCards(parsed.cards);
-            parsed.cards.forEach((card) => newLog.push({ id: makeId("card"), kind: "resultCard", card }));
+            parsed.cards.forEach((card) =>
+              newLog.push({ id: makeId("card"), kind: "resultCard", card }),
+            );
           }
           if (parsed.actions?.length) {
             newLog.push({
@@ -241,6 +272,8 @@ export function useChatSession() {
     clearPendingImage();
     clearPendingFile();
     hotspotGeometriesRef.current = {};
+    aoiChoicesRef.current.clear();
+    consumedCardsRef.current.clear();
     if (sessionPanelOpen) setSessionPanelOpen(false);
   }
 
@@ -269,7 +302,12 @@ export function useChatSession() {
     }
   }
 
-  function offerGeoJSONAsAOI(geo: GeoJSON.GeoJSON, fileName: string, rawText: string, sizeLabel: string) {
+  function offerGeoJSONAsAOI(
+    geo: GeoJSON.GeoJSON,
+    fileName: string,
+    rawText: string,
+    sizeLabel: string,
+  ) {
     const name = aoiNameFromGeoJSON(geo, fileName);
     appendEntry({
       id: makeId("aoi"),
@@ -425,6 +463,23 @@ export function useChatSession() {
     const entry = log.find((e) => e.id === entryId);
     if (!entry || entry.kind !== "choiceCard" || entry.selectedIndex !== null) return;
     updateChoiceCard(entryId, { selectedIndex: index });
+    const pending = aoiChoicesRef.current.get(entryId);
+    if (pending) {
+      aoiChoicesRef.current.delete(entryId);
+      try {
+        selectAoi(pending.candidates[index]);
+        appendMessage(
+          "assistant",
+          `AOI ${pending.candidates[index].display_name} dipilih; peta telah diarahkan ke batasnya.`,
+        );
+        if (pending.cardEntryId) consumedCardsRef.current.delete(pending.cardEntryId);
+        if (pending.actions.length) void executeActionQueue(pending.actions, pending.cardEntryId);
+        else if (pending.cardEntryId) updateConfirmCard(pending.cardEntryId, { status: "done" });
+      } catch (error) {
+        appendMessage("assistant", error instanceof Error ? error.message : "Pemilihan AOI gagal.");
+      }
+      return;
+    }
     const choice = entry.choices[index];
     if (choice) sendMessage(choice.msg, { prefill: true });
   }
@@ -448,6 +503,22 @@ export function useChatSession() {
 
   /* ── Sending messages / backend call ─────────────────────────── */
   function sendMessage(rawText: string | undefined, opts?: { prefill?: boolean }) {
+    if (executionRef.current) {
+      const jobs = useAnalysisJobStore
+        .getState()
+        .jobs.filter((j) => ["queued", "running"].includes(j.status));
+      appendMessage(
+        "assistant",
+        jobs.length
+          ? jobs
+              .map(
+                (j) => `Job ${j.job_id}: ${j.status === "queued" ? "antrean" : "sedang diproses"}.`,
+              )
+              .join("\n")
+          : "Tindakan masih berjalan. Tunggu hasil sebelum mengirim perintah baru.",
+      );
+      return;
+    }
     const isPrefill = !!opts?.prefill;
     const typed = (rawText || "").trim();
     const image = isPrefill ? null : pendingImage;
@@ -456,7 +527,11 @@ export function useChatSession() {
     if (!typed && !image && !file) return;
     if (isLoadingRef.current) return;
 
-    const defaultCaption = image ? "Tolong analisis screenshot peta ini." : file ? "Tolong analisis file ini." : "";
+    const defaultCaption = image
+      ? "Tolong analisis screenshot peta ini."
+      : file
+        ? "Tolong analisis file ini."
+        : "";
     const finalText = typed || defaultCaption;
 
     appendMessage("user", finalText, {
@@ -469,7 +544,11 @@ export function useChatSession() {
     callBackend(finalText, image, file);
   }
 
-  async function callBackend(message: string, image: string | null, file: PendingFileAttachment | null) {
+  async function callBackend(
+    message: string,
+    image: string | null,
+    file: PendingFileAttachment | null,
+  ) {
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -528,7 +607,11 @@ export function useChatSession() {
   }
 
   /** Inline 30s-slow "Coba Lagi" on the loading bubble itself: abort + immediately resend. */
-  function retryLoadingNow(message: string, image: string | null, file: PendingFileAttachment | null) {
+  function retryLoadingNow(
+    message: string,
+    image: string | null,
+    file: PendingFileAttachment | null,
+  ) {
     suppressAbortChipRef.current = true;
     abortControllerRef.current?.abort();
     void callBackend(message, image, file);
@@ -570,7 +653,12 @@ export function useChatSession() {
     }
 
     if (resp.needs_confirmation) {
-      appendEntry({ id: makeId("confirm"), kind: "confirmCard", actions: execActions, status: "pending" });
+      appendEntry({
+        id: makeId("confirm"),
+        kind: "confirmCard",
+        actions: execActions,
+        status: "pending",
+      });
     } else {
       void executeActionQueue(execActions);
     }
@@ -596,13 +684,19 @@ export function useChatSession() {
     const sysMsg = isSceneSearch
       ? "Pencarian scene selesai. Baca jumlah scene, provider, halaman, dan status truncated dari get_current_context. Jelaskan jika hasil hanya sebagian dari katalog provider; jangan mengarang tanggal akuisisi atau jumlah total."
       : directGlobal
-      ? "Layer dataset referensi langsung telah dimuat tanpa AOI atau model. Jelaskan hanya metadata dataset yang benar-benar tersedia (sumber, tahun efektif, resolusi, dan keterbatasan). Jangan menyebutnya prediksi atau mengarang statistik AOI."
-      :
-      `Analisis ${typeLabel} telah selesai dijalankan. Tolong ringkas dan jelaskan hasil analisis yang ` +
-      "sudah tersedia: angka estimasi utama, satuan, interpretasi kondisi area, keterbatasan dataset yang " +
-      "dipakai, dan rekomendasi tindak lanjut.";
+        ? "Layer dataset referensi langsung telah dimuat tanpa AOI atau model. Jelaskan hanya metadata dataset yang benar-benar tersedia (sumber, tahun efektif, resolusi, dan keterbatasan). Jangan menyebutnya prediksi atau mengarang statistik AOI."
+        : `Analisis ${typeLabel} telah selesai dijalankan. Tolong ringkas dan jelaskan hasil analisis yang ` +
+          "sudah tersedia: angka estimasi utama, satuan, interpretasi kondisi area, keterbatasan dataset yang " +
+          "dipakai, dan rekomendasi tindak lanjut.";
     const loadingId = makeId("loading");
-    appendEntry({ id: loadingId, kind: "loading", startedAt: Date.now(), message: sysMsg, image: null, file: null });
+    appendEntry({
+      id: loadingId,
+      kind: "loading",
+      startedAt: Date.now(),
+      message: sysMsg,
+      image: null,
+      file: null,
+    });
     try {
       const resp = await chatbotApi.sendAgentControl({
         message: sysMsg,
@@ -623,8 +717,24 @@ export function useChatSession() {
   }
 
   async function executeActionQueue(actions: ChatAction[], cardEntryId?: string) {
-    const hadAnalysis = actions.some((a) => a.type === "run_analysis" || a.action === "run_analysis");
-    const analysisTypes = actions.filter((a) => a.type === "run_analysis" || a.action === "run_analysis").map((a) => a.analysis || a.target || "");
+    if (executionRef.current || (cardEntryId && consumedCardsRef.current.has(cardEntryId))) return;
+    executionRef.current = true;
+    if (cardEntryId) consumedCardsRef.current.add(cardEntryId);
+    const disposeJobs = useAnalysisJobStore.subscribe((state, previous) => {
+      for (const job of state.jobs) {
+        if (previous.jobs.find((j) => j.job_id === job.job_id)?.status === job.status) continue;
+        appendMessage(
+          "assistant",
+          `Job ${job.job_id}: ${{ queued: "antrean", running: "sedang diproses", succeeded: "selesai", failed: "gagal" }[job.status]}.`,
+        );
+      }
+    });
+    const hadAnalysis = actions.some(
+      (a) => a.type === "run_analysis" || a.action === "run_analysis",
+    );
+    const analysisTypes = actions
+      .filter((a) => a.type === "run_analysis" || a.action === "run_analysis")
+      .map((a) => a.analysis || a.target || "");
     const searchedScenes = actions.some((a) => a.action === "search_scenes");
 
     if (cardEntryId) updateConfirmCard(cardEntryId, { status: "running" });
@@ -634,7 +744,13 @@ export function useChatSession() {
       addGuideStep: (step, total, title, body) =>
         appendEntry({ id: makeId("guide"), kind: "guideStep", step, total, title, body }),
       addChoiceCard: (question, choices: QuickAction[]) =>
-        appendEntry({ id: makeId("choice"), kind: "choiceCard", question, choices, selectedIndex: null }),
+        appendEntry({
+          id: makeId("choice"),
+          kind: "choiceCard",
+          question,
+          choices,
+          selectedIndex: null,
+        }),
       offerBoundaryDownload: (name, feature) => {
         if (!feature) {
           appendMessage("assistant", `Batas wilayah **${name}** sudah diset di peta.`);
@@ -661,11 +777,34 @@ export function useChatSession() {
         setStatus(`Menjalankan ${i + 1}/${total}...`);
         if (cardEntryId) updateConfirmCard(cardEntryId, { runningStepIndex: i });
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof AoiChoiceRequired) {
+        const id = makeId("aoi-choice");
+        aoiChoicesRef.current.set(id, {
+          cardEntryId,
+          candidates: error.candidates,
+          actions:
+            (error as AoiChoiceRequired & { remainingActions?: ChatAction[] }).remainingActions ??
+            [],
+        });
+        appendEntry({
+          id,
+          kind: "choiceCard",
+          question: error.message,
+          choices: error.candidates.map((c) => ({ label: c.display_name, msg: c.display_name })),
+          selectedIndex: null,
+        });
+      }
       setStatus(DEFAULT_STATUS);
-      if (cardEntryId) updateConfirmCard(cardEntryId, { status: "done" });
+      if (cardEntryId)
+        updateConfirmCard(cardEntryId, {
+          status: error instanceof AoiChoiceRequired ? "waiting" : "failed",
+        });
       setQuickActionsVisible(true);
       return;
+    } finally {
+      disposeJobs();
+      executionRef.current = false;
     }
 
     setStatus(DEFAULT_STATUS);
@@ -673,6 +812,10 @@ export function useChatSession() {
     setQuickActionsVisible(true);
 
     if (hadAnalysis) {
+      appendMessage(
+        "assistant",
+        "Backend mengonfirmasi hasil; hasil analisis tersedia pada panel dan peta modul terkait.",
+      );
       await narrateResults(analysisTypes);
     } else if (searchedScenes) {
       await narrateResults(["scenes.searchRequest"]);
@@ -704,11 +847,13 @@ export function useChatSession() {
     close,
     status,
     // context bar (spec section 13)
-    aoiName: geoContext?.aoi_name ?? null,
+    aoiName: activeAoiName ?? geoContext?.aoi_name ?? null,
     period: geoContext?.aoi ? geoContext.period : null,
     // log
     log,
-    quickActions: quickActionsVisible ? buildSuggestedPrompts(geoContext ?? buildGeoAiContext(), language) : [],
+    quickActions: quickActionsVisible
+      ? buildSuggestedPrompts(geoContext ?? buildGeoAiContext(), language)
+      : [],
     // attachments
     pendingImage,
     pendingFile,

@@ -14,6 +14,7 @@ export interface WildfireQueryState {
   village: string;
   villageCode: string;
   layers: string[];
+  camsScope: "event" | "world";
   basemap: string;
   lat: number | null;
   lng: number | null;
@@ -35,6 +36,7 @@ export const DEFAULT_WILDFIRE_QUERY: WildfireQueryState = {
   village: "",
   villageCode: "",
   layers: ["hotspot", "boundary"],
+  camsScope: "event",
   basemap: "",
   lat: null,
   lng: null,
@@ -99,6 +101,7 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
         "cams-aod",
       ].includes(layer),
     ),
+    camsScope: params.get("cams_scope") === "world" ? "world" : "event",
     basemap: params.get("basemap") ?? "",
     lat: Number.isFinite(lat) && lat >= -11 && lat <= 6 ? lat : null,
     lng: Number.isFinite(lng) && lng >= 95 && lng <= 141 ? lng : null,
@@ -129,6 +132,7 @@ export function writeWildfireQuery(
     village: state.village || null,
     village_code: state.villageCode || null,
     layers: state.layers.join(",") === "hotspot,boundary" ? null : state.layers.join(","),
+    cams_scope: state.camsScope === "event" ? null : state.camsScope,
     basemap: state.basemap || null,
     lat: state.lat == null ? null : state.lat.toFixed(4),
     lng: state.lng == null ? null : state.lng.toFixed(4),

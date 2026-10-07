@@ -874,6 +874,27 @@ export default function ImageryModule() {
     }
   }, [satellite]);
 
+  // Changing the shared AOI invalidates catalog results and pending previews;
+  // preserve the user's provider and date filters for the next search.
+  useEffect(() => {
+    ++searchRequestRef.current;
+    ++tileRequestRef.current;
+    setSearching(false);
+    setScenes([]);
+    setSceneTilesById({});
+    setTruncated(false);
+    setSearched(false);
+    setSearchError(null);
+    setTileError(null);
+    setTileLoading(false);
+    setSelectedSceneId(null);
+    setHoverSceneId(null);
+    setFocusSceneId(null);
+    setTileUrl(null);
+    setHimawariTimeLayerUrl(null);
+    setSceneSearchRegion(null);
+  }, [aoi]);
+
   // Fixed group order (SearchableSelect renders a group header whenever an
   // option's group differs from the previous option's - it does NOT sort by
   // group itself, so the array must already come in group order).
@@ -1237,6 +1258,8 @@ export default function ImageryModule() {
     read: () => ({
       provider: satellite,
       availableProviders: Object.keys(imageryProviders),
+      providers: Object.values(imageryProviders).map(p => ({ key: p.key, name: p.name, capabilities: p.capabilities, configuration_status: p.configuration_status })),
+      scenes: scenes.slice(0, 20).map(s => ({ id: s.id, acquired_at: s.acquired_at, platform: s.platform, resolution_m: s.resolution_m, cloud_cover_pct: s.cloud_cover_pct })) ,
       startDate,
       endDate,
       cloudMax: cloudFilterEnabled ? maxCloudCover : null,
@@ -1248,6 +1271,7 @@ export default function ImageryModule() {
       sceneCount: scenes.length,
       truncated,
       selectedSceneId,
+      selectedScene: scenes.find(s => s.id === selectedSceneId) ? ((s) => ({ id: s.id, acquired_at: s.acquired_at, platform: s.platform, resolution_m: s.resolution_m, cloud_cover_pct: s.cloud_cover_pct }))(scenes.find(s => s.id === selectedSceneId)!) : null,
       sceneVisible: Boolean(tileUrl || himawariTimeLayerUrl),
       availableSceneIds: scenes.map((scene) => scene.id),
       error: searchError || tileError,
@@ -1295,8 +1319,10 @@ export default function ImageryModule() {
           setSelectedSceneId(null);
           return;
         }
-        const scene = scenes.find((item) => item.id === sceneId);
-        if (!scene) throw new Error("Scene tidak ada dalam hasil pencarian saat ini.");
+        const scene = sceneId === "latest"
+          ? [...scenes].filter(s => Number.isFinite(Date.parse(s.acquired_at))).sort((a, b) => Date.parse(b.acquired_at) - Date.parse(a.acquired_at))[0]
+          : scenes.find((item) => item.id === sceneId);
+        if (!scene) throw new Error("Scene tidak ditemukan untuk AOI dan filter saat ini. Perluas rentang tanggal atau ubah filter awan.");
         setMosaicRequestedMode(false);
         setSceneRequestedMode(true);
         await loadSceneTile(scene, scene.default_asset_key || "visual");
@@ -2151,7 +2177,9 @@ export default function ImageryModule() {
                       data={footprintData}
                       onHover={setHoverSceneId}
                       onSelect={(sceneId) => {
-                        const scene = scenes.find((item) => item.id === sceneId);
+                        const scene = sceneId === "latest"
+          ? [...scenes].filter(s => Number.isFinite(Date.parse(s.acquired_at))).sort((a, b) => Date.parse(b.acquired_at) - Date.parse(a.acquired_at))[0]
+          : scenes.find((item) => item.id === sceneId);
                         if (scene) selectScene(scene);
                       }}
                     />

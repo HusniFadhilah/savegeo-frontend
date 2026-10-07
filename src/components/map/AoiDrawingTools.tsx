@@ -494,7 +494,7 @@ export function SyncAoiToGroup({
       group.clearLayers();
       return;
     }
-    if (group.getLayers().length === 0) setAoiOnMap(map, group, aoi);
+    setAoiOnMap(map, group, aoi);
   }, [aoi, map, groupRef]);
   return null;
 }

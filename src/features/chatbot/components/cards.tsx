@@ -27,7 +27,7 @@ export function ConfirmActionCard({
   onCancel,
 }: {
   actions: ChatAction[];
-  status: "pending" | "running" | "done";
+  status: "pending" | "running" | "done" | "failed" | "waiting";
   runningStepIndex?: number;
   onRun: () => void;
   onCancel: () => void;
@@ -35,11 +35,28 @@ export function ConfirmActionCard({
   return (
     <div className="sgc-plan-card">
       <div className="sgc-plan-header">
-        <span className="sgc-plan-badge">Menunggu Konfirmasi</span>
+        <span className="sgc-plan-badge">
+          {
+            {
+              pending: "Menunggu Konfirmasi",
+              running: "Sedang berjalan",
+              done: "Selesai",
+              failed: "Gagal",
+              waiting: "Menunggu pilihan AOI",
+            }[status]
+          }
+        </span>
       </div>
       <ol className="sgc-plan-steps">
         {actions.map((a, i) => (
-          <li key={i} style={status === "running" && runningStepIndex != null && i <= runningStepIndex ? { opacity: 0.5 } : undefined}>
+          <li
+            key={i}
+            style={
+              status === "running" && runningStepIndex != null && i <= runningStepIndex
+                ? { opacity: 0.5 }
+                : undefined
+            }
+          >
             {actionLabel(a)}
           </li>
         ))}
@@ -60,6 +77,8 @@ export function ConfirmActionCard({
             <i className="bi bi-arrow-repeat sgc-spin me-1" /> Menjalankan tindakan...
           </div>
         )}
+        {status === "waiting" && <span>Pilih batas AOI untuk melanjutkan.</span>}
+        {status === "failed" && <span role="alert">Tindakan gagal. Periksa pesan kesalahan.</span>}
         {status === "done" && (
           <span style={{ color: "#1e6b3c", fontSize: 13 }}>
             <i className="bi bi-check-circle me-1" /> Selesai
@@ -71,7 +90,13 @@ export function ConfirmActionCard({
 }
 
 /* ── Action-history card (rendered when reopening a saved session) ─── */
-export function ActionHistoryCard({ actions, timestamp }: { actions: ChatAction[]; timestamp?: string }) {
+export function ActionHistoryCard({
+  actions,
+  timestamp,
+}: {
+  actions: ChatAction[];
+  timestamp?: string;
+}) {
   let ts = "";
   if (timestamp) {
     try {
@@ -84,7 +109,7 @@ export function ActionHistoryCard({ actions, timestamp }: { actions: ChatAction[
     <div className="sgc-action-history-card">
       <div className="sgc-action-history-header">
         <span className="sgc-action-history-badge">
-          <i className="bi bi-list-check" /> Langkah Dijalankan
+          <i className="bi bi-list-check" /> Rencana Percakapan
         </span>
         {ts && <span className="sgc-action-history-time">{ts}</span>}
       </div>
@@ -327,7 +352,11 @@ export function HotspotResultCard({
   );
 }
 
-export function ComparisonResultCard({ card }: { card: Extract<ResultCard, { type: "comparison" }> }) {
+export function ComparisonResultCard({
+  card,
+}: {
+  card: Extract<ResultCard, { type: "comparison" }>;
+}) {
   return (
     <div className="sgc-result-card sgc-comparison-card">
       <div className="sgc-result-card-title">{card.title}</div>
@@ -365,14 +394,24 @@ export function SuggestedActionResultCard({
   onSelect: (message: string) => void;
 }) {
   return (
-    <button type="button" className="sgc-chip sgc-suggested-action-chip" onClick={() => onSelect(card.message)}>
+    <button
+      type="button"
+      className="sgc-chip sgc-suggested-action-chip"
+      onClick={() => onSelect(card.message)}
+    >
       {card.label}
     </button>
   );
 }
 
 /** Dispatches a ResultCard union member to its component. */
-export function ResultCardView({ card, onSend }: { card: ResultCard; onSend: (message: string) => void }) {
+export function ResultCardView({
+  card,
+  onSend,
+}: {
+  card: ResultCard;
+  onSend: (message: string) => void;
+}) {
   switch (card.type) {
     case "metric":
       return <MetricResultCard card={card} />;

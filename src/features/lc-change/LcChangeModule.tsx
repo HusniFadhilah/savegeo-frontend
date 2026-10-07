@@ -352,6 +352,13 @@ export default function LcChangeModule() {
     [dateMode, isDynamicWorldCompatible, tanggalStart, tanggalEnd, startMonth, endMonth],
   );
 
+  useEffect(() => {
+    setYearData({});
+    setActiveYears([]);
+    setChangeMapCache({});
+    setRunError(null);
+  }, [aoi]);
+
   const runAnalysis = async () => {
     if (!aoi) {
       setRunError("Gambar AOI terlebih dahulu di peta.");

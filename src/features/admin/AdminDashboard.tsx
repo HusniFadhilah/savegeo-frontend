@@ -34,7 +34,6 @@ const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: strin
       { id: "cc", icon: "bi-tree-fill", labelKey: "admin.menu.calibration", permission: "calibration.read" },
       { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config", permission: "config.read" },
       { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users", permission: "users.read" },
-      { id: "vf", icon: "bi-toggles", labelKey: "admin.menu.viewerFeatures", permission: "viewer_features.manage" },
       { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites", permission: "satellite.read" },
     ],
   },

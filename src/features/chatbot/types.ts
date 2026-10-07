@@ -126,6 +126,7 @@ export interface AgentControlResponse {
  * windowBridge.ts buildGeoAiContext().
  */
 export interface GeoAiContext {
+  jobs?: import("@/services/analysisJobStore").AnalysisJobRecord[];
   aoi: GeoJSON.GeoJSON | null;
   aoi_name: string | null;
   area_ha: number | null;
@@ -151,7 +152,14 @@ export interface GeoAiContext {
 export interface ChatPageState {
   route?: string;
   map?: { center: number[] | null; zoom: number | null };
-  ui?: { carbon: Record<string, unknown> | null; lc_change: Record<string, unknown> | null; results: Record<string, unknown> | null; scenes: Record<string, unknown> | null; crop: Record<string, unknown> | null; disaster: Record<string, unknown> | null };
+  ui?: {
+    carbon: Record<string, unknown> | null;
+    lc_change: Record<string, unknown> | null;
+    results: Record<string, unknown> | null;
+    scenes: Record<string, unknown> | null;
+    crop: Record<string, unknown> | null;
+    disaster: Record<string, unknown> | null;
+  };
   current_module: string;
   has_aoi: boolean;
   aoi_name: string | null;
@@ -211,7 +219,7 @@ export type LogEntry =
       id: string;
       kind: "confirmCard";
       actions: ChatAction[];
-      status: "pending" | "running" | "done";
+      status: "pending" | "running" | "done" | "failed" | "waiting";
       runningStepIndex?: number;
     }
   | {

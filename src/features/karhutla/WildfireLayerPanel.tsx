@@ -6,6 +6,7 @@ type LayerTab = "hotspot" | "overlays" | "cams" | "fdrs";
 interface Props {
   query: WildfireQueryState;
   onToggleLayer: (layer: string) => void;
+  onCamsScopeChange: (scope: "event" | "world") => void;
   viirsAvailable: boolean | null;
   onSync: () => void;
   syncing: boolean;
@@ -102,6 +103,7 @@ function LayerCheckbox({
 export default function WildfireLayerPanel({
   query,
   onToggleLayer,
+  onCamsScopeChange,
   viirsAvailable,
   onSync,
   syncing,
@@ -231,6 +233,28 @@ export default function WildfireLayerPanel({
 
           {tab === "cams" && (
             <div className="wildfire-layer-list" role="tabpanel">
+              <fieldset className="wildfire-cams-scope">
+                <legend>Cakupan Aerosol (ungu)</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="wildfire-cams-scope"
+                    checked={query.camsScope === "event"}
+                    onChange={() => onCamsScopeChange("event")}
+                  />
+                  Wilayah event
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="wildfire-cams-scope"
+                    checked={query.camsScope === "world"}
+                    onChange={() => onCamsScopeChange("world")}
+                  />
+                  Dunia
+                </label>
+                <small>GFAS dan titik hotspot tetap pada cakupan event.</small>
+              </fieldset>
               <LayerCheckbox
                 option={{
                   id: "cams-gfas",
@@ -254,11 +278,17 @@ export default function WildfireLayerPanel({
               <div className="wildfire-layer-note" role={camsStatus === "error" ? "alert" : "status"}>
                 <i className={`bi ${camsStatus === "error" || camsStatus === "empty" ? "bi-exclamation-triangle" : camsStatus === "loading" ? "bi-arrow-repeat wildfire-spin" : "bi-info-circle"}`} aria-hidden="true" />
                 <span>
-                  {camsStatus === "loading" ? "Memuat arsip CAMS…" :
-                    camsStatus === "error" ? "Arsip CAMS tidak dapat dimuat." :
-                      camsStatus === "empty" ? "Arsip CAMS belum memiliki raster untuk ditampilkan." :
-                      camsStatus === "ready" ? "Tanggal dan opasitas mengikuti kontrol arsip CAMS." :
-                        "Pilih layer untuk menampilkan raster CAMS pada peta."}
+                  {camsStatus === "loading"
+                    ? "Memuat arsip CAMS…"
+                    : camsStatus === "error"
+                      ? "Arsip CAMS untuk cakupan yang dipilih tidak dapat dimuat."
+                      : camsStatus === "empty"
+                        ? "Arsip CAMS belum memiliki raster untuk ditampilkan."
+                        : camsStatus === "ready"
+                          ? query.camsScope === "world" && query.layers.includes("cams-aod")
+                            ? "Aerosol CAMS global aktif; GFAS dan hotspot tetap di wilayah event."
+                            : "Tanggal dan opasitas mengikuti kontrol arsip CAMS."
+                          : "Pilih layer untuk menampilkan raster CAMS pada peta."}
                   {camsStatus === "error" && <> <button type="button" className="wildfire-layer-retry" onClick={onRetryCams}>Coba lagi</button></>}
                 </span>
               </div>

@@ -4,18 +4,10 @@ import { zoomToLocation, zoomToFeature, highlightPolygon } from "./mapActions";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
 import type { ChatAction, QuickAction } from "./types";
+import { AoiChoiceRequired } from "./aoiCommands";
 import { executeUiCommand } from "./uiCommandBus";
 
-/**
- * Executes AI-issued actions against the rest of the app. Ported 1:1 from
- * savegeo-chatbot.js `ActionExecutor` - same dispatch table, same DOM-id /
- * `window.*` function lookups, same defensive `typeof x === 'function'`
- * degradation when a hook another module owns doesn't exist yet (see
- * windowBridge.ts for why that's expected right now). The three action
- * types that need to add something to the on-screen chat log (`guide_step`,
- * `offer_choices`, `download_boundary_geojson`) go through `ActionRunContext`
- * callbacks instead of manual DOM appends, since the chat log is React state.
- */
+/** Structured application commands dispatch to the owning React module. Legacy conversation cards remain supported for saved sessions. */
 export interface ActionRunContext {
   addAssistantMessage: (text: string) => void;
   addGuideStep: (step: number, total: number, title: string, body: string) => void;
@@ -46,10 +38,7 @@ function delay(ms: number): Promise<void> {
 
 function setInputValue(id: string, value: unknown): boolean {
   const el = document.getElementById(id) as
-    | HTMLInputElement
-    | HTMLSelectElement
-    | HTMLTextAreaElement
-    | null;
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
   if (!el) return false;
   el.value = String(value);
   el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -90,6 +79,8 @@ export async function runActions(
   ctx: ActionRunContext,
   onStep?: (action: ChatAction, index: number, total: number) => void,
 ): Promise<void> {
+  // A resumed AOI choice may have updated React state in the same event.
+  await delay(0);
   const queue = (actions || []).filter((a) => a.type !== "ask_user" && a.type !== "explain");
   for (let i = 0; i < queue.length; i++) {
     const action = queue[i];
@@ -97,6 +88,10 @@ export async function runActions(
     try {
       await dispatchAction(action, ctx);
     } catch (error) {
+      if (error instanceof AoiChoiceRequired) {
+        Object.assign(error, { remainingActions: queue.slice(i + 1) });
+        throw error;
+      }
       const reason = error instanceof Error ? error.message : "Kesalahan tidak diketahui.";
       ctx.addAssistantMessage(`Tindakan ${action.action || action.type || "UI"} gagal: ${reason}`);
       throw error;
@@ -132,7 +127,12 @@ async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promis
     case "set_aoi_geocode":
       return setAoiGeocode(action);
     case "guide_step":
-      return void ctx.addGuideStep(action.step || 1, action.total || 1, action.title || "", action.body || "");
+      return void ctx.addGuideStep(
+        action.step || 1,
+        action.total || 1,
+        action.title || "",
+        action.body || "",
+      );
     case "highlight_ui":
       return void highlightUi(action.element_id);
     case "request_file_aoi":
@@ -144,7 +144,11 @@ async function dispatchAction(action: ChatAction, ctx: ActionRunContext): Promis
     case "download_boundary_geojson":
       return downloadBoundaryGeoJSON(action, ctx);
     case "zoom_to_location":
-      return void (action.lat != null && action.lng != null && zoomToLocation(action.lat, action.lng, action.zoom || 13));
+      return void (
+        action.lat != null &&
+        action.lng != null &&
+        zoomToLocation(action.lat, action.lng, action.zoom || 13)
+      );
     case "zoom_to_feature":
       return void (action.geometry && zoomToFeature(action.geometry));
     case "highlight_polygon":
@@ -210,7 +214,10 @@ function setValue(target: string | undefined, value: ChatAction["value"]): void 
       break;
     }
     case "start_month":
-      setInputValue(firstExistingId("startMonth", "carbonStartMonth", "lcStartMonth")?.id || "", value);
+      setInputValue(
+        firstExistingId("startMonth", "carbonStartMonth", "lcStartMonth")?.id || "",
+        value,
+      );
       break;
     case "end_month":
       setInputValue(firstExistingId("endMonth", "carbonEndMonth", "lcEndMonth")?.id || "", value);
@@ -442,29 +449,11 @@ function bboxToFeature(bbox: [number, number, number, number], name: string): Ge
 }
 
 async function setAoiGeocode(action: ChatAction): Promise<void> {
-  const query = action.query || "";
-  const d = await chatbotApi.geocode(query);
-  if (!d || !d.lat) return;
-
-  const ai = d.address_info || { country_code: "", province: "", city: "", district: "", village: "" };
-  const isID = ai.country_code === "id";
-  const setAOIByAdminName = getAppValue("setAOIByAdminName");
-  const setAOIFromGeoJSON = getAppValue("setAOIFromGeoJSON");
-  const flyToLocation = getAppValue("flyToLocation");
-
-  if (isID && ai.province && typeof setAOIByAdminName === "function") {
-    const ok = await setAOIByAdminName(ai.province, ai.city || "", ai.district || "", ai.village || "");
-    if (!ok && d.bbox && typeof setAOIFromGeoJSON === "function") {
-      setAOIFromGeoJSON(bboxToFeature(d.bbox, d.display_name || query), d.display_name || query);
-    }
-    return;
-  }
-
-  if (d.bbox && typeof setAOIFromGeoJSON === "function") {
-    setAOIFromGeoJSON(bboxToFeature(d.bbox, d.display_name || query), d.display_name || query);
-  } else if (typeof flyToLocation === "function") {
-    flyToLocation(d.lat, d.lng, 12, d.bbox);
-  }
+  await executeUiCommand({
+    action: "select_aoi",
+    target: "aoi.active",
+    parameters: { query: action.query },
+  });
 }
 
 function highlightUi(elementId: string | undefined): void {
@@ -492,7 +481,13 @@ async function downloadBoundaryGeoJSON(action: ChatAction, ctx: ActionRunContext
     return;
   }
 
-  const ai = d.address_info || { country_code: "", province: "", city: "", district: "", village: "" };
+  const ai = d.address_info || {
+    country_code: "",
+    province: "",
+    city: "",
+    district: "",
+    village: "",
+  };
   const isID = ai.country_code === "id";
   const setAOIByAdminName = getAppValue("setAOIByAdminName");
   const setAOIFromGeoJSON = getAppValue("setAOIFromGeoJSON");
@@ -512,7 +507,8 @@ async function downloadBoundaryGeoJSON(action: ChatAction, ctx: ActionRunContext
 
   if (d.bbox) {
     const feature = bboxToFeature(d.bbox, d.display_name || query);
-    if (typeof setAOIFromGeoJSON === "function") setAOIFromGeoJSON(feature, d.display_name || query);
+    if (typeof setAOIFromGeoJSON === "function")
+      setAOIFromGeoJSON(feature, d.display_name || query);
     ctx.offerBoundaryDownload(query, feature);
     return;
   }

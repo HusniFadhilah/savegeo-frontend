@@ -251,15 +251,15 @@ export function fetchWildfireCamsCapabilities(slug: string) {
   );
 }
 
-export function fetchWildfireCamsArchive(slug: string) {
+export function fetchWildfireCamsArchive(slug: string, scope: "event" | "world" = "event") {
   return userGet<import("@/features/karhutla/types").CamsArchive>(
-    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/archive`,
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/archive${buildQuery(scope === "world" ? { scope } : {})}`,
   );
 }
 
-export function fetchWildfireCamsPoint(slug: string, layerId: string, frameId: string, lat: number, lon: number) {
+export function fetchWildfireCamsPoint(slug: string, layerId: string, frameId: string, lat: number, lon: number, scope: "event" | "world" = "event") {
   return userGet<import("@/features/karhutla/types").CamsPointSample>(
-    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/point/${encodeURIComponent(layerId)}/${encodeURIComponent(frameId)}${buildQuery({ lat, lon })}`,
+    `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/point/${encodeURIComponent(layerId)}/${encodeURIComponent(frameId)}${buildQuery({ lat, lon, ...(scope === "world" ? { scope } : {}) })}`,
   );
 }
 

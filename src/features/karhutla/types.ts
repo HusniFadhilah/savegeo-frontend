@@ -82,6 +82,7 @@ export interface WildfireHotspotsResponse {
     total_features?: number;
     returned_features?: number;
     truncated_for_map?: boolean;
+    features_included?: boolean;
     stale: boolean;
     attribution: string;
     disclaimer: string;

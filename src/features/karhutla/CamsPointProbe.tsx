@@ -8,6 +8,7 @@ import type { CamsPointSample } from "./types";
 interface ProbeLayer {
   layerId: string;
   frameId: string;
+  scope?: "event" | "world";
 }
 
 interface ProbeResult {
@@ -38,9 +39,9 @@ export default function CamsPointProbe({ slug, layers }: { slug: string; layers:
       const lon = lng >= -180 && lng <= 180 ? lng : ((lng + 180) % 360 + 360) % 360 - 180;
       const position: [number, number] = [lat, lng];
       setResult({ requestId: version, position, loading: true, entries: [] });
-      Promise.all(targets.map(async ({ layerId, frameId }) => {
+      Promise.all(targets.map(async ({ layerId, frameId, scope = "event" }) => {
         try {
-          return { layerId, sample: await fetchWildfireCamsPoint(slug, layerId, frameId, lat, lon) };
+          return { layerId, sample: await fetchWildfireCamsPoint(slug, layerId, frameId, lat, lon, scope) };
         } catch {
           return { layerId, sample: null };
         }

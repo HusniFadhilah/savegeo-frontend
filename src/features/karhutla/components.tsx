@@ -623,6 +623,7 @@ interface HotspotMapProps {
   query: WildfireQueryState;
   onSelect: (feature: FirmsHotspotFeature) => void;
   onToggleLayer: (layer: string) => void;
+  onCamsScopeChange: (scope: "event" | "world") => void;
   onSync: () => void;
   syncing: boolean;
   syncError: string | null;
@@ -644,6 +645,7 @@ function HotspotMap({
   query,
   onSelect,
   onToggleLayer,
+  onCamsScopeChange,
   onSync,
   syncing,
   syncError,
@@ -655,54 +657,96 @@ function HotspotMap({
   const [boundaryFailed, setBoundaryFailed] = useState(false);
   const [viirsFeatures, setViirsFeatures] = useState<FirmsHotspotFeature[]>([]);
   const [viirsAvailable, setViirsAvailable] = useState<boolean | null>(null);
-  const [camsArchive, setCamsArchive] = useState<CamsArchive | null>(null);
-  const [camsArchiveSlug, setCamsArchiveSlug] = useState<string | null>(null);
-  const [camsArchiveLoading, setCamsArchiveLoading] = useState(false);
-  const [camsArchiveError, setCamsArchiveError] = useState(false);
+  const [eventCamsArchive, setEventCamsArchive] = useState<CamsArchive | null>(null);
+  const [eventCamsArchiveSlug, setEventCamsArchiveSlug] = useState<string | null>(null);
+  const [eventCamsArchiveLoading, setEventCamsArchiveLoading] = useState(false);
+  const [eventCamsArchiveError, setEventCamsArchiveError] = useState(false);
+  const [worldCamsArchive, setWorldCamsArchive] = useState<CamsArchive | null>(null);
+  const [worldCamsArchiveLoaded, setWorldCamsArchiveLoaded] = useState(false);
+  const [worldCamsArchiveLoading, setWorldCamsArchiveLoading] = useState(false);
+  const [worldCamsArchiveError, setWorldCamsArchiveError] = useState(false);
   const [camsArchiveRetry, setCamsArchiveRetry] = useState(0);
   const viirsEnabled = query.layers.includes("viirs");
   const hotspotEnabled = query.layers.includes("hotspot");
   const boundaryEnabled = query.layers.includes("boundary");
   const camsEnabled = CAMS_MAP_LAYERS.some((item) => query.layers.includes(item.queryId));
-  const camsArchiveHasFrames = CAMS_MAP_LAYERS.some((item) => (camsArchive?.layers[item.archiveId]?.frames.length ?? 0) > 0);
-  const camsStatus = camsArchiveLoading ? "loading" : camsArchiveError ? "error" : camsArchiveSlug === event.slug ? camsArchiveHasFrames ? "ready" : "empty" : "idle";
-  const camsLayersToRender = camsArchiveSlug === event.slug && camsArchive
-    ? CAMS_MAP_LAYERS.flatMap((item) => {
-        if (!query.layers.includes(item.queryId)) return [];
-        const layer = camsArchive.layers[item.archiveId];
-        if (!layer?.frames.length) return [];
-        const savedFrameId = camsSelection[item.archiveId]?.frameId;
-        const frame = layer.frames.find((candidate) => candidate.id === savedFrameId)
-          ?? layer.frames.filter((candidate) => !candidate.is_forecast).at(-1)
-          ?? layer.frames.at(-1);
-        return frame ? [{ ...item, layer, frame, opacity: camsSelection[item.archiveId]?.opacity ?? 0.75 }] : [];
-      })
-    : [];
+  const worldAodEnabled = query.camsScope === "world" && query.layers.includes("cams-aod");
+  const eventCamsArchiveNeeded = camsEnabled && (
+    query.layers.includes("cams-gfas") || (query.layers.includes("cams-aod") && !worldAodEnabled)
+  );
+  const worldCamsArchiveNeeded = camsEnabled && worldAodEnabled;
+  const camsArchiveLoading = (eventCamsArchiveNeeded && eventCamsArchiveLoading)
+    || (worldCamsArchiveNeeded && worldCamsArchiveLoading);
+  const camsArchiveError = (eventCamsArchiveNeeded && eventCamsArchiveError)
+    || (worldCamsArchiveNeeded && worldCamsArchiveError);
+  const camsLayersToRender = CAMS_MAP_LAYERS.flatMap((item) => {
+    if (!query.layers.includes(item.queryId)) return [];
+    const useWorldArchive = item.archiveId === "organic_aod" && worldAodEnabled;
+    const archive = useWorldArchive ? worldCamsArchive : eventCamsArchive;
+    const archiveReady = useWorldArchive
+      ? worldCamsArchiveLoaded
+      : eventCamsArchiveSlug === event.slug;
+    if (!archiveReady || !archive) return [];
+    const layer = archive.layers[item.archiveId];
+    if (!layer?.frames.length) return [];
+    const savedFrameId = camsSelection[item.archiveId]?.frameId;
+    const frame = layer.frames.find((candidate) => candidate.id === savedFrameId)
+      ?? layer.frames.filter((candidate) => !candidate.is_forecast).at(-1)
+      ?? layer.frames.at(-1);
+    return frame ? [{ ...item, layer, frame, opacity: camsSelection[item.archiveId]?.opacity ?? 0.75 }] : [];
+  });
+  const camsHaveSelectedFrames = camsLayersToRender.length > 0;
+  const camsStatus = camsArchiveLoading ? "loading" : camsArchiveError ? "error"
+    : camsHaveSelectedFrames ? "ready"
+      : eventCamsArchiveNeeded && eventCamsArchiveSlug === event.slug
+        || worldCamsArchiveNeeded && worldCamsArchiveLoaded ? "empty" : "idle";
   const provinceCodeKey = event.province_codes.join(",");
 
   useEffect(() => {
-    if (!camsEnabled) {
-      setCamsArchiveLoading(false);
+    if (!eventCamsArchiveNeeded || eventCamsArchiveSlug === event.slug) {
+      setEventCamsArchiveLoading(false);
       return undefined;
     }
-    if (camsArchiveSlug === event.slug) return undefined;
     let cancelled = false;
-    setCamsArchiveLoading(true);
-    setCamsArchiveError(false);
+    setEventCamsArchiveLoading(true);
+    setEventCamsArchiveError(false);
     fetchWildfireCamsArchive(event.slug)
       .then((archive) => {
         if (cancelled) return;
-        setCamsArchive(archive);
-        setCamsArchiveSlug(event.slug);
+        setEventCamsArchive(archive);
+        setEventCamsArchiveSlug(event.slug);
       })
       .catch(() => {
-        if (!cancelled) setCamsArchiveError(true);
+        if (!cancelled) setEventCamsArchiveError(true);
       })
       .finally(() => {
-        if (!cancelled) setCamsArchiveLoading(false);
+        if (!cancelled) setEventCamsArchiveLoading(false);
       });
     return () => { cancelled = true; };
-  }, [camsEnabled, event.slug, camsArchiveSlug, camsArchiveRetry]);
+  }, [eventCamsArchiveNeeded, event.slug, eventCamsArchiveSlug, camsArchiveRetry]);
+
+  useEffect(() => {
+    if (!worldCamsArchiveNeeded || worldCamsArchiveLoaded) {
+      setWorldCamsArchiveLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setWorldCamsArchiveLoading(true);
+    setWorldCamsArchiveError(false);
+    fetchWildfireCamsArchive(event.slug, "world")
+      .then((archive) => {
+        if (cancelled) return;
+        setWorldCamsArchive(archive);
+        setWorldCamsArchiveLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setWorldCamsArchiveError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setWorldCamsArchiveLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [event.slug, worldCamsArchiveNeeded, worldCamsArchiveLoaded, camsArchiveRetry]);
 
   const camsTileUrl = `${env.apiBaseUrl}/disasters/wildfires/events/${encodeURIComponent(event.slug)}/emissions/tiles`;
   const selectedRegion = query.villageCode
@@ -733,11 +777,14 @@ function HotspotMap({
           return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
         })
       : (async () => {
-          const provinces = await fetchProvinces();
-          const legacyProvince = query.province
-            ? provinces.find((item) => item.name === query.province)
-            : null;
-          const codes = legacyProvince ? [legacyProvince.code] : provinceCodeKey.split(",").filter(Boolean);
+          let codes = provinceCodeKey.split(",").filter(Boolean);
+          if (query.province) {
+            const provinces = await fetchProvinces(
+              event.slug === "kalimantan-2026" ? "Kalimantan" : undefined,
+            );
+            const legacyProvince = provinces.find((item) => item.name === query.province);
+            if (legacyProvince) codes = [legacyProvince.code];
+          }
           const results = await Promise.allSettled(codes.map((code) => fetchRegionGeometry("province", code)));
           const features = results.flatMap((result, index) => {
             if (result.status !== "fulfilled") return [];
@@ -826,17 +873,25 @@ function HotspotMap({
         preferCanvas
       >
         <BasemapSwitcher />
-        <FitBoundaryToMap boundary={boundary} focusKey={`${selectedRegion?.level ?? "event"}:${selectedRegion?.code ?? provinceCodeKey}`} />
+        <FitBoundaryToMap
+          boundary={boundary}
+          eventBbox={event.bbox}
+          fitEventBbox={!selectedRegion && !query.province}
+          camsWorldEnabled={worldAodEnabled}
+          focusKey={`${selectedRegion?.level ?? "event"}:${selectedRegion?.code ?? provinceCodeKey}`}
+        />
         <WildfireLayerPanel
           query={query}
           onToggleLayer={onToggleLayer}
+          onCamsScopeChange={onCamsScopeChange}
           viirsAvailable={viirsAvailable}
           onSync={onSync}
           syncing={syncing}
           syncError={syncError}
           camsStatus={camsStatus}
           onRetryCams={() => {
-            setCamsArchiveError(false);
+            setEventCamsArchiveError(false);
+            setWorldCamsArchiveError(false);
             setCamsArchiveRetry((value) => value + 1);
           }}
         />
@@ -851,14 +906,21 @@ function HotspotMap({
         {camsLayersToRender.map(({ archiveId, frame, opacity }) => (
           <TileLayer
             key={`${archiveId}-${frame.id}`}
-            url={`${camsTileUrl}/${archiveId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}&render=2`}
+            url={`${camsTileUrl}/${archiveId}/${frame.id}/{z}/{x}/{y}.png?v=${frame.sha256.slice(0, 12)}${archiveId === "organic_aod" && worldAodEnabled ? "&scope=world" : ""}`}
             opacity={opacity}
             zIndex={archiveId === "organic_aod" ? 210 : 220}
-            maxNativeZoom={14}
+            maxNativeZoom={8}
+            keepBuffer={0}
+            updateWhenIdle
+            updateWhenZooming={false}
             attribution="CAMS / ECMWF · ADS · CC-BY 4.0"
           />
         ))}
-        <CamsPointProbe slug={event.slug} layers={camsLayersToRender.map(({ archiveId, frame }) => ({ layerId: archiveId, frameId: frame.id }))} />
+        <CamsPointProbe slug={event.slug} layers={camsLayersToRender.map(({ archiveId, frame }) => ({
+          layerId: archiveId,
+          frameId: frame.id,
+          scope: archiveId === "organic_aod" && worldAodEnabled ? "world" as const : "event" as const,
+        }))} />
         {viirsEnabled &&
           viirsAvailable &&
           viirsFeatures.map((feature) => {
@@ -1000,13 +1062,61 @@ async function fetchRegionGeometry(level: WildfireRegionLevel, code: string) {
   );
 }
 
-function FitBoundaryToMap({ boundary, focusKey }: { boundary: GeoJSON.GeoJSON | null; focusKey: string }) {
+function extendBoundsFromCoordinates(bounds: L.LatLngBounds, coordinates: unknown): void {
+  if (!Array.isArray(coordinates)) return;
+  if (typeof coordinates[0] === "number" && typeof coordinates[1] === "number") {
+    bounds.extend([coordinates[1], coordinates[0]]);
+    return;
+  }
+  coordinates.forEach((coordinate) => extendBoundsFromCoordinates(bounds, coordinate));
+}
+
+function extendBoundsFromGeometry(bounds: L.LatLngBounds, geometry: GeoJSON.Geometry | null): void {
+  if (!geometry) return;
+  if (geometry.type === "GeometryCollection") {
+    geometry.geometries.forEach((item) => extendBoundsFromGeometry(bounds, item));
+    return;
+  }
+  extendBoundsFromCoordinates(bounds, geometry.coordinates);
+}
+
+function geoJSONBounds(data: GeoJSON.GeoJSON): L.LatLngBounds {
+  const bounds = L.latLngBounds([]);
+  if (data.type === "FeatureCollection") {
+    data.features.forEach((feature) => extendBoundsFromGeometry(bounds, feature.geometry));
+  } else if (data.type === "Feature") {
+    extendBoundsFromGeometry(bounds, data.geometry);
+  } else {
+    extendBoundsFromGeometry(bounds, data);
+  }
+  return bounds;
+}
+
+function FitBoundaryToMap({
+  boundary,
+  eventBbox,
+  fitEventBbox,
+  camsWorldEnabled,
+  focusKey,
+}: {
+  boundary: GeoJSON.GeoJSON | null;
+  eventBbox: [number, number, number, number];
+  fitEventBbox: boolean;
+  camsWorldEnabled: boolean;
+  focusKey: string;
+}) {
   const map = useMap();
   useEffect(() => {
+    if (camsWorldEnabled) {
+      map.fitBounds([[-85, -180], [85, 180]], { padding: [20, 20], maxZoom: 2 });
+      return;
+    }
     if (!boundary) return;
-    const bounds = L.geoJSON(boundary as GeoJSON.GeoJsonObject).getBounds();
+    const bounds = fitEventBbox && focusKey.startsWith("event:")
+      ? L.latLngBounds([[eventBbox[1], eventBbox[0]], [eventBbox[3], eventBbox[2]]])
+      : geoJSONBounds(boundary);
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
-  }, [boundary, focusKey, map]);
+  }, [boundary, eventBbox, fitEventBbox, camsWorldEnabled, focusKey, map]);
   return null;
 }
 
@@ -1050,9 +1160,12 @@ export function KarhutlaDetailPage() {
   const [regionStatistics, setRegionStatistics] = useState<WildfireRegionStatistic[]>([]);
   const [regionStatisticsLoading, setRegionStatisticsLoading] = useState(false);
   const [regionStatisticsError, setRegionStatisticsError] = useState<string | null>(null);
+  const regionStatisticsRef = useRef<HTMLDivElement>(null);
+  const [regionStatisticsVisibleFor, setRegionStatisticsVisibleFor] = useState<string | null>(null);
   const currentEventLookupStatus = eventLookup.slug === slug ? eventLookup.status : "loading";
   const eventBackedByApi = isConfirmedWildfireEventForRoute(event?.slug, slug, currentEventLookupStatus);
   const confidenceKey = query.confidence.join(",");
+  const includeMapFeatures = query.layers.includes("hotspot");
   const regionStatisticsLevel: WildfireRegionLevel = query.districtCode
     ? "village"
     : query.cityCode
@@ -1071,6 +1184,22 @@ export function KarhutlaDetailPage() {
           ? { level: "province" as const, code: query.provinceCode }
           : null;
   const eventProvinceCodesKey = (event?.province_codes ?? []).join(",");
+
+  useEffect(() => {
+    if (!eventProvinceCodesKey || regionStatisticsVisibleFor === slug) return;
+    const target = regionStatisticsRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      setRegionStatisticsVisibleFor(slug);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      setRegionStatisticsVisibleFor(slug);
+      observer.disconnect();
+    }, { rootMargin: "400px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [eventProvinceCodesKey, regionStatisticsVisibleFor, slug]);
 
   useEffect(() => {
     setCamsSelection({});
@@ -1228,6 +1357,7 @@ export function KarhutlaDetailPage() {
       confidence: confidenceKey,
       region_level: selectedRegion?.level,
       region_code: selectedRegion?.code,
+      include_features: String(includeMapFeatures),
     })
       .then((hotspotResponse) => {
         if (cancelled) return;
@@ -1257,9 +1387,13 @@ export function KarhutlaDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code, includeMapFeatures]);
   useEffect(() => {
     if (!event) return;
+    if (regionStatisticsVisibleFor !== slug) {
+      setRegionStatisticsLoading(false);
+      return;
+    }
     if (currentEventLookupStatus === "loading") {
       setRegionStatisticsLoading(true);
       setRegionStatisticsError(null);
@@ -1294,7 +1428,7 @@ export function KarhutlaDetailPage() {
       })
       .finally(() => { if (!cancelled) setRegionStatisticsLoading(false); });
     return () => { cancelled = true; };
-  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision, regionStatisticsVisibleFor, slug]);
   const syncData = async () => {
     setSyncing(true);
     setSyncError(null);
@@ -1634,6 +1768,7 @@ export function KarhutlaDetailPage() {
                   : [...query.layers, layer],
               })
             }
+            onCamsScopeChange={(camsScope) => updateQuery({ camsScope })}
             onSync={syncData}
             syncing={syncing}
             syncError={syncError}
@@ -1755,7 +1890,7 @@ export function KarhutlaDetailPage() {
             )}
           </div>
           {event.province_codes.length > 0 && (
-            <div className="wildfire-region-statistics">
+            <div className="wildfire-region-statistics" ref={regionStatisticsRef}>
               <div className="wildfire-region-panel-heading">
                 <div>
                   <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
@@ -1772,7 +1907,9 @@ export function KarhutlaDetailPage() {
                   <table className="wildfire-region-table">
                     <thead><tr><th>Wilayah</th><th>Jumlah hotspot</th><th>Keyakinan tinggi</th></tr></thead>
                     <tbody>
-                      {regionStatisticsLoading && regionStatistics.length === 0 ? (
+                      {regionStatisticsVisibleFor !== slug ? (
+                        <tr><td colSpan={3}>Statistik wilayah dimuat saat panel ini mendekati tampilan.</td></tr>
+                      ) : regionStatisticsLoading && regionStatistics.length === 0 ? (
                         <tr><td colSpan={3}>Memuat statistik batas wilayah…</td></tr>
                       ) : regionStatistics.length === 0 ? (
                         <tr><td colSpan={3}>Belum ada data hotspot pada wilayah dan filter ini.</td></tr>

@@ -185,6 +185,13 @@ export default function CarbonModule() {
     };
   }, [aoi]);
 
+  useEffect(() => {
+    setResults({});
+    setDeltaResult(null);
+    setVegTsResult(null);
+    setRunError(null);
+  }, [aoi?.feature]);
+
   function patchCarbon(patch: Partial<CarbonPartial>) {
     setCarbonPartial((p) => ({ ...p, ...patch }));
   }
