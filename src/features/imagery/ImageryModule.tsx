@@ -3,6 +3,7 @@ import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
 import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
+import ParentFallbackTileLayer from "@/components/map/ParentFallbackTileLayer";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
@@ -2189,11 +2190,22 @@ export default function ImageryModule() {
                     {himawariTimeLayerUrl && <TileLayer key={himawariTimeLayerUrl} url={himawariTimeLayerUrl} opacity={himawariOpacity} attribution="JMA Himawari-9" maxNativeZoom={5} maxZoom={SCENE_TILE_MAX_ZOOM} pane={RESULT_PANE} />}
                     {tileUrl && (
                       <>
-                        <TileLayer
-                          key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
-                          url={tileUrl}
-                          opacity={tileOpacity}
-                          attribution={
+                        {isEsriWayback ? (
+                          <ParentFallbackTileLayer
+                            key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
+                            url={tileUrl}
+                            opacity={tileOpacity}
+                            attribution="Esri World Imagery Wayback"
+                            maxNativeZoom={sceneTileMaxNativeZoom}
+                            maxZoom={SCENE_TILE_MAX_ZOOM}
+                            pane={aoi ? "historical-imagery" : RESULT_PANE}
+                          />
+                        ) : (
+                          <TileLayer
+                            key={`${selectedSceneId ?? "scene"}:${tileUrl}:${sceneTileMaxNativeZoom}`}
+                            url={tileUrl}
+                            opacity={tileOpacity}
+                            attribution={
                             satelliteMeta?.source_kind === "oam_stac"
                               ? "OpenAerialMap / HOT"
                               : satelliteMeta?.source_kind === "maxar_open_data_stac"
@@ -2215,11 +2227,12 @@ export default function ImageryModule() {
                                       : isEsriWayback
                                         ? "Esri World Imagery Wayback"
                                         : "Google Earth Engine"
-                          }
-                          maxNativeZoom={sceneTileMaxNativeZoom}
-                          maxZoom={SCENE_TILE_MAX_ZOOM}
-                          pane={isEsriWayback && aoi ? "historical-imagery" : RESULT_PANE}
-                        />
+                            }
+                            maxNativeZoom={sceneTileMaxNativeZoom}
+                            maxZoom={SCENE_TILE_MAX_ZOOM}
+                            pane={RESULT_PANE}
+                          />
+                        )}
                         {effectiveVisualEnhancement && (
                           <GpuEnhancedTileLayer
                             key={`gpu:${selectedSceneId ?? "scene"}:${tileUrl}:${gpuEnhancement.model}:${gpuEnhancement.quality}:${gpuEnhancement.cacheVersion}`}
@@ -2372,6 +2385,7 @@ export default function ImageryModule() {
                     beforeMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneAId), cogAssetKey, satelliteMeta?.resolution_m))}
                     afterMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m))}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
+                    fallbackToParentTiles={isEsriWayback}
                     bounds={sceneSearchRegion ? L.geoJSON(sceneSearchRegion as GeoJSON.Feature).getBounds() : undefined}
                     clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
                   >

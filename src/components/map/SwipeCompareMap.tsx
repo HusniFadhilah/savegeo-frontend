@@ -8,6 +8,7 @@ import type {
 import RasterResolutionNotice from "./RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
+import ParentFallbackTileLayer, { type ParentFallbackTileStatus } from "@/components/map/ParentFallbackTileLayer";
 import "@/styles/disaster-swipe.css";
 
 export type SwipeOrientation = "vertical" | "horizontal";
@@ -18,16 +19,14 @@ const AFTER_PANE = "swipe-after";
 // tile, below overlayPane (400) so AOI polygons/markers stay on top of both.
 const AFTER_PANE_Z_INDEX = 360;
 
-type TileStatus = "loading" | "ready" | "error";
+type TileStatus = ParentFallbackTileStatus;
 
 // Subscribe before TileLayer mounts, including cached tiles. Keep the layer
 // mounted while the divider moves; only source/AOI changes replace it.
-function CompareTile({
+function StandardCompareTile({
   onStatus,
   ...props
-}: React.ComponentProps<typeof TileLayer> & {
-  onStatus: (status: TileStatus) => void;
-}) {
+}: React.ComponentProps<typeof TileLayer> & { onStatus: (status: TileStatus) => void }) {
   const layer = useRef<LeafletTileLayer>(null);
   const failed = useRef(false);
   const handlers = useMemo(
@@ -50,6 +49,31 @@ function CompareTile({
     }
   }, [onStatus]);
   return <TileLayer {...props} ref={layer} eventHandlers={handlers} />;
+}
+
+function CompareTile({
+  onStatus,
+  fallbackToParentTiles = false,
+  ...props
+}: React.ComponentProps<typeof TileLayer> & {
+  onStatus: (status: TileStatus) => void;
+  fallbackToParentTiles?: boolean;
+}) {
+  if (fallbackToParentTiles) {
+    return (
+      <ParentFallbackTileLayer
+        url={props.url}
+        opacity={props.opacity}
+        pane={props.pane}
+        attribution={props.attribution}
+        bounds={props.bounds}
+        maxZoom={props.maxZoom}
+        maxNativeZoom={props.maxNativeZoom}
+        onStatus={onStatus}
+      />
+    );
+  }
+  return <StandardCompareTile {...props} onStatus={onStatus} />;
 }
 
 function SwipePaneSetup({ onReady }: { onReady: () => void }) {
@@ -320,6 +344,8 @@ interface Props {
   showGlobeControl?: boolean;
   /** Analysis date used to select the historical satellite basemap. */
   historicalDate?: string;
+  /** Try lower Wayback parent tiles when a release has no tile at the requested level. */
+  fallbackToParentTiles?: boolean;
 }
 
 /**
@@ -356,6 +382,7 @@ export default function SwipeCompareMap({
   children,
   showGlobeControl = true,
   historicalDate,
+  fallbackToParentTiles = false,
 }: Props) {
   const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
@@ -396,12 +423,17 @@ export default function SwipeCompareMap({
     (status: TileStatus) => setAfterStatus({ key: sourceKey, status }),
     [sourceKey],
   );
-  const ready =
-    (!beforeUrl || (beforeStatus?.key === sourceKey && beforeStatus.status === "ready")) &&
-    (!afterUrl || (afterStatus?.key === sourceKey && afterStatus.status === "ready"));
+  const beforeLoaded = beforeStatus?.key === sourceKey && ["ready", "fallback"].includes(beforeStatus.status);
+  const afterLoaded = afterStatus?.key === sourceKey && ["ready", "fallback"].includes(afterStatus.status);
+  const ready = (!beforeUrl || beforeLoaded) && (!afterUrl || afterLoaded);
   const hasError =
     (beforeUrl && beforeStatus?.key === sourceKey && beforeStatus.status === "error") ||
     (afterUrl && afterStatus?.key === sourceKey && afterStatus.status === "error");
+  const fallbackSources = [
+    beforeStatus?.key === sourceKey && beforeStatus.status === "fallback" ? beforeLabel : null,
+    afterStatus?.key === sourceKey && afterStatus.status === "fallback" ? afterLabel : null,
+  ].filter((label): label is string => Boolean(label));
+  const hasFallback = fallbackSources.length > 0;
   // A missing tile should not disable the whole comparison. Leaflet can still
   // render the other tiles, and the user can retry only the affected source.
   const enabled = !!beforeUrl && !!afterUrl && (ready || !!hasError);
@@ -499,6 +531,7 @@ export default function SwipeCompareMap({
             bounds={bounds}
             maxNativeZoom={beforeMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
+            fallbackToParentTiles={fallbackToParentTiles}
           />
         )}
         {afterPaneReady && afterUrl && (
@@ -513,6 +546,7 @@ export default function SwipeCompareMap({
             bounds={bounds}
             maxNativeZoom={afterMaxNativeZoom ?? maxNativeZoom}
             maxZoom={maxZoom}
+            fallbackToParentTiles={fallbackToParentTiles}
           />
         )}
         <ClipController
@@ -568,7 +602,7 @@ export default function SwipeCompareMap({
       >
         {afterLabel}
       </div>
-      {!enabled && (
+      {(!enabled || hasFallback) && (
         <div className="swipe-status" aria-live="polite">
           {hasError ? (
             <>
@@ -581,6 +615,8 @@ export default function SwipeCompareMap({
                 Coba lagi
               </button>
             </>
+          ) : hasFallback ? (
+            `Tile ${fallbackSources.join(" dan ")} memakai zoom sumber lebih rendah karena tile resolusi tinggi tidak tersedia di area ini.`
           ) : !beforeUrl || !afterUrl ? (
             "Perbandingan memerlukan dua layer. Layer yang tersedia tetap ditampilkan."
           ) : (
