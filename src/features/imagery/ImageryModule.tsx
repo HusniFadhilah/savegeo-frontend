@@ -499,6 +499,18 @@ function formatAcquired(iso: string): string {
   });
 }
 
+function formatSceneDate(iso: string, isEsriWayback: boolean): string {
+  if (!isEsriWayback) return formatAcquired(iso);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return `Rilis Wayback · ${iso}`;
+  return `Rilis Wayback · ${d.toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    timeZone: "UTC",
+  })}`;
+}
+
 function cloudBadgeClass(pct: number | null): string {
   if (pct == null) return "bg-secondary";
   if (pct <= 20) return "bg-success";
@@ -2000,7 +2012,7 @@ export default function ImageryModule() {
                           onClick={() => selectScene(scene)}
                         >
                           <td>
-                            {formatAcquired(scene.acquired_at)}
+                            {formatSceneDate(scene.acquired_at, isEsriWayback)}
                             {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
                           {(supportsSceneMetadata || isHimawari) && (
@@ -2098,7 +2110,7 @@ export default function ImageryModule() {
               <div className="row g-2">
                 <div className="col-md-4"><span className="text-muted d-block">Provider / mission</span><strong>{satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.name}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
-                <div className="col-md-4"><span className="text-muted d-block">Akuisisi (UTC)</span><strong>{formatAcquired(selectedScene.acquired_at)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{isEsriWayback ? "Tanggal rilis arsip" : "Akuisisi (UTC)"}</span><strong>{formatSceneDate(selectedScene.acquired_at, isEsriWayback)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Tutupan awan</span><strong>{selectedScene.cloud_cover_pct == null ? "Tidak tersedia / tidak relevan" : `${selectedScene.cloud_cover_pct}%`}</strong></div>
                 <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.title || activeCogAsset.key}` : "Asset tile provider"}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Attribution / lisensi</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? "Gunakan sesuai ketentuan sumber."}</span></div>
@@ -2147,7 +2159,7 @@ export default function ImageryModule() {
                       <span className="imagery-accordion-scene">
                         {tileRenderMode === "mosaic"
                           ? `- mosaik ${tileSceneCount} scene pada rentang tanggal`
-                          : `- menampilkan scene ${formatAcquired(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "")}`}
+                          : `- menampilkan scene ${formatSceneDate(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "", isEsriWayback)}`}
                       </span>
                     )}
                     {himawariTimeLayerUrl && (
@@ -2337,7 +2349,7 @@ export default function ImageryModule() {
                       onChange={(v) => setCompareSceneAId(v || null)}
                       options={sortedScenes.map((s) => ({
                         value: s.id,
-                        label: `${formatAcquired(s.acquired_at)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
+                        label: `${formatSceneDate(s.acquired_at, isEsriWayback)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
                       }))}
                     />
                   </div>
@@ -2348,7 +2360,7 @@ export default function ImageryModule() {
                       onChange={(v) => setCompareSceneBId(v || null)}
                       options={sortedScenes.map((s) => ({
                         value: s.id,
-                        label: `${formatAcquired(s.acquired_at)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
+                        label: `${formatSceneDate(s.acquired_at, isEsriWayback)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
                       }))}
                     />
                   </div>
@@ -2375,8 +2387,8 @@ export default function ImageryModule() {
                     id="imageryCompareMap"
                     beforeUrl={compareTileA}
                     afterUrl={compareTileB}
-                    beforeLabel={formatAcquired(scenes.find((s) => s.id === compareSceneAId)?.acquired_at ?? "")}
-                    afterLabel={formatAcquired(scenes.find((s) => s.id === compareSceneBId)?.acquired_at ?? "")}
+                    beforeLabel={formatSceneDate(scenes.find((s) => s.id === compareSceneAId)?.acquired_at ?? "", isEsriWayback)}
+                    afterLabel={formatSceneDate(scenes.find((s) => s.id === compareSceneBId)?.acquired_at ?? "", isEsriWayback)}
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
                     maxNativeZoom={sceneTileMaxNativeZoom}

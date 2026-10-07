@@ -350,7 +350,6 @@ export default function MapExportControl({ mapTitle, enabled = true }: Props) {
         onClick={() => setOpen((value) => !value)}
       >
         <i className="bi bi-download" aria-hidden="true" />
-        <span>{t("map.export.trigger")}</span>
       </button>
       {open && (
         <section

@@ -1,8 +1,8 @@
 .savegeo-map-export {
   position: absolute;
   z-index: 1001;
-  top: 10px;
-  left: 52px;
+  top: 44px;
+  right: 10px;
   pointer-events: auto;
   color: #19313b;
   font: 13px/1.4 "Montserrat", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -14,17 +14,15 @@
 }
 
 .savegeo-map-export__trigger {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid #c4d2d8;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 1px 5px #142b3530;
-  color: #183f4f;
-  font-weight: 700;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: white;
+  font-size: 1.1rem;
+  color: #333;
   cursor: pointer;
 }
 

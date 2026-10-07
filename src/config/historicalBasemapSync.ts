@@ -4,7 +4,8 @@ export type HistoricalImagerySource =
   | "nasa-gibs"
   | "nasa-viirs-night"
   | "nasa-black-marble"
-  | "eox-cloudless";
+  | "eox-cloudless"
+  | "copernicus-sentinel2";
 
 /** Basemap to activate when a matching source is selected in the history panel. */
 export const BASEMAP_FOR_HISTORICAL_SOURCE: Readonly<Record<HistoricalImagerySource, string | null>> = {
@@ -14,6 +15,7 @@ export const BASEMAP_FOR_HISTORICAL_SOURCE: Readonly<Record<HistoricalImagerySou
   "nasa-viirs-night": "nasa-gibs-viirs-night",
   "nasa-black-marble": "nasa-gibs-black-marble",
   "eox-cloudless": "eox-sentinel2-cloudless",
+  "copernicus-sentinel2": null,
 };
 
 /** Keep the history selector aligned when a basemap is selected on the map. */

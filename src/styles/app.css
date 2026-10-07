@@ -2749,8 +2749,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: none;
   background: white;
   font-size: 1.1rem;
@@ -7864,7 +7864,7 @@ body:has(.wildfire-detail-shell) .leaflet-container:not(#wildfire-detail-map) {
 
 /* SiPongi-inspired layer control for the wildfire map. */
 .wildfire-layer-control {
-  top: 3.25rem;
+  top: 80px;
   z-index: 650;
   margin: 0;
 }
@@ -8007,8 +8007,8 @@ html[data-theme="dark"] .wildfire-fdrs-row,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: 0;
   background: white;
