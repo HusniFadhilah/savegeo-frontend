@@ -17,6 +17,7 @@ export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCove
     datasets: params.datasets,
     dw_mode: params.dwMode,
     include_improbable_classes: params.includeImprobableClasses,
+    confidence_threshold: params.confidenceThreshold,
     start_month: dateMode === "year" ? params.startMonth : selectedMonth,
     end_month: dateMode === "year" ? params.endMonth : selectedMonth,
   };

@@ -13,6 +13,7 @@ import DashboardOverview from "./components/DashboardOverview";
 import GeeCredentials from "./components/GeeCredentials";
 import ArcgisStatus from "./components/ArcgisStatus";
 import ModelRegistry from "./components/ModelRegistry";
+import LandCoverModels from "./components/LandCoverModels";
 import CarbonCalibration from "./components/CarbonCalibration";
 import ConfigEditor from "./components/ConfigEditor";
 import AdminUsers from "./components/AdminUsers";
@@ -300,7 +301,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "ov" && <DashboardOverview onNavigate={selectSection} />}
               {section === "ge" && <GeeCredentials />}
               {section === "ag" && <ArcgisStatus />}
-              {section === "ml" && <ModelRegistry />}
+              {section === "ml" && <><ModelRegistry /><LandCoverModels /></>}
               {section === "cc" && <CarbonCalibration />}
               {section === "cf" && <ConfigEditor />}
               {section === "us" && <AdminUsers />}

@@ -6,6 +6,7 @@ interface Props {
   years: number[];
   minYear: number;
   maxYear: number;
+  supportedYears?: number[];
   onChange: (years: number[]) => void;
 }
 
@@ -20,12 +21,12 @@ type Mode = "list" | "slider";
  * modes write to the same `years` array via `onChange` - switching modes
  * doesn't reset a selection made in the other one.
  */
-export default function YearSelector({ years, minYear, maxYear, onChange }: Props) {
+export default function YearSelector({ years, minYear, maxYear, supportedYears, onChange }: Props) {
   const t = useI18nStore((state) => state.t);
   const [mode, setMode] = useState<Mode>("list");
 
   const options: number[] = [];
-  for (let y = maxYear; y >= minYear; y--) options.push(y);
+  for (let y = maxYear; y >= minYear; y--) if (!supportedYears || supportedYears.includes(y)) options.push(y);
 
   const setYearAt = (index: number, value: number) => {
     const next = [...years];
@@ -64,8 +65,8 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
     // drag should analyze all 12 years in between, not skip straight from
     // 2015 to 2026.
     const range: number[] = [];
-    for (let y = start; y <= end; y++) range.push(y);
-    onChange(range);
+    for (let y = start; y <= end; y++) if (options.includes(y)) range.push(y);
+    if (range.length >= 2) onChange(range);
   };
 
   const spanPct = (v: number) => ((v - minYear) / Math.max(1, maxYear - minYear)) * 100;
@@ -118,7 +119,7 @@ export default function YearSelector({ years, minYear, maxYear, onChange }: Prop
               )}
             </div>
           ))}
-          <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-1" onClick={addYear}>
+          <button type="button" className="btn btn-sm btn-outline-secondary w-100 mt-1" disabled={options.every((year) => years.includes(year))} onClick={addYear}>
             <i className="bi bi-plus-circle" /> {t("lc.addYear")}
           </button>
         </div>

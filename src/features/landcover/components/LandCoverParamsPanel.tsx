@@ -75,21 +75,25 @@ function dateForYear(year: number, month: number, day: number) {
 
 /** Ported from module-carbon.html's #landcoverParams block. */
 export default function LandCoverParamsPanel({ params, year, onParamsChange }: Props) {
-  const { t } = useI18nStore();
+  const { t, language } = useI18nStore();
+  const text = (id: string, en: string) => language === "id" ? id : en;
   const [catalog, setCatalog] = useState<LandCoverDatasetCatalog>({});
 
   useEffect(() => {
+    let cancelled = false;
     fetchLandCoverDatasets()
       .then((res) => {
-        if (res) setCatalog(res);
+        if (!cancelled && res) setCatalog(res);
       })
       .catch(() => {
         /* dataset picker falls back to no options; user sees empty select */
       });
+    return () => { cancelled = true; };
   }, []);
 
   const datasetList = Object.values(catalog);
-  const datasetOptions = datasetList.length ? datasetList : FALLBACK_LULC_DATASETS;
+  const datasetOptions = (datasetList.length ? datasetList : FALLBACK_LULC_DATASETS).filter((item) => item.available !== false);
+  const selectedSources = params.datasets.map((key) => catalog[key]).filter(Boolean);
   const dateMode = params.dateMode ?? "year";
   const selectedMonth = params.selectedMonth ?? params.startMonth;
   const startDate = params.startDate || dateForYear(year, 1, 1);
@@ -156,7 +160,24 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         <small className="text-muted d-block mt-1">
           {t("landcover.selected", { count: params.datasets.length })}
         </small>
+        {selectedSources.map((source) => <div className="border rounded p-2 small mt-2" key={source.key}>
+          <strong>{source.name}</strong><div>{source.class_count} {text("kelas", "classes")} · {source.resolution} · {source.year_min}–{source.year_max} · {source.coverage}</div>
+          {source.collection_version && <div>{text("Versi", "Version")}: {source.collection_version}</div>}
+          <div>{source.monthly ? text("Mendukung periode bulan/tanggal.", "Supports month/date periods.") : text("Produk tahunan; pilihan bulan tidak mengubah raster sumber.", "Annual product; month selection does not change the source raster.")}</div>
+          {source.supported_years && !source.supported_years.includes(year) && <div className="text-warning">{text("Tahun pilihan belum tersedia. Periksa tahun efektif pada hasil.", "The selected year is unavailable. Check the effective year in the result.")}</div>}
+          {source.accuracy && <div className="text-muted">{source.accuracy}</div>}
+        </div>)}
+        {datasetList.some((source) => source.available === false) && <details className="small mt-2"><summary>{text("Model yang memerlukan konfigurasi", "Models needing configuration")}</summary>
+          {datasetList.filter((source) => source.available === false).map((source) => <p key={source.key} className="mb-1">{source.name}: {source.availability_reason}</p>)}
+          <a href="/admin/ml-models">{text("Konfigurasi model di Admin", "Configure models in Admin")}</a>
+        </details>}
       </div>
+
+      {params.datasets.some((key) => ["AlphaEarth_RF", "Sentinel1_2_RF", "Dynamic_World"].includes(key)) && <div className="mb-3">
+        <label className="form-label" htmlFor="landcover-confidence">{text("Ambang confidence (opsional)", "Confidence threshold (optional)")}</label>
+        <input id="landcover-confidence" className="form-control" type="number" min={0} max={1} step={0.05} placeholder="0–1" value={params.confidenceThreshold ?? ""} onChange={(event) => onParamsChange({ confidenceThreshold: event.target.value === "" ? undefined : Number(event.target.value) })} />
+        <small className="text-muted">{text("Confidence RF adalah proporsi suara dan belum dikalibrasi sebagai akurasi.", "RF confidence is a vote proportion and has not been calibrated as accuracy.")}</small>
+      </div>}
 
       <div className="mb-3">
         <label className="form-label">{t("landcover.dwMode")}</label>

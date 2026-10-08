@@ -26,6 +26,11 @@ export interface LcDwConfidence {
 
 /** One dataset bucket as returned by POST /analyze/landcover, keyed by dataset id. */
 export interface LcYearResult {
+  collection_version?: string;
+  model_version?: string;
+  class_schema?: string;
+  quality_note?: string;
+  missing_training_classes?: number[];
   classes: Record<string, LcClassInfo>;
   tile_url: string | null;
   total_area_ha: number;
@@ -189,10 +194,28 @@ export interface LcHotspotResponse {
 }
 
 export interface TransitionData {
+  method?: "pixel_transition";
+  totalAreaHa?: number;
+  changedAreaHa?: number;
+  stableAreaHa?: number;
+  sourceVersion?: string;
   matrix: Record<string, Record<string, number>>;
   allClasses: string[];
   gains: Record<string, number>;
   losses: Record<string, number>;
+}
+
+export interface LcTransitionResponse {
+  method: "pixel_transition";
+  comparison_crs: string;
+  collection_version?: string;
+  model_version?: string;
+  pairs: Array<{
+    from_year: number; to_year: number;
+    from_effective_year: number; to_effective_year: number;
+    total_area_ha: number; changed_area_ha: number; stable_area_ha: number;
+    flows: Array<{ from: string; to: string; area: number; changed: boolean }>;
+  }>;
 }
 
 export interface YearRow {

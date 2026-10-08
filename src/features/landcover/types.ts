@@ -6,6 +6,15 @@ export interface LandCoverClassInfo {
 }
 
 export interface LandCoverDatasetResult {
+  requested_year?: number;
+  date_range?: { start: string; end: string };
+  fallback_reason?: string | null;
+  collection_version?: string;
+  model_version?: string;
+  class_schema?: string;
+  quality_note?: string;
+  training_sample_count?: number;
+  missing_training_classes?: number[];
   resolution?: string | number;
   dataset_name?: string;
   year?: number | string;
@@ -15,6 +24,18 @@ export interface LandCoverDatasetResult {
 
 /** Response of GET /landcover/datasets: keyed by dataset key. */
 export interface LandCoverDatasetOption {
+  available?: boolean;
+  availability_reason?: string;
+  supported_years?: number[];
+  year_min?: number;
+  year_max?: number;
+  monthly?: boolean;
+  model_status?: string;
+  class_count?: number;
+  collection_version?: string;
+  accuracy?: string;
+  coverage?: string;
+  supports_transition?: boolean;
   key: string;
   name: string;
   resolution: string;
@@ -53,4 +74,5 @@ export interface LandCoverParams {
   selectedMonth: number;
   startDate?: string;
   endDate?: string;
+  confidenceThreshold?: number;
 }

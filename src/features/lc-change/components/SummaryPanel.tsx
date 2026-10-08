@@ -55,7 +55,7 @@ function makeRows(
 /** Ports LCChange._renderSummaryTable: gain/loss class breakdown + biggest single transition insight. */
 export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) {
   const { gains, losses, matrix, allClasses } = trans;
-  const totalAreaA = Object.values(clsA).reduce((s, c) => s + Number(c.area || 0), 0) || 1;
+  const totalAreaA = trans.totalAreaHa ?? (Object.values(clsA).reduce((s, c) => s + Number(c.area || 0), 0) || 1);
 
   let bigFrom = "";
   let bigTo = "";
@@ -72,6 +72,7 @@ export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) 
 
   return (
     <div>
+      <p className="small text-muted">Perolehan dan kehilangan bruto dari piksel yang berubah; persentase terhadap area valid bersama.</p>
       <div className="row">
         <div className="col-md-6">
           <h6 className="text-success mb-2">

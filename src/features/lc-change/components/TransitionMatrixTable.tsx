@@ -38,6 +38,10 @@ export default function TransitionMatrixTable({ trans, yearA, yearB }: Props) {
 
   return (
     <div>
+      {trans.method === "pixel_transition" && <div className="alert alert-info py-2 small">
+        Transisi piksel · Area valid bersama: {trans.totalAreaHa?.toLocaleString("id-ID")} ha ·
+        Berubah: {trans.changedAreaHa?.toLocaleString("id-ID")} ha · Versi: {trans.sourceVersion}
+      </div>}
       <p className="text-muted mb-2" style={{ fontSize: ".8rem" }}>
         <i className="fas fa-info-circle" /> Baris = kelas asal ({yearA}) · Kolom = kelas tujuan ({yearB}) ·
         Diagonal (kotak tebal) = area tidak berubah
@@ -62,7 +66,7 @@ export default function TransitionMatrixTable({ trans, yearA, yearB }: Props) {
                   const v = matrix[from]?.[to] || 0;
                   return (
                     <td key={to} style={cellStyle(from, to)} title={`${translateLulcClass(from)} → ${translateLulcClass(to)}`}>
-                      {v >= 1 ? v.toLocaleString("id-ID", { maximumFractionDigits: 0 }) : ""}
+                      {v > 0 ? v.toLocaleString("id-ID", { maximumFractionDigits: 2 }) : ""}
                     </td>
                   );
                 })}

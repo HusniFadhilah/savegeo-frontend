@@ -7,7 +7,7 @@ import {
   LinearScale,
   Tooltip,
 } from "chart.js";
-import type { LcClassInfo } from "../types";
+import type { LcClassInfo, TransitionData } from "../types";
 import { translateLulcClass } from "../utils";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -15,15 +15,17 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 interface Props {
   clsA: Record<string, LcClassInfo>;
   clsB: Record<string, LcClassInfo>;
+  trans?: TransitionData | null;
 }
 
 /** Horizontal net-change bar chart, ported from LCChange._renderNetChange (Plotly -> chart.js). */
-export default function NetChangeChart({ clsA, clsB }: Props) {
+export default function NetChangeChart({ clsA, clsB, trans }: Props) {
+  if (!trans) return <p className="text-muted small">Matriks transisi piksel diperlukan untuk menghitung perubahan pada area valid bersama.</p>;
   const all = [...new Set([...Object.keys(clsA), ...Object.keys(clsB)])];
   const rows = all
     .map((cls) => ({
       cls,
-      change: Number(clsB[cls]?.area || 0) - Number(clsA[cls]?.area || 0),
+      change: Number(trans.gains[cls] || 0) - Number(trans.losses[cls] || 0),
     }))
     .sort((a, b) => a.change - b.change);
 

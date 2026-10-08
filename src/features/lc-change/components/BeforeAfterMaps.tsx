@@ -155,6 +155,7 @@ export default function BeforeAfterMaps({
 
   return (
     <div>
+      {[yearA, yearB].map((year) => year != null && yearData[year]?.quality_note ? <p className="alert alert-info py-2 small" key={year}>{year}: {yearData[year].quality_note} · {yearData[year].model_version}</p> : null)}
       <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
         <p className="text-muted mb-0 me-auto" style={{ fontSize: ".8rem" }}>
           <i className="fas fa-info-circle" /> {view === "split" ? t("lc.left") : t("lc.before")} = {t("lc.startYear")} (

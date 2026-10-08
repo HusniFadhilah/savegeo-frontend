@@ -21,6 +21,8 @@ interface Props {
   endDateA?: string;
   startDateB?: string;
   endDateB?: string;
+  dwProbabilityThreshold?: number;
+  nativeScale?: number;
 }
 
 const AOI_STYLE = { color: "#94a3b8", weight: 1, dashArray: "4 3", fillOpacity: 0 };
@@ -71,11 +73,15 @@ export default function HotspotPanel({
   endDateA,
   startDateB,
   endDateB,
+  dwProbabilityThreshold,
+  nativeScale = 10,
 }: Props) {
   const [minAreaHa, setMinAreaHa] = useState(1);
   const [topN, setTopN] = useState(20);
+  const [scaleMultiplier, setScaleMultiplier] = useState(1);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
   const [result, setResult] = useState<LcHotspotResponse | null>(null);
   const [selected, setSelected] = useState<LcHotspot | null>(null);
 
@@ -86,6 +92,7 @@ export default function HotspotPanel({
     setRunning(true);
     setError(null);
     setSelected(null);
+    const requestedGeneration = generation.current;
     try {
       const res = await analyzeLandCoverHotspots({
         aoi: { geojson: aoi },
@@ -94,6 +101,7 @@ export default function HotspotPanel({
         to_year: yearB,
         start_month: startMonth,
         end_month: endMonth,
+        dw_probability_threshold: dwProbabilityThreshold,
         ...(startDateA && endDateA && startDateB && endDateB
           ? {
               from_start_date: startDateA,
@@ -104,9 +112,12 @@ export default function HotspotPanel({
           : {}),
         min_area_ha: minAreaHa,
         top_n: topN,
+        vector_scale: nativeScale * scaleMultiplier,
       });
+      if (requestedGeneration !== generation.current) return;
       setResult(res);
     } catch (err) {
+      if (requestedGeneration !== generation.current) return;
       setError(err instanceof Error ? err.message : "Gagal memuat hotspot perubahan.");
       setResult(null);
     } finally {
@@ -117,12 +128,14 @@ export default function HotspotPanel({
   // Re-fetch is manual (not on every param tweak) - vectorization is a heavier
   // GEE call than the flat change-map tile, no point re-running on every keystroke.
   useEffect(() => {
+    generation.current += 1;
+    setError(null);
     setResult(null);
     setSelected(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aoi, dataset, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB]);
+  }, [aoi, dataset, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB, dwProbabilityThreshold, nativeScale, scaleMultiplier, minAreaHa, topN]);
 
-  const hotspots = result?.hotspots ?? [];
+  const hotspots = useMemo(() => result?.hotspots ?? [], [result]);
   const maxArea = useMemo(() => Math.max(1, ...hotspots.map((h) => h.area_ha)), [hotspots]);
 
   const polyStyle = (h: LcHotspot, isSelected: boolean) => {
@@ -177,6 +190,11 @@ export default function HotspotPanel({
             </>
           )}
         </button>
+        <div><label className="form-label mb-1 small" htmlFor="hotspot-scale">Resolusi poligon</label>
+          <select id="hotspot-scale" className="form-select form-select-sm" value={scaleMultiplier} onChange={(event) => setScaleMultiplier(Number(event.target.value))}>
+            <option value={1}>{nativeScale} m · piksel asli</option><option value={3}>{nativeScale * 3} m · lebih cepat</option><option value={5}>{nativeScale * 5} m · lebih kasar</option>
+          </select>
+        </div>
         {result && (
           <span className="badge bg-secondary align-self-center">
             {result.hotspot_count} hotspot · skala vektorisasi {result.vector_scale}m

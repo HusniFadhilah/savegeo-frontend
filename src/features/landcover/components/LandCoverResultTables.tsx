@@ -98,6 +98,10 @@ export default function LandCoverResultTables({ result }: Props) {
               <h6 className="mb-2">
                 <i className="bi bi-layers me-1" /> {label}
               </h6>
+              <p className="small text-muted mb-2">{value.year} · {value.resolution} · {value.model_version ?? value.collection_version} · {value.class_schema}</p>
+              {value.fallback_reason && <div className="alert alert-warning py-2 small">{value.fallback_reason}</div>}
+              {value.quality_note && <div className="alert alert-info py-2 small">{value.quality_note}</div>}
+              {Boolean(value.missing_training_classes?.length) && <p className="small text-warning">Kelas tanpa sampel training: {value.missing_training_classes?.join(", ")}</p>}
               <div className="table-responsive">
                 <table className="table table-striped table-hover table-sm">
                   <thead className="table-secondary">

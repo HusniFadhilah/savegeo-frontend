@@ -8,7 +8,31 @@ import type {
   LcIdentifyResponse,
   LcHotspotParams,
   LcHotspotResponse,
+  LcTransitionResponse,
+  TransitionData,
 } from "./types";
+
+export async function analyzeLandCoverTransition(params: LcChangeMapParams): Promise<TransitionData> {
+  const response = await runAnalysisJob<LcTransitionResponse>("landcover_transition", params, { timeoutMs: 900_000 });
+  const pair = response.pairs.find((item) => item.from_year === params.from_year && item.to_year === params.to_year);
+  if (response.method !== "pixel_transition" || !pair) throw new Error("Matriks transisi piksel tidak tersedia.");
+  const matrix: TransitionData["matrix"] = {};
+  const gains: TransitionData["gains"] = {};
+  const losses: TransitionData["losses"] = {};
+  const classes = new Set<string>();
+  for (const flow of pair.flows) {
+    classes.add(flow.from); classes.add(flow.to);
+    matrix[flow.from] ??= {};
+    matrix[flow.from][flow.to] = (matrix[flow.from][flow.to] ?? 0) + flow.area;
+    if (flow.changed) {
+      gains[flow.to] = (gains[flow.to] ?? 0) + flow.area;
+      losses[flow.from] = (losses[flow.from] ?? 0) + flow.area;
+    }
+  }
+  return { matrix, gains, losses, allClasses: [...classes].sort(), method: response.method,
+    totalAreaHa: pair.total_area_ha, changedAreaHa: pair.changed_area_ha,
+    stableAreaHa: pair.stable_area_ha, sourceVersion: response.model_version ?? response.collection_version };
+}
 
 /**
  * LC-Change module API calls. Endpoint paths/payload/response shapes are
