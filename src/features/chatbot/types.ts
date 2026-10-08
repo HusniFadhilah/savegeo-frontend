@@ -221,6 +221,7 @@ export type LogEntry =
       actions: ChatAction[];
       status: "pending" | "running" | "done" | "failed" | "waiting";
       runningStepIndex?: number;
+      errorMessage?: string;
     }
   | {
       id: string;

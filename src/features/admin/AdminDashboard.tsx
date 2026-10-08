@@ -23,16 +23,31 @@ import DisasterManagement from "./components/disaster/DisasterManagement";
 import AdminProfile from "./components/AdminProfile";
 import CloudDatasetPanel from "@/features/geospatial/CloudDatasetPanel";
 
-const NAV_SECTIONS: { sectionKey: string; items: { id: AdminSection; icon: string; labelKey: string; permission?: string }[] }[] = [
+type AdminNavItem = {
+  id: AdminSection;
+  icon: string;
+  labelKey: string;
+  permission?: string;
+  children?: AdminNavItem[];
+};
+
+const NAV_SECTIONS: { sectionKey: string; items: AdminNavItem[] }[] = [
   { sectionKey: "admin.nav.main", items: [{ id: "ov", icon: "bi-grid-1x2-fill", labelKey: "admin.menu.overview", permission: "config.read" }] },
   {
     sectionKey: "admin.nav.configuration",
     items: [
-      { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee", permission: "credential.read" },
-      { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis", permission: "credential.read" },
       { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models", permission: "model.read" },
       { id: "cc", icon: "bi-tree-fill", labelKey: "admin.menu.calibration", permission: "calibration.read" },
-      { id: "cf", icon: "bi-sliders", labelKey: "admin.menu.config", permission: "config.read" },
+      {
+        id: "cf",
+        icon: "bi-sliders",
+        labelKey: "admin.menu.config",
+        permission: "config.read",
+        children: [
+          { id: "ge", icon: "bi-broadcast-pin", labelKey: "admin.menu.gee", permission: "credential.read" },
+          { id: "ag", icon: "bi-geo-alt-fill", labelKey: "admin.menu.arcgis", permission: "credential.read" },
+        ],
+      },
       { id: "us", icon: "bi-shield-lock-fill", labelKey: "admin.menu.users", permission: "users.read" },
       { id: "sp", icon: "bi-camera-fill", labelKey: "admin.menu.satellites", permission: "satellite.read" },
     ],
@@ -88,9 +103,11 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
   // state (not shared useUiStore - admin has its own section nav, not the
   // main app's DashboardModule) mirrors the main app's Sidebar/Navbar pattern.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [configurationExpanded, setConfigurationExpanded] = useState(["cf", "ge", "ag"].includes(routeSection));
 
   const selectSection = (id: AdminSection, event?: ReactMouseEvent<HTMLAnchorElement>) => {
     event?.preventDefault();
+    if (id === "cf") setConfigurationExpanded(true);
     setSection(id);
     navigate(getAdminSectionPath(id));
     setMobileNavOpen(false);
@@ -114,6 +131,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
 
   useEffect(() => {
     setSection(routeSection);
+    if (["cf", "ge", "ag"].includes(routeSection)) setConfigurationExpanded(true);
   }, [routeSection]);
 
   useEffect(() => {
@@ -163,22 +181,67 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
             </Link>
             <div className="sb-nav">
               {NAV_SECTIONS.map((grp) => {
-                const items = grp.items.filter((item) => !item.permission || hasAdminPermission(user, item.permission));
+                const canNavigate = (item: AdminNavItem) => !item.permission || hasAdminPermission(user, item.permission);
+                const canNavigateChild = (item: AdminNavItem) =>
+                  (item.children ?? []).some((child) => canNavigate(child));
+                const items = grp.items.filter((item) => canNavigate(item) || canNavigateChild(item));
                 if (!items.length) return null;
                 return (
                   <div key={grp.sectionKey}>
                     <div className="sb-section">{t(grp.sectionKey)}</div>
-                    {items.map((item) => (
-                      <a
-                        key={item.id}
-                        className={`sb-item ${section === item.id ? "active" : ""}`}
-                        href={getAdminSectionPath(item.id)}
-                        onClick={(event) => selectSection(item.id, event)}
-                      >
-                        <i className={`bi ${item.icon}`} />
-                        <span>{t(item.labelKey)}</span>
-                      </a>
-                    ))}
+                    {items.map((item) => {
+                      const children = (item.children ?? []).filter(
+                        (child) => canNavigate(child),
+                      );
+                      const expanded = item.id === "cf" && configurationExpanded;
+                      return (
+                        <div key={item.id} className="sb-menu-group">
+                          <div className="sb-parent-row">
+                            {canNavigate(item) ? (
+                              <a
+                                className={`sb-item ${section === item.id ? "active" : ""}`}
+                                href={getAdminSectionPath(item.id)}
+                                onClick={(event) => selectSection(item.id, event)}
+                              >
+                                <i className={`bi ${item.icon}`} />
+                                <span>{t(item.labelKey)}</span>
+                              </a>
+                            ) : (
+                              <div className="sb-item sb-item-disabled" aria-disabled="true">
+                                <i className={`bi ${item.icon}`} />
+                                <span>{t(item.labelKey)}</span>
+                              </div>
+                            )}
+                            {children.length > 0 && (
+                              <button
+                                type="button"
+                                className="sb-submenu-toggle"
+                                aria-label={`${t(item.labelKey)} submenu`}
+                                aria-expanded={expanded}
+                                onClick={() => setConfigurationExpanded((value) => !value)}
+                              >
+                                <i className={`bi ${expanded ? "bi-chevron-down" : "bi-chevron-right"}`} />
+                              </button>
+                            )}
+                          </div>
+                          {children.length > 0 && expanded && (
+                            <div className="sb-subnav">
+                              {children.map((child) => (
+                                <a
+                                  key={child.id}
+                                  className={`sb-item ${section === child.id ? "active" : ""}`}
+                                  href={getAdminSectionPath(child.id)}
+                                  onClick={(event) => selectSection(child.id, event)}
+                                >
+                                  <i className={`bi ${child.icon}`} />
+                                  <span>{t(child.labelKey)}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}

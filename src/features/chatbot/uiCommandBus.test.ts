@@ -45,3 +45,42 @@ describe("analysis completion contract", () => {
     } finally { dispose(); }
   });
 });
+
+
+it("waits for the owner to commit a parameter before the next analysis uses it", async () => {
+  let analysisType = "carbon";
+  let usedType = "";
+  const dispose = registerUiCommands("carbon", {
+    read: () => ({ analysisType, hasResult: usedType === "vegetation" }),
+    execute: ({ action }) => {
+      if (action === "set_analysis_type") setTimeout(() => { analysisType = "vegetation"; }, 50);
+      if (action === "run_analysis") usedType = analysisType;
+    },
+  });
+  try {
+    await executeUiCommand({ action: "set_analysis_type", target: "carbon.analysisType", parameters: { value: "vegetation" }, expected_state: { analysisType: "vegetation" } });
+    await executeUiCommand({ action: "run_analysis", target: "carbon.analysis" });
+    expect(usedType).toBe("vegetation");
+  } finally { dispose(); }
+});
+
+
+it("uses the current API outcome when React still exposes a previous error", async () => {
+  const dispose = registerUiCommands("carbon", {
+    read: () => ({ hasResult: false, error: "Previous carbon error" }),
+    execute: async () => ({ hasResult: true, error: null }),
+  });
+  try {
+    await expect(executeUiCommand({ action: "run_analysis", target: "carbon.analysis" })).resolves.toMatchObject({ hasResult: true, error: null });
+  } finally { dispose(); }
+});
+
+it("uses a failed API outcome even if React still exposes a previous result", async () => {
+  const dispose = registerUiCommands("carbon", {
+    read: () => ({ hasResult: true, error: null }),
+    execute: async () => ({ hasResult: false, error: "No valid vegetation pixels" }),
+  });
+  try {
+    await expect(executeUiCommand({ action: "run_analysis", target: "carbon.analysis" })).rejects.toThrow("No valid vegetation pixels");
+  } finally { dispose(); }
+});

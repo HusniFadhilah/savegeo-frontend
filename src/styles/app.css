@@ -8887,3 +8887,7 @@ html[data-theme="dark"] .wildfire-cams-variable-list li small,
   .wildfire-cams-product-grid { grid-template-columns: 1fr; }
   .wildfire-cams-panel__body { padding-inline: 0.75rem; }
 }
+
+.cams-hotspot-popup .leaflet-popup-content { max-height: min(65vh, 480px); overflow-y: auto; }
+.cams-hotspot-popup .wildfire-popup dt { color: #9aa9ba; }
+.cams-hotspot-popup .cams-point-content { border-top: 1px solid #39424c; margin-top: 12px; padding-top: 12px; }

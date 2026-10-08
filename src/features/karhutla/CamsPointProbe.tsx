@@ -5,7 +5,7 @@ import { fetchWildfireCamsPoint } from "@/features/disaster/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { CamsPointSample } from "./types";
 
-interface ProbeLayer {
+export interface ProbeLayer {
   layerId: string;
   frameId: string;
   scope?: "event" | "world";
@@ -20,7 +20,6 @@ interface ProbeResult {
 
 export default function CamsPointProbe({ slug, layers }: { slug: string; layers: ProbeLayer[] }) {
   const map = useMap();
-  const { t, language } = useI18nStore();
   const [result, setResult] = useState<ProbeResult | null>(null);
   const popupRef = useRef<LeafletPopup | null>(null);
   // A new parent array with the same frames must not clear an open popup.
@@ -64,13 +63,19 @@ export default function CamsPointProbe({ slug, layers }: { slug: string; layers:
   }, [map, selectionKey, slug]);
 
   if (!result) return null;
+  return <Popup key={result.requestId} ref={popupRef} position={result.position} className="cams-point-popup" minWidth={250} maxWidth={320}>
+    <CamsPointContent loading={result.loading} entries={result.entries} />
+  </Popup>;
+}
+
+export function CamsPointContent({ loading, entries }: Pick<ProbeResult, "loading" | "entries">) {
+  const { t, language } = useI18nStore();
   const locale = language === "id" ? "id-ID" : "en-GB";
   const number = (value: number) => value.toLocaleString(locale, { maximumFractionDigits: 3 });
   const date = (value: string) => new Date(value).toLocaleString(locale, { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" });
   const coordinate = (value: number, positive: string, negative: string) => `${Math.abs(value).toFixed(3)}° ${value < 0 ? negative : positive}`;
-  return <Popup key={result.requestId} ref={popupRef} position={result.position} className="cams-point-popup" minWidth={250} maxWidth={320}>
-    <div className="cams-point-content" aria-live="polite">
-      {result.loading ? <p role="status">{t("wildfire.cams.pointLoading")}</p> : result.entries.map(({ layerId, sample }) => (
+  return <div className="cams-point-content" aria-live="polite">
+      {loading ? <p role="status">{t("wildfire.cams.pointLoading")}</p> : entries.map(({ layerId, sample }) => (
         <section key={layerId}>
           <h4>{t(`wildfire.cams.layer.${layerId}`)}</h4>
           {!sample ? <p role="alert">{t("wildfire.cams.pointError")}</p> : <>
@@ -89,7 +94,6 @@ export default function CamsPointProbe({ slug, layers }: { slug: string; layers:
           </>}
         </section>
       ))}
-      {!result.loading && <small className="cams-point-note">{t("wildfire.cams.nativeCell")}</small>}
-    </div>
-  </Popup>;
+      {!loading && <small className="cams-point-note">{t("wildfire.cams.nativeCell")}</small>}
+    </div>;
 }

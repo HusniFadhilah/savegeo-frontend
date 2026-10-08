@@ -15,10 +15,29 @@ function fmt(v: number | undefined, digits = 4): string {
 /** Ported from main.js displayStatsTable(): vegetation index min/mean/max/std table. */
 export default function VegStatsTable({ result }: Props) {
   const entries = Object.entries(result.indices || {}).sort((a, b) => a[0].localeCompare(b[0]));
-  if (!entries.length) return null;
+  const skipped = result.skipped_indices ?? [];
+  if (!entries.length && !skipped.length) return null;
+  if (!entries.length) {
+    return (
+      <div className="alert alert-warning mt-4 py-2 small">
+        <strong>Semua indeks gagal dihitung.</strong>
+        <ul className="mb-0 mt-1">
+          {skipped.map(({ index, reason }) => <li key={index}>{index}: {reason}</li>)}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">
+      {skipped.length > 0 && (
+        <div className="alert alert-warning py-2 small">
+          <strong>Beberapa indeks tidak berhasil dihitung:</strong>
+          <ul className="mb-0 mt-1">
+            {skipped.map(({ index, reason }) => <li key={index}>{index}: {reason}</li>)}
+          </ul>
+        </div>
+      )}
       {result.satellite && (
         <div className="alert alert-light border py-2 mb-2 d-flex align-items-center gap-2 flex-wrap" style={{ fontSize: ".8rem" }}>
           <i className="bi bi-camera-fill text-muted" />

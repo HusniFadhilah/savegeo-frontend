@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "./lib/geo";
+import { availableCarbonReferenceDatasets } from "./referenceDatasets";
 import type {
   CarbonDeltaResponse,
   CarbonReferenceDatasetOption,
@@ -55,7 +56,7 @@ export function getCarbonModelInfo(modelName: string): Promise<CarbonModelInfo> 
 
 export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption[]> {
   const res = await apiClient.get<{ datasets: CarbonDatasetApiItem[]; count: number }>("/carbon/datasets?include_unavailable=true");
-  return (res.datasets ?? []).map((ds) => {
+  return availableCarbonReferenceDatasets((res.datasets ?? []).map((ds) => {
     const resolution = ds.resolution ? `, ${ds.resolution}m` : "";
     const year = ds.year ?? (Array.isArray(ds.year_range) ? ds.year_range.join("-") : ds.year_range);
     const yearSuffix = year ? ` (${year}${resolution})` : resolution ? ` (${String(resolution).replace(/^, /, "")})` : "";
@@ -80,7 +81,7 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       source: "api",
       ...(ds.name || ds.full_name ? { label: `${ds.name || ds.full_name}${yearSuffix}` } : {}),
     };
-  });
+  }));
 }
 
 function isNonGeeModel(meta: CarbonModelListItem["metadata_json"]): boolean {
@@ -250,6 +251,7 @@ export interface DirectReferenceLayer {
   dataset_name: string;
   tile_url?: string | null;
   year?: number | string | null;
+  requested_dataset?: string | null;
   requested_year?: number | string | null;
   effective_year?: number | string | null;
   available_years?: number[] | null;

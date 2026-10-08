@@ -46,20 +46,29 @@ export function getCloudMaskTechniques() {
 export interface VegetationTimeSeriesArgs {
   aoi: AoiPayload;
   year: number;
-  index: string;
+  index?: string;
+  indices?: string[];
+  bands?: string[];
+  startMonth?: number;
+  endMonth?: number;
   cloudThreshold: number;
   scale?: number;
   satellite: string;
   cloudMaskTechnique: string;
 }
 
-/** POST /timeseries - monthly mean of one index over one year (P0 "time-series & timelapse"). Flat body, no {success,data} envelope. */
+/** POST /timeseries - monthly means for selected vegetation indices and spectral bands. */
 export function analyzeVegetationTimeSeries(args: VegetationTimeSeriesArgs) {
+  const indices = args.indices ?? (args.index ? [args.index] : ["NDVI"]);
   return apiClient.post<VegetationTimeSeriesResponse>("/timeseries", {
     aoi: args.aoi,
     year: args.year,
-    index: args.index,
+    index: indices[0],
+    indices,
+    bands: args.bands ?? [],
     interval: "monthly",
+    start_month: args.startMonth ?? 1,
+    end_month: args.endMonth ?? 12,
     cloud_threshold: args.cloudThreshold,
     scale: args.scale,
     satellite: args.satellite,

@@ -38,7 +38,7 @@ export const FALLBACK_WILDFIRE_EVENTS: WildfireEvent[] = [
     severity: "high",
     source_ids: ["nasa-firms", "laporan-kemenhut"],
     source: "NASA FIRMS · Kementerian Kehutanan",
-    boundary_source: "SP3STAB",
+    boundary_source: "Peta Administratif",
     methodology:
       "Deteksi panas satelit dikurasi sebagai event pemantauan; tidak disamakan dengan incident atau area terbakar.",
     limitations: ["Hotspot adalah indikasi anomali termal dan memerlukan verifikasi lapangan."],
@@ -80,7 +80,7 @@ export const FALLBACK_WILDFIRE_EVENTS: WildfireEvent[] = [
     severity: "medium",
     source_ids: ["nasa-firms"],
     source: "NASA FIRMS",
-    boundary_source: "SP3STAB",
+    boundary_source: "Peta Administratif",
     methodology: "Deteksi panas berdasarkan sumber sensor yang tersedia.",
     limitations: ["Kelengkapan bergantung pada ketersediaan sumber sensor."],
     is_featured: false,

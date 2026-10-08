@@ -7,6 +7,8 @@ import {
   DEFAULT_CARBON_REFERENCE_DATASET,
   FALLBACK_CARBON_REFERENCE_DATASETS,
   carbonDatasetYearOptions,
+  availableCarbonReferenceDatasets,
+  resolveCarbonReferenceDataset,
 } from "@/features/carbon/referenceDatasets";
 import type {
   CarbonModelInfo,
@@ -167,14 +169,10 @@ export default function CarbonParamsPanel({
       .then((list) => {
         if (cancelled) return;
         setDatasets(list);
-        if (list.length > 0 && !list.some((d) => d.value === params.referenceDataset)) {
-          const preferred = list.find((d) => d.value === DEFAULT_CARBON_REFERENCE_DATASET);
-          onParamsChange({ referenceDataset: preferred?.value ?? list[0].value });
-        }
       })
       .catch(() => {
         if (cancelled) return;
-        setDatasets(FALLBACK_CARBON_REFERENCE_DATASETS.map((d) => ({ ...d, source: "fallback" })));
+        setDatasets(availableCarbonReferenceDatasets(FALLBACK_CARBON_REFERENCE_DATASETS).map((d) => ({ ...d, source: "fallback" })));
         setDatasetsError(t("carbon.params.datasetLoadFailed"));
       })
       .finally(() => {
@@ -185,6 +183,14 @@ export default function CarbonParamsPanel({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!datasets.length) return;
+    const referenceDataset = resolveCarbonReferenceDataset(params.referenceDataset, datasets);
+    if (referenceDataset !== params.referenceDataset) {
+      onParamsChange({ referenceDataset, modelName: null });
+    }
+  }, [datasets, params.referenceDataset, onParamsChange]);
 
   // Per-dataset year options: prefer the selected dataset's own `year`/
   // `yearRange` from the live catalog (e.g. WCMC is 2010-only, GEDI is
@@ -222,7 +228,7 @@ export default function CarbonParamsPanel({
           onParamsChange({
             modelName: null,
             referenceOnly: Boolean(meta?.referenceOnlyCapable || (meta?.source === "fallback" && !meta.requiresConfiguration)),
-            loadOnly: false,
+            loadOnly: params.loadOnly,
           });
         }
       })

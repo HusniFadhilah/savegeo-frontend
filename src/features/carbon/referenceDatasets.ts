@@ -1,14 +1,6 @@
 import type { CarbonReferenceDatasetOption } from "./types";
 
-/**
- * Fallback only - the real list is fetched live via `listCarbonDatasets()`
- * (GET /carbon/datasets) in CarbonParamsPanel.tsx, which also applies
- * admin DB overrides and filters to datasets with an active compatible
- * model. This static copy is what renders if that request fails outright;
- * synced against `savegeo/backend/app/registries/carbon_dataset_registry.py`
- * as of writing (including the reference-only Chloris fallback). It will not always match
- * the DB-driven live list exactly - that's expected for a fallback.
- */
+/** Offline fallback for the curated API catalog. Keep retired targets out of new selections. */
 export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] = [
   {
     value: "WCMC",
@@ -20,29 +12,21 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
   },
   {
     value: "GEDI",
-    label: "GEDI L4B Biomass (2019-2023, 1km)",
+    label: "GEDI L4B Biomass (2019-2021, 1km)",
     year: 2020,
     group: "Aboveground Biomass Carbon",
     description:
-      "NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest areas, 2019-2023.",
+      "NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Gridded 2019-2021 observation product; not an annual time series.",
   },
   {
     value: "GEDI_L4A_MONTHLY",
-    label: "GEDI L4A Monthly AGBD (2019-2023, 25m)",
+    label: "GEDI L4A Monthly AGBD (2019-2025, 25m)",
     year: 2020,
-    yearRange: [2019, 2023],
+    yearRange: [2019, 2025],
     yearSelectable: true,
     group: "Aboveground Biomass Carbon",
     description:
-      "NASA GEDI L4A monthly aboveground biomass density composite at 25m, converted to carbon with x0.47.",
-  },
-  {
-    value: "GEDI_L4B_STACK",
-    label: "GEDI L4B + Predictor Stack (2019-2023, 1km)",
-    year: 2020,
-    group: "Aboveground Biomass Carbon",
-    description:
-      "GEDI L4B gridded biomass (1km) combined with Sentinel-2 predictor stack. Enhanced spatial coverage.",
+      "NASA GEDI L4A valid laser footprints at 25m, quality-filtered and converted to carbon with x0.47. Coverage is sparse.",
   },
   {
     value: "GEDI_L4D",
@@ -57,7 +41,7 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     label: "Spawn & Gibbs AGB Carbon (2010, 300m)",
     group: "Aboveground Biomass Carbon",
     description:
-      "Spawn & Gibbs (2020) aboveground biomass carbon (300m). Pantropical coverage, 2010 baseline.",
+      "Spawn & Gibbs (2020) aboveground biomass carbon (300m). Global coverage, 2010 baseline.",
   },
   {
     value: "ORNL_AGB_BGB",
@@ -66,16 +50,6 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     group: "Above and Belowground Biomass Carbon",
     description:
       "ORNL DAAC aboveground + belowground biomass carbon (300m). Includes root biomass. 2010 baseline.",
-  },
-  {
-    value: "ESA_CCI_SATIO_AGB",
-    label: "ESA CCI AGB via sat-io (2010-2020, 100m)",
-    year: 2020,
-    availableYears: [2010, 2017, 2018, 2019, 2020],
-    group: "Aboveground Biomass Carbon",
-    deprecated: true,
-    replacementKey: "ESA_CCI_BIOMASS_V7_COG",
-    description: "ESA CCI AGB via sat-io community asset (100m). 2010-2020 annual maps.",
   },
   {
     value: "ESA_CCI_BIOMASS_V7_COG",
@@ -100,17 +74,6 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     referenceOnlyCapable: true,
   },
   {
-    value: "GLOBAL_MANGROVE_WATCH_AGB",
-    label: "Global Mangrove Watch extent (mask only)",
-    group: "Mangrove Extent Mask",
-    year: 2020,
-    yearRange: [2020, 2020],
-    deprecated: true,
-    replacementKey: "CTREES_AGB_100M",
-    description:
-      "JAXA Global Mangrove Watch is an extent/change mask, not an AGB carbon raster. Use it only as a mangrove mask.",
-  },
-  {
     value: "CHLORIS_AGB_STOCK",
     label: "Chloris AGB Carbon Stock (2003-2019, 4.6km)",
     group: "Aboveground Biomass Carbon",
@@ -132,11 +95,21 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     referenceOnlyCapable: true,
   },
   {
-    value: "OPENLANDMAP_SOC",
-    label: "OpenLandMap SOC (g/kg, 250m)",
+    value: "OPENLANDMAP_SOC_G_KG",
+    label: "OpenLandMap SOC (0 cm, g/kg, 250m)",
+    year: 2018,
+    selectionYear: 2018,
     group: "Soil Carbon",
-    description:
-      "OpenLandMap soil organic carbon (250m), unit: g/kg. GEE-deployable linear model available.",
+    description: "Surface SOC concentration: native b0 values x5 give g/kg. 2018 is the release year; this is not a soil-carbon stock.",
+    referenceOnlyCapable: true,
+  },
+  {
+    value: "UNEP_WCMC_Biomass_SOC",
+    label: "UNEP-WCMC Biomass + Soil Carbon (2010, 300m)",
+    year: 2010,
+    group: "Total Ecosystem Carbon",
+    description: "Above- and belowground biomass carbon plus soil carbon to 1 m; distinct from biomass-only WCMC.",
+    referenceOnlyCapable: true,
   },
   {
     value: "SOILGRIDS_SOC_30CM",
@@ -152,6 +125,36 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
 // value separate from the fallback list so the live API catalog can still
 // provide labels, compatibility counts, and admin overrides.
 export const DEFAULT_CARBON_REFERENCE_DATASET = "GEDI_L4A_MONTHLY";
+
+/** Old delivery variants/targets remain loadable by the backend for saved work. */
+export const RETIRED_CARBON_REFERENCE_DATASETS: Readonly<Record<string, string>> = {
+  GEDI_L4B_STACK: "GEDI",
+  WCMC_Carbon_ArcGIS: "WCMC",
+  UNEP_WCMC_Biomass: "WCMC",
+  ESA_CCI: "ESA_CCI_BIOMASS_V7_COG",
+  ESA_CCI_SATIO_AGB: "ESA_CCI_BIOMASS_V7_COG",
+  ESA_CCI_BIOMASS_COG: "ESA_CCI_BIOMASS_V7_COG",
+  GLOBAL_MANGROVE_WATCH_AGB: "CTREES_AGB_100M",
+  Simard: "CTREES_AGB_100M",
+  OPENLANDMAP_SOC: "OPENLANDMAP_SOC_G_KG",
+};
+
+export function availableCarbonReferenceDatasets(datasets: CarbonReferenceDatasetOption[]): CarbonReferenceDatasetOption[] {
+  const seen = new Set<string>();
+  return datasets.filter((dataset) => {
+    if (dataset.deprecated || Object.prototype.hasOwnProperty.call(RETIRED_CARBON_REFERENCE_DATASETS, dataset.value)
+      || dataset.isConfigured === false || dataset.requiresConfiguration || seen.has(dataset.value)) return false;
+    seen.add(dataset.value);
+    return true;
+  });
+}
+
+export function resolveCarbonReferenceDataset(value: string, datasets: CarbonReferenceDatasetOption[]): string {
+  if (datasets.some((dataset) => dataset.value === value)) return value;
+  const replacement = RETIRED_CARBON_REFERENCE_DATASETS[value];
+  if (replacement && datasets.some((dataset) => dataset.value === replacement)) return replacement;
+  return datasets.find((dataset) => dataset.value === DEFAULT_CARBON_REFERENCE_DATASET)?.value ?? datasets[0]?.value ?? value;
+}
 
 /**
  * Fallback only - CarbonParamsPanel.tsx prefers each dataset's own

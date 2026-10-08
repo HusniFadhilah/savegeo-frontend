@@ -39,7 +39,7 @@ import type { DisasterEventListItem } from "@/features/disaster/types";
 import WindArrowLayer from "./WindArrowLayer";
 import WildfireLayerPanel from "./WildfireLayerPanel";
 import CamsFireEmissionsPanel from "./CamsFireEmissionsPanel";
-import CamsPointProbe from "./CamsPointProbe";
+import CamsHotspotPopup from "./CamsHotspotPopup";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels =
@@ -695,6 +695,11 @@ function HotspotMap({
       ?? layer.frames.at(-1);
     return frame ? [{ ...item, layer, frame, opacity: camsSelection[item.archiveId]?.opacity ?? 0.75 }] : [];
   });
+  const camsProbeLayers = camsLayersToRender.map(({ archiveId, frame }) => ({
+    layerId: archiveId,
+    frameId: frame.id,
+    scope: archiveId === "organic_aod" && worldAodEnabled ? "world" as const : "event" as const,
+  }));
   const camsHaveSelectedFrames = camsLayersToRender.length > 0;
   const camsStatus = camsArchiveLoading ? "loading" : camsArchiveError ? "error"
     : camsHaveSelectedFrames ? "ready"
@@ -916,11 +921,6 @@ function HotspotMap({
             attribution="CAMS / ECMWF · ADS · CC-BY 4.0"
           />
         ))}
-        <CamsPointProbe slug={event.slug} layers={camsLayersToRender.map(({ archiveId, frame }) => ({
-          layerId: archiveId,
-          frameId: frame.id,
-          scope: archiveId === "organic_aod" && worldAodEnabled ? "world" as const : "event" as const,
-        }))} />
         {viirsEnabled &&
           viirsAvailable &&
           viirsFeatures.map((feature) => {
@@ -938,7 +938,7 @@ function HotspotMap({
                   weight: 1.5,
                 }}
               >
-                <Popup>
+                <CamsHotspotPopup slug={event.slug} layers={camsProbeLayers} position={[lat, lng]}>
                   <div className="wildfire-popup">
                     <strong>VIIRS / NASA FIRMS · tersimpan</strong>
                     <dl>
@@ -956,7 +956,7 @@ function HotspotMap({
                       )}
                     </dl>
                   </div>
-                </Popup>
+                </CamsHotspotPopup>
               </CircleMarker>
             );
           })}
@@ -979,7 +979,7 @@ function HotspotMap({
                 }}
                 eventHandlers={{ click: () => onSelect(feature) }}
               >
-                <Popup closeButton>
+                <CamsHotspotPopup slug={event.slug} layers={camsProbeLayers} position={[lat, lng]}>
                   <div className="wildfire-popup">
                     <strong>{highConfidence ? "High confidence" : "Hotspot"}</strong>
                     <dl>
@@ -1009,7 +1009,7 @@ function HotspotMap({
                       )}
                     </dl>
                   </div>
-                </Popup>
+                </CamsHotspotPopup>
               </CircleMarker>
             );
           })}
@@ -1928,7 +1928,7 @@ export function KarhutlaDetailPage() {
                   </table>
                 </div>
               )}
-              <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif SP3STAB. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
+              <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif Indonesia. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
             </div>
           )}
         </main>

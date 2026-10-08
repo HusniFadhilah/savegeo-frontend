@@ -28,12 +28,18 @@ export interface VegetationDataQuality {
   images_used: number | null;
 }
 
+export interface SkippedVegetationIndex {
+  index: string;
+  reason: string;
+}
+
 export interface VegetationResult {
   rgb_tile_url?: string;
   collection_size?: number;
   satellite?: SatelliteProvider;
   data_quality?: VegetationDataQuality;
   indices: Record<string, VegetationIndexStats>;
+  skipped_indices?: SkippedVegetationIndex[];
 }
 
 export interface VegetationParams {
@@ -61,12 +67,27 @@ export interface CloudMaskTechniqueCatalogResponse {
   default: CloudMaskTechnique;
 }
 
-/** POST /timeseries response - monthly mean of one vegetation index across one year. */
+export interface VegetationTimeSeriesMetric {
+  kind: "index" | "band";
+  unit: "index" | "surface_reflectance";
+  data: { period: string; value: number | null }[];
+  availability?: string;
+}
+
+/** POST /timeseries response - monthly means for selected indices and bands. */
 export interface VegetationTimeSeriesResponse {
-  index: string;
+  index?: string | null;
+  indices?: string[];
+  bands?: string[];
   year: number;
   interval: string;
+  start_month?: number;
+  end_month?: number;
   scale: number;
   satellite?: SatelliteProvider;
+  periods?: string[];
+  series?: Record<string, VegetationTimeSeriesMetric>;
+  period_errors?: string[];
+  /** Legacy single-index series retained for older clients. */
   data: { period: string; value: number | null }[];
 }

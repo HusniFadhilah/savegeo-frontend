@@ -79,6 +79,7 @@ export default function MessageList({
                 actions={entry.actions}
                 status={entry.status}
                 runningStepIndex={entry.runningStepIndex}
+                errorMessage={entry.errorMessage}
                 onRun={() => onRunConfirm(entry.id)}
                 onCancel={() => onCancelConfirm(entry.id)}
               />

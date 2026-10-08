@@ -193,6 +193,57 @@
   text-decoration: none;
 }
 
+.admin-panel .sb-parent-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin: 3px 0.5rem;
+}
+
+.admin-panel .sb-parent-row > .sb-item {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-panel .sb-parent-row > .sb-item-disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.admin-panel .sb-submenu-toggle {
+  width: 30px;
+  flex: 0 0 30px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--sb-text);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-panel .sb-submenu-toggle:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-panel .sb-submenu-toggle:focus-visible {
+  outline: 2px solid var(--sb-active-border);
+  outline-offset: 1px;
+}
+
+.admin-panel .sb-subnav {
+  margin: 0.1rem 0 0.4rem 1.15rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.admin-panel .sb-subnav .sb-item {
+  margin: 2px 0.35rem;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.9em;
+}
+
 .admin-panel .sb-item:hover {
   background: rgba(255, 255, 255, 0.07);
   transform: translateX(2px);

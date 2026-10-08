@@ -13,9 +13,14 @@ export interface UiCommand {
   expected_state?: Record<string, unknown>;
 }
 
+export interface UiCommandOutcome {
+  hasResult: boolean;
+  error?: string | null;
+}
+
 export interface UiCommandHandler {
   read: () => Record<string, unknown>;
-  execute: (command: UiCommand) => Promise<void> | void;
+  execute: (command: UiCommand) => Promise<void | UiCommandOutcome> | void | UiCommandOutcome;
 }
 
 const handlers = new Map<string, UiCommandHandler>();
@@ -128,10 +133,23 @@ export async function executeUiCommand(command: UiCommand): Promise<Record<strin
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
-  await (handlers.get(namespace) ?? handler).execute(command);
+  const outcome = await (handlers.get(namespace) ?? handler).execute(command);
   // React batches state updates; let the owner commit before reading back.
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const state = handlers.get(namespace)?.read() ?? handler.read();
+  let state = handlers.get(namespace)?.read() ?? handler.read();
+  // Setters must observe the committed React state before the next action uses
+  // it. A fixed delay can read an old handler during a busy render.
+  if (["set_parameter", "set_analysis_type", "set_provider", "set_date_range", "accordion", "select_field"].includes(command.action)) {
+    const deadline = Date.now() + 1500;
+    while (Object.entries(command.expected_state ?? {}).some(([key, expected]) => JSON.stringify(state[key]) !== JSON.stringify(expected)) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      state = handlers.get(namespace)?.read() ?? handler.read();
+    }
+  }
+  // The owner may return the actual API outcome before React commits its
+  // result/error state. Never turn a successful request into a render-timing
+  // failure, or report an old result after this request failed.
+  if (command.action === "run_analysis" && outcome) state = { ...state, ...outcome };
   if (
     ["run_analysis", "search_scenes", "show_scene"].includes(command.action) &&
     typeof state.error === "string" &&

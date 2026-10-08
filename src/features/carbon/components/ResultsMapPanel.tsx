@@ -118,7 +118,7 @@ function buildLegend(
   visMax: number,
   visPalette: string[],
   legendBins: number,
-): { title: string; entries: MapLegendEntry[] } {
+): { title: string; entries: MapLegendEntry[]; scale?: { min: number; max: number; unit: string; colors: string[] } } {
   if (!activeKey) return { title: "", entries: [] };
 
   if (activeKey === "carbon_estimated" || activeKey === "carbon_reference") {
@@ -152,9 +152,33 @@ function buildLegend(
   if (activeKey.startsWith("direct:")) {
     const dataset = activeKey.slice("direct:".length);
     const layer = (results.direct ?? []).find((item) => item.dataset === dataset) as DirectReferenceLayer | undefined;
+    const year = layer?.effective_year ?? layer?.year;
+    const yearLabel = year != null ? " · Tahun dataset " + year : "";
+
+    // Global carbon rasters contain continuous density values. Their palette
+    // is a color ramp, not a set of land-cover classes.
+    if (layer?.analysis_kind === "carbon") {
+      const palette = layer.vis_params?.palette?.length ? layer.vis_params.palette : visPalette;
+      const colors = buildLegendColors(
+        palette.length ? palette : ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"],
+        Math.min(Math.max(palette.length || legendBins, 2), 20),
+      );
+      const rawMin = Number(layer.vis_params?.min);
+      const rawMax = Number(layer.vis_params?.max);
+      const min = Number.isFinite(rawMin) ? rawMin : visMin;
+      const maxCandidate = Number.isFinite(rawMax) ? rawMax : visMax;
+      const max = maxCandidate > min ? maxCandidate : min + 1;
+      const unit = layer.unit || "Mg C/ha";
+      return {
+        title: "Densitas Karbon (" + unit + ") · " + layer.dataset_name + yearLabel,
+        entries: [],
+        scale: { min, max, unit, colors },
+      };
+    }
+
     if (layer?.legend) {
       return {
-        title: `${layer.dataset_name}${layer.effective_year ?? layer.year ? ` · Tahun dataset ${layer.effective_year ?? layer.year}` : ""}`,
+        title: (layer?.dataset_name || "Dataset") + yearLabel,
         entries: Object.values(layer.legend).map((item) => ({
           color: item.color || "#2e7d32",
           label: item.label || "Kelas",
@@ -163,10 +187,10 @@ function buildLegend(
     }
     const palette = layer?.vis_params?.palette || [];
     return {
-      title: `${layer?.dataset_name || "Dataset"}${layer?.unit ? ` (${layer.unit})` : ""}${layer?.effective_year ?? layer?.year ? ` · Tahun dataset ${layer.effective_year ?? layer.year}` : ""}`,
+      title: (layer?.dataset_name || "Dataset") + (layer?.unit ? " (" + layer.unit + ")" : "") + yearLabel,
       entries: buildLegendColors(palette.length ? palette : ["#440154", "#fde725"], Math.min(Math.max(palette.length, 2), 8)).map((color, i) => ({
         color,
-        label: `Kelas ${i + 1}`,
+        label: "Nilai " + (i + 1),
       })),
     };
   }
@@ -392,14 +416,14 @@ export default function ResultsMapPanel({
               {aoi && <CompareAoiView aoi={aoi} zoom={zoom} />}
             </SwipeCompareMap>
             <div className="row g-2 mt-1">
-              {legend.entries.length > 0 && (
+              {(legend.entries.length > 0 || legend.scale) && (
                 <div className="col-md-6">
-                  <MapLegend title={legend.title} entries={legend.entries} />
+                  <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
                 </div>
               )}
-              {compareLegend.entries.length > 0 && (
+              {(compareLegend.entries.length > 0 || compareLegend.scale) && (
                 <div className="col-md-6">
-                  <MapLegend title={compareLegend.title} entries={compareLegend.entries} />
+                  <MapLegend title={compareLegend.title} entries={compareLegend.entries} scale={compareLegend.scale} />
                 </div>
               )}
             </div>

@@ -3,7 +3,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
 import {
   deleteCompany,
-  importCompaniesFromGFW,
+  getCompanyImportJob,
   importCompaniesFromOSM,
   saveCompany,
   toggleCompanyActive,
@@ -46,6 +46,23 @@ function validateGeoJsonText(text: string): string | null {
     return "GeoJSON Feature harus memiliki field \"geometry\"";
   }
   return null;
+}
+
+async function waitForCompanyImport(jobId: string, onProgress: (message: string) => void) {
+  const deadline = Date.now() + 15 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const job = await getCompanyImportJob(jobId);
+    if (job.status === "completed") {
+      if (!job.result) throw new Error("Impor selesai tanpa ringkasan hasil.");
+      return job.result;
+    }
+    if (job.status === "failed") {
+      throw new Error(job.error || "Impor gagal. Coba lagi nanti.");
+    }
+    onProgress(job.message || "Impor sedang diproses...");
+    await new Promise((resolve) => window.setTimeout(resolve, 2000));
+  }
+  throw new Error(`Waktu tunggu status impor habis. ID job: ${jobId}`);
 }
 
 export default function CompanyBoundaries() {
@@ -228,27 +245,14 @@ export default function CompanyBoundaries() {
       return;
     }
     setImporting(true);
-    setImportLog("Mengambil data dari OpenStreetMap... (dapat berlangsung 30–180 detik)");
+    setImportLog("Mengantrekan impor OpenStreetMap...");
     try {
-      const r = await importCompaniesFromOSM(types);
+      const job = await importCompaniesFromOSM(types);
+      const r = await waitForCompanyImport(job.job_id, setImportLog);
       setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
       await reload();
     } catch (err) {
       setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data OSM"}`);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const doImportGFW = async (dataset: string) => {
-    setImporting(true);
-    setImportLog(`Mengambil dataset GFW: ${dataset}...`);
-    try {
-      const r = await importCompaniesFromGFW(dataset);
-      setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
-      await reload();
-    } catch (err) {
-      setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data GFW"}`);
     } finally {
       setImporting(false);
     }
@@ -400,7 +404,7 @@ export default function CompanyBoundaries() {
         {/* Import open data form */}
         <div className={`collapse-form ${importOpen ? "open" : ""}`}>
           <div style={{ marginBottom: "0.75rem", fontSize: 12, color: "var(--text-muted)" }}>
-            Data konsesi akan diambil secara otomatis dari sumber terbuka. Proses dapat berlangsung selama 30–180 detik.
+            OpenStreetMap diproses di latar belakang. Konsesi Indonesia dari GFW saat ini hanya tersedia untuk tampilan, bukan unduhan; unggah GeoJSON yang Anda miliki hak aksesnya melalui formulir batas perusahaan.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "0.75rem" }}>
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>OpenStreetMap (Overpass API)</div>
@@ -421,16 +425,8 @@ export default function CompanyBoundaries() {
             </button>
             <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>Global Forest Watch (GFW)</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button type="button" className="btn-sm" disabled={importing} onClick={() => doImportGFW("mining")}>
-                <i className="bi bi-hammer" /> Mining Concessions
-              </button>
-              <button type="button" className="btn-sm" disabled={importing} onClick={() => doImportGFW("palm_oil")}>
-                <i className="bi bi-tree" /> Palm Oil
-              </button>
-              <button type="button" className="btn-sm" disabled={importing} onClick={() => doImportGFW("timber")}>
-                <i className="bi bi-tree-fill" /> Timber
-              </button>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Data konsesi Indonesia dari GFW dibatasi hanya untuk tampilan oleh WRI, jadi tidak dapat diimpor langsung.
             </div>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", minHeight: 20 }}>{importLog}</div>

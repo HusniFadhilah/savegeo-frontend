@@ -23,12 +23,14 @@ export function ConfirmActionCard({
   actions,
   status,
   runningStepIndex,
+  errorMessage,
   onRun,
   onCancel,
 }: {
   actions: ChatAction[];
   status: "pending" | "running" | "done" | "failed" | "waiting";
   runningStepIndex?: number;
+  errorMessage?: string;
   onRun: () => void;
   onCancel: () => void;
 }) {
@@ -78,7 +80,7 @@ export function ConfirmActionCard({
           </div>
         )}
         {status === "waiting" && <span>Pilih batas AOI untuk melanjutkan.</span>}
-        {status === "failed" && <span role="alert">Tindakan gagal. Periksa pesan kesalahan.</span>}
+        {status === "failed" && <span role="alert">{errorMessage || "Tindakan gagal. Periksa pesan kesalahan."}</span>}
         {status === "done" && (
           <span style={{ color: "#1e6b3c", fontSize: 13 }}>
             <i className="bi bi-check-circle me-1" /> Selesai

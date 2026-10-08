@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
@@ -22,7 +22,7 @@ import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
 import LandCoverResultTables from "@/features/landcover/components/LandCoverResultTables";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
-import { analyzeVegetation, analyzeVegetationTimeSeries, getVegetationSatellites } from "@/features/vegetation/api";
+import { analyzeVegetation, analyzeVegetationTimeSeries, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
 import { analyzeLandCover, fetchLandCoverDatasets } from "@/features/landcover/api";
 import { analyzeCarbon, analyzeCarbonDelta, listCarbonDatasets, listCarbonModels, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer } from "@/features/carbon/api";
@@ -45,10 +45,23 @@ import type {
 import type { VegetationParams, VegetationTimeSeriesResponse } from "@/features/vegetation/types";
 import type { LandCoverParams } from "@/features/landcover/types";
 import { parseCarbonQuery, serializeCarbonQuery } from "./lib/carbonQueryState";
-import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
+import { registerUiCommands, type UiCommandOutcome } from "@/features/chatbot/uiCommandBus";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
+
+const VEGETATION_SERIES_BANDS = [
+  { code: "B2", label: "Blue" },
+  { code: "B3", label: "Green" },
+  { code: "B4", label: "Red" },
+  { code: "B5", label: "Red Edge 1" },
+  { code: "B6", label: "Red Edge 2" },
+  { code: "B7", label: "Red Edge 3" },
+  { code: "B8", label: "NIR" },
+  { code: "B8A", label: "NIR Narrow" },
+  { code: "B11", label: "SWIR 1" },
+  { code: "B12", label: "SWIR 2" },
+];
 
 /**
  * Full port of module-carbon.html + main.js's carbon/vegetation/landcover
@@ -103,9 +116,9 @@ export default function CarbonModule() {
   }, [analysisType, availableAnalysisTypes]);
 
   const [carbonPartial, setCarbonPartial] = useState<CarbonPartial>({
-    startMonth: 1,
-    endMonth: 12,
-    cloudThreshold: 10,
+    startMonth: initialQuery.monthFrom ?? 1,
+    endMonth: initialQuery.monthTo ?? 12,
+    cloudThreshold: initialQuery.cloudThreshold ?? 10,
     clipMode: "clipped",
     referenceDataset: DEFAULT_CARBON_REFERENCE_DATASET,
     datasetYear: CARBON_DATASET_YEARS[0],
@@ -115,10 +128,6 @@ export default function CarbonModule() {
     showReference: true,
     cloudMaskTechnique: "scl",
   });
-  useEffect(() => {
-    const q = serializeCarbonQuery({ mode: (analysisType === "combined" ? "carbon" : analysisType), year, monthFrom: carbonPartial.startMonth, monthTo: carbonPartial.endMonth, cloudThreshold: carbonPartial.cloudThreshold, clipMode: carbonPartial.clipMode, showReference: carbonPartial.showReference, view: initialQuery.view, orientation: initialQuery.orientation, opacity: initialQuery.opacity });
-    if (typeof window !== "undefined" && window.location.pathname === "/carbon-estimation") window.history.replaceState(null, "", `/carbon-estimation?${q.toString()}`);
-  }, [analysisType, year, carbonPartial.startMonth, carbonPartial.endMonth, carbonPartial.cloudThreshold, carbonPartial.clipMode, carbonPartial.showReference, initialQuery.view, initialQuery.orientation, initialQuery.opacity]);
   const [selectedModel, setSelectedModel] = useState<CarbonModelListItem | null>(null);
 
   // P0 "time-series & timelapse" - carbon-only, mutually exclusive with the
@@ -136,9 +145,9 @@ export default function CarbonModule() {
   const [deltaError, setDeltaError] = useState<string | null>(null);
 
   const [vegParams, setVegParams] = useState<VegetationParams>({
-    startMonth: 6,
-    endMonth: 9,
-    cloudThreshold: 40,
+    startMonth: initialQuery.monthFrom ?? 6,
+    endMonth: initialQuery.monthTo ?? 9,
+    cloudThreshold: initialQuery.cloudThreshold ?? 40,
     indices: DEFAULT_VEGETATION_INDICES,
     satellite: "sentinel2",
     cloudMaskTechnique: "scl",
@@ -147,11 +156,55 @@ export default function CarbonModule() {
   // P0 "time-series & timelapse" for vegetation - carbon-only-style toggle,
   // mutually exclusive with the single-year combined analysis (only usable
   // when analysisType === "vegetation", monthly series for one index/year).
-  const [vegTsEnabled, setVegTsEnabled] = useState(false);
-  const [vegTsIndex, setVegTsIndex] = useState("NDVI");
+  const [vegTsEnabled, setVegTsEnabled] = useState(initialQuery.timeSeries ?? false);
+  const [vegTsIndices, setVegTsIndices] = useState<string[]>(() => initialQuery.indices ?? [initialQuery.index?.toUpperCase() ?? "NDVI"]);
+  const [vegTsBands, setVegTsBands] = useState<string[]>(() => initialQuery.bands ?? []);
+  const [vegTsIndexOptions, setVegTsIndexOptions] = useState<string[]>(VEGETATION_INDICES.map((index) => index.code));
   const [vegTsResult, setVegTsResult] = useState<VegetationTimeSeriesResponse | null>(null);
   const [vegTsRunning, setVegTsRunning] = useState(false);
   const [vegTsError, setVegTsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getVegetationCatalog()
+      .then((catalog) => {
+        const codes = Object.keys(catalog.indices ?? {});
+        if (!cancelled && codes.length) setVegTsIndexOptions(codes);
+      })
+      .catch(() => {
+        // Keep the bundled index list available if the catalog endpoint is offline.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const availableVegTsBands = vegParams.satellite === "sentinel2"
+    ? VEGETATION_SERIES_BANDS
+    : VEGETATION_SERIES_BANDS.filter(({ code }) => !["B5", "B6", "B7", "B8A"].includes(code));
+
+  useEffect(() => {
+    const isVegetation = analysisType === "vegetation";
+    const q = serializeCarbonQuery({
+      mode: analysisType === "combined" ? "carbon" : analysisType,
+      year,
+      monthFrom: isVegetation ? vegParams.startMonth : carbonPartial.startMonth,
+      monthTo: isVegetation ? vegParams.endMonth : carbonPartial.endMonth,
+      cloudThreshold: isVegetation ? vegParams.cloudThreshold : carbonPartial.cloudThreshold,
+      clipMode: carbonPartial.clipMode,
+      showReference: carbonPartial.showReference,
+      index: vegTsIndices[0],
+      indices: isVegetation ? vegTsIndices : undefined,
+      bands: isVegetation ? vegTsBands : undefined,
+      timeSeries: isVegetation ? vegTsEnabled : false,
+      view: initialQuery.view,
+      orientation: initialQuery.orientation,
+      opacity: initialQuery.opacity,
+    });
+    if (typeof window !== "undefined" && window.location.pathname === "/carbon-estimation") {
+      window.history.replaceState(null, "", `/carbon-estimation?${q.toString()}`);
+    }
+  }, [analysisType, year, carbonPartial.startMonth, carbonPartial.endMonth, carbonPartial.cloudThreshold, carbonPartial.clipMode, carbonPartial.showReference, vegParams.startMonth, vegParams.endMonth, vegParams.cloudThreshold, vegTsIndices, vegTsBands, vegTsEnabled, initialQuery.view, initialQuery.orientation, initialQuery.opacity]);
 
   const [lcParams, setLcParams] = useState<LandCoverParams>({
     datasets: ["Dynamic_World"],
@@ -196,6 +249,16 @@ export default function CarbonModule() {
     setCarbonPartial((p) => ({ ...p, ...patch }));
   }
 
+  const changeAnalysisType = useCallback((nextType: AnalysisType) => {
+    if (!availableAnalysisTypes.includes(nextType)) return;
+    setAnalysisType(nextType);
+    setRunError(null);
+    if (nextType === "vegetation") {
+      setDirectLoadEnabled(false);
+      setCarbonPartial((previous) => ({ ...previous, referenceOnly: false, loadOnly: false }));
+    }
+  }, [availableAnalysisTypes]);
+
   const hasResults = Object.keys(results).length > 0;
   const hasDirectResults = Boolean(results.direct?.length);
 
@@ -206,10 +269,10 @@ export default function CarbonModule() {
     };
   }, [results]);
 
-  async function handleRunDelta() {
+  async function handleRunDelta(): Promise<UiCommandOutcome> {
     if (!aoi) {
       setRunError(t("carbon.err.selectAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.selectAoi") };
     }
     const aoiPayload: AoiPayload = aoi.feature
       ? { geojson: aoi.feature }
@@ -218,11 +281,11 @@ export default function CarbonModule() {
         : null!;
     if (!aoiPayload) {
       setRunError(t("carbon.err.invalidAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.invalidAoi") };
     }
     if (deltaStartYear >= deltaEndYear) {
       setDeltaError(t("carbon.err.startBeforeEnd"));
-      return;
+      return { hasResult: false, error: t("carbon.err.startBeforeEnd") };
     }
 
     setDeltaRunning(true);
@@ -230,6 +293,7 @@ export default function CarbonModule() {
     setRunError(null);
     setResults({});
     showLoading(t("carbon.loading.deltaTitle"), `${deltaStartYear} - ${deltaEndYear}`);
+    let outcome: UiCommandOutcome;
     try {
       const res = await analyzeCarbonDelta({
         aoi: aoiPayload,
@@ -247,21 +311,25 @@ export default function CarbonModule() {
         visPalette,
       });
       setDeltaResult(res);
+      outcome = { hasResult: true, error: null };
       setMapKey((k) => k + 1);
     } catch (err) {
-      setDeltaError(err instanceof ApiError ? err.message : t("carbon.err.deltaFailed"));
+      const error = err instanceof ApiError ? err.message : t("carbon.err.deltaFailed");
+      setDeltaError(error);
+      outcome = { hasResult: false, error };
       setDeltaResult(null);
     } finally {
       hideLoading();
       setDeltaRunning(false);
     }
     window._onSaveGeoAnalysisDone?.();
+    return outcome;
   }
 
-  async function handleRunVegTs() {
+  async function handleRunVegTs(): Promise<UiCommandOutcome> {
     if (!aoi) {
       setRunError(t("carbon.err.selectAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.selectAoi") };
     }
     const aoiPayload: AoiPayload = aoi.feature
       ? { geojson: aoi.feature }
@@ -270,54 +338,68 @@ export default function CarbonModule() {
         : null!;
     if (!aoiPayload) {
       setRunError(t("carbon.err.invalidAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.invalidAoi") };
+    }
+    const selectedBands = vegTsBands.filter((band) => availableVegTsBands.some((option) => option.code === band));
+    if (vegTsIndices.length === 0 && selectedBands.length === 0) {
+      setVegTsError(t("carbon.err.noVegTsMetric"));
+      return { hasResult: false, error: t("carbon.err.noVegTsMetric") };
     }
 
     setVegTsRunning(true);
     setVegTsError(null);
+    setVegTsResult(null);
     setRunError(null);
     setResults({});
-    showLoading(t("carbon.loading.vegTsTitle"), `${vegTsIndex} - ${year}`);
+    showLoading(t("carbon.loading.vegTsTitle"), `${[...vegTsIndices, ...selectedBands].join(", ")} - ${year}`);
+    let outcome: UiCommandOutcome;
     try {
       const res = await analyzeVegetationTimeSeries({
         aoi: aoiPayload,
         year,
-        index: vegTsIndex,
+        indices: vegTsIndices,
+        bands: selectedBands,
+        startMonth: vegParams.startMonth,
+        endMonth: vegParams.endMonth,
         cloudThreshold: vegParams.cloudThreshold,
         satellite: vegParams.satellite,
         cloudMaskTechnique: vegParams.cloudMaskTechnique,
       });
       setVegTsResult(res);
+      outcome = { hasResult: true, error: null };
     } catch (err) {
-      setVegTsError(err instanceof ApiError ? err.message : t("carbon.err.vegTsFailed"));
+      const error = err instanceof ApiError ? err.message : t("carbon.err.vegTsFailed");
+      setVegTsError(error);
+      outcome = { hasResult: false, error };
       setVegTsResult(null);
     } finally {
       hideLoading();
       setVegTsRunning(false);
     }
     window._onSaveGeoAnalysisDone?.();
+    return outcome;
   }
 
-  async function handleRunAnalysis() {
+  async function handleRunAnalysis(): Promise<UiCommandOutcome> {
     if (deltaEnabled && analysisType === "carbon") {
-      await handleRunDelta();
-      return;
+      return handleRunDelta();
     }
     if (vegTsEnabled && analysisType === "vegetation") {
-      await handleRunVegTs();
-      return;
+      return handleRunVegTs();
     }
     setDeltaResult(null);
     setVegTsResult(null);
 
     if (directLoadEnabled) {
       if (analysisType === "vegetation") {
-        setRunError("Mode pemuatan langsung tersedia untuk LULC dan stok karbon, bukan indeks vegetasi.");
-        return;
+        const error = "Mode pemuatan langsung tersedia untuk LULC dan stok karbon, bukan indeks vegetasi.";
+        setRunError(error);
+        return { hasResult: false, error };
       }
       setRunning(true);
       setRunError(null);
       showLoading("Memuat dataset langsung", "Tanpa AOI dan tanpa model");
+      let outcome: UiCommandOutcome;
       try {
         const directLayers = [];
         if (analysisType === "carbon" || analysisType === "combined") {
@@ -337,21 +419,24 @@ export default function CarbonModule() {
           directLayers.push(...loaded.map((layer) => ({ ...layer, analysis_kind: "landcover" as const })));
         }
         setResults({ direct: directLayers });
+        outcome = { hasResult: directLayers.length > 0, error: null };
         setProcessingTimes({ total: "direct" });
         setMapKey((k) => k + 1);
       } catch (err) {
         setResults({});
-        setRunError(err instanceof ApiError ? err.message : "Dataset langsung tidak dapat dimuat.");
+        const error = err instanceof ApiError ? err.message : "Dataset langsung tidak dapat dimuat.";
+        setRunError(error);
+        outcome = { hasResult: false, error };
       } finally {
         hideLoading();
         setRunning(false);
       }
-      return;
+      return outcome;
     }
 
     if (!aoi) {
       setRunError(t("carbon.err.selectAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.selectAoi") };
     }
     const aoiPayload: AoiPayload = aoi.feature
       ? { geojson: aoi.feature }
@@ -360,7 +445,7 @@ export default function CarbonModule() {
         : null!;
     if (!aoiPayload) {
       setRunError(t("carbon.err.invalidAoi"));
-      return;
+      return { hasResult: false, error: t("carbon.err.invalidAoi") };
     }
 
     setRunning(true);
@@ -429,6 +514,7 @@ export default function CarbonModule() {
       setRunError(errors.join(" "));
     }
     window._onSaveGeoAnalysisDone?.();
+    return { hasResult: Object.keys(newResults).length > 0, error: errors.join(" ") || (Object.keys(newResults).length === 0 ? t("carbon.err.noResults") : null) };
   }
 
   const handleRunAnalysisRef = useRef(handleRunAnalysis);
@@ -444,9 +530,12 @@ export default function CarbonModule() {
       loadOnly: carbonPartial.loadOnly,
       directGlobal: directLoadEnabled,
       modelName: selectedModel?.name ?? null,
-      startMonth: carbonPartial.startMonth,
-      endMonth: carbonPartial.endMonth,
-      cloudThreshold: carbonPartial.cloudThreshold,
+      startMonth: analysisType === "vegetation" ? vegParams.startMonth : analysisType === "landcover" ? lcParams.startMonth : carbonPartial.startMonth,
+      endMonth: analysisType === "vegetation" ? vegParams.endMonth : analysisType === "landcover" ? lcParams.endMonth : carbonPartial.endMonth,
+      cloudThreshold: analysisType === "vegetation" ? vegParams.cloudThreshold : carbonPartial.cloudThreshold,
+      vegetationStartMonth: vegParams.startMonth,
+      vegetationEndMonth: vegParams.endMonth,
+      vegetationCloudThreshold: vegParams.cloudThreshold,
       clipMode: carbonPartial.clipMode,
       showReference: carbonPartial.showReference,
       vegetationIndices: vegParams.indices,
@@ -454,22 +543,24 @@ export default function CarbonModule() {
       landcoverDatasets: lcParams.datasets,
       includeImprobableClasses: lcParams.includeImprobableClasses,
       aoiExists: Boolean(aoi),
-      running,
-      error: runError,
-      hasResult: Object.keys(results).length > 0,
+      running: running || deltaRunning || vegTsRunning,
+      error: runError || (deltaEnabled && analysisType === "carbon" ? deltaError : null) || (vegTsEnabled && analysisType === "vegetation" ? vegTsError : null),
+      hasResult: analysisType === "vegetation" ? Boolean(vegTsEnabled ? vegTsResult : results.vegetation)
+        : analysisType === "landcover" ? Boolean(results.landcover || (directLoadEnabled && results.direct?.length))
+        : analysisType === "carbon" ? Boolean(deltaEnabled ? deltaResult : results.carbon || (directLoadEnabled && results.direct?.length))
+        : Object.keys(results).length > 0,
     }),
     execute: async ({ action, target, parameters }) => {
       const value = parameters?.value;
       if (action === "set_analysis_type" && target === "carbon.analysisType") {
         if (!availableAnalysisTypes.includes(value as AnalysisType)) throw new Error("Jenis analisis tidak tersedia untuk akun ini.");
-        setAnalysisType(value as AnalysisType);
+        changeAnalysisType(value as AnalysisType);
         return;
       }
       if (action === "run_analysis" && target === "carbon.analysis") {
         if (!aoi && !directLoadEnabled) throw new Error("AOI diperlukan sebelum menjalankan analisis.");
-        if (running) throw new Error("Analisis masih berjalan.");
-        await handleRunAnalysisRef.current();
-        return;
+        if (running || deltaRunning || vegTsRunning) throw new Error("Analisis masih berjalan.");
+        return handleRunAnalysisRef.current();
       }
       if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul karbon.`);
       if (target === "carbon.analysisYear") {
@@ -524,18 +615,24 @@ export default function CarbonModule() {
       } else if (target === "carbon.clipMode") {
         if (value !== "clipped" && value !== "full") throw new Error("Mode clip tidak valid.");
         patchCarbon({ clipMode: value });
-      } else if (["carbon.startMonth", "carbon.endMonth", "carbon.cloudThreshold"].includes(target)) {
+      } else if (["carbon.startMonth", "carbon.endMonth", "carbon.cloudThreshold", "carbon.vegetationStartMonth", "carbon.vegetationEndMonth", "carbon.vegetationCloudThreshold"].includes(target)) {
         if (!Number.isInteger(value)) throw new Error("Parameter harus berupa bilangan bulat.");
         const number = value as number;
-        if (target === "carbon.cloudThreshold") {
+        const vegetationTarget = target.startsWith("carbon.vegetation") || analysisType === "vegetation";
+        const key = target.endsWith("CloudThreshold") || target.endsWith("cloudThreshold") ? "cloudThreshold"
+          : target.endsWith("StartMonth") || target.endsWith("startMonth") ? "startMonth" : "endMonth";
+        const current = vegetationTarget ? vegParams : analysisType === "landcover" ? lcParams : carbonPartial;
+        if (key === "cloudThreshold") {
           if (number < 0 || number > 100) throw new Error("Ambang awan harus 0 sampai 100 persen.");
-          patchCarbon({ cloudThreshold: number });
+          if (analysisType === "landcover" && !vegetationTarget) throw new Error("Analisis tutupan lahan tidak menyediakan ambang awan ini.");
         } else {
           if (number < 1 || number > 12) throw new Error("Bulan harus 1 sampai 12.");
-          if (target === "carbon.startMonth" && number > carbonPartial.endMonth) throw new Error("Bulan awal harus sebelum bulan akhir.");
-          if (target === "carbon.endMonth" && number < carbonPartial.startMonth) throw new Error("Bulan akhir harus setelah bulan awal.");
-          patchCarbon(target === "carbon.startMonth" ? { startMonth: number } : { endMonth: number });
+          if (key === "startMonth" && number > current.endMonth) throw new Error("Bulan awal harus sebelum bulan akhir.");
+          if (key === "endMonth" && number < current.startMonth) throw new Error("Bulan akhir harus setelah bulan awal.");
         }
+        if (vegetationTarget) setVegParams((previous) => ({ ...previous, [key]: number }));
+        else if (analysisType === "landcover") setLcParams((previous) => ({ ...previous, [key]: number }));
+        else patchCarbon({ [key]: number });
       } else if (target === "carbon.vegetationIndices") {
         if (!Array.isArray(value) || !value.length || !value.every((item) => typeof item === "string" && VEGETATION_INDICES.some((idx) => idx.code === item))) throw new Error("Indeks vegetasi tidak tersedia.");
         setVegParams((prev) => ({ ...prev, indices: value as string[] }));
@@ -556,7 +653,7 @@ export default function CarbonModule() {
         throw new Error(`Target ${target} tidak didukung oleh modul karbon.`);
       }
     },
-  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, viewerFeatures, isViewerPrincipal, availableAnalysisTypes]);
+  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, viewerFeatures, isViewerPrincipal, availableAnalysisTypes, changeAnalysisType, deltaRunning, vegTsRunning, deltaEnabled, deltaError, deltaResult, vegTsEnabled, vegTsError, vegTsResult]);
 
   const reportContext: ReportContext | null = aoi
     ? {
@@ -653,14 +750,7 @@ export default function CarbonModule() {
           <AnalysisTypeSelector
             value={analysisType}
             availableTypes={availableAnalysisTypes}
-            onChange={(nextType) => {
-              if (!availableAnalysisTypes.includes(nextType)) return;
-              setAnalysisType(nextType);
-              if (nextType === "vegetation") {
-                setDirectLoadEnabled(false);
-                patchCarbon({ referenceOnly: false, loadOnly: false });
-              }
-            }}
+            onChange={changeAnalysisType}
           />
 
           {(analysisType === "carbon" || analysisType === "combined") && (
@@ -815,18 +905,52 @@ export default function CarbonModule() {
                 <label className="form-label">{t("carbon.sidebar.indexSingle")}</label>
                 <InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.sidebar.vegTsHint")} />
               </div>
-              <select
-                id="vegTsIndex"
-                className="form-select form-select-sm"
-                value={vegTsIndex}
-                onChange={(e) => setVegTsIndex(e.target.value)}
-              >
-                {VEGETATION_INDICES.map((idx) => (
-                  <option key={idx.code} value={idx.code}>
-                    {idx.label}
-                  </option>
-                ))}
-              </select>
+              <div className="border rounded p-2 mb-2" style={{ maxHeight: 180, overflowY: "auto" }}>
+                <div className="d-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: ".25rem .75rem" }}>
+                  {vegTsIndexOptions.map((code) => (
+                    <label key={code} className="form-check mb-0 small">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={vegTsIndices.includes(code)}
+                        onChange={(event) => {
+                          setVegTsIndices((previous) => event.target.checked
+                            ? [...new Set([...previous, code])]
+                            : previous.filter((item) => item !== code));
+                          setVegTsResult(null);
+                          setVegTsError(null);
+                        }}
+                      />
+                      <span className="form-check-label">{code}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="carbon-info-label">
+                <label className="form-label">{t("carbon.sidebar.spectralBands")}</label>
+                <InfoTip label={t("carbon.params.moreInfo")} content={t("carbon.sidebar.spectralBandsHint")} />
+              </div>
+              <div className="border rounded p-2" style={{ maxHeight: 160, overflowY: "auto" }}>
+                <div className="d-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: ".25rem .75rem" }}>
+                  {availableVegTsBands.map(({ code, label }) => (
+                    <label key={code} className="form-check mb-0 small">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={vegTsBands.includes(code)}
+                        onChange={(event) => {
+                          setVegTsBands((previous) => event.target.checked
+                            ? [...new Set([...previous, code])]
+                            : previous.filter((item) => item !== code));
+                          setVegTsResult(null);
+                          setVegTsError(null);
+                        }}
+                      />
+                      <span className="form-check-label">{label} ({code})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               {vegTsError && <div className="alert alert-danger py-1 px-2 mt-2 small">{vegTsError}</div>}
             </div>
           )}

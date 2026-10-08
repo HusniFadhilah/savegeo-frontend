@@ -737,7 +737,7 @@ export function useChatSession() {
       .map((a) => a.analysis || a.target || "");
     const searchedScenes = actions.some((a) => a.action === "search_scenes");
 
-    if (cardEntryId) updateConfirmCard(cardEntryId, { status: "running" });
+    if (cardEntryId) updateConfirmCard(cardEntryId, { status: "running", errorMessage: undefined });
 
     const ctx: ActionRunContext = {
       addAssistantMessage: (text) => appendMessage("assistant", text),
@@ -799,6 +799,7 @@ export function useChatSession() {
       if (cardEntryId)
         updateConfirmCard(cardEntryId, {
           status: error instanceof AoiChoiceRequired ? "waiting" : "failed",
+          errorMessage: error instanceof AoiChoiceRequired ? undefined : error instanceof Error ? error.message : "Kesalahan tidak diketahui.",
         });
       setQuickActionsVisible(true);
       return;

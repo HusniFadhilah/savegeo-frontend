@@ -266,12 +266,25 @@ export const toggleCompanyActive = (id: number, isActive: boolean) =>
 export const deleteCompany = (id: number) =>
   apiClient.delete<{ error?: string }>(`/admin/companies/${id}`, { auth: true });
 
+export interface CompanyImportJob {
+  job_id: string;
+  type: "osm";
+  status: "queued" | "running" | "completed" | "failed";
+  status_url?: string;
+  message?: string;
+  result?: { imported: number; skipped: number; errors?: string[] };
+  error?: string;
+}
+
 export const importCompaniesFromOSM = (industryTypes: string[]) =>
-  apiClient.post<{ imported: number; skipped: number; error?: string }>(
+  apiClient.post<CompanyImportJob>(
     "/admin/companies/import/osm",
     { industry_types: industryTypes },
     { auth: true },
   );
+
+export const getCompanyImportJob = (jobId: string) =>
+  apiClient.get<CompanyImportJob>(`/admin/companies/import/jobs/${encodeURIComponent(jobId)}`, { auth: true });
 
 // ── Satellite providers (overlay on app/registries/satellite_provider_registry.py) ──
 export const listSatelliteProvidersAdmin = () =>
@@ -310,13 +323,6 @@ export const saveImageryProviderConnection = (
 
 export const resetImageryProvider = (key: string) =>
   apiClient.delete<{ message: string }>(`/admin/imagery-providers/${encodeURIComponent(key)}`, { auth: true });
-
-export const importCompaniesFromGFW = (dataset: string) =>
-  apiClient.post<{ imported: number; skipped: number; error?: string }>(
-    "/admin/companies/import/gfw",
-    { dataset },
-    { auth: true },
-  );
 
 // ── Disaster Intelligence Dashboard (Admin) ─────────────────────────
 // Every function follows the shapes documented in
