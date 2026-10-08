@@ -10,7 +10,7 @@ const EVENT_ISLANDS: Record<string, string> = {
 };
 
 export function wildfireEventIsland(slug: string): string | undefined {
-  return EVENT_ISLANDS[slug];
+  return Object.prototype.hasOwnProperty.call(EVENT_ISLANDS, slug) ? EVENT_ISLANDS[slug] : undefined;
 }
 
 export function wildfireEventRegionLabel(slug: string): string {

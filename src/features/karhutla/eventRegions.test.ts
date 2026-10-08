@@ -7,6 +7,7 @@ describe("wildfire event regional coverage", () => {
     expect(wildfireEventIsland("sumatra-2026")).toBe("Sumatra");
     expect(wildfireEventIsland("kalimantan-2026")).toBe("Kalimantan");
     expect(wildfireEventIsland("another-event")).toBeUndefined();
+    expect(wildfireEventIsland("constructor")).toBeUndefined();
     expect(wildfireEventIsland("jawa-2026")).toBe("Jawa");
     expect(wildfireEventIsland("sulawesi-2026")).toBe("Sulawesi");
     expect(wildfireEventIsland("bali-nusa-tenggara-2026")).toBe("Bali_Nusa_Tenggara");
