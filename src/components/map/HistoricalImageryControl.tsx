@@ -31,7 +31,7 @@ function acquiredDate(scene: ImageryScene): string {
 }
 
 function sceneIndexAtOrBefore(scenes: ImageryScene[], targetDate: string): number {
-  let index = scenes.findIndex((scene) => acquiredDate(scene) > targetDate);
+  const index = scenes.findIndex((scene) => acquiredDate(scene) > targetDate);
   if (index < 0) return scenes.length - 1;
   return Math.max(0, index - 1);
 }
