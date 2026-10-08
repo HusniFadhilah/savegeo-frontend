@@ -245,6 +245,18 @@ export function fetchWildfireEvent(slug: string) {
   );
 }
 
+export function fetchEventSamGeoCapabilities() {
+  return userGet<import("./types").SamGeoCapabilities>("/disasters/segmentation/status");
+}
+
+export function startEventSegmentation(eventId: number, payload: { imagery_id: number; mode: import("./types").SamGeoMode; class_label: import("./types").SamGeoClass; prompt?: string; confidence_threshold: number; center_crop_m: 500 | 1000 | 2000 }) {
+  return userPost<import("./types").SamGeoJob>(`/disasters/${eventId}/segmentation/jobs`, payload);
+}
+
+export function fetchEventSegmentationJob(eventId: number, jobId: string) {
+  return userGet<import("./types").SamGeoJob>(`/disasters/${eventId}/segmentation/jobs/${encodeURIComponent(jobId)}`);
+}
+
 export function fetchWildfireCamsCapabilities(slug: string) {
   return userGet<import("@/features/karhutla/types").WildfireCamsCapabilities>(
     `/disasters/wildfires/events/${encodeURIComponent(slug)}/emissions/capabilities`,

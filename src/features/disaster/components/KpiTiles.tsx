@@ -1,27 +1,9 @@
 import type { DisasterAnalysisEntry, DisasterStatisticsResponse } from "../types";
+import { formatStatistic, statisticMetric } from "../lib/statisticMetrics";
 
 interface Props {
   kpis: DisasterStatisticsResponse["kpis"];
   analyses: DisasterAnalysisEntry[];
-}
-
-function humanizeKey(key: string): string {
-  const withoutSuffix = key.replace(/_ha$/, "");
-  const words = withoutSuffix.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1));
-  return words.join(" ");
-}
-
-function formatValue(key: string, value: unknown): string {
-  if (value === null || value === undefined) return "Belum tersedia";
-  if (typeof value === "number") {
-    const formatted = value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
-    return key.endsWith("_ha") ? `${formatted} ha` : formatted;
-  }
-  return String(value);
-}
-
-function isScalar(value: unknown): boolean {
-  return value === null || value === undefined || typeof value === "number" || typeof value === "string";
 }
 
 function modelIcon(modelId: string): string {
@@ -87,14 +69,14 @@ export default function KpiTiles({ kpis, analyses }: Props) {
               </div>
             )}
             <div className="row g-2">
-              {Object.entries(stats).filter(([, value]) => isScalar(value)).map(([key, value]) => (
+              {Object.entries(stats).filter(([key, value]) => statisticMetric(key) && (value == null || typeof value === "number" && Number.isFinite(value))).map(([key, value]) => (
                 <div className="col-6 col-md-3" key={key}>
                   <div className="metric-card">
                     <div className="disaster-metric-icon">
                       <i className={`bi ${metricIcon(key)}`} />
                     </div>
-                    <div className="metric-value">{formatValue(key, value)}</div>
-                    <div className="metric-label">{humanizeKey(key)}</div>
+                    <div className="metric-value">{formatStatistic(key, value)}</div>
+                    <div className="metric-label">{statisticMetric(key)?.label}</div>
                   </div>
                 </div>
               ))}

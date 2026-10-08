@@ -450,7 +450,7 @@ export interface AnalysisResultRecord {
   run_id: number;
   tile_url: string | null;
   features?: GeoJSON.FeatureCollection | null;
-  statistics: Record<string, number | string | null> | null;
+  statistics: Record<string, unknown> | null;
   legend: MapLegendEntry[];
   confidence_summary: Record<string, number | string | null> | null;
   coverage?: { valid_area_ha?: number | null; no_data_area_ha?: number | null; coverage_pct?: number | null } | null;
@@ -513,8 +513,14 @@ export interface CrossLayerStat {
  * result's statistics, namespaced by model_id. */
 export interface DisasterStatisticsResponse {
   event?: Pick<DisasterEventRecord, "id" | "name" | "disaster_type" | "event_date" | "start_date" | "end_date">;
-  kpis: Record<string, Record<string, number | string | null>>;
+  kpis: Record<string, Record<string, unknown>>;
   cross_layer: CrossLayerStat[];
+  completeness?: DisasterCompleteness;
+}
+
+export interface DisasterCompleteness {
+  complete: boolean; available_count: number; required_count: number; note: string;
+  sections: Array<{ id: string; label: string; status: "available" | "not_computed" | "requires_model_data"; model_ids: string[]; requirements: string[]; interpretation: string }>;
 }
 
 /** `Hotspot.to_dict()`. */

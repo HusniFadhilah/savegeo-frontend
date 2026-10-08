@@ -1,4 +1,5 @@
 import SegmentationComparison from "./components/SegmentationComparison";
+import AnalysisCompleteness from "./components/AnalysisCompleteness";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/services/apiClient";
@@ -503,10 +504,11 @@ export default function DisasterDashboard() {
         <>
           {statistics.event && (
             <div className="alert alert-info py-2 small mb-3">
-              <i className="bi bi-shield-check me-1" /> Statistik tervalidasi untuk kejadian <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type}</strong> — {statistics.event.name}. Hanya model yang kompatibel dengan jenis bencana ini yang ditampilkan.
+              <i className="bi bi-shield-check me-1" /> Hasil yang dipublikasikan untuk kejadian <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type}</strong> — {statistics.event.name}. Jenis hasil dan batas interpretasi dijelaskan pada tiap analisis.
             </div>
           )}
           <KpiTiles kpis={statistics.kpis} analyses={analyses} />
+          {statistics.completeness && <AnalysisCompleteness report={statistics.completeness} />}
 
           {/* 9. Cross-layer stat card - only rendered if the backend actually returned entries */}
           {statistics.cross_layer.length > 0 && (
@@ -581,7 +583,7 @@ export default function DisasterDashboard() {
           </div>
         )}
       </div>
-      <SamGeoSegmentationPanel aoi={aoi} imagery={imagery} />
+      <SamGeoSegmentationPanel eventId={detail.event.id} aoi={aoi} imagery={imagery} />
     </div>
   );
 }

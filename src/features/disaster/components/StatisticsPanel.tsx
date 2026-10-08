@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from "chart.js";
 import type { DisasterAnalysisEntry, DisasterStatisticsResponse } from "../types";
+import { statisticMetric } from "../lib/statisticMetrics";
 
 // Same chart.js registration pattern as lc-change/components/TimeSeriesChart.tsx
 // / NetChangeChart.tsx - this repo uses chart.js + react-chartjs-2, not
@@ -21,14 +22,6 @@ const BAR_COLORS = [
   "rgba(255,179,0,0.82)",
   "rgba(142,68,173,0.82)",
 ];
-
-function humanizeKey(key: string): string {
-  const withoutSuffix = key.replace(/_ha$/, "");
-  return withoutSuffix
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 interface Props {
   kpis: DisasterStatisticsResponse["kpis"];
@@ -61,28 +54,22 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
       {entries.map(([modelId, stats]) => {
         const analysis = analyses.find((a) => a.model_id === modelId);
         const label = analysis?.user_label ?? modelId;
-        const rows = Object.entries(stats).filter(([, v]) => typeof v === "number");
+        const rows = Object.entries(stats).filter((entry): entry is [string, number] => statisticMetric(entry[0]) !== null && typeof entry[1] === "number" && Number.isFinite(entry[1]));
         if (!rows.length) return null;
-
-        const data = {
-          labels: rows.map(([key]) => humanizeKey(key)),
-          datasets: [
-            {
-              label,
-              data: rows.map(([, v]) => Number(v)),
-              backgroundColor: rows.map((_, i) => BAR_COLORS[i % BAR_COLORS.length]),
-            },
-          ],
-        };
+        const groups = new Map<string, [string, number][]>();
+        for (const row of rows) {
+          const unit = statisticMetric(row[0])?.unit ?? "";
+          groups.set(unit, [...(groups.get(unit) ?? []), row]);
+        }
 
         return (
           <div className="col-lg-6" key={modelId}>
             <div className="card h-100 disaster-modern-card disaster-chart-card">
               <div className="card-header py-2 disaster-soft-header">{label}</div>
               <div className="card-body">
-                <div style={{ height: Math.max(220, rows.length * 42) }}>
+                {[...groups].map(([unit, group]) => <div key={unit} className="mb-3" style={{ height: Math.max(220, group.length * 42) }}>
                   <Bar
-                    data={data}
+                    data={{ labels: group.map(([key]) => statisticMetric(key)?.label ?? key), datasets: [{label, data: group.map(([, value]) => value), backgroundColor: group.map((_, i) => BAR_COLORS[i % BAR_COLORS.length])}] }}
                     options={{
                       indexAxis: "y",
                       responsive: true,
@@ -91,14 +78,14 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
                         legend: { display: false },
                         tooltip: {
                           callbacks: {
-                            label: (ctx) => `${ctx.label}: ${ctx.formattedValue} ha`,
+                            label: (ctx) => `${ctx.label}: ${ctx.formattedValue} ${unit}`.trim(),
                           },
                         },
                       },
-                      scales: { x: { title: { display: true, text: rows.every(([key]) => key.endsWith("_ha")) ? "Luas (ha)" : "Nilai" } } },
+                      scales: { x: { title: { display: true, text: unit || "Nilai" } } },
                     }}
                   />
-                </div>
+                </div>)}
               </div>
             </div>
           </div>

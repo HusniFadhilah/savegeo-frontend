@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { GeoJSON } from "react-leaflet";
+import { GeoJSON, useMap } from "react-leaflet";
+import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { ApiError } from "@/services/apiClient";
-import { fetchSamGeoCapabilities, fetchSamGeoJob, startSamGeoSegmentation } from "../api";
+import { fetchEventSamGeoCapabilities, fetchEventSegmentationJob, startEventSegmentation, fetchSamGeoJob, startSamGeoSegmentation } from "../api";
 import type { DisasterAoiRecord, SatelliteImageryRecord, SamGeoCapabilities, SamGeoClass, SamGeoJob, SamGeoMode } from "../types";
 
 interface Props {
+  eventId: number;
   aoi: DisasterAoiRecord | null;
   imagery: { pre: SatelliteImageryRecord[]; post: SatelliteImageryRecord[] };
 }
@@ -34,9 +36,21 @@ function downloadGeoJson(features: GeoJSON.FeatureCollection) {
   URL.revokeObjectURL(url);
 }
 
-export default function SamGeoSegmentationPanel({ aoi, imagery }: Props) {
+function FitCandidates({ geometry }: { geometry: GeoJSON.GeoJsonObject }) {
+  const map = useMap();
+  useEffect(() => {
+    const bounds = L.geoJSON(geometry).getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 18, padding: [15, 15] });
+  }, [geometry, map]);
+  return null;
+}
+
+export default function SamGeoSegmentationPanel({ eventId, aoi, imagery }: Props) {
+  const [open, setOpen] = useState(false);
   const [capabilities, setCapabilities] = useState<SamGeoCapabilities | null>(null);
-  const [mode, setMode] = useState<SamGeoMode>("automatic");
+  const [mode, setMode] = useState<SamGeoMode>("prompt_based");
+  const [cropSize, setCropSize] = useState<500 | 1000 | 2000>(1000);
+  const [jobSource, setJobSource] = useState<"event" | "manual">("event");
   const [classLabel, setClassLabel] = useState<SamGeoClass>("building");
   const [prompt, setPrompt] = useState("");
   const [imageryId, setImageryId] = useState("");
@@ -49,16 +63,32 @@ export default function SamGeoSegmentationPanel({ aoi, imagery }: Props) {
   const selectedImagery = useMemo(() => [...imagery.pre, ...imagery.post].find((entry) => String(entry.id) === imageryId), [imagery, imageryId]);
 
   useEffect(() => {
-    fetchSamGeoCapabilities().then(setCapabilities).catch(() => setCapabilities(null));
-  }, []);
+    if (!open) return;
+    let cancelled = false;
+    fetchEventSamGeoCapabilities().then(value => { if (!cancelled) setCapabilities(value); }).catch(() => { if (!cancelled) setCapabilities(null); });
+    return () => { cancelled = true; };
+  }, [open]);
+
+  useEffect(() => {
+    const entry = [...imagery.post, ...imagery.pre].find(image => image.source_kind === "local_upload" && image.resolution_m != null && image.resolution_m <= 3);
+    setImageryId(entry ? String(entry.id) : "");
+    setJob(null); setFeatures(null); setError(null);
+  }, [eventId, imagery]);
+
+  useEffect(() => {
+    if (capabilities?.available && capabilities.modes?.length && !capabilities.modes.includes(mode)) {
+      setMode(capabilities.modes[0]);
+    }
+  }, [capabilities, mode]);
 
   useEffect(() => {
     if (!job?.job_id || job.status !== "running") return;
     const timer = window.setTimeout(() => {
-      fetchSamGeoJob(job.job_id).then(setJob).catch((err) => setError(message(err)));
+      const request = jobSource === "event" ? fetchEventSegmentationJob(eventId, job.job_id) : fetchSamGeoJob(job.job_id);
+      request.then(setJob).catch((err) => { setError(message(err)); setJob(current => current ? { ...current, status: "failed" } : null); });
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [job]);
+  }, [job, jobSource, eventId]);
 
   useEffect(() => {
     if (job?.result) setFeatures(job.result);
@@ -66,20 +96,25 @@ export default function SamGeoSegmentationPanel({ aoi, imagery }: Props) {
 
   const start = async () => {
     if (!aoi?.geojson) return setError("AOI belum tersedia");
-    if (!upload && !itemUrl.trim()) return setError("Pilih GeoTIFF/COG atau isi URL scene");
+    if (!selectedImagery && !upload && !itemUrl.trim()) return setError("Pilih imagery event atau unggah GeoTIFF/COG");
     if (mode === "prompt_based" && classLabel === "custom_prompt" && !prompt.trim()) return setError("Isi custom prompt");
     setError(null);
     setFeatures(null);
     try {
-      const result = await startSamGeoSegmentation({
+      const result = selectedImagery ? await startEventSegmentation(eventId, {
+        imagery_id: selectedImagery.id, mode, class_label: classLabel,
+        prompt: classLabel === "custom_prompt" ? prompt.trim() : undefined,
+        confidence_threshold: confidence, center_crop_m: cropSize,
+      }) : await startSamGeoSegmentation({
         item_url: upload ? undefined : itemUrl.trim(),
         file: upload,
         aoi: aoi.geojson,
         mode,
-        class_label: classLabel,
+        class_label: mode === "prompt_based" ? classLabel : undefined,
         prompt: mode === "prompt_based" ? (classLabel === "custom_prompt" ? prompt.trim() : classLabel) : undefined,
         confidence_threshold: confidence,
       });
+      setJobSource(selectedImagery ? "event" : "manual");
       setJob(result);
     } catch (err) {
       setError(message(err));
@@ -99,22 +134,24 @@ export default function SamGeoSegmentationPanel({ aoi, imagery }: Props) {
 
   return (
     <div className="card mt-3 disaster-modern-card">
-      <div className="card-header py-2 disaster-soft-header"><i className="bi bi-magic me-1" /> Interactive SamGeo segmentation</div>
-      <div className="card-body">
+      <button type="button" className="card-header py-2 disaster-soft-header border-0 text-start" aria-expanded={open} onClick={() => setOpen(value => !value)}><i className="bi bi-magic me-1" /> Segmentasi objek · bangunan, jalan, air, pohon</button>
+      {open && <div className="card-body">
         <div className="alert alert-warning py-2 small">Hasil segmentasi adalah kandidat dan berstatus review_required. Jangan menafsirkannya sebagai kerusakan terkonfirmasi.</div>
         {!capabilities?.available && <div className="text-muted small mb-2">Runtime SamGeo belum tersedia pada server.</div>}
         <div className="row g-2">
-          <div className="col-md-3"><label className="form-label small">Imagery pre/post</label><select className="form-select form-select-sm" value={imageryId} onChange={(event) => setImageryId(event.target.value)}><option value="">Upload/URL manual</option>{[...imagery.pre, ...imagery.post].map((entry) => <option key={entry.id} value={entry.id}>{entry.phase} · {entry.satellite} · {entry.acquisition_date}</option>)}</select></div>
-          <div className="col-md-3"><label className="form-label small">GeoTIFF/COG upload</label><input className="form-control form-control-sm" type="file" accept=".tif,.tiff" onChange={(event) => setUpload(event.target.files?.[0])} /></div>
-          <div className="col-md-3"><label className="form-label small">COG URL</label><input className="form-control form-control-sm" value={itemUrl} onChange={(event) => setItemUrl(event.target.value)} placeholder={selectedImagery?.data_source ?? "https://..."} /></div>
-          <div className="col-md-3"><label className="form-label small">Mode</label><select className="form-select form-select-sm" value={mode} onChange={(event) => setMode(event.target.value as SamGeoMode)}><option value="automatic">Automatic</option><option value="prompt_based">Prompt-based</option></select></div>
+          <div className="col-md-3"><label className="form-label small">Imagery pre/post</label><select className="form-select form-select-sm" value={imageryId} onChange={(event) => setImageryId(event.target.value)}><option value="">Upload/URL manual</option>{[...imagery.pre, ...imagery.post].map((entry) => <option key={entry.id} value={entry.id} disabled={entry.source_kind !== "local_upload" || entry.resolution_m == null || entry.resolution_m > 3}>{entry.phase} · {entry.satellite} · {entry.acquisition_date} · {entry.resolution_m ?? "?"} m</option>)}</select></div>
+          <div className="col-md-3"><label className="form-label small">GeoTIFF/COG upload</label><input className="form-control form-control-sm" type="file" accept=".tif,.tiff" disabled={!!selectedImagery} onChange={(event) => setUpload(event.target.files?.[0])} /></div>
+          <div className="col-md-3"><label className="form-label small">COG URL</label><input className="form-control form-control-sm" value={itemUrl} disabled={!!selectedImagery} onChange={(event) => setItemUrl(event.target.value)} placeholder="https://..." /></div>
+          <div className="col-md-3"><label className="form-label small">Mode</label><select className="form-select form-select-sm" value={mode} onChange={(event) => setMode(event.target.value as SamGeoMode)}><option value="automatic">Automatic</option><option value="prompt_based" disabled={!capabilities?.modes?.includes("prompt_based")}>Prompt-based</option></select></div>
         </div>
-        {mode === "prompt_based" && <div className="row g-2 mt-1"><div className="col-md-4"><label className="form-label small">Kelas</label><select className="form-select form-select-sm" value={classLabel} onChange={(event) => setClassLabel(event.target.value as SamGeoClass)}>{CLASS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div><div className="col-md-4"><label className="form-label small">Custom prompt</label><input className="form-control form-control-sm" value={prompt} onChange={(event) => setPrompt(event.target.value)} disabled={classLabel !== "custom_prompt"} placeholder="e.g. damaged buildings" /></div><div className="col-md-4"><label className="form-label small">Confidence: {confidence.toFixed(2)}</label><input className="form-range" type="range" min="0" max="1" step="0.05" value={confidence} onChange={(event) => setConfidence(Number(event.target.value))} /></div></div>}
+        {selectedImagery && <label className="form-label small mt-2">Potongan di pusat AOI <select className="form-select form-select-sm" value={cropSize} onChange={e => setCropSize(Number(e.target.value) as 500 | 1000 | 2000)}><option value={500}>500 m</option><option value={1000}>1 km</option><option value={2000}>2 km</option></select><span className="text-muted">Potongan membatasi beban model dan menjaga detail. Hasil hanya mencakup potongan ini.</span></label>}
+        {mode === "prompt_based" && <div className="row g-2 mt-1"><div className="col-md-4"><label className="form-label small">Kelas</label><select className="form-select form-select-sm" value={classLabel} onChange={(event) => setClassLabel(event.target.value as SamGeoClass)}>{CLASS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div><div className="col-md-4"><label className="form-label small">Custom prompt</label><input className="form-control form-control-sm" value={prompt} onChange={(event) => setPrompt(event.target.value)} disabled={classLabel !== "custom_prompt"} placeholder="Contoh: buildings" /></div><div className="col-md-4"><label className="form-label small">Ambang deteksi: {confidence.toFixed(2)}</label><input className="form-range" type="range" min="0" max="1" step="0.05" value={confidence} onChange={(event) => setConfidence(Number(event.target.value))} /></div></div>}
         {error && <div className="alert alert-danger py-1 px-2 small mt-2">{error}</div>}
-        <div className="d-flex gap-2 mt-2"><button type="button" className="btn btn-sm btn-primary" onClick={start} disabled={job?.status === "running" || !aoi}>{job?.status === "running" ? "Memproses…" : "Segment"}</button>{features && <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => downloadGeoJson(features)}>Export GeoJSON</button>}</div>
+        <div className="d-flex gap-2 mt-2"><button type="button" className="btn btn-sm btn-primary" onClick={start} disabled={job?.status === "running" || !aoi || !capabilities?.available}>{job?.status === "running" ? "Memproses…" : "Segment"}</button>{features && <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => downloadGeoJson(features)}>Export GeoJSON</button>}</div>
         {job?.status === "running" && <div className="small text-muted mt-2" role="status">Job {job.job_id} sedang diproses…</div>}
-        {features && <><div className="small text-muted mt-2">{features.features.length} polygon kandidat · confidence {confidence.toFixed(2)} · review_required</div><div className="row g-2 mt-1"><div className="col-lg-7"><MapView id="samgeoCandidateMap"><BasemapSwitcher /> <GeoJSON data={features} style={{ color: "#7c3aed", weight: 2, fillOpacity: 0.2 }} /></MapView></div><div className="col-lg-5" style={{ maxHeight: 260, overflowY: "auto" }}>{features.features.map((feature, index) => <div className="d-flex gap-1 align-items-center mb-1" key={`${index}-${feature.properties?.segment_id ?? "segment"}`}><input className="form-control form-control-sm" value={String(feature.properties?.class_label ?? classLabel)} onChange={(event) => editFeatureLabel(index, event.target.value)} aria-label={`Label polygon ${index + 1}`} /><button type="button" className="btn btn-sm btn-outline-danger" onClick={() => deleteFeature(index)} aria-label={`Hapus polygon ${index + 1}`}><i className="bi bi-trash" /></button></div>)}</div></div></>}
-      </div>
+        {job?.status === "failed" && <div role="alert" className="alert alert-danger mt-2">{job.message || "Pekerjaan segmentasi gagal"}</div>}
+        {features && <><div className="small text-muted mt-2">{features.features.length} polygon kandidat · {String(job?.result?.metadata?.acquisition_date ?? "Tanggal sumber manual")} · resolusi pemrosesan {typeof job?.result?.metadata?.effective_resolution_m === "number" ? job.result.metadata.effective_resolution_m.toFixed(2) : "?"} m · review_required. Ambang deteksi bukan probabilitas kerusakan. Hitungan polygon belum menghitung bangunan rusak.</div><div className="row g-2 mt-1"><div className="col-lg-7"><MapView id="samgeoCandidateMap"><BasemapSwitcher /><FitCandidates geometry={features.features.length ? features : aoi!.geojson} /> <GeoJSON key={`${job?.job_id}-${features.features.length}`} data={features} style={{ color: "#7c3aed", weight: 2, fillOpacity: 0.2 }} /></MapView></div><div className="col-lg-5" style={{ maxHeight: 260, overflowY: "auto" }}>{features.features.map((feature, index) => <div className="d-flex gap-1 align-items-center mb-1" key={`${index}-${feature.properties?.segment_id ?? "segment"}`}><input className="form-control form-control-sm" value={String(feature.properties?.class_label ?? "Kandidat objek")} onChange={(event) => editFeatureLabel(index, event.target.value)} aria-label={`Label polygon ${index + 1}`} /><button type="button" className="btn btn-sm btn-outline-danger" onClick={() => deleteFeature(index)} aria-label={`Hapus polygon ${index + 1}`}><i className="bi bi-trash" /></button></div>)}</div></div></>}
+      </div>}
     </div>
   );
 }
