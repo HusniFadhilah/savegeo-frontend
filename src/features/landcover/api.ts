@@ -5,7 +5,14 @@ import type { LandCoverDatasetCatalog, LandCoverParams, LandCoverResult } from "
 
 /** Both endpoints return their payload directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function fetchLandCoverDatasets() {
-  return apiClient.get<LandCoverDatasetCatalog>("/landcover/datasets");
+  return apiClient.get<LandCoverDatasetCatalog>("/landcover/datasets").then((catalog) =>
+    Object.fromEntries(Object.entries(catalog).map(([key, source]) => [key, {
+      ...source,
+      // Legacy catalog entries use "present" for near-real-time products.
+      // Year selectors need a numeric upper bound.
+      year_max: String(source.year_max) === "present" ? new Date().getFullYear() : source.year_max,
+    }])),
+  );
 }
 
 export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCoverParams) {
