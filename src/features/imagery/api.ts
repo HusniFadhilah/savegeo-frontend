@@ -1,11 +1,9 @@
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
-import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type {
   DemTileResponse,
   GetDemTileParams,
   GetSceneTileParams,
-  HistoricalSentinel2TileResponse,
   ImageryProviderCatalogResponse,
   AdvancedImageryCapabilities,
   ImagerySceneListResponse,
@@ -101,15 +99,4 @@ export function runRasterToolbox(params: { itemUrl: string; assetKey: string; ao
 
 export function getNasaGibsLayers() {
   return apiClient.get<{ layers: { id: string; name: string; date_mode: string }[] }>("/imagery/nasa-gibs/layers");
-}
-
-/** Create a bounded five-day Copernicus Sentinel-2 L1C mosaic for the map history layer. */
-export function getHistoricalSentinel2Tile(params: { aoi: AoiPayload; startDate: string; endDate: string }) {
-  return apiClient.post<HistoricalSentinel2TileResponse>("/imagery/historical/sentinel2-tile", {
-    aoi: params.aoi,
-    start_date: params.startDate,
-    end_date: params.endDate,
-    max_cloud_cover: 100,
-    cloud_mask_technique: "s2cloudless",
-  }, { auth: "app", timeoutMs: 180_000 });
 }

@@ -143,16 +143,6 @@ export interface ImagerySceneTileResponse {
   cloud_mask_technique?: string | null;
 }
 
-export interface HistoricalSentinel2TileResponse {
-  tile_url: string | null;
-  scene_count: number;
-  start_date: string;
-  end_date: string;
-  dataset: string;
-  resolution_m: number | null;
-  cloud_mask_technique: string | null;
-}
-
 export interface ListScenesParams {
   aoi: AoiPayload;
   satellite: string;

@@ -448,9 +448,9 @@ export default function ResultsMapPanel({
                 </>
               )}
             </MapView>
-            {legend.entries.length > 0 && (
+            {(legend.entries.length > 0 || legend.scale) && (
               <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 1000, maxWidth: 220 }}>
-                <MapLegend title={legend.title} entries={legend.entries} />
+                <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
               </div>
             )}
           </div>

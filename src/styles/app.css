@@ -8118,7 +8118,10 @@ html[data-theme="dark"] .wildfire-fdrs-row,
   .wildfire-detail-shell .wildfire-map-wrap .leaflet-container { height: 430px; min-height: 430px; }
   .wildfire-map-status { display: flex; flex-direction: column; gap: .15rem; font-size: .68rem; }
   .wildfire-map-legend { left: .55rem; right: .55rem; bottom: .55rem; justify-content: center; flex-wrap: wrap; font-size: .6rem; }
-  .wildfire-cams-map-legend { left: .55rem; right: auto; bottom: 3.25rem; width: min(13rem, calc(100% - 1.1rem)); }
+  /* Keep stacked CAMS legends in the clear top-right lane on short/mobile maps.
+     Bottom-left map controls sit 55px above the edge, so anchoring these cards
+     above them causes the cards to cover the controls when two layers are on. */
+  .wildfire-cams-map-legend { left: auto; right: 2.75rem; top: .55rem; bottom: auto; width: min(13rem, calc(100% - 5.75rem)); }
   .wildfire-cams-map-legend__item { padding: .4rem .5rem; font-size: .62rem; }
   .wildfire-layer-control { top: 3.25rem; right: 10px; }
   .wildfire-layer-panel { width: min(18rem, calc(100vw - 1.1rem)); max-height: calc(100% - 1rem); overflow: auto; }

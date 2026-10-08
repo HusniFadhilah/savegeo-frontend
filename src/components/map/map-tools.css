@@ -110,7 +110,6 @@ html[data-theme="dark"] .map-view-shell .leaflet-top.leaflet-left > .leaflet-con
 .map-history-date { display: flex; gap: 4px; }
 .map-history-date select { padding: 5px 1px; border: 0; border-bottom: 1px solid #ffffff45; background: transparent; color: #fff; font-size: 16px; cursor: pointer; }
 .map-history-date input[type="date"] { max-width: 145px; padding: 5px 4px; border: 1px solid #ffffff45; border-radius: 4px; background: #263226; color: #fff; color-scheme: dark; font: inherit; }
-.map-history-copernicus-date { align-items: center; color: #d1d7ce; font-size: 11px; white-space: nowrap; }
 .map-history-date option { background: #263226; color: #fff; }
 .map-history-slider { flex: 1; min-width: 0; }
 .map-history-track { display: flex; align-items: center; gap: 5px; }

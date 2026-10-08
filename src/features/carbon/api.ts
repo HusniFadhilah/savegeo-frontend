@@ -259,6 +259,7 @@ export interface DirectReferenceLayer {
   unit?: string | null;
   target_pool?: string | null;
   provider_type?: string | null;
+  source?: string | null;
   date_range?: { start?: string; end?: string } | null;
   legend?: Record<string, { label?: string; color?: string; class_value?: number }>;
   vis_params?: { min?: number; max?: number; palette?: string[] };

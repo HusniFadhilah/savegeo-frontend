@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { boundsToPayload, type AoiPayload } from "@/features/carbon/lib/geo";
-import { getHistoricalSentinel2Tile } from "@/features/imagery/api";
+import { getImagerySceneTile, listImageryScenes } from "@/features/imagery/api";
+import type { ImageryScene } from "@/features/imagery/types";
 import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, selectEsriWaybackScene, type WaybackScene } from "@/features/imagery/wayback";
 import { clampNasaGibsDate, nasaGibsBlackMarbleTileUrl, NASA_GIBS_BLACK_MARBLE_YEARS, NASA_GIBS_FIRST_DATE, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE, nasaGibsDateAt, nasaGibsDateIndex, nasaGibsTimelineTicks, nasaGibsTrueColorTileUrl, nasaGibsViirsNightTileUrl, type NasaGibsBlackMarbleYear } from "@/features/imagery/nasaGibs";
 import { EOX_CLOUDLESS_YEARS, eoxCloudlessTileUrl, type EoxCloudlessYear } from "@/features/imagery/eoxCloudless";
@@ -18,7 +19,6 @@ import "./map-tools.css";
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
 const CURRENT_SCENE_ID = "current";
 const COPERNICUS_S2_FIRST_DATE = "2015-06-27";
-const COPERNICUS_S2_WINDOW_DAYS = 5;
 
 function addUtcDays(date: string, days: number): string {
   const value = new Date(`${date}T00:00:00Z`);
@@ -26,30 +26,25 @@ function addUtcDays(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-function daysBetween(start: string, end: string): number {
-  return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000);
+function acquiredDate(scene: ImageryScene): string {
+  return scene.acquired_at.slice(0, 10);
 }
 
-function copernicusS2MaxIndex(maxDate: string): number {
-  return Math.max(0, Math.floor(daysBetween(COPERNICUS_S2_FIRST_DATE, maxDate) / COPERNICUS_S2_WINDOW_DAYS));
+function sceneIndexAtOrBefore(scenes: ImageryScene[], targetDate: string): number {
+  let index = scenes.findIndex((scene) => acquiredDate(scene) > targetDate);
+  if (index < 0) return scenes.length - 1;
+  return Math.max(0, index - 1);
 }
 
-function copernicusS2DateAt(index: number): string {
-  return addUtcDays(COPERNICUS_S2_FIRST_DATE, Math.max(0, index) * COPERNICUS_S2_WINDOW_DAYS);
-}
-
-function normalizeCopernicusS2Date(date: string, maxDate: string): string {
-  const requested = Number.isFinite(Date.parse(`${date}T00:00:00Z`)) ? date : maxDate;
-  const index = Math.round(daysBetween(COPERNICUS_S2_FIRST_DATE, requested) / COPERNICUS_S2_WINDOW_DAYS);
-  return copernicusS2DateAt(Math.min(copernicusS2MaxIndex(maxDate), Math.max(0, index)));
-}
-
-function copernicusS2YearTicks(maxDate: string) {
-  const totalDays = Math.max(1, daysBetween(COPERNICUS_S2_FIRST_DATE, maxDate));
-  const lastYear = Number(maxDate.slice(0, 4));
-  return Array.from({ length: lastYear - 2015 + 1 }, (_, index) => 2015 + index).map((year) => ({
-    year: String(year),
-    position: Math.max(0, Math.min(100, daysBetween(COPERNICUS_S2_FIRST_DATE, year === 2015 ? COPERNICUS_S2_FIRST_DATE : `${year}-01-01`) / totalDays * 100)),
+function getCopernicusYearTicks(scenes: ImageryScene[]) {
+  const firstSceneByYear = new Map<string, number>();
+  scenes.forEach((scene, index) => {
+    const year = acquiredDate(scene).slice(0, 4);
+    if (!firstSceneByYear.has(year)) firstSceneByYear.set(year, index);
+  });
+  return [...firstSceneByYear].map(([year, index]) => ({
+    year,
+    position: index / Math.max(1, scenes.length - 1) * 100,
   }));
 }
 
@@ -130,7 +125,6 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const sentinelToday = now.toISOString().slice(0, 10);
-  const copernicusMaxDate = addUtcDays(sentinelToday, -COPERNICUS_S2_WINDOW_DAYS);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -141,8 +135,9 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const [viirsNightTileDate, setViirsNightTileDate] = useState(() => dateFromQuery() ?? today);
   const [blackMarbleYear, setBlackMarbleYear] = useState<NasaGibsBlackMarbleYear>(2016);
   const [eoxYear, setEoxYear] = useState<EoxCloudlessYear>(2025);
-  const [copernicusDate, setCopernicusDate] = useState(() => normalizeCopernicusS2Date(dateFromQuery() ?? copernicusMaxDate, copernicusMaxDate));
-  const [copernicusTileDate, setCopernicusTileDate] = useState(() => normalizeCopernicusS2Date(dateFromQuery() ?? copernicusMaxDate, copernicusMaxDate));
+  const [copernicusSelectedAcquiredAt, setCopernicusSelectedAcquiredAt] = useState<string | null>(null);
+  const [copernicusTileSceneId, setCopernicusTileSceneId] = useState<string | null>(null);
+  const [copernicusLastTileScene, setCopernicusLastTileScene] = useState<ImageryScene | null>(null);
   const [copernicusAoi, setCopernicusAoi] = useState<AoiPayload | null>(null);
   const [tileError, setTileError] = useState(false);
   const [queryDate, setQueryDate] = useState<string | undefined>(() => dateFromQuery());
@@ -166,41 +161,96 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
-  const copernicusMaxIndex = copernicusS2MaxIndex(copernicusMaxDate);
-  const copernicusIndex = Math.min(copernicusMaxIndex, Math.round(daysBetween(COPERNICUS_S2_FIRST_DATE, copernicusDate) / COPERNICUS_S2_WINDOW_DAYS));
-  const copernicusEndDate = addUtcDays(copernicusDate, COPERNICUS_S2_WINDOW_DAYS - 1);
-  const copernicusYearTicks = copernicusS2YearTicks(copernicusMaxDate);
   const copernicusViewportKey = copernicusAoi ? JSON.stringify(copernicusAoi) : "no-viewport";
-  const copernicusQuery = useQuery({
-    queryKey: ["map-copernicus-sentinel2", copernicusTileDate, copernicusViewportKey],
+  const copernicusScenesQuery = useQuery({
+    queryKey: ["map-copernicus-sentinel2-scenes", copernicusViewportKey, sentinelToday],
     queryFn: () => {
       if (!copernicusAoi) throw new Error("Map bounds are not ready yet");
-      return getHistoricalSentinel2Tile({
+      return listImageryScenes({
         aoi: copernicusAoi,
-        startDate: copernicusTileDate,
-        endDate: addUtcDays(copernicusTileDate, COPERNICUS_S2_WINDOW_DAYS),
+        satellite: "sentinel2_l1c",
+        startDate: COPERNICUS_S2_FIRST_DATE,
+        endDate: addUtcDays(sentinelToday, 1),
+        maxCloudCover: 100,
       });
     },
     enabled: historySource === "copernicus-sentinel2" && enabled && Boolean(copernicusAoi),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
     retry: 1,
   });
+  const copernicusScenes = useMemo(
+    () => [...(copernicusScenesQuery.data?.scenes ?? [])].sort((left, right) => left.acquired_at.localeCompare(right.acquired_at)),
+    [copernicusScenesQuery.data?.scenes],
+  );
+  const copernicusTargetDate = copernicusSelectedAcquiredAt?.slice(0, 10) ?? analysisDate ?? sentinelToday;
+  const copernicusDateIndex = copernicusScenes.length
+    ? sceneIndexAtOrBefore(copernicusScenes, copernicusTargetDate)
+    : -1;
+  const explicitCopernicusIndex = copernicusScenes.findIndex((scene) => scene.acquired_at === copernicusSelectedAcquiredAt);
+  const copernicusIndex = explicitCopernicusIndex >= 0 ? explicitCopernicusIndex : copernicusDateIndex;
+  const copernicusSelectedScene = copernicusScenes[copernicusIndex] ?? null;
+  const copernicusSelectedSceneId = copernicusSelectedScene?.id ?? null;
+  const copernicusTicks = useMemo(() => getCopernicusYearTicks(copernicusScenes), [copernicusScenes]);
   useEffect(() => {
-    const updateViewport = () => {
+    if (!copernicusSelectedSceneId) {
+      setCopernicusTileSceneId(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setCopernicusTileSceneId(copernicusSelectedSceneId), 350);
+    return () => window.clearTimeout(timer);
+  }, [copernicusSelectedSceneId]);
+  const copernicusTileQuery = useQuery({
+    queryKey: ["map-copernicus-sentinel2-scene-tile", copernicusTileSceneId],
+    queryFn: () => {
+      if (!copernicusTileSceneId) throw new Error("Sentinel-2 scene is not selected");
+      return getImagerySceneTile({
+        satellite: "sentinel2_l1c",
+        sceneId: copernicusTileSceneId,
+        forceScene: true,
+      });
+    },
+    enabled: historySource === "copernicus-sentinel2" && enabled && Boolean(copernicusTileSceneId),
+    placeholderData: (previousData) => previousData,
+    staleTime: 60 * 60 * 1000,
+    retry: 1,
+  });
+  const copernicusTileScene = copernicusScenes.find((scene) => scene.id === copernicusTileQuery.data?.scene_id)
+    ?? copernicusLastTileScene;
+  useEffect(() => {
+    const tileSceneId = copernicusTileQuery.data?.scene_id;
+    if (!tileSceneId) return;
+    const scene = copernicusScenes.find((item) => item.id === tileSceneId);
+    if (scene && (copernicusLastTileScene?.id !== scene.id || copernicusLastTileScene.acquired_at !== scene.acquired_at)) {
+      setCopernicusLastTileScene(scene);
+    }
+  }, [copernicusScenes, copernicusLastTileScene, copernicusTileQuery.data?.scene_id]);
+  const copernicusScenesTruncated = copernicusScenesQuery.data?.truncated === true;
+  useEffect(() => {
+    let previousCenter = map.getCenter();
+    let previousZoom = map.getZoom();
+    const updateViewport = (force = false) => {
+      const center = map.getCenter();
+      if (!force && previousCenter.distanceTo(center) < 1_000) return;
+      previousCenter = center;
       const next = viewportAoi(map);
       setCopernicusAoi((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next);
     };
-    updateViewport();
-    map.on("moveend zoomend resize", updateViewport);
-    return () => { map.off("moveend zoomend resize", updateViewport); };
-  }, [map]);
-  useEffect(() => {
-    if (analysisDate) setCopernicusDate(normalizeCopernicusS2Date(analysisDate, copernicusMaxDate));
-  }, [analysisDate, copernicusMaxDate]);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setCopernicusTileDate(copernicusDate), 350);
-    return () => window.clearTimeout(timer);
-  }, [copernicusDate]);
+    const handleMoveEnd = () => {
+      const zoom = map.getZoom();
+      const zoomChanged = zoom !== previousZoom;
+      previousZoom = zoom;
+      if (zoomChanged) {
+        if (copernicusScenesTruncated || previousCenter.distanceTo(map.getCenter()) >= 1_000) updateViewport(true);
+        else previousCenter = map.getCenter();
+        return;
+      }
+      updateViewport();
+    };
+    updateViewport(true);
+    map.on("moveend", handleMoveEnd);
+    return () => { map.off("moveend", handleMoveEnd); };
+  }, [copernicusScenesTruncated, map]);
   const entries = [...scenes, { id: CURRENT_SCENE_ID, release_label: today, tile_url: "" }];
   const autoScene = analysisDate ? selectEsriWaybackScene(scenes as WaybackScene[], analysisDate) : null;
   const defaultHistoricalSceneId = autoScene?.id ?? scenes[0]?.id ?? null;
@@ -228,8 +278,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const blackMarbleTicks = NASA_GIBS_BLACK_MARBLE_YEARS.map((year, index) => ({ year: String(year), position: index / (NASA_GIBS_BLACK_MARBLE_YEARS.length - 1) * 100 }));
   const eoxYearIndex = EOX_CLOUDLESS_YEARS.indexOf(eoxYear);
   const eoxYearTicks = EOX_CLOUDLESS_YEARS.map((year, index) => ({ year: String(year), position: index / (EOX_CLOUDLESS_YEARS.length - 1) * 100 }));
-  const copernicusTileUrl = copernicusQuery.data?.tile_url ?? "";
-  const copernicusSceneCount = copernicusQuery.data?.scene_count ?? 0;
+  const copernicusTileUrl = copernicusTileQuery.data?.tile_url ?? "";
   const selectedTileUrl = selected?.tile_url ?? "";
   const selectedReleaseDate = selected?.release_label ?? today;
 
@@ -240,7 +289,15 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
     return () => { window.removeEventListener("popstate", sync); window.removeEventListener("savegeo:map-query", sync); };
   }, []);
 
-  useEffect(() => { setSelectedId(null); }, [queryDate, targetDate]);
+  useEffect(() => {
+    setSelectedId(null);
+    setCopernicusSelectedAcquiredAt(null);
+  }, [queryDate, targetDate]);
+  useEffect(() => {
+    if (!analysisDate && !copernicusSelectedAcquiredAt && copernicusScenes.length) {
+      setCopernicusSelectedAcquiredAt(copernicusScenes[copernicusScenes.length - 1].acquired_at);
+    }
+  }, [analysisDate, copernicusScenes, copernicusSelectedAcquiredAt]);
   useEffect(() => {
     if (historySource !== "esri-wayback" || isFetching || selected.id !== CURRENT_SCENE_ID) return;
     if (defaultHistoricalSceneId) setSelectedId(defaultHistoricalSceneId);
@@ -316,8 +373,8 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
         ? nasaGibsBlackMarbleTileUrl(blackMarbleYear)
         : historySource === "eox-cloudless"
           ? eoxCloudlessTileUrl(eoxYear)
-          : historySource === "copernicus-sentinel2"
-            ? copernicusTileUrl
+      : historySource === "copernicus-sentinel2"
+            ? (copernicusSelectedScene ? copernicusTileUrl : "")
           : selectedTileUrl;
     if (!tileUrl) { setTileError(false); return; }
     const attribution = historySource === "nasa-gibs"
@@ -327,11 +384,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       : historySource === "nasa-black-marble"
         ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Black Marble ${blackMarbleYear}`
       : historySource === "copernicus-sentinel2"
-        ? `<a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus Sentinel-2 L1C</a> - Contains modified Copernicus Sentinel data ${copernicusTileDate.slice(0, 4)}, via <a href="https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_HARMONIZED" target="_blank" rel="noreferrer">Earth Engine</a>`
+        ? `<a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus Sentinel-2 L1C</a> - Contains modified Copernicus Sentinel data ${copernicusTileScene?.acquired_at.slice(0, 4) ?? sentinelToday.slice(0, 4)}, via <a href="https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_HARMONIZED" target="_blank" rel="noreferrer">Earth Engine</a>`
       : historySource === "eox-cloudless"
           ? `<a href="https://cloudless.eox.at/" target="_blank" rel="noreferrer">EOxCloudless</a> by EOX IT Services GmbH - modified Copernicus Sentinel data ${eoxYear} - <a href="${eoxYear === 2016 ? "https://creativecommons.org/licenses/by/4.0/" : "https://creativecommons.org/licenses/by-nc-sa/4.0/"}" target="_blank" rel="noreferrer">${eoxYear === 2016 ? "CC BY 4.0" : "CC BY-NC-SA 4.0 (non-commercial use)"}</a>`
           : `Esri World Imagery Wayback · Rilis ${selectedReleaseDate}`;
-    const maxNativeZoom = historySource === "nasa-gibs" ? 9 : historySource === "nasa-black-marble" || historySource === "nasa-viirs-night" ? 8 : historySource === "eox-cloudless" || historySource === "copernicus-sentinel2" ? 14 : 19;
+    const maxNativeZoom = historySource === "nasa-gibs" ? 9 : historySource === "nasa-black-marble" || historySource === "nasa-viirs-night" ? 8 : historySource === "eox-cloudless" ? 14 : historySource === "copernicus-sentinel2" ? 16 : 19;
     const layer = L.tileLayer(tileUrl, {
       pane: paneName,
       maxNativeZoom,
@@ -348,7 +405,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       : historySource === "nasa-black-marble"
         ? `NASA Black Marble ${blackMarbleYear}`
       : historySource === "copernicus-sentinel2"
-          ? `Copernicus Sentinel-2 ${copernicusTileDate}–${addUtcDays(copernicusTileDate, COPERNICUS_S2_WINDOW_DAYS - 1)} (${copernicusSceneCount} scenes)`
+          ? `Copernicus Sentinel-2 ${copernicusTileScene ? `${acquiredDate(copernicusTileScene)} ${copernicusTileScene.acquired_at.slice(11, 16)} UTC` : ""}`
       : historySource === "eox-cloudless"
           ? `EOX Sentinel-2 Cloudless ${eoxYear}`
           : selectedReleaseDate;
@@ -358,7 +415,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       map.removeLayer(layer);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusSceneCount, copernicusTileDate, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];
@@ -386,7 +443,8 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
     if (year !== undefined) setEoxYear(year);
   };
   const chooseCopernicusIndex = (nextIndex: number) => {
-    setCopernicusDate(copernicusS2DateAt(Math.min(copernicusMaxIndex, Math.max(0, nextIndex))));
+    const scene = copernicusScenes[nextIndex];
+    if (scene) setCopernicusSelectedAcquiredAt(scene.acquired_at);
   };
   const setNasaTimelineDateAt = (nextIndex: number) => {
     const firstDate = isViirsNight ? NASA_GIBS_VIIRS_NIGHT_FIRST_DATE : NASA_GIBS_FIRST_DATE;
@@ -423,7 +481,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
           <option value="nasa-black-marble">NASA GIBS · Black Marble (snapshot 2012/2016)</option>
           <option value="nasa-viirs-night">NASA GIBS - VIIRS Day/Night harian (sejak 2016)</option>
           <option value="eox-cloudless">EOX · Sentinel-2 Cloudless (tahunan)</option>
-          <option value="copernicus-sentinel2">Copernicus · Sentinel-2 L1C (mosaik 5 hari)</option>
+          <option value="copernicus-sentinel2">Copernicus · Sentinel-2 L1C (scene asli)</option>
         </select>
       </label>
       {activeBasemapId === "nasa-gibs-viirs-night" && <p className="map-history-note">Basemap Earth at Night 2012 adalah komposit tetap. Untuk menelusuri citra malam harian, pilih NASA GIBS - VIIRS malam harian.</p>}
@@ -495,31 +553,30 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
         <p className="map-history-note">Mosaik tahunan tersedia untuk 2016 dan 2018–2025; data 2017 tidak tersedia. Mosaik 2018–2025 berlisensi CC BY-NC-SA 4.0 dan hanya untuk penggunaan nonkomersial; mosaik 2016 berlisensi CC BY 4.0.</p>
       </> : historySource === "copernicus-sentinel2" ? <>
         <div className="map-history-body map-history-copernicus-body">
-          <div className="map-history-nasa-selected-date"><small>Mosaik lima hari</small><strong>{copernicusDate}–{copernicusEndDate}</strong></div>
-          <label className="map-history-date map-history-copernicus-date">Tanggal awal
-            <input type="date" aria-label="Tanggal awal mosaik Sentinel-2" min={COPERNICUS_S2_FIRST_DATE} max={copernicusMaxDate} value={copernicusDate}
-              onChange={(event) => setCopernicusDate(normalizeCopernicusS2Date(event.target.value, copernicusMaxDate))} />
-          </label>
+          <div className="map-history-nasa-selected-date"><small>Tanggal akuisisi scene</small><strong>{copernicusSelectedScene ? `${acquiredDate(copernicusSelectedScene)} · ${copernicusSelectedScene.acquired_at.slice(11, 16)} UTC` : "—"}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
-              <button type="button" aria-label="Periode Sentinel-2 sebelumnya" disabled={copernicusIndex === 0}
+              <button type="button" aria-label="Scene Sentinel-2 sebelumnya" disabled={copernicusIndex <= 0}
                 onClick={() => chooseCopernicusIndex(copernicusIndex - 1)}>&lsaquo;</button>
-              <input type="range" aria-label="Linimasa historis Copernicus Sentinel-2 setiap lima hari" aria-valuetext={`${copernicusDate} sampai ${copernicusEndDate}`}
-                min={0} max={copernicusMaxIndex} step={1} value={copernicusIndex}
+              <input type="range" aria-label="Linimasa scene Copernicus Sentinel-2" aria-valuetext={copernicusSelectedScene?.acquired_at ?? "Belum ada scene"}
+                min={0} max={Math.max(0, copernicusScenes.length - 1)} step={1} value={Math.max(0, copernicusIndex)} disabled={!copernicusScenes.length}
                 onChange={(event) => chooseCopernicusIndex(Number(event.target.value))} />
-              <button type="button" aria-label="Periode Sentinel-2 berikutnya" disabled={copernicusIndex >= copernicusMaxIndex}
+              <button type="button" aria-label="Scene Sentinel-2 berikutnya" disabled={copernicusIndex < 0 || copernicusIndex >= copernicusScenes.length - 1}
                 onClick={() => chooseCopernicusIndex(copernicusIndex + 1)}>&rsaquo;</button>
             </div>
             <div className="map-history-ruler" aria-hidden="true">
-              {copernicusYearTicks.map(({ year, position }) => <span key={year} style={{ left: `${position}%` }}>{year}</span>)}
+              {copernicusTicks.map(({ year, position }) => <span key={year} style={{ left: `${position}%` }}>{year}</span>)}
             </div>
           </div>
         </div>
-        {copernicusQuery.isFetching && <p role="status" className="map-history-note">Memuat scene Copernicus pada area peta...</p>}
-        {copernicusQuery.isError && <p role="alert" className="map-history-note">Mosaik Sentinel-2 gagal dimuat. <button type="button" onClick={() => void copernicusQuery.refetch()}>Coba lagi</button></p>}
-        {!copernicusQuery.isFetching && !copernicusQuery.isError && copernicusQuery.data?.scene_count === 0 && <p role="status" className="map-history-note">Tidak ada scene pada area dan periode ini. Coba periode lima hari berikutnya.</p>}
-        {!copernicusQuery.isError && copernicusQuery.data && copernicusQuery.data.scene_count > 0 && <p className="map-history-note">{copernicusQuery.data.scene_count} scene pada area peta; resolusi asli hingga 10 m/piksel.</p>}
-        <p className="map-history-note">Arsip Copernicus Sentinel-2 L1C tersedia sejak 27 Juni 2015. L1C adalah reflektansi TOA (belum dikoreksi atmosfer), dipilih agar arsip lebih awal ikut tersedia. Revisit nominal lima hari; tanggal akuisisi berbeda menurut lokasi, dan awan masih dapat terlihat.</p>
+        {copernicusScenesQuery.isFetching && !copernicusScenes.length && <p role="status" className="map-history-note">Mencari tanggal akuisisi Sentinel-2 di area peta...</p>}
+        {copernicusScenesQuery.isError && <p role="alert" className="map-history-note">Daftar scene Sentinel-2 gagal dimuat. <button type="button" onClick={() => void copernicusScenesQuery.refetch()}>Coba lagi</button></p>}
+        {!copernicusScenesQuery.isFetching && !copernicusScenesQuery.isError && !copernicusScenes.length && <p role="status" className="map-history-note">Tidak ada scene Sentinel-2 pada area peta.</p>}
+        {copernicusTileQuery.isFetching && <p role="status" className="map-history-note">Menyiapkan tile scene Sentinel-2...</p>}
+        {copernicusTileQuery.isError && <p role="alert" className="map-history-note">Tile scene Sentinel-2 gagal dimuat. <button type="button" onClick={() => void copernicusTileQuery.refetch()}>Coba lagi</button></p>}
+        {copernicusScenes.length > 0 && <p className="map-history-note">{copernicusScenes.length}{copernicusScenesQuery.data?.truncated ? "+" : ""} akuisisi tersedia untuk area peta. Tiap posisi slider menampilkan satu scene L1C pada tanggal dan waktu akuisisinya.</p>}
+        {copernicusScenesTruncated && <p className="map-history-note">Jumlah scene di area ini melewati batas hasil. Perbesar peta atau geser ke area yang lebih kecil untuk memuat arsip lokal.</p>}
+        <p className="map-history-note">Arsip Copernicus Sentinel-2 L1C tersedia sejak 27 Juni 2015. L1C adalah reflektansi TOA (belum dikoreksi atmosfer); awan tetap dapat terlihat.</p>
       </> : <>
         <div className="map-history-body">
           <div className="map-history-date">

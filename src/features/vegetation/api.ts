@@ -9,6 +9,10 @@ import type {
   VegetationTimeSeriesResponse,
 } from "./types";
 
+// Province-wide four-index runs can exceed 11 minutes (Bali live check: ~14 min).
+// This bounds job polling; each status request retains its own 30-second limit.
+const VEGETATION_JOB_TIMEOUT_MS = 30 * 60_000;
+
 /** POST /analyze/vegetation returns the VegetationResult dict directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function analyzeVegetation(aoi: AoiPayload, year: number, params: VegetationParams) {
   return runAnalysisJob<VegetationResult>("vegetation", {
@@ -21,7 +25,7 @@ export function analyzeVegetation(aoi: AoiPayload, year: number, params: Vegetat
     indices: params.indices,
     satellite: params.satellite,
     cloud_mask_technique: params.cloudMaskTechnique,
-  }, { timeoutMs: 650_000 });
+  }, { timeoutMs: VEGETATION_JOB_TIMEOUT_MS });
 }
 
 export interface SatelliteCatalogResponse {
