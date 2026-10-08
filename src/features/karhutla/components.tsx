@@ -40,7 +40,7 @@ import WindArrowLayer from "./WindArrowLayer";
 import WildfireLayerPanel from "./WildfireLayerPanel";
 import CamsFireEmissionsPanel from "./CamsFireEmissionsPanel";
 import CamsHotspotPopup from "./CamsHotspotPopup";
-import { wildfireEventIsland } from "./eventRegions";
+import { wildfireEventIsland, wildfireEventRegionLabel } from "./eventRegions";
 
 function statusLabel(status: WildfireEvent["status"], language: "id" | "en") {
   const labels =
@@ -1654,7 +1654,7 @@ export function KarhutlaDetailPage() {
                         });
                       }}
                     >
-                      <option value="">Semua provinsi {wildfireEventIsland(event.slug) ?? "event"}</option>
+                      <option value="">Semua provinsi {wildfireEventRegionLabel(event.slug)}</option>
                       {provinceOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
                     </select>
                   </label>
@@ -1896,7 +1896,7 @@ export function KarhutlaDetailPage() {
                 <div>
                   <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
                   <span>
-                    {query.district || query.city || query.province || `Seluruh ${wildfireEventIsland(event.slug) ?? "wilayah event"}`} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
+                    {query.district || query.city || query.province || `Seluruh ${wildfireEventRegionLabel(event.slug)}`} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
                   </span>
                 </div>
                 {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
@@ -1998,6 +1998,17 @@ export function KarhutlaDetailPage() {
           <section className="wildfire-side-card">
             <h2>{t("wildfire.sources.title")}</h2>
             <p>{event.source}</p>
+            {event.boundary_source && <p className="wildfire-muted">Batas wilayah: {event.boundary_source}</p>}
+            {event.official_reports && event.official_reports.length > 0 && (
+              <ul>
+                {event.official_reports.map((report) => (
+                  <li key={report.url + report.event_date}>
+                    <a href={report.url} target="_blank" rel="noopener noreferrer">{report.title}</a>
+                    <small> · {report.event_date} · {report.location}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p className="wildfire-muted">
               {event.burned_area_ha == null
                 ? t("wildfire.sources.noBurnedArea")

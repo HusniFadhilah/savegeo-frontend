@@ -31,6 +31,7 @@ export interface WildfireEvent {
   severity: "low" | "medium" | "high" | "critical";
   source_ids: string[];
   source: string;
+  official_reports?: { title: string; event_date: string; location: string; url: string }[];
   boundary_source: string | null;
   methodology: string | null;
   limitations: string[];

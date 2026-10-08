@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { wildfireEventIsland } from "./eventRegions";
+import { wildfireEventIsland, wildfireEventRegionLabel } from "./eventRegions";
 import { FALLBACK_WILDFIRE_EVENTS } from "./data";
 
 describe("wildfire event regional coverage", () => {
@@ -7,6 +7,12 @@ describe("wildfire event regional coverage", () => {
     expect(wildfireEventIsland("sumatra-2026")).toBe("Sumatra");
     expect(wildfireEventIsland("kalimantan-2026")).toBe("Kalimantan");
     expect(wildfireEventIsland("another-event")).toBeUndefined();
+    expect(wildfireEventIsland("jawa-2026")).toBe("Jawa");
+    expect(wildfireEventIsland("sulawesi-2026")).toBe("Sulawesi");
+    expect(wildfireEventIsland("bali-nusa-tenggara-2026")).toBe("Bali_Nusa_Tenggara");
+    expect(wildfireEventIsland("maluku-2026")).toBe("Maluku");
+    expect(wildfireEventIsland("papua-2026")).toBe("Papua");
+    expect(wildfireEventRegionLabel("bali-nusa-tenggara-2026")).toBe("Bali & Nusa Tenggara");
   });
   it("includes ten Sumatra provinces and eastern Kepulauan Riau", () => {
     const event = FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === "sumatra-2026")!;
