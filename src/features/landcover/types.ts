@@ -50,7 +50,7 @@ export type LandCoverDatasetCatalog = Record<string, LandCoverDatasetOption>;
 /** Response of POST /analyze/landcover: keyed by dataset key, plus a few
  * non-dataset metadata keys (processing_time, total_area_ha, resolution)
  * that must be filtered out before treating entries as dataset results. */
-export type LandCoverResult = Record<string, LandCoverDatasetResult | number | string | undefined>;
+export type LandCoverResult = Record<string, LandCoverDatasetResult | { error: string; available?: boolean } | number | string | undefined>;
 
 export const NON_DATASET_KEYS = new Set(["processing_time", "total_area_ha", "resolution"]);
 

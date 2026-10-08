@@ -77,13 +77,17 @@ export default function LandCoverResultTables({ result }: Props) {
     isLandCoverDatasetEntry(key, value),
   );
 
-  if (!entries.length) return null;
+  const errors = Object.entries(result).flatMap(([key, value]) =>
+    value && typeof value === "object" && "error" in value ? [{ key, message: value.error }] : [],
+  );
+  if (!entries.length && !errors.length) return null;
 
   return (
     <div className="mt-4">
       <h5 className="mb-3">
         <i className="bi bi-map me-1" /> Analisis Tutupan Lahan
       </h5>
+      {errors.map(({ key, message }) => <div className="alert alert-warning py-2 small" role="alert" key={key}><strong>{key.replace(/_/g, " ")}</strong>: {message}</div>)}
       {entries.map(([key, value]) => {
         if (!isLandCoverDatasetEntry(key, value)) return null;
         const label = value.dataset_name || key.replace(/_/g, " ");
