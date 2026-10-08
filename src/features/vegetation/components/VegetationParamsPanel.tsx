@@ -114,8 +114,18 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       </h6>
 
       <div className="mb-3">
-        <label className="form-label">{t("imagery.satelliteProvider")}</label>
+        <div className="d-flex align-items-center gap-1 mb-1">
+          <label className="form-label mb-0" htmlFor="vegetation-satellite-provider">{t("imagery.satelliteProvider")}</label>
+          {activeSatellite && <InfoTip label={t("carbon.params.moreInfo")} content={<>
+            <strong>{activeSatellite.name}</strong>
+            <p className="mb-1">{activeSatellite.provider}</p>
+            <p className="mb-1">{activeSatellite.resolution_label} · {t("imagery.revisit", { days: activeSatellite.revisit_days })} · {t("imagery.since", { year: activeSatellite.launch })}</p>
+            <p className="mb-1">{activeSatellite.description}</p>
+            <p className="mb-0">{t("imagery.bands")}: {activeSatellite.bands_available.join(", ")}</p>
+          </>} />}
+        </div>
         <select
+          id="vegetation-satellite-provider"
           className="form-select"
           value={params.satellite}
           onChange={(e) => onParamsChange({ satellite: e.target.value })}
@@ -127,28 +137,6 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
             </option>
           ))}
         </select>
-        {activeSatellite && (
-          <div className="mt-2 p-2 border rounded" style={{ fontSize: ".78rem" }}>
-            <div className="d-flex flex-wrap gap-3 mb-1">
-              <span>
-                <i className="bi bi-building me-1" /> <strong>{activeSatellite.provider}</strong>
-              </span>
-              <span>
-                <i className="bi bi-aspect-ratio me-1" /> {activeSatellite.resolution_label}
-              </span>
-              <span>
-                <i className="bi bi-arrow-repeat me-1" /> {t("imagery.revisit", { days: activeSatellite.revisit_days })}
-              </span>
-              <span>
-                <i className="bi bi-calendar-event me-1" /> {t("imagery.since", { year: activeSatellite.launch })}
-              </span>
-            </div>
-            <div className="text-muted mb-1">{activeSatellite.description}</div>
-            <div className="text-muted">
-              <i className="bi bi-layers me-1" /> {t("imagery.bands")}: {activeSatellite.bands_available.join(", ")}
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="mb-3">
