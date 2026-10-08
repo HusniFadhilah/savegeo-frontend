@@ -8332,6 +8332,13 @@ html[data-theme="dark"] .disaster-list-shell .wildfire-overview-value-skeleton,
   background-size: 220% 100%;
 }
 
+.lulc-source-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .12rem .6rem; padding: .55rem .7rem; margin-top: .45rem; border: 1px solid #e4ebe5; border-radius: 10px; background: #fbfdfb; }
+.lulc-source-summary > strong { overflow: hidden; color: #263d2e; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.lulc-source-summary > span { color: #718077; font-size: .7rem; }
+.lulc-source-summary > .inline-info-tip { grid-column: 2; grid-row: 1 / span 2; }
+html[data-theme="dark"] .lulc-source-summary { border-color: #34453a; background: #111d2b; }
+html[data-theme="dark"] .lulc-source-summary > strong { color: #e6efe8; }
+html[data-theme="dark"] .lulc-source-summary > span { color: #a3b3a8; }
 .inline-info-tip {
   position: relative;
   display: inline-flex;

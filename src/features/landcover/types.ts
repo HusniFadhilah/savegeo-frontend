@@ -36,6 +36,7 @@ export interface LandCoverDatasetOption {
   class_count?: number;
   collection_version?: string;
   accuracy?: string;
+  limitations?: string[];
   coverage?: string;
   supports_transition?: boolean;
   key: string;

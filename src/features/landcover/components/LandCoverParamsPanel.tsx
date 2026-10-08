@@ -44,13 +44,23 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
 
   const datasetList = Object.values(catalog);
   const sources = datasetList.length ? datasetList : PRIMARY_LULC_DATASETS;
-  const hasAdvancedSelection = params.datasets.some((key) => !isPrimaryLandCover(catalog[key] ?? { key, name: key, resolution: "" }));
-  const datasetOptions = landCoverChoices(sources, showAdvanced || hasAdvancedSelection);
+  const advancedSources = landCoverChoices(sources, true).filter((source) => !isPrimaryLandCover(source));
+  const advancedKeys = new Set(advancedSources.map((source) => source.key));
+  const hasAdvancedSelection = params.datasets.some((key) => advancedKeys.has(key));
+  const showAdvancedToggle = advancedSources.length > 0;
+  const datasetOptions = landCoverChoices(sources, (showAdvanced && showAdvancedToggle) || hasAdvancedSelection);
   const selectedSources = params.datasets.map((key) => catalog[key]).filter(Boolean);
   const dateMode = params.dateMode ?? "year";
   const selectedMonth = params.selectedMonth ?? params.startMonth;
   const startDate = params.startDate || dateForYear(year, 1, 1);
   const endDate = params.endDate || dateForYear(year, 12, 31);
+
+  useEffect(() => {
+    if (!Object.keys(catalog).length) return;
+    const available = new Set(landCoverChoices(Object.values(catalog), true).map((source) => source.key));
+    const valid = params.datasets.filter((key) => available.has(key));
+    if (valid.length !== params.datasets.length) onParamsChange({ datasets: valid });
+  }, [catalog, params.datasets, onParamsChange]);
 
   const setDateMode = (mode: LandCoverParams["dateMode"]) => {
     if (mode === "month") {
@@ -71,26 +81,25 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
       </h6>
 
       <div className="mb-3">
-        <label className="form-label">{t("landcover.dataset")}</label>
-        <div className="form-check mb-2">
-          <input id="lulc-advanced" type="checkbox" className="form-check-input" checked={showAdvanced || hasAdvancedSelection} disabled={hasAdvancedSelection} onChange={(event) => setShowAdvanced(event.target.checked)} />
-          <label htmlFor="lulc-advanced" className="form-check-label small">{text("Tampilkan dataset khusus dan model eksperimental", "Show specialist datasets and experimental models")}</label>
+        <div className="d-flex align-items-center justify-content-between mb-2">
+          <label className="form-label mb-0" htmlFor="landcoverDatasetSelectSearch">{t("landcover.dataset")}</label>
+          <div className="d-flex align-items-center gap-2">
+            <InfoTip label={text("Info dataset LULC", "LULC dataset information")} content={text("Pilih beberapa sumber untuk membandingkan hasil. Resolusi, tahun, dan catatan akurasi tiap sumber tersedia melalui ikon info pada ringkasan pilihan.", "Select multiple sources to compare results. Resolution, years, and accuracy notes are available from the info icon for each selected source.")} />
+            {showAdvancedToggle && <div className="form-check form-switch mb-0 d-flex align-items-center gap-1">
+              <input id="lulc-advanced" type="checkbox" className="form-check-input mt-0" checked={showAdvanced || hasAdvancedSelection} disabled={hasAdvancedSelection} onChange={(event) => setShowAdvanced(event.target.checked)} />
+              <label htmlFor="lulc-advanced" className="small text-muted">{text("Lanjutan", "Advanced")}</label>
+              <InfoTip label={text("Info dataset lanjutan", "Advanced dataset information")} content={text("Hanya menampilkan model dan produk khusus yang saat ini tersedia. Keluaran RF referensi memakai label MapBiomas dan belum divalidasi independen secara lokal.", "Shows only currently available models and specialist products. Reference RF outputs use MapBiomas labels and have not been independently validated locally.")} />
+            </div>}
+          </div>
         </div>
-        {(showAdvanced || hasAdvancedSelection) && <p className="small text-warning">{text("Model RF belum memiliki validasi lokal independen. Produk khusus/coarse memiliki cakupan dan tujuan berbeda. Hapus pilihan lanjutan sebelum menutup opsi ini.", "RF models lack independent local validation. Specialist/coarse products have different coverage and purposes. Remove advanced selections before closing this option.")}</p>}
         <SearchableMultiSelect
           id="landcoverDatasetSelectSearch"
           value={params.datasets}
           onChange={(datasets) => onParamsChange({ datasets })}
           options={datasetOptions.map((ds) => ({
             value: ds.key,
-            label: ds.deprecated ? `${ds.name} · legacy` : ds.name,
-            description: ds.deprecated && ds.replacement_key
-              ? `Legacy — gunakan ${ds.replacement_key}`
-              : ds.alias_of
-                ? `Adapter untuk ${ds.alias_of}`
-                : ds.resolution
-                  ? `Resolusi ${ds.resolution}`
-                  : undefined,
+            label: ds.name,
+            description: ds.resolution,
           }))}
           placeholder={t("landcover.searchPlaceholder")}
           emptyHint={t("landcover.empty")}
@@ -115,26 +124,22 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
             </option>
           ))}
         </select>
-        <small className="text-muted d-block mt-1">
-          {t("landcover.selected", { count: params.datasets.length })}
-        </small>
-        {selectedSources.map((source) => <div className="border rounded p-2 small mt-2" key={source.key}>
-          <strong>{source.name}</strong><div>{source.class_count} {text("kelas", "classes")} · {source.resolution} · {source.year_min}–{source.year_max} · {source.coverage}</div>
-          {source.collection_version && <div>{text("Versi", "Version")}: {source.collection_version}</div>}
-          <div>{source.monthly ? text("Mendukung periode bulan/tanggal.", "Supports month/date periods.") : text("Produk tahunan; pilihan bulan tidak mengubah raster sumber.", "Annual product; month selection does not change the source raster.")}</div>
-          {source.supported_years && !source.supported_years.includes(year) && <div className="text-warning">{text("Tahun pilihan belum tersedia. Periksa tahun efektif pada hasil.", "The selected year is unavailable. Check the effective year in the result.")}</div>}
-          {source.accuracy && <div className="text-muted">{source.accuracy}</div>}
+        {selectedSources.map((source) => <div className="lulc-source-summary" key={source.key}>
+          <strong>{source.name}</strong>
+          <span>{source.class_count} {text("kelas", "classes")} · {source.resolution} · {source.year_min}–{source.year_max} · {source.monthly ? text("Bulanan", "Monthly") : text("Tahunan", "Annual")}</span>
+          <InfoTip label={text(`Info ${source.name}`, `${source.name} information`)} content={<>
+            {source.description && <p>{source.description}</p>}
+            {source.collection_version && <p>{text("Versi", "Version")}: {source.collection_version}</p>}
+            {source.accuracy && <p>{source.accuracy}</p>}
+            {source.supported_years && !source.supported_years.includes(year) && <p>{text(`Tahun ${year} belum tersedia pada sumber ini. Hasil akan memakai tahun terdekat yang didukung.`, `Year ${year} is not available for this source. Results will use the nearest supported year.`)}</p>}
+            {source.limitations?.map((limitation) => <p key={limitation}>{limitation}</p>)}
+          </>} />
         </div>)}
-        {datasetList.some((source) => source.available === false) && <details className="small mt-2"><summary>{text("Dataset/model yang belum tersedia", "Unavailable datasets/models")}</summary>
-          {datasetList.filter((source) => source.available === false).map((source) => <p key={source.key} className="mb-1">{source.name}: {source.availability_reason}</p>)}
-          <a href="/admin/ml-models">{text("Konfigurasi model di Admin", "Configure models in Admin")}</a>
-        </details>}
       </div>
 
       {params.datasets.some((key) => ["AlphaEarth_RF", "Sentinel1_2_RF", "Dynamic_World"].includes(key)) && <div className="mb-3">
-        <label className="form-label" htmlFor="landcover-confidence">{text("Ambang confidence (opsional)", "Confidence threshold (optional)")}</label>
+        <div className="d-flex align-items-center gap-1 mb-1"><label className="form-label mb-0" htmlFor="landcover-confidence">{text("Ambang confidence (opsional)", "Confidence threshold (optional)")}</label><InfoTip label={text("Info confidence", "Confidence information")} content={text("Confidence RF adalah proporsi suara classifier, bukan nilai akurasi yang terkalibrasi.", "RF confidence is the classifier vote proportion, not a calibrated accuracy score.")} /></div>
         <input id="landcover-confidence" className="form-control" type="number" min={0} max={1} step={0.05} placeholder="0–1" value={params.confidenceThreshold ?? ""} onChange={(event) => onParamsChange({ confidenceThreshold: event.target.value === "" ? undefined : Number(event.target.value) })} />
-        <small className="text-muted">{text("Confidence RF adalah proporsi suara dan belum dikalibrasi sebagai akurasi.", "RF confidence is a vote proportion and has not been calibrated as accuracy.")}</small>
       </div>}
 
       <div className="mb-3">
