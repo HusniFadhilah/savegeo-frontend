@@ -24,6 +24,8 @@ export interface LandCoverDatasetResult {
 
 /** Response of GET /landcover/datasets: keyed by dataset key. */
 export interface LandCoverDatasetOption {
+  recommended?: boolean;
+  selection_tier?: string;
   available?: boolean;
   availability_reason?: string;
   supported_years?: number[];

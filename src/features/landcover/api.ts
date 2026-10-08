@@ -2,6 +2,7 @@ import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { LandCoverDatasetCatalog, LandCoverParams, LandCoverResult } from "./types";
+import { canonicalLandCoverKeys } from "./catalog";
 
 /** Both endpoints return their payload directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function fetchLandCoverDatasets() {
@@ -21,7 +22,7 @@ export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCove
   const payload: Record<string, unknown> = {
     aoi,
     year,
-    datasets: params.datasets,
+    datasets: canonicalLandCoverKeys(params.datasets),
     dw_mode: params.dwMode,
     include_improbable_classes: params.includeImprobableClasses,
     confidence_threshold: params.confidenceThreshold,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
-import type { LandCoverDatasetCatalog, LandCoverDatasetOption, LandCoverParams } from "@/features/landcover/types";
+import type { LandCoverDatasetCatalog, LandCoverParams } from "@/features/landcover/types";
+import { canonicalLandCoverKeys, isPrimaryLandCover, landCoverChoices, PRIMARY_LULC_DATASETS } from "@/features/landcover/catalog";
 import SearchableMultiSelect from "@/components/ui/SearchableMultiSelect";
 import InfoTip from "@/components/ui/InfoTip";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -13,62 +14,6 @@ interface Props {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-const FALLBACK_LULC_DATASETS: LandCoverDatasetOption[] = [
-  { key: "Dynamic_World", name: "Dynamic World", resolution: "10m" },
-  {
-    key: "GeoSave_Copernicus_DynamicWorld",
-    name: "GeoSave Copernicus Sentinel-2 Land Cover",
-    resolution: "10m",
-  },
-  { key: "ESA_WorldCover", name: "ESA WorldCover", resolution: "10m" },
-  {
-    key: "ESRI_LandCover",
-    name: "ESRI 10m Annual LULC v3 (GEE Community Catalog)",
-    resolution: "10m",
-  },
-  {
-    key: "ESRI_LULC_LivingAtlas",
-    name: "Esri Sentinel-2 10m LULC Time Series (ArcGIS Living Atlas)",
-    resolution: "10m",
-  },
-  { key: "MODIS_LandCover", name: "MODIS MCD12Q1 IGBP", resolution: "500m" },
-  { key: "Copernicus_LandCover", name: "Copernicus Global Land Cover", resolution: "100m" },
-  { key: "GLC_FCS30D", name: "GLC_FCS30D", resolution: "30m" },
-  { key: "C3S_LandCover", name: "C3S Land Cover", resolution: "300m" },
-  {
-    key: "JAXA_FNF",
-    name: "JAXA ALOS Forest/Non-Forest",
-    resolution: "25m",
-    deprecated: true,
-    replacement_key: "JAXA_FNF4",
-  },
-  { key: "JAXA_FNF4", name: "JAXA PALSAR Forest/Non-Forest 4-class", resolution: "25m" },
-  { key: "MapBiomas_Indonesia", name: "MapBiomas Indonesia LANDY", resolution: "30m" },
-  {
-    key: "GeoSave_MapBiomas_Indonesia",
-    name: "GeoSave MapBiomas Indonesia LANDY",
-    resolution: "30m",
-  },
-  {
-    key: "DEA_Mangroves",
-    name: "Digital Earth Australia Mangroves Landsat (ArcGIS Living Atlas)",
-    resolution: "25m",
-  },
-  { key: "JRC_TMF", name: "JRC Tropical Moist Forest Annual Changes v1 2022", resolution: "30m" },
-  {
-    key: "FROM_GLC10",
-    name: "Tsinghua FROM-GLC 10m Global Land Cover 2017",
-    resolution: "10m",
-    deprecated: true,
-    replacement_key: "ESRI_LandCover",
-  },
-  {
-    key: "GLAD_GLCLUC",
-    name: "GLAD Annual Global Land Use/Land Cover (Potapov et al. 2022)",
-    resolution: "30m",
-  },
-];
-
 function dateForYear(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -78,6 +23,12 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
   const { t, language } = useI18nStore();
   const text = (id: string, en: string) => language === "id" ? id : en;
   const [catalog, setCatalog] = useState<LandCoverDatasetCatalog>({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  useEffect(() => {
+    const canonical = canonicalLandCoverKeys(params.datasets);
+    if (canonical.join("|") !== params.datasets.join("|")) onParamsChange({ datasets: canonical });
+  }, [params.datasets, onParamsChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +43,9 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
   }, []);
 
   const datasetList = Object.values(catalog);
-  const datasetOptions = (datasetList.length ? datasetList : FALLBACK_LULC_DATASETS).filter((item) => item.available !== false);
+  const sources = datasetList.length ? datasetList : PRIMARY_LULC_DATASETS;
+  const hasAdvancedSelection = params.datasets.some((key) => !isPrimaryLandCover(catalog[key] ?? { key, name: key, resolution: "" }));
+  const datasetOptions = landCoverChoices(sources, showAdvanced || hasAdvancedSelection);
   const selectedSources = params.datasets.map((key) => catalog[key]).filter(Boolean);
   const dateMode = params.dateMode ?? "year";
   const selectedMonth = params.selectedMonth ?? params.startMonth;
@@ -119,6 +72,11 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
 
       <div className="mb-3">
         <label className="form-label">{t("landcover.dataset")}</label>
+        <div className="form-check mb-2">
+          <input id="lulc-advanced" type="checkbox" className="form-check-input" checked={showAdvanced || hasAdvancedSelection} disabled={hasAdvancedSelection} onChange={(event) => setShowAdvanced(event.target.checked)} />
+          <label htmlFor="lulc-advanced" className="form-check-label small">{text("Tampilkan dataset khusus dan model eksperimental", "Show specialist datasets and experimental models")}</label>
+        </div>
+        {(showAdvanced || hasAdvancedSelection) && <p className="small text-warning">{text("Model RF belum memiliki validasi lokal independen. Produk khusus/coarse memiliki cakupan dan tujuan berbeda. Hapus pilihan lanjutan sebelum menutup opsi ini.", "RF models lack independent local validation. Specialist/coarse products have different coverage and purposes. Remove advanced selections before closing this option.")}</p>}
         <SearchableMultiSelect
           id="landcoverDatasetSelectSearch"
           value={params.datasets}
@@ -167,7 +125,7 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
           {source.supported_years && !source.supported_years.includes(year) && <div className="text-warning">{text("Tahun pilihan belum tersedia. Periksa tahun efektif pada hasil.", "The selected year is unavailable. Check the effective year in the result.")}</div>}
           {source.accuracy && <div className="text-muted">{source.accuracy}</div>}
         </div>)}
-        {datasetList.some((source) => source.available === false) && <details className="small mt-2"><summary>{text("Model yang memerlukan konfigurasi", "Models needing configuration")}</summary>
+        {datasetList.some((source) => source.available === false) && <details className="small mt-2"><summary>{text("Dataset/model yang belum tersedia", "Unavailable datasets/models")}</summary>
           {datasetList.filter((source) => source.available === false).map((source) => <p key={source.key} className="mb-1">{source.name}: {source.availability_reason}</p>)}
           <a href="/admin/ml-models">{text("Konfigurasi model di Admin", "Configure models in Admin")}</a>
         </details>}

@@ -1,24 +1,10 @@
 import type { LcClassInfo, LcDataset, LcYearResult, TransitionData } from "./types";
 
-export const DATASET_OPTIONS: { value: LcDataset; label: string }[] = [
-  { value: "Dynamic_World", label: "Dynamic World (Google, 10m)" },
-  {
-    value: "GeoSave_Copernicus_DynamicWorld",
-    label: "GeoSave Copernicus Sentinel-2 Land Cover (10m)",
-  },
-  { value: "ESA_WorldCover", label: "ESA WorldCover (10m)" },
-  { value: "ESRI_LandCover", label: "ESRI Land Cover (10m)" },
-  { value: "MapBiomas_Indonesia", label: "MapBiomas Indonesia LANDY (30m)" },
-  { value: "GeoSave_MapBiomas_Indonesia", label: "GeoSave MapBiomas Indonesia LANDY (30m)" },
-  { value: "JAXA_FNF4", label: "JAXA PALSAR FNF 4-class (25m)" },
-  { value: "JAXA_FNF", label: "JAXA ALOS FNF (25m)" },
-];
-
 export const DATASET_NOTES: Record<LcDataset, string> = {
   Dynamic_World: "Near real-time · Data tersedia tiap tahun (2015+)",
   ESA_WorldCover: "Tersedia: 2020, 2021 · Tahun lain → data terdekat",
-  ESRI_LandCover: "Tersedia: 2017–2023 · Luar range → batas terdekat",
-  MapBiomas_Indonesia: "Indonesia tahunan 2000–2023 · kelas hutan, gambut, sawit, tambang, urban",
+  ESRI_LandCover: "Tahunan 2017–2025 · periksa tahun efektif",
+  MapBiomas_Indonesia: "Indonesia Collection 4.1 tahunan 1990–2024 · 13 kelas",
   JAXA_FNF4: "Forest/Non-Forest 4 kelas 2017–2020 · relevan untuk monitoring hutan/karbon",
   JAXA_FNF: "Forest/Non-Forest 2007–2018 · sederhana untuk baseline hutan",
 };

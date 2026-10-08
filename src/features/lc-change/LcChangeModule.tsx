@@ -10,7 +10,8 @@ import InfoTip from "@/components/ui/InfoTip";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear, analyzeLandCoverTransition } from "./api";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
-import { DATASET_NOTES, DATASET_OPTIONS } from "./utils";
+import { canonicalLandCoverKey, isPrimaryLandCover, landCoverChoices, PRIMARY_LULC_DATASETS } from "@/features/landcover/catalog";
+import { DATASET_NOTES } from "./utils";
 import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcYearResult, TransitionData } from "./types";
 import type { LandCoverDatasetCatalog } from "@/features/landcover/types";
 import YearSelector from "./components/YearSelector";
@@ -89,6 +90,7 @@ function dateRangeForYear(year: number, start: string, end: string): { start: st
  */
 export default function LcChangeModule() {
   const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
   const query = useMemo(() => parseQuery(typeof window !== "undefined" ? window.location.search : ""), []);
   const { showLoading, setLoadingProgress, hideLoading } = useUiStore();
 
@@ -122,7 +124,7 @@ export default function LcChangeModule() {
     },
     [setAoiState],
   );
-  const [dataset, setDataset] = useState<LcDataset>((query.dataset as LcDataset) || "Dynamic_World");
+  const [dataset, setDataset] = useState<LcDataset>(canonicalLandCoverKey(query.dataset || "Dynamic_World"));
   const [years, setYears] = useState<number[]>([initialYearFrom, initialYearTo]);
   // Default to Dynamic World's complete available date coverage, clipped to
   // each selected year (full historical years plus the current YTD window).
@@ -163,11 +165,15 @@ export default function LcChangeModule() {
     updateUrlFromState({ ...query, dataset, yearFrom: years[0], yearTo: years[1], monthFrom: startMonth, monthTo: endMonth, dwProbabilityThreshold, changeMode: mode });
   }, [query, dataset, years, startMonth, endMonth, dwProbabilityThreshold, mode]);
 
-  // Dataset options fetched from GET /landcover/datasets (same catalog the
-  // Landcover feature calls) instead of the 6-item static DATASET_OPTIONS -
-  // falls back to that static list if the request fails/is empty.
-  const [datasetOptions, setDatasetOptions] = useState(DATASET_OPTIONS);
+  // Share the canonical curated catalog and primary fallback with land cover.
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [datasetDocs, setDatasetDocs] = useState<LandCoverDatasetCatalog>({});
+  const hasAdvancedSelection = !isPrimaryLandCover(datasetDocs[dataset] ?? { key: dataset, name: dataset, resolution: "" });
+  const datasetOptions = useMemo(() => {
+    const entries = Object.values(datasetDocs);
+    return landCoverChoices(entries.length ? entries : PRIMARY_LULC_DATASETS, showAdvanced || hasAdvancedSelection, true)
+      .map((source) => ({ value: source.key, label: `${source.name} (${source.resolution})` }));
+  }, [datasetDocs, showAdvanced, hasAdvancedSelection]);
   useEffect(() => {
     let cancelled = false;
     fetchLandCoverDatasets()
@@ -175,9 +181,6 @@ export default function LcChangeModule() {
         if (cancelled || !catalog) return;
         const entries = Object.values(catalog);
         if (!entries.length) return;
-        setDatasetOptions(
-          entries.filter((ds) => ds.available !== false && ds.supports_transition !== false).map((ds) => ({ value: ds.key, label: `${ds.name} (${ds.resolution})` })),
-        );
         setDatasetDocs(catalog);
       })
       .catch(() => {
@@ -352,6 +355,7 @@ export default function LcChangeModule() {
   }, [aoi, changeMapCacheKey, tab, completedAnalysisSignature, analysisSignature]);
 
   const onDatasetChange = (value: LcDataset) => {
+    value = canonicalLandCoverKey(value);
     setDataset(value);
     if (datasetDocs[value]?.monthly !== true && !DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(value)) setDateMode("year");
   };
@@ -498,8 +502,8 @@ export default function LcChangeModule() {
       }
       if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul perubahan tutupan lahan.`);
       if (target === "lc_change.dataset") {
-        if (typeof value !== "string" || !datasetOptions.some((item) => item.value === value)) throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
-        setDataset(value);
+        if (typeof value !== "string" || !datasetOptions.some((item) => item.value === canonicalLandCoverKey(value))) throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
+        setDataset(canonicalLandCoverKey(value));
       } else if (target === "lc_change.fromYear" || target === "lc_change.toYear") {
         if (!Number.isInteger(value) || (value as number) < minYear || (value as number) > maxYear) throw new Error("Tahun di luar rentang yang tersedia.");
         const from = target === "lc_change.fromYear" ? value as number : years[0];
@@ -680,6 +684,11 @@ export default function LcChangeModule() {
                 </label>
                 {datasetNote && <InfoTip label={t("lc.moreInfo")} content={datasetNote} />}
               </div>
+              <div className="form-check mb-2">
+                <input id="lc-change-advanced" type="checkbox" className="form-check-input" checked={showAdvanced || hasAdvancedSelection} disabled={hasAdvancedSelection} onChange={(event) => setShowAdvanced(event.target.checked)} />
+                <label htmlFor="lc-change-advanced" className="form-check-label small">{language === "id" ? "Tampilkan dataset khusus dan model eksperimental" : "Show specialist datasets and experimental models"}</label>
+              </div>
+              {(showAdvanced || hasAdvancedSelection) && <p className="small text-warning">{language === "id" ? "RF belum divalidasi lokal secara independen. Pilih dataset utama untuk menutup opsi lanjutan." : "RF lacks independent local validation. Select a primary dataset to close advanced options."}</p>}
               <SearchableSelect
                 id="lcChangeDataset"
                 value={dataset}
@@ -687,7 +696,7 @@ export default function LcChangeModule() {
                 options={datasetOptions.map((d) => ({ value: d.value, label: d.label }))}
               />
               <small className="text-muted d-block mt-2">{datasetNote}</small>
-              <details className="small mt-2"><summary>Model yang memerlukan konfigurasi</summary>
+              <details className="small mt-2"><summary>Dataset/model yang belum tersedia</summary>
                 {Object.values(datasetDocs).filter((item) => item.available === false).map((item) => (
                   <p className="mb-1" key={item.key}><strong>{item.name}</strong>: {item.availability_reason}</p>
                 ))}
