@@ -20,6 +20,16 @@ describe("carbon reference year choices", () => {
     expect(years[0]).toBe(2023);
     expect(years.at(-1)).toBe(2000);
   });
+
+  it("offers licensed Chloris vintages only when provided by the live catalog", () => {
+    const fallback = FALLBACK_CARBON_REFERENCE_DATASETS.find((item) => item.value === "CHLORIS_AGB_STOCK")!;
+    expect(carbonDatasetYearOptions(fallback)).not.toContain(2025);
+    expect(carbonDatasetYearOptions(fallback)).not.toContain(2024);
+    expect(carbonDatasetYearOptions(fallback)).toContain(2003);
+    const live = { ...fallback, year: 2025, availableYears: [2019, 2024, 2025] };
+    expect(carbonDatasetYearOptions(live)).toEqual([2025, 2024, 2019]);
+    expect(carbonDatasetYearOptions(live)).not.toContain(2020);
+  });
 });
 
 describe("curated carbon references", () => {

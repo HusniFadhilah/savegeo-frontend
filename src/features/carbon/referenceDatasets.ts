@@ -79,8 +79,10 @@ export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] 
     group: "Aboveground Biomass Carbon",
     year: 2019,
     yearRange: [2003, 2019],
+    availableYears: Array.from({ length: 17 }, (_, index) => 2019 - index),
+    yearSelectable: true,
     description:
-      "Annual Chloris above-ground biomass stock. Uses a licensed Chloris raster when configured, otherwise the public Planetary Computer chloris-biomass STAC collection.",
+      "Annual Chloris above-ground biomass stock. Licensed 2024/2025 rasters are offered by the live catalog when configured. The public collection covers 2003-2019 at 4.6km.",
     referenceOnlyCapable: true,
   },
   {
