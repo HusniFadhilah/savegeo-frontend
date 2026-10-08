@@ -238,7 +238,7 @@ export default function CamsArchiveMap({ slug, onSelectionChange }: {
         <option value="area">{t("wildfire.cams.aggregateArea")}</option>
       </select></label>
       {aggregationMode === "province" && <label>{t("wildfire.cams.region")}<select value={region} onChange={(event) => setRegion(event.target.value)}>
-        <option value="">{t("wildfire.cams.allKalimantan")}</option>
+        <option value="">{t("wildfire.cams.allRegions")}</option>
         {layer.frames[0]?.regions.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
       </select></label>}
       <label>{t("wildfire.cams.from")}<input type="date" value={from || layer.frames[0]?.valid_at.slice(0, 10) || ""} onChange={(event) => { setFrom(event.target.value); setPlaying(false); }} /></label>
