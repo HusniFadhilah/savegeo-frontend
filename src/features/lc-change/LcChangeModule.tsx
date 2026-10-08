@@ -168,7 +168,12 @@ export default function LcChangeModule() {
   // Share the canonical curated catalog and primary fallback with land cover.
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [datasetDocs, setDatasetDocs] = useState<LandCoverDatasetCatalog>({});
-  const hasAdvancedSelection = !isPrimaryLandCover(datasetDocs[dataset] ?? { key: dataset, name: dataset, resolution: "" });
+  const advancedSources = useMemo(
+    () => landCoverChoices(Object.values(datasetDocs), true, true).filter((source) => !isPrimaryLandCover(source)),
+    [datasetDocs],
+  );
+  const hasAdvancedSelection = advancedSources.some((source) => source.key === dataset);
+  const showAdvancedToggle = advancedSources.length > 0;
   const datasetOptions = useMemo(() => {
     const entries = Object.values(datasetDocs);
     return landCoverChoices(entries.length ? entries : PRIMARY_LULC_DATASETS, showAdvanced || hasAdvancedSelection, true)
@@ -191,18 +196,30 @@ export default function LcChangeModule() {
     };
   }, []);
 
-  const datasetNote = (() => {
-    const doc = datasetDocs[dataset];
-    if (doc) {
-      const years =
-        doc.year_min || doc.year_max
-          ? `Tersedia: ${doc.year_min ?? "-"}-${doc.year_max ?? "-"}`
-          : "";
-      const combined = [years, doc.collection_version, doc.class_count ? `${doc.class_count} kelas` : "", doc.description, doc.accuracy].filter(Boolean).join(" · ");
-      if (combined) return combined;
-    }
-    return DATASET_NOTES[dataset] || "";
-  })();
+  const selectedDatasetDoc = datasetDocs[dataset];
+  const datasetSummary = selectedDatasetDoc
+    ? [
+        selectedDatasetDoc.year_min || selectedDatasetDoc.year_max
+          ? `${selectedDatasetDoc.year_min ?? "-"}–${selectedDatasetDoc.year_max ?? "-"}`
+          : "",
+        selectedDatasetDoc.class_count ? `${selectedDatasetDoc.class_count} ${language === "id" ? "kelas" : "classes"}` : "",
+        selectedDatasetDoc.collection_version,
+        selectedDatasetDoc.resolution,
+      ].filter(Boolean).join(" · ")
+    : "";
+  const datasetInfoContent = selectedDatasetDoc ? (
+    <div className="d-grid gap-1">
+      <strong>{selectedDatasetDoc.name}</strong>
+      {datasetSummary && <span>{datasetSummary}</span>}
+      {selectedDatasetDoc.description && <span>{selectedDatasetDoc.description}</span>}
+      {selectedDatasetDoc.accuracy && (
+        <span><strong>{language === "id" ? "Akurasi:" : "Accuracy:"}</strong> {selectedDatasetDoc.accuracy}</span>
+      )}
+      {!!selectedDatasetDoc.limitations?.length && (
+        <span><strong>{language === "id" ? "Catatan:" : "Notes:"}</strong> {selectedDatasetDoc.limitations.join(" ")}</span>
+      )}
+    </div>
+  ) : DATASET_NOTES[dataset] || (language === "id" ? "Informasi dataset tidak tersedia." : "Dataset information is unavailable.");
   const isDynamicWorldCompatible = DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(dataset) || datasetDocs[dataset]?.monthly === true;
   const hasConfidence = isDynamicWorldCompatible || dataset === "AlphaEarth_RF";
   const supportedYears = datasetDocs[dataset]?.supported_years;
@@ -682,26 +699,35 @@ export default function LcChangeModule() {
                 <label className="form-label fw-bold mb-0" htmlFor="lcChangeDataset">
                   <i className="fas fa-database" /> {t("lc.datasetLulc")}
                 </label>
-                {datasetNote && <InfoTip label={t("lc.moreInfo")} content={datasetNote} />}
+                <InfoTip label={t("lc.moreInfo")} content={datasetInfoContent} />
               </div>
-              <div className="form-check mb-2">
-                <input id="lc-change-advanced" type="checkbox" className="form-check-input" checked={showAdvanced || hasAdvancedSelection} disabled={hasAdvancedSelection} onChange={(event) => setShowAdvanced(event.target.checked)} />
-                <label htmlFor="lc-change-advanced" className="form-check-label small">{language === "id" ? "Tampilkan dataset khusus dan model eksperimental" : "Show specialist datasets and experimental models"}</label>
-              </div>
-              {(showAdvanced || hasAdvancedSelection) && <p className="small text-warning">{language === "id" ? "RF belum divalidasi lokal secara independen. Pilih dataset utama untuk menutup opsi lanjutan." : "RF lacks independent local validation. Select a primary dataset to close advanced options."}</p>}
+              {showAdvancedToggle && (
+                <div className="form-check form-switch d-flex align-items-center gap-2 mb-2">
+                  <input
+                    id="lc-change-advanced"
+                    type="checkbox"
+                    className="form-check-input mt-0"
+                    checked={showAdvanced || hasAdvancedSelection}
+                    disabled={hasAdvancedSelection}
+                    onChange={(event) => setShowAdvanced(event.target.checked)}
+                  />
+                  <label htmlFor="lc-change-advanced" className="form-check-label small">
+                    {language === "id" ? "Dataset lanjutan" : "Advanced datasets"}
+                  </label>
+                  <InfoTip
+                    label={t("lc.moreInfo")}
+                    content={language === "id"
+                      ? "Menampilkan dataset khusus dan model eksperimental yang tersedia. Model RF belum memiliki validasi lokal independen."
+                      : "Show available specialist datasets and experimental models. The RF model has not been independently validated locally."}
+                  />
+                </div>
+              )}
               <SearchableSelect
                 id="lcChangeDataset"
                 value={dataset}
                 onChange={(v) => onDatasetChange(v as LcDataset)}
                 options={datasetOptions.map((d) => ({ value: d.value, label: d.label }))}
               />
-              <small className="text-muted d-block mt-2">{datasetNote}</small>
-              <details className="small mt-2"><summary>Dataset/model yang belum tersedia</summary>
-                {Object.values(datasetDocs).filter((item) => item.available === false).map((item) => (
-                  <p className="mb-1" key={item.key}><strong>{item.name}</strong>: {item.availability_reason}</p>
-                ))}
-                <a href="/admin/ml-models">Konfigurasi dan training di Admin → Model Registry</a>
-              </details>
             </div>
 
             <div className="mb-3">
