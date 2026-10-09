@@ -54,7 +54,10 @@ describe("curated carbon references", () => {
   });
 
   it("keeps the offline fallback curated and offers published GEDI years", () => {
-    expect(availableCarbonReferenceDatasets(FALLBACK_CARBON_REFERENCE_DATASETS)).toEqual(FALLBACK_CARBON_REFERENCE_DATASETS);
+    const curatedFallback = availableCarbonReferenceDatasets(FALLBACK_CARBON_REFERENCE_DATASETS);
+    expect(curatedFallback.map((item) => item.value)).toEqual(
+      FALLBACK_CARBON_REFERENCE_DATASETS.map((item) => item.value).filter((value) => value !== "SOILGRIDS_SOC_30CM"),
+    );
     expect(carbonDatasetYearOptions(FALLBACK_CARBON_REFERENCE_DATASETS.find((item) => item.value === "GEDI_L4A_MONTHLY"))).toContain(2025);
   });
 });

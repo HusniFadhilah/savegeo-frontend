@@ -272,7 +272,7 @@ export interface CompanyImportJob {
   status: "queued" | "running" | "completed" | "failed";
   status_url?: string;
   message?: string;
-  result?: { imported: number; skipped: number; errors?: string[] };
+  result?: { imported: number; skipped: number; errors?: string[]; warnings?: string[]; failed_types?: string[] };
   error?: string;
 }
 

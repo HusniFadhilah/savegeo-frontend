@@ -226,10 +226,11 @@ export default function CarbonModule() {
   const [directLoadEnabled, setDirectLoadEnabled] = useState(false);
 
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
+  const staticPoolModel = selectedModel?.metadata_json?.time_series_supported === false;
 
   useEffect(() => {
-    if (carbonParams.referenceOnly || directLoadEnabled) setDeltaEnabled(false);
-  }, [carbonParams.referenceOnly, directLoadEnabled]);
+    if (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel) setDeltaEnabled(false);
+  }, [carbonParams.referenceOnly, directLoadEnabled, staticPoolModel]);
 
   useEffect(() => {
     window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name, areaKm2: aoi.areaKm2 } : null;
@@ -679,7 +680,7 @@ export default function CarbonModule() {
   const analysisTypeLabel = t(`carbon.statusChip.${analysisType}`);
   const carbonPeriodLabel = deltaEnabled && analysisType === "carbon"
     ? `${deltaStartYear}-${deltaEndYear}`
-    : analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled)
+    : analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel)
       ? `dataset ${carbonParams.datasetYear}`
       : String(year);
 
@@ -777,7 +778,7 @@ export default function CarbonModule() {
                 className="form-check-input"
                 type="checkbox"
                 checked={deltaEnabled}
-                disabled={carbonParams.referenceOnly || directLoadEnabled}
+                disabled={carbonParams.referenceOnly || directLoadEnabled || staticPoolModel}
                 onChange={(e) => setDeltaEnabled(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="enableCarbonDelta">
@@ -839,7 +840,7 @@ export default function CarbonModule() {
               </div>
               {deltaError && <div className="alert alert-danger py-1 px-2 mt-2 small">{deltaError}</div>}
             </div>
-          ) : !(analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled)) ? (
+          ) : !(analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel)) ? (
             <div className="mb-3">
               <label className="form-label">{t("carbon.sidebar.year")}</label>
               <input
@@ -1044,6 +1045,9 @@ export default function CarbonModule() {
                   ? ` (tahun yang diminta ${layer.requested_year})` : ""}.
                 {layer.target_pool === "aboveground_belowground_biomass_carbon" && " Pool: karbon biomassa atas dan bawah tanah."}
                 {layer.target_pool === "soil_organic_carbon" && " Pool: karbon organik tanah."}
+                {layer.target_pool === "belowground_biomass_carbon" && " Pool: karbon biomassa akar hidup."}
+                {layer.depth_cm && ` Kedalaman: ${layer.depth_cm.join("–")} cm.`}
+                {layer.source_period && ` Periode sumber: ${layer.source_period}.`}
                 {layer.load_note ? ` ${layer.load_note}` : ""}
               </div>)}
               Peta global dimuat. AOI tidak digunakan; statistik dan total tidak dihitung.

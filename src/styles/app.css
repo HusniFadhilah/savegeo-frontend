@@ -1063,33 +1063,148 @@
   color: #6b7280;
 }
 
-.cs-stat-row {
+.cs-panel-heading,
+.cs-panel-notes,
+.cs-status-summary,
+.cs-card-header-spread,
+.cs-card-header-spread > span {
   display: flex;
+  align-items: center;
+}
+
+.cs-panel-heading,
+.cs-card-header-spread {
   justify-content: space-between;
-  align-items: baseline;
-  padding: 7px 0;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.85rem;
+  gap: 10px;
 }
 
-.cs-stat-row:last-child {
-  border-bottom: none;
+.cs-panel-heading {
+  margin-bottom: 12px;
 }
 
-.cs-stat-label {
+.cs-panel-notes {
+  gap: 8px;
+}
+
+.cs-status-summary {
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+}
+
+.cs-note-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #946200;
+}
+
+.cs-card-header-spread > span {
+  gap: 7px;
+}
+
+.cs-card-header-spread .inline-info-tip__trigger {
+  color: #fff;
+  opacity: 0.88;
+}
+
+.cs-chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1f5;
   color: #64748b;
+  font-size: 0.75rem;
 }
 
-.cs-stat-value {
+.cs-chart-summary strong {
+  color: #334155;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
-  color: #1f2937;
-  font-weight: 500;
 }
 
-.cs-stat-value-strong {
-  color: var(--primary-dark, #1b5e20);
-  font-weight: 700;
-  font-size: 0.95rem;
+.cs-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.cs-chart-block {
+  min-width: 0;
+}
+
+.cs-chart-block h6 {
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.cs-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: -2px 0 6px;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.cs-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cs-chart-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+}
+
+.cs-chart-legend__mean { color: #c2410c; border-top: 1px dashed; background: transparent !important; }
+.cs-chart-legend__median { color: #1d4ed8; border-top: 1px dashed; background: transparent !important; }
+.cs-chart-legend__spread { color: #b45309; height: 9px !important; width: 14px !important; background: rgba(245, 158, 11, 0.18) !important; }
+
+.cs-chart-frame {
+  position: relative;
+  height: 220px;
+}
+
+.cs-chart-empty {
+  margin-top: 12px;
+  padding: 18px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.cs-popover-copy > *:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .cs-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .cs-panel-heading {
+    align-items: flex-start;
+  }
+
 }
 
 .cs-config-grid {
@@ -7577,6 +7692,33 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
   box-shadow: 0 8px 20px rgba(16, 42, 36, .15);
   backdrop-filter: blur(8px);
 }
+.wildfire-cams-map-legend {
+  top: .65rem;
+  right: auto;
+  bottom: auto;
+  left: 3.25rem;
+  width: min(15rem, calc(100% - 4rem));
+  gap: .25rem;
+  padding: .35rem;
+  border: 1px solid rgba(255, 255, 255, .78);
+  border-radius: .75rem;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 8px 20px rgba(16, 42, 36, .15);
+  backdrop-filter: blur(8px);
+}
+.wildfire-cams-map-legend__item {
+  gap: .15rem;
+  padding: .4rem .5rem;
+  border: 0;
+  border-radius: .5rem;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.wildfire-cams-map-legend__item + .wildfire-cams-map-legend__item {
+  border-top: 1px solid rgba(35, 70, 58, .14);
+  border-radius: 0;
+}
 .wildfire-detail-sidebar { gap: 1rem; }
 .wildfire-stat-grid { gap: .7rem; }
 .wildfire-stat {
@@ -7633,6 +7775,13 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 .wildfire-bar-track { height: .5rem; margin-top: .35rem; background: #e8efec; }
 .wildfire-side-card p { color: var(--wildfire-ink); }
 .wildfire-side-card small { display: block; color: var(--wildfire-muted-ink); }
+.wildfire-source-list { display: grid; gap: .55rem; margin: 0 0 .8rem; }
+.wildfire-source-item { display: flex; align-items: flex-start; gap: .65rem; min-width: 0; padding: .65rem .7rem; border: 1px solid var(--wildfire-border); border-radius: .7rem; background: rgba(244, 248, 246, .72); }
+.wildfire-source-item > i { flex: 0 0 auto; margin-top: .1rem; color: var(--wildfire-green); }
+.wildfire-source-item > span { display: grid; gap: .12rem; min-width: 0; }
+.wildfire-source-item small { color: var(--wildfire-muted-ink); font-size: .64rem; }
+.wildfire-source-item strong { overflow-wrap: anywhere; color: var(--wildfire-ink); font-size: .74rem; font-weight: 700; }
+.wildfire-source-methodology { padding-top: .65rem; border-top: 1px solid var(--wildfire-border); }
 .wildfire-timeline-panel { margin-top: 1.15rem; padding: 1.15rem; }
 .wildfire-histogram { height: 132px; }
 .wildfire-timeline-panel .wildfire-panel-heading { align-items: flex-start; }
@@ -7797,6 +7946,8 @@ html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-panel,
 .dark-mode .wildfire-detail-shell .wildfire-side-card,
 .dark-mode .wildfire-detail-shell .wildfire-stat,
 .dark-mode .wildfire-detail-shell .wildfire-timeline-panel { background: var(--wildfire-card); }
+html[data-theme="dark"] .wildfire-source-item,
+.dark-mode .wildfire-source-item { background: rgba(20, 35, 29, .72); }
 html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-controls,
 .dark-mode .wildfire-detail-shell .wildfire-timeline-controls { border-color: #315245; background: rgba(20, 35, 29, .9); }
 html[data-theme="dark"] .wildfire-detail-shell .wildfire-timeline-controls input,
@@ -7991,8 +8142,10 @@ html[data-theme="dark"] .wildfire-layer-note,
 html[data-theme="dark"] .wildfire-fdrs-status,
 .dark-mode .wildfire-layer-note,
 .dark-mode .wildfire-fdrs-status { background: #1c3a2e; color: #b8d6ca; }
+html[data-theme="dark"] .wildfire-cams-map-legend,
+.dark-mode .wildfire-cams-map-legend { border-color: rgba(93, 123, 108, .7); background: rgba(23, 33, 29, .94); }
 html[data-theme="dark"] .wildfire-cams-map-legend__item,
-.dark-mode .wildfire-cams-map-legend__item { border-color: rgba(93, 123, 108, .7); background: rgba(23, 33, 29, .94); color: #e6f0eb; }
+.dark-mode .wildfire-cams-map-legend__item { border-color: rgba(93, 123, 108, .45); background: transparent; color: #e6f0eb; }
 html[data-theme="dark"] .wildfire-cams-map-legend__item small,
 .dark-mode .wildfire-cams-map-legend__item small { color: #a1b2a9; }
 html[data-theme="dark"] .wildfire-fdrs-row,
@@ -8118,11 +8271,8 @@ html[data-theme="dark"] .wildfire-fdrs-row,
   .wildfire-detail-shell .wildfire-map-wrap .leaflet-container { height: 430px; min-height: 430px; }
   .wildfire-map-status { display: flex; flex-direction: column; gap: .15rem; font-size: .68rem; }
   .wildfire-map-legend { left: .55rem; right: .55rem; bottom: .55rem; justify-content: center; flex-wrap: wrap; font-size: .6rem; }
-  /* Keep stacked CAMS legends in the clear top-right lane on short/mobile maps.
-     Bottom-left map controls sit 55px above the edge, so anchoring these cards
-     above them causes the cards to cover the controls when two layers are on. */
-  .wildfire-cams-map-legend { left: auto; right: 2.75rem; top: .55rem; bottom: auto; width: min(13rem, calc(100% - 5.75rem)); }
-  .wildfire-cams-map-legend__item { padding: .4rem .5rem; font-size: .62rem; }
+  .wildfire-cams-map-legend { left: 3rem; top: .45rem; width: min(13rem, calc(100% - 3.6rem)); }
+  .wildfire-cams-map-legend__item { padding: .35rem .4rem; font-size: .62rem; }
   .wildfire-layer-control { top: 3.25rem; right: 10px; }
   .wildfire-layer-panel { width: min(18rem, calc(100vw - 1.1rem)); max-height: calc(100% - 1rem); overflow: auto; }
   .wildfire-layer-option { min-height: 2.2rem; }
@@ -8901,3 +9051,14 @@ html[data-theme="dark"] .wildfire-cams-variable-list li small,
 .cams-hotspot-popup .leaflet-popup-content { max-height: min(65vh, 480px); overflow-y: auto; }
 .cams-hotspot-popup .wildfire-popup dt { color: #9aa9ba; }
 .cams-hotspot-popup .cams-point-content { border-top: 1px solid #39424c; margin-top: 12px; padding-top: 12px; }
+
+html[data-theme="dark"] .cs-chart-block h6,
+.dark-mode .cs-chart-block h6 { color: #cbd5e1; }
+html[data-theme="dark"] .cs-chart-summary,
+.dark-mode .cs-chart-summary { border-color: #334155; color: #cbd5e1; }
+html[data-theme="dark"] .cs-chart-summary strong,
+.dark-mode .cs-chart-summary strong { color: #e2e8f0; }
+html[data-theme="dark"] .cs-chart-empty,
+.dark-mode .cs-chart-empty { border-color: #475569; color: #cbd5e1; }
+html[data-theme="dark"] .cs-status-summary,
+.dark-mode .cs-status-summary { border-color: #1e40af; background: #172554; color: #dbeafe; }

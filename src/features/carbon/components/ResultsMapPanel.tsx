@@ -24,6 +24,13 @@ interface ResultTab {
   resolutionM?: number;
 }
 
+function carbonQuantityLabel(layer?: CarbonLayerResult): string {
+  if (layer?.quantity === "concentration" || layer?.unit === "g/kg") return "Konsentrasi SOC";
+  if (layer?.target_pool === "belowground_biomass_carbon") return "Karbon BGB";
+  if (layer?.target_pool === "soil_organic_carbon") return "Stok SOC";
+  return "Densitas Karbon";
+}
+
 function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
   const map = useMap();
   useEffect(() => {
@@ -80,7 +87,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     if (!referenceOnly && results.carbon.carbon_estimated?.tile_url) {
       tabs.push({
         key: "carbon_estimated",
-        label: "Carbon Stock",
+        label: carbonQuantityLabel(results.carbon.carbon_estimated),
         icon: "bi-tree",
         tileUrl: results.carbon.carbon_estimated.tile_url,
         resolutionM: results.carbon.model_info?.scale,
@@ -94,6 +101,10 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
         tileUrl: results.carbon.carbon_reference.tile_url,
         resolutionM: results.carbon.carbon_reference.resolution,
       });
+    }
+    if (results.carbon.carbon_uncertainty?.tile_url) {
+      tabs.push({ key: "carbon_uncertainty", label: "BGB · standard error referensi", icon: "bi-question-circle",
+        tileUrl: results.carbon.carbon_uncertainty.tile_url, resolutionM: results.carbon.carbon_reference?.resolution });
     }
   }
 
@@ -121,7 +132,7 @@ function buildLegend(
 ): { title: string; entries: MapLegendEntry[]; scale?: { min: number; max: number; unit: string; colors: string[] } } {
   if (!activeKey) return { title: "", entries: [] };
 
-  if (activeKey === "carbon_estimated" || activeKey === "carbon_reference") {
+  if (activeKey === "carbon_estimated" || activeKey === "carbon_reference" || activeKey === "carbon_uncertainty") {
     const layer = results.carbon?.[activeKey] as CarbonLayerResult | undefined;
     const palette = layer?.vis_params?.palette?.length ? layer.vis_params.palette : visPalette;
     const colors = buildLegendColors(palette.length ? palette : ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"], legendBins);
@@ -146,7 +157,7 @@ function buildLegend(
       };
     });
     const unit = layer?.unit || "Mg/ha";
-    return { title: `Densitas Karbon (${unit})`, entries };
+    return { title: `${activeKey === "carbon_uncertainty" ? "Standard error BGB referensi" : carbonQuantityLabel(layer)} (${unit})`, entries };
   }
 
   if (activeKey.startsWith("direct:")) {
@@ -170,7 +181,7 @@ function buildLegend(
       const max = maxCandidate > min ? maxCandidate : min + 1;
       const unit = layer.unit || "Mg C/ha";
       return {
-        title: "Densitas Karbon (" + unit + ") · " + layer.dataset_name + yearLabel,
+        title: carbonQuantityLabel({ unit: layer.unit ?? undefined, target_pool: layer.target_pool ?? undefined, quantity: layer.quantity ?? undefined }) + " (" + unit + ") · " + layer.dataset_name + yearLabel,
         entries: [],
         scale: { min, max, unit, colors },
       };

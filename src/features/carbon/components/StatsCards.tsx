@@ -20,7 +20,7 @@ function formatDuration(seconds?: string | number): string {
 
 function MetricCard({ icon, value, label, sub }: { icon: string; value: ReactNode; label: string; sub?: string }) {
   return (
-    <div className="col-md-3">
+    <div className="col">
       <div className="metric-card">
         <div className="metric-icon">
           <i className={`bi ${icon}`} />
@@ -51,7 +51,6 @@ export default function StatsCards({ results, processingTimes }: Props) {
 
   if (results.carbon && !results.carbon.model_info?.load_only && results.carbon.model_info?.statistics_available !== false) {
     const c = results.carbon;
-    const stats = c.carbon_estimated?.statistics || {};
     const areaInfo = c.area_info || {};
     // `model_performance` was never actually populated by the backend (dead
     // field, verified live) - the real R²/RMSE live under model_info.cv_metrics.
@@ -66,12 +65,6 @@ export default function StatsCards({ results, processingTimes }: Props) {
     const calculationMode = c.model_info?.calculation_mode || "unknown";
 
     cards.push(
-      <MetricCard
-        key="carbon-density"
-        icon="bi-tree"
-        value={<>{(stats.mean ?? 0).toFixed(2)} <small>Mg/ha</small></>}
-        label={t("carbon.stats.avgDensity")}
-      />,
       <MetricCard
         key="carbon-total"
         icon="bi-clipboard-data"
@@ -95,10 +88,10 @@ export default function StatsCards({ results, processingTimes }: Props) {
             </span>
           }
           label={t("carbon.stats.r2Score")}
-          sub={`RMSE: ${(perf.rmse ?? 0).toFixed(2)} Mg/ha`}
+          sub={`RMSE: ${(perf.rmse ?? 0).toFixed(2)} ${c.carbon_estimated.unit || "Mg C/ha"}`}
         />
       ) : (
-        <MetricCard key="carbon-rmse" icon="bi-bar-chart" value={(perf.rmse ?? 0).toFixed(2)} label={t("carbon.stats.modelRmse")} />
+        <MetricCard key="carbon-rmse" icon="bi-bar-chart" value={perf.rmse == null ? "—" : perf.rmse.toFixed(2)} label={t("carbon.stats.modelRmse")} />
       ),
     );
   }
@@ -158,7 +151,7 @@ export default function StatsCards({ results, processingTimes }: Props) {
 
   return (
     <>
-      {cards.length > 0 && <div className="row">{cards}</div>}
+      {cards.length > 0 && <div className="row row-cols-1 row-cols-md-3 row-cols-xl-4 g-3">{cards}</div>}
       {timeSections.length > 0 && (
         <div className="cs-card mt-3">
           <div className="cs-card-header">

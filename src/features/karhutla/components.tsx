@@ -1997,8 +1997,18 @@ export function KarhutlaDetailPage() {
           </section>
           <section className="wildfire-side-card">
             <h2>{t("wildfire.sources.title")}</h2>
-            <p>{event.source}</p>
-            {event.boundary_source && <p className="wildfire-muted">Batas wilayah: {event.boundary_source}</p>}
+            <div className="wildfire-source-list">
+              <div className="wildfire-source-item">
+                <i className="bi bi-fire" aria-hidden="true" />
+                <span><small>Sumber hotspot</small><strong>{event.source}</strong></span>
+              </div>
+              {event.boundary_source && (
+                <div className="wildfire-source-item">
+                  <i className="bi bi-bounding-box" aria-hidden="true" />
+                  <span><small>Batas administratif</small><strong>{event.boundary_source}</strong></span>
+                </div>
+              )}
+            </div>
             {event.official_reports && event.official_reports.length > 0 && (
               <ul>
                 {event.official_reports.map((report) => (
@@ -2014,7 +2024,7 @@ export function KarhutlaDetailPage() {
                 ? t("wildfire.sources.noBurnedArea")
                 : `${t("wildfire.sources.burnedAreaNote")}: ${event.burned_area_source}`}
             </p>
-            <small>{event.methodology}</small>
+            <small className="wildfire-source-methodology">{event.methodology}</small>
           </section>
           {query.panel === "methodology" && (
             <section className="wildfire-side-card">
@@ -2103,6 +2113,8 @@ export function adaptLegacyEvent(event: Partial<WildfireEvent> | DisasterEventLi
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+  const hideBoundaryProvider = (value?: string | null) =>
+    value?.replace(/\bsp3stab\b/gi, "batas administratif") ?? value;
   return {
     ...FALLBACK_WILDFIRE_EVENTS[0],
     ...raw,
@@ -2122,13 +2134,15 @@ export function adaptLegacyEvent(event: Partial<WildfireEvent> | DisasterEventLi
     center_lat: raw.center_lat ?? FALLBACK_WILDFIRE_EVENTS[0].center_lat,
     center_lon: raw.center_lon ?? FALLBACK_WILDFIRE_EVENTS[0].center_lon,
     default_zoom: raw.default_zoom ?? 5,
-    source: raw.source ?? "NASA FIRMS",
+    source: hideBoundaryProvider(raw.source) ?? "NASA FIRMS",
+    boundary_source: hideBoundaryProvider(raw.boundary_source),
+    methodology: hideBoundaryProvider(raw.methodology) ?? "",
     hotspot_count: raw.hotspot_count ?? 0,
     high_confidence_count: raw.high_confidence_count ?? 0,
     burned_area_ha: raw.burned_area_ha ?? null,
-    burned_area_source: raw.burned_area_source ?? null,
+    burned_area_source: hideBoundaryProvider(raw.burned_area_source),
     updated_at: raw.updated_at ?? null,
-    limitations: raw.limitations ?? [],
+    limitations: (raw.limitations ?? []).map((item) => hideBoundaryProvider(item) ?? item),
     source_ids: raw.source_ids ?? ["nasa-firms"],
   } as WildfireEvent;
 }

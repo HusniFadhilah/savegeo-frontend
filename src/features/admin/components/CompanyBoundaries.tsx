@@ -249,7 +249,9 @@ export default function CompanyBoundaries() {
     try {
       const job = await importCompaniesFromOSM(types);
       const r = await waitForCompanyImport(job.job_id, setImportLog);
-      setImportLog(`Selesai: ${r.imported} diimpor, ${r.skipped} dilewati.`);
+      const completion = r.failed_types?.length ? "Selesai sebagian" : "Selesai";
+      const warning = r.warnings?.length ? ` Peringatan: ${r.warnings.join("; ")}` : "";
+      setImportLog(`${completion}: ${r.imported} diimpor, ${r.skipped} dilewati.${warning}`);
       await reload();
     } catch (err) {
       setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data OSM"}`);

@@ -3,6 +3,33 @@ import type { CarbonReferenceDatasetOption } from "./types";
 /** Offline fallback for the curated API catalog. Keep retired targets out of new selections. */
 export const FALLBACK_CARBON_REFERENCE_DATASETS: CarbonReferenceDatasetOption[] = [
   {
+    value: "ORNL_BGB", label: "NASA/ORNL BGB Carbon (2010, 300m)", year: 2010,
+    group: "Belowground Biomass Carbon", unit: "Mg C/ha", targetPool: "belowground_biomass_carbon",
+    referenceOnlyCapable: true, description: "Living root biomass carbon, already Mg C/ha. 2010 baseline with standard error; separate from SOC.",
+  },
+  {
+    value: "SOILGRIDS_OCS_0_30CM", label: "SoilGrids SOC stock 0–30 cm (250m)", year: 2020,
+    group: "Soil Carbon", unit: "Mg C/ha", targetPool: "soil_organic_carbon", depthCm: [0, 30],
+    referenceOnlyCapable: true, description: "Official SoilGrids v2 stock, 0–30 cm. Static modeled baseline via Earth Engine; 2020 identifies product generation.",
+  },
+  ...([100, 200] as const).map((bottom): CarbonReferenceDatasetOption => ({
+    value: `SOILGRIDS_SOC_STOCK_0_${bottom}CM`, label: `SoilGrids derived SOC stock 0–${bottom} cm (250m)`,
+    year: 2020, group: "Soil Carbon", unit: "Mg C/ha", targetPool: "soil_organic_carbon", depthCm: [0, bottom],
+    referenceOnlyCapable: true, description: "Depth-integrated SOC × bulk density × fine-earth fraction. Derived from property means; not an annual observation.",
+  })),
+  ...([[0, 5], [5, 15], [15, 30], [30, 60], [60, 100], [100, 200]]).map(([top, bottom]): CarbonReferenceDatasetOption => ({
+    value: `SOILGRIDS_SOC_${top}_${bottom}CM_G_KG`, label: `SoilGrids SOC concentration ${top}–${bottom} cm (g/kg, 250m)`,
+    year: 2020, group: "Soil Carbon", unit: "g/kg", targetPool: "soil_organic_carbon", quantity: "concentration", depthCm: [top, bottom],
+    referenceOnlyCapable: true, description: "SOC concentration, native dg/kg divided by 10. Carbon totals require bulk density, coarse fragments and thickness.",
+  })),
+  ...([30, 100] as const).map((bottom): CarbonReferenceDatasetOption => ({
+    value: `OPENLANDMAP_SOC_STOCK_0_${bottom}CM_30M`, label: `OpenLandMap-soildb SOC stock 0–${bottom} cm (30m)`,
+    year: 2022, availableYears: [2005, 2010, 2015, 2020, 2022], yearSelectable: true,
+    periods: { "2005": [2000, 2005], "2010": [2005, 2010], "2015": [2010, 2015], "2020": [2015, 2020], "2022": [2020, 2022] },
+    group: "Soil Carbon", unit: "Mg C/ha", targetPool: "soil_organic_carbon", depthCm: [0, bottom],
+    referenceOnlyCapable: true, description: "Modeled stock integrated from SOC density. Last available period 2020–2022; separate from legacy OpenLandMap v02.",
+  })),
+  {
     value: "WCMC",
     label: "WCMC Carbon Density (2010, 300m)",
     year: 2010,
@@ -139,6 +166,7 @@ export const RETIRED_CARBON_REFERENCE_DATASETS: Readonly<Record<string, string>>
   GLOBAL_MANGROVE_WATCH_AGB: "CTREES_AGB_100M",
   Simard: "CTREES_AGB_100M",
   OPENLANDMAP_SOC: "OPENLANDMAP_SOC_G_KG",
+  SOILGRIDS_SOC_30CM: "SOILGRIDS_OCS_0_30CM",
 };
 
 export function availableCarbonReferenceDatasets(datasets: CarbonReferenceDatasetOption[]): CarbonReferenceDatasetOption[] {

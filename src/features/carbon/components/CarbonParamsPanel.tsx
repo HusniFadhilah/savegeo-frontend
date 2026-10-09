@@ -95,6 +95,9 @@ function compareModels(a: CarbonModelListItem, b: CarbonModelListItem): number {
 
 function pickDefaultModel(models: CarbonModelListItem[], referenceDataset: string): CarbonModelListItem | null {
   if (!models.length) return null;
+  if (referenceDataset === "ORNL_BGB") {
+    return models.find((model) => model.metadata_json?.training_mode === "reference_raster") ?? models[0];
+  }
   if (referenceDataset === DEFAULT_CARBON_REFERENCE_DATASET) {
     const gediL4aModel = models.find((model) => /gedi[._-]?l4a/i.test(model.name));
     if (gediL4aModel) return gediL4aModel;
@@ -114,6 +117,7 @@ function compatibilityInfo(
     return { text: t("carbon.params.compat.nonGeeStac"), tone: "gray" };
   }
   if (!meta.gee_deployable) return { text: t("carbon.params.compat.statsOnly"), tone: "gray" };
+  if (meta.builtin) return { text: t("carbon.pool.builtinModel"), tone: "green" };
   if (meta.gee_algorithm_type === "native_classifier") return { text: t("carbon.params.compat.geeNative"), tone: "green" };
   if (meta.gee_algorithm_type === "linear_expression") return { text: t("carbon.params.compat.geeDirect"), tone: "green" };
   // Older models predate `gee_algorithm_type` — infer linear-direct from algorithm name.
@@ -197,7 +201,12 @@ export default function CarbonParamsPanel({
   // 2019-2023) over the flat CARBON_DATASET_YEARS fallback, which offered
   // the same year list regardless of which dataset was picked.
   const selectedDatasetMeta = datasets.find((d) => d.value === params.referenceDataset);
-  const yearOptions = carbonDatasetYearOptions(selectedDatasetMeta);
+  const frozenReferenceYear = !params.referenceOnly && !directLoadEnabled
+    && selectedModel?.metadata_json?.method === "saved_reference_ensemble"
+    && typeof selectedModel.metadata_json.reference_year === "number"
+    ? selectedModel.metadata_json.reference_year : null;
+  const yearOptions = frozenReferenceYear === null
+    ? carbonDatasetYearOptions(selectedDatasetMeta) : [frozenReferenceYear];
 
   useEffect(() => {
     if (!yearOptions.length) return;
@@ -205,7 +214,7 @@ export default function CarbonParamsPanel({
       onParamsChange({ datasetYear: yearOptions[0] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.referenceDataset, datasets]);
+  }, [params.referenceDataset, datasets, frozenReferenceYear, params.datasetYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -384,6 +393,11 @@ export default function CarbonParamsPanel({
             </option>
           ))}
         </select>
+        {datasetMeta?.depthCm && (
+          <small className="text-muted d-block mt-1">
+            {t("carbon.pool.depth")}: {datasetMeta.depthCm.join("–")} cm · {datasetMeta.unit}
+          </small>
+        )}
         {datasetMeta?.requiresConfiguration && datasetMeta.isConfigured === false && (
           <small className="text-warning d-block mt-1">
             <i className="bi bi-exclamation-triangle me-1" />
@@ -424,7 +438,7 @@ export default function CarbonParamsPanel({
               );
               return {
                 value: m.name,
-                label: `${m.name}${modelBadge(m)}`,
+                label: `${m.display_name || m.name}${modelBadge(m)}`,
                 description: descParts.join(" · "),
                 group: algo.toUpperCase(),
               };
@@ -585,13 +599,13 @@ export default function CarbonParamsPanel({
         >
           {yearOptions.map((y) => (
             <option key={y} value={y}>
-              {y}
+              {datasetMeta?.periods?.[String(y)]?.join("–") || y}
             </option>
           ))}
         </select>
       </div>
 
-      {analysisMode === "model" && (
+      {analysisMode === "model" && !selectedModel?.metadata_json?.builtin && (
         <>
           <div className="mb-3">
             <label className="form-label">{t("carbon.params.dateRange")}</label>

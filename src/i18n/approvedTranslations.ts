@@ -13,6 +13,16 @@ export type Language = "id" | "en";
  */
 export const approvedTranslations: Record<Language, Record<string, string>> = {
   id: {
+    "carbon.pool.builtinModel": "Model karbon siap digunakan",
+    "carbon.pool.frozenModelHint": "Model tersimpan untuk wilayah kalibrasi Jawa (108–112° BT, 8,3–6° LS), referensi {year}. Validasi mengukur kesesuaian dengan raster referensi; belum divalidasi terhadap plot lapangan independen.",
+    "carbon.pool.depth": "Kedalaman tanah",
+    "carbon.pool.concentrationStats": "Statistik konsentrasi SOC",
+    "carbon.pool.concentrationAvg": "Konsentrasi SOC rata-rata",
+    "carbon.pool.concentrationTotals": "Total karbon memerlukan ketebalan lapisan, bulk density, dan fragmen kasar. Pilih dataset stok SOC untuk total Mg C.",
+    "carbon.pool.period": "Periode sumber",
+    "carbon.pool.referenceAgreement": "Validasi spasial terhadap raster referensi",
+    "carbon.pool.samples": "Sampel latih / validasi",
+    "carbon.pool.referenceValidationNote": "Metrik ini mengukur kesesuaian dengan raster referensi. Akurasi lapangan lokal masih memerlukan pengukuran BGB atau sampel tanah independen.",
     "standards.observedAt": "Waktu pengamatan",
     "standards.acquiredAt": "Waktu akuisisi",
     "standards.processedAt": "Waktu pemrosesan",
@@ -1462,6 +1472,16 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.referenceCarbon": "Peta Referensi Asli",
   },
   en: {
+    "carbon.pool.builtinModel": "Ready-to-use carbon model",
+    "carbon.pool.frozenModelHint": "Saved model for the Java calibration region (108–112° E, 8.3–6° S), reference {year}. Validation measures agreement with the reference raster; independent field-plot validation is pending.",
+    "carbon.pool.depth": "Soil depth",
+    "carbon.pool.concentrationStats": "SOC concentration statistics",
+    "carbon.pool.concentrationAvg": "Mean SOC concentration",
+    "carbon.pool.concentrationTotals": "Carbon totals require layer thickness, bulk density, and coarse fragments. Select an SOC stock dataset for total Mg C.",
+    "carbon.pool.period": "Source period",
+    "carbon.pool.referenceAgreement": "Spatial validation against the reference raster",
+    "carbon.pool.samples": "Training / validation samples",
+    "carbon.pool.referenceValidationNote": "These metrics measure agreement with the reference raster. Local field accuracy still requires independent root biomass measurements or soil samples.",
     "standards.observedAt": "Observation time",
     "standards.acquiredAt": "Acquisition time",
     "standards.processedAt": "Processing time",

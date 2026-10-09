@@ -26,6 +26,12 @@ export interface CarbonReferenceDatasetOption {
   ingestionMethod?: string | null;
   referenceOnlyCapable?: boolean;
   source?: "api" | "fallback";
+  unit?: string | null;
+  targetPool?: string | null;
+  quantity?: string | null;
+  depthCm?: number[] | null;
+  sourcePeriod?: string | null;
+  periods?: Record<string, number[]> | null;
 }
 
 export interface CarbonModelCvMetrics {
@@ -55,6 +61,8 @@ export interface CarbonDataQuality {
 }
 
 export interface CarbonModelMeta {
+  builtin?: boolean;
+  time_series_supported?: boolean;
   provider?: string;
   gee_deployable?: boolean;
   gee_algorithm_type?: string;
@@ -69,6 +77,8 @@ export interface CarbonModelMeta {
 
 export interface CarbonModelListItem {
   name: string;
+  display_name?: string;
+  description?: string;
   algorithm?: string;
   uploaded_at?: string;
   metrics?: { cv_metrics?: CarbonModelCvMetrics; r2_mean?: number };
@@ -110,12 +120,28 @@ export interface CarbonStats {
   mean?: number;
   max?: number;
   std_dev?: number;
+  histogram?: {
+    bucket_means: number[];
+    counts: number[];
+    pixel_count?: number;
+    sampled?: boolean;
+  };
+  percentiles?: {
+    p25?: number | null;
+    median?: number | null;
+    p75?: number | null;
+  };
 }
 
 export interface CarbonLayerResult {
   tile_url?: string;
   statistics?: CarbonStats | null;
   unit?: string;
+  target_pool?: string;
+  quantity?: string;
+  depth_cm?: number[];
+  source_period?: string;
+  description?: string;
   vis_params?: {
     min?: number;
     max?: number;
@@ -161,11 +187,20 @@ export interface CarbonModelRunInfo {
   /** Satellite-imagery year the model ran inference on - distinct from
    * `carbon_reference.year`, the (usually much older) vintage of the
    * biomass ground-truth dataset the model was trained against. */
-  analysis_year?: number;
+  analysis_year?: number | string;
+  depth_cm?: number[];
+  source_period?: string;
+  method_description?: string;
+  validation_note?: string;
+  validation_type?: string;
+  n_samples?: number;
+  validation_samples?: number;
+  validation_metrics?: { rmse?: number | null; mae?: number | null; bias?: number | null; r2?: number | null };
 }
 
 export interface CarbonResult {
   carbon_estimated: CarbonLayerResult;
+  carbon_uncertainty?: CarbonLayerResult;
   carbon_reference?: CarbonLayerResult & CarbonReferenceInfo;
   area_info: CarbonAreaInfo;
   model_info: CarbonModelRunInfo;

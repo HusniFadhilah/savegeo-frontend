@@ -33,6 +33,11 @@ interface CarbonDatasetApiItem {
   availability_error?: string | null;
   ingestion_method?: string | null;
   reference_only_capable?: boolean;
+  unit?: string | null;
+  quantity?: string | null;
+  depth_cm?: number[] | null;
+  source_period?: string | null;
+  periods?: Record<string, number[]> | null;
 }
 
 /**
@@ -63,7 +68,9 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
     return {
       value: ds.key,
       label: ds.name || ds.full_name || ds.key,
-      group: ds.target_pool || ds.provider_type || "Carbon Dataset",
+      group: ds.target_pool === "belowground_biomass_carbon" ? "Belowground Biomass Carbon"
+        : ds.target_pool === "soil_organic_carbon" ? "Soil Organic Carbon"
+        : ds.target_pool || ds.provider_type || "Carbon Dataset",
       description: ds.description || ds.full_name || ds.provider_type || "",
       year: ds.year,
       yearRange: ds.year_range,
@@ -78,6 +85,12 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
       availabilityError: ds.availability_error,
       ingestionMethod: ds.ingestion_method,
       referenceOnlyCapable: ds.reference_only_capable,
+      unit: ds.unit,
+      targetPool: ds.target_pool,
+      quantity: ds.quantity,
+      depthCm: ds.depth_cm,
+      sourcePeriod: ds.source_period,
+      periods: ds.periods,
       source: "api",
       ...(ds.name || ds.full_name ? { label: `${ds.name || ds.full_name}${yearSuffix}` } : {}),
     };
@@ -258,6 +271,9 @@ export interface DirectReferenceLayer {
   resolution?: number | string | null;
   unit?: string | null;
   target_pool?: string | null;
+  quantity?: string | null;
+  depth_cm?: number[] | null;
+  source_period?: string | null;
   provider_type?: string | null;
   source?: string | null;
   date_range?: { start?: string; end?: string } | null;
