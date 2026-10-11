@@ -147,6 +147,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const panelId = useId();
   const analysisDate = targetDate ?? queryDate;
   const activeBasemap = basemaps.find((basemap) => basemap.id === activeBasemapId);
+  const mapboxAvailable = basemaps.some((basemap) => basemap.id === "mapbox-satellite");
   const activeBasemapTranslationId = activeBasemap?.id === "satellite_roads" ? "satelliteRoads"
     : activeBasemap?.id === "topo" ? "topographic"
       : activeBasemap?.id === "terrain" ? "terrainRelief" : activeBasemap?.id;
@@ -258,7 +259,8 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const foundIndex = entries.findIndex(scene => scene.id === effectiveSelectedId);
   const index = foundIndex >= 0 ? foundIndex : entries.length - 1;
   const selected = entries[index] ?? entries[entries.length - 1];
-  const isCurrent = historySource === "current-basemap" || (historySource === "esri-wayback" && selected.id === CURRENT_SCENE_ID);
+  const isCurrentBasemapSource = historySource === "current-basemap" || historySource === "mapbox-satellite";
+  const isCurrent = isCurrentBasemapSource || (historySource === "esri-wayback" && selected.id === CURRENT_SCENE_ID);
   const effectiveNasaDate = clampNasaGibsDate(nasaDate, today);
   const effectiveNasaTileDate = clampNasaGibsDate(nasaTileDate, today);
   const effectiveViirsNightDate = clampNasaGibsDate(viirsNightDate, today, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE);
@@ -358,7 +360,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   };
 
   useEffect(() => {
-    const shouldShowHistorical = enabled && historySource !== "current-basemap" && (historySource !== "esri-wayback" || (!isCurrent && (visible || Boolean(analysisDate))));
+    const shouldShowHistorical = enabled && !isCurrentBasemapSource && (historySource !== "esri-wayback" || (!isCurrent && (visible || Boolean(analysisDate))));
     if (!shouldShowHistorical || (historySource === "esri-wayback" && isFetching)) { setTileError(false); return; }
     const paneName = "historical-imagery";
     const pane = map.getPane(paneName) ?? map.createPane(paneName);
@@ -415,7 +417,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       map.removeLayer(layer);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];
@@ -452,7 +454,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
     if (isViirsNight) setViirsNightDate(nextDate);
     else setNasaDate(nextDate);
   };
-  const sourceLabel = historySource === "current-basemap"
+  const sourceLabel = isCurrentBasemapSource
     ? activeBasemapName
     : historySource === "nasa-gibs"
     ? "NASA GIBS - MODIS Terra"
@@ -472,10 +474,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       onClick={() => setOpen(value => !value)}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}
     {visible && createPortal(<div ref={panelRef} id={panelId} className="map-history-panel" role="region" aria-label="Citra historis"
       onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}>
-      <div className="map-history-heading"><span>{historySource === "current-basemap" ? "Basemap terkini" : "Citra historis"} <small>{sourceLabel}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
+      <div className="map-history-heading"><span>{isCurrentBasemapSource ? "Basemap terkini" : "Citra historis"} <small>{sourceLabel}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
       <label className="map-history-source">Sumber citra
         <select aria-label="Sumber citra historis" value={historySource} onChange={event => chooseHistorySource(event.target.value as HistoricalImagerySource)}>
           <option value="current-basemap">Basemap terkini · {activeBasemapName}</option>
+          {mapboxAvailable && <option value="mapbox-satellite">{t("map.history.mapboxSource")}</option>}
           <option value="esri-wayback">Esri Wayback · mosaik resolusi tinggi</option>
           <option value="nasa-gibs">NASA GIBS - MODIS Terra True Color (harian)</option>
           <option value="nasa-black-marble">NASA GIBS · Black Marble (snapshot 2012/2016)</option>
@@ -489,8 +492,10 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       {historySource === "esri-wayback" && analysisDate && !isCurrent && <p className="map-history-note">Sinkron dengan waktu analisis: <strong>{analysisDate}</strong>. Menampilkan rilis arsip Wayback terdekat yang tersedia.</p>}
       {historySource === "esri-wayback" && isFetching && !scenes.length && <p role="status">Memuat arsip citra...</p>}
       {historySource === "esri-wayback" && isError && <p role="alert">Arsip citra Wayback gagal dimuat. Basemap tetap tersedia. <button type="button" onClick={() => void refetch()}>Coba lagi</button></p>}
-      {historySource === "current-basemap"
-        ? <p className="map-history-note">Peta menampilkan basemap aktif: <strong>{activeBasemapName}</strong>. Pilih sumber lain untuk menampilkan citra historis.</p>
+      {isCurrentBasemapSource
+        ? <p className="map-history-note">{historySource === "mapbox-satellite"
+          ? t("map.history.mapboxNote")
+          : <>Peta menampilkan basemap aktif: <strong>{activeBasemapName}</strong>. Pilih sumber lain untuk menampilkan citra historis.</>}</p>
         : historySource === "nasa-gibs" || historySource === "nasa-viirs-night" ? <>
         <div className="map-history-body map-history-nasa-body">
           <div className="map-history-nasa-selected-date"><small>{isViirsNight ? "Tanggal malam VIIRS" : "Tanggal citra"}</small><strong>{nasaTimelineDate}</strong></div>
