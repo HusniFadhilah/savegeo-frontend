@@ -1,5 +1,4 @@
-import { apiClient, ApiError } from "@/services/apiClient";
-import { handleAppUnauthorized } from "@/services/appSession";
+import { apiClient } from "@/services/apiClient";
 import type { AoiPayload } from "./types";
 import type {
   BmkgAlertsData,
@@ -38,29 +37,18 @@ import type { WildfireEventsResponse, WildfireHotspotsResponse, WildfireRegionSt
  * envelope) and non-2xx bodies are `{error}`/`{detail}`, already thrown as
  * ApiError by apiClient - callers try/catch, never branch on `.success`.
  */
+const disasterEventRequests = new Map<string, Promise<DisasterEventListResponse>>();
 
 /**
- * Prefer the public user token when present; otherwise fall back to admin
- * auth (`auth: true`) so an already logged-in admin can inspect the published
- * disaster dashboard without a duplicate user account. User 401s still clear
- * only the user session; admin 401s use apiClient's existing admin handler.
+ * The browser session is carried by HttpOnly cookies. The API client owns
+ * 401 handling for these requests so session expiry is signaled exactly once.
  */
 async function userGet<T>(path: string): Promise<T> {
-  try {
-    return await apiClient.get<T>(path, { auth: "app" });
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) handleAppUnauthorized();
-    throw err;
-  }
+  return apiClient.get<T>(path, { auth: "app" });
 }
 
 async function userPost<T>(path: string, body?: unknown): Promise<T> {
-  try {
-    return await apiClient.post<T>(path, body, { auth: "app" });
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) handleAppUnauthorized();
-    throw err;
-  }
+  return apiClient.post<T>(path, body, { auth: "app" });
 }
 
 // --- legacy /disaster/* (sources / BMKG / DEM) ------------------------------
@@ -160,7 +148,17 @@ export function fetchDisasterEvents(params: DisasterEventListParams = {}) {
     severity: params.severity,
     search: params.search,
   });
-  return userGet<DisasterEventListResponse>(`/disasters${qs}`);
+  const path = `/disasters${qs}`;
+  const pending = disasterEventRequests.get(path);
+  if (pending) return pending;
+
+  const request = userGet<DisasterEventListResponse>(path);
+  disasterEventRequests.set(path, request);
+  const clear = () => {
+    if (disasterEventRequests.get(path) === request) disasterEventRequests.delete(path);
+  };
+  void request.then(clear, clear);
+  return request;
 }
 
 export function fetchDisasterEvent(eventId: number | string) {

@@ -20,6 +20,12 @@ function buildRows(data: HealthStatus | null): StatusRow[] {
   if (!data) return [];
   return [
     { icon: "bi-server", label: "Backend", value: data.status === "ok" ? "Online" : "Error", ok: data.status === "ok" },
+    ...(typeof data.database_connected === "boolean" ? [{
+      icon: "bi-database",
+      label: "Database",
+      value: data.database_connected ? "Terhubung" : "Tidak terhubung",
+      ok: data.database_connected,
+    }] : []),
     {
       icon: "bi-broadcast",
       label: "Google Earth Engine",

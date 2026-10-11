@@ -8,7 +8,7 @@ export interface ApiEnvelope<T> {
 export interface HealthStatus {
   status: string;
   ee_initialized: boolean;
-  database_connected: boolean;
+  database_connected?: boolean;
   active_model?: string | null;
 }
 

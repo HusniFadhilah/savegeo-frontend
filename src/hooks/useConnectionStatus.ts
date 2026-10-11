@@ -18,7 +18,7 @@ export function useConnectionStatus() {
     try {
       const data = await fetchHealth();
       setHealth(data);
-      setState(data.ee_initialized ? "online" : "degraded");
+      setState(data.status === "ok" && data.ee_initialized ? "online" : "degraded");
     } catch {
       setHealth(null);
       setState("offline");

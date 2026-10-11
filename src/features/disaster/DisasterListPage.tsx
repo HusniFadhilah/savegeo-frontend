@@ -94,7 +94,9 @@ export default function DisasterListPage() {
     fetchDisasterEvents(filters)
       .then((res) => {
         if (cancelled) return;
-        setEvents(res.events ?? []);
+        const nextEvents = res.events ?? [];
+        setEvents(nextEvents);
+        if (activeFilterCount(filters) === 0) setProvinceSourceEvents(nextEvents);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -111,20 +113,6 @@ export default function DisasterListPage() {
       cancelled = true;
     };
   }, [filters]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchDisasterEvents()
-      .then((res) => {
-        if (!cancelled) setProvinceSourceEvents(res.events ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setProvinceSourceEvents([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     setPage(0);
