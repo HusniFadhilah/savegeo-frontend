@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, GeoJSON, Pane, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
@@ -18,6 +18,7 @@ import {
   type WaybackScene,
 } from "@/features/imagery/wayback";
 import type { AoiFeature } from "@/types/map";
+import { SegmentationStatistics, SegmentationSummary, type SegmentationResult } from "./SegmentationComparison";
 import type {
   DisasterAoiRecord,
   DisasterAnalysisEntry,
@@ -31,6 +32,18 @@ import type {
 } from "../types";
 
 type ViewMode = "pre" | "post" | "split" | "swipe";
+type OutputMode = "imagery" | "classes" | "change";
+interface ViewerViewport {
+  geometry: GeoJSON.GeoJsonObject | null;
+  center: L.LatLng;
+  zoom: number;
+}
+interface ViewerComparison {
+  model_id: string;
+  user_label: string;
+  runId?: number;
+  comparison: SegmentationResult;
+}
 const DISASTER_SCENE_MAX_ZOOM = 23;
 const DISASTER_FIT_MAX_ZOOM = 18;
 
@@ -105,18 +118,42 @@ function postDateRange(event?: DisasterEventRecord): { startDate: string; endDat
 }
 
 function FitToAoi({
-  aoi,
+  geometry,
+  maps,
+  viewport,
   maxZoom = DISASTER_FIT_MAX_ZOOM,
 }: {
-  aoi: DisasterAoiRecord | null;
+  geometry: GeoJSON.GeoJsonObject | null;
+  maps: React.MutableRefObject<Set<L.Map>>;
+  viewport: React.MutableRefObject<ViewerViewport | null>;
   maxZoom?: number;
 }) {
   const map = useMap();
   useEffect(() => {
-    if (!aoi?.geojson) return;
-    const bounds = L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds();
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom });
-  }, [aoi?.geojson, map, maxZoom]);
+    const registered = maps.current;
+    if (viewport.current?.geometry === geometry) {
+      map.setView(viewport.current.center, viewport.current.zoom, { animate: false });
+    } else if (geometry) {
+      const bounds = L.geoJSON(geometry as GeoJSON.Feature).getBounds();
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom });
+    }
+    registered.add(map);
+    const sync = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      viewport.current = { geometry, center, zoom };
+      map.getContainer().dataset.mapCenter = JSON.stringify([center.lat, center.lng]);
+      map.getContainer().dataset.mapZoom = String(zoom);
+      for (const other of registered) {
+        if (other !== map && (!other.getCenter().equals(center) || other.getZoom() !== zoom)) {
+          other.setView(center, zoom, { animate: false });
+        }
+      }
+    };
+    sync();
+    map.on("moveend", sync);
+    return () => { map.off("moveend", sync); registered.delete(map); };
+  }, [geometry, map, maps, maxZoom, viewport]);
   return null;
 }
 
@@ -336,7 +373,7 @@ function ViewerLayers({
         />
       )}
       {analyses
-        .filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.tile_url)
+        .filter((entry) => checkedAnalyses.has(entry.model_id) && !entry.result?.comparison && entry.result?.tile_url)
         .map((entry) => (
           <TileLayer
             key={`analysis-${entry.model_id}`}
@@ -400,6 +437,8 @@ interface Props {
   focusFeature?: GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null;
   focusSignal?: number;
   showGlobeControl?: boolean;
+  initialOutput?: OutputMode;
+  comparisonResults?: ViewerComparison[];
 }
 
 /**
@@ -431,7 +470,10 @@ export default function SatelliteViewer({
   focusFeature = null,
   focusSignal = 0,
   showGlobeControl = true,
+  initialOutput = "imagery",
+  comparisonResults,
 }: Props) {
+  const { language } = useI18nStore();
   const [preId, setPreId] = useState<number | null>(
     primaryImagery.pre?.id ?? imagery.pre[0]?.id ?? null,
   );
@@ -441,6 +483,12 @@ export default function SatelliteViewer({
   const [view, setView] = useState<ViewMode>("swipe");
   const [swipeOrientation, setSwipeOrientation] = useState<SwipeOrientation>("vertical");
   const [imageryOpacity, setImageryOpacity] = useState(0.9);
+  const [analysisOpacity, setAnalysisOpacity] = useState(1);
+  const [output, setOutput] = useState<OutputMode>(initialOutput);
+  const [comparisonId, setComparisonId] = useState<string | null>(null);
+  const [tileErrorSource, setTileErrorSource] = useState<string | null>(null);
+  const maps = useRef(new Set<L.Map>());
+  const viewport = useRef<ViewerViewport | null>(null);
   const [preSource, setPreSource] = useState<DynamicImagerySource | null>(null);
   const [dynamicPre, setDynamicPre] = useState<DynamicImageryLayer | null>(null);
   const [dynamicPreLoading, setDynamicPreLoading] = useState(false);
@@ -471,10 +519,51 @@ export default function SatelliteViewer({
   const postDate = dynamicPost?.acquisitionDate ?? postImg?.acquisition_date ?? null;
   const postResolutionM = dynamicPost?.resolutionM ?? postImg?.resolution_m ?? null;
   const postAttribution = dynamicPost?.attribution ?? "Google Earth Engine";
-  const preNativeZoom = nativeZoomForResolution(preResolutionM);
-  const postNativeZoom = nativeZoomForResolution(postResolutionM);
   const preSelection = preSource ? `source:${preSource}` : preId ? String(preId) : "";
   const postSelection = postSource ? `source:${postSource}` : postId ? String(postId) : "";
+  const comparisonEntries = comparisonResults ?? analyses.flatMap(entry =>
+    entry.available && checkedAnalyses.has(entry.model_id) && entry.result?.comparison
+      ? [{ model_id: entry.model_id, user_label: entry.user_label, runId: entry.run?.id, comparison: entry.result.comparison }]
+      : []);
+  const comparisonEntry = comparisonEntries.find(entry => entry.model_id === comparisonId) ?? comparisonEntries[0];
+  const comparison = comparisonEntry?.comparison ?? null;
+  const hasClassTiles = !!(comparison?.pre_tile_url || comparison?.post_tile_url);
+  const activeOutput: OutputMode = !comparison ? "imagery"
+    : output === "change" && !comparison.change_tile_url ? hasClassTiles ? "classes" : "imagery"
+    : output === "classes" && !hasClassTiles ? "imagery" : output;
+  const displayView = activeOutput === "change" ? "post" : view;
+  const analysisVisible = activeOutput !== "imagery";
+  const opacity = analysisVisible ? analysisOpacity : imageryOpacity;
+  const setOpacity = analysisVisible ? setAnalysisOpacity : setImageryOpacity;
+  const opacityLabel = language === "id"
+    ? analysisVisible ? "Opasitas segmentasi" : "Opasitas citra"
+    : analysisVisible ? "Segmentation opacity" : "Imagery opacity";
+  const comparisonFeature = useMemo<AoiFeature | null>(() => comparison
+    ? { type: "Feature", properties: {}, geometry: comparison.aoi }
+    : null, [comparison]);
+  const displayAoi = analysisVisible ? comparisonFeature : aoiFeature;
+  const fitGeometry = aoi?.geojson ?? comparisonFeature;
+  const displayBounds = useMemo(() => analysisVisible && comparisonFeature
+    ? L.geoJSON(comparisonFeature).getBounds()
+    : aoiBounds, [analysisVisible, comparisonFeature, aoiBounds]);
+  const displayPreTile = analysisVisible ? viewerUrl(comparison?.pre_tile_url ?? null) : preTile;
+  const displayPostTile = analysisVisible ? viewerUrl(activeOutput === "change" ? comparison?.change_tile_url ?? null : comparison?.post_tile_url ?? null) : postTile;
+  const displayPreDate = analysisVisible ? comparison?.pre.date ?? null : preDate;
+  const displayPostDate = analysisVisible ? comparison?.post.date ?? null : postDate;
+  const displayPreResolution = analysisVisible ? comparison?.resolution_m ?? null : preResolutionM;
+  const displayPostResolution = analysisVisible ? comparison?.resolution_m ?? null : postResolutionM;
+  const displayPreNativeZoom = nativeZoomForResolution(displayPreResolution);
+  const displayPostNativeZoom = nativeZoomForResolution(displayPostResolution);
+  const analysisAttribution = comparison?.model_id === "dynamic_world_v1" ? "Dynamic World · Google Earth Engine" : comparisonEntry?.user_label ?? "";
+  const displayPreAttribution = analysisVisible ? analysisAttribution : preAttribution;
+  const displayPostAttribution = analysisVisible ? analysisAttribution : postAttribution;
+  const preLabel = `${analysisVisible ? "Segmentasi pre" : language === "id" ? "Sebelum" : "Before"}${displayPreDate ? ` · ${displayPreDate}` : ""}`;
+  const postLabel = `${activeOutput === "change" ? language === "id" ? "Perubahan" : "Change" : analysisVisible ? "Segmentasi post" : language === "id" ? "Sesudah" : "After"}${displayPostDate ? ` · ${displayPostDate}` : ""}`;
+  const tileErrorKey = `${comparisonEntry?.model_id}-${comparisonEntry?.runId}-${activeOutput}-${displayView}-${displayPreTile}-${displayPostTile}`;
+  const chooseView = (next: ViewMode) => {
+    setView(next);
+    if (activeOutput === "change") setOutput("classes");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -602,7 +691,39 @@ export default function SatelliteViewer({
     };
   }, [aoiFeature, event?.end_date, event?.event_date, postRange, postSource]);
 
-  if (!imagery.pre.length && !imagery.post.length && !aoiFeature) {
+  const sharedLayers = <>
+    <ViewerLayers aoi={aoi} showAoi={showAoi} satellite={satellite} showSatellite={showSatellite}
+      analyses={analyses} checkedAnalyses={checkedAnalyses} hotspots={hotspots} showHotspots={showHotspots}
+      highlightedHotspotId={highlightedHotspotId} onHotspotClick={onHotspotClick}
+      firmsFeatures={firmsFeatures} firmsShowLabels={firmsShowLabels} firmsCluster={firmsCluster} />
+    {showAoi && !aoi?.geojson && comparisonFeature && <GeoJSON data={comparisonFeature} style={AOI_STYLE} />}
+    <FitToAoi geometry={fitGeometry} maps={maps} viewport={viewport} />
+    <FitToFeature feature={focusFeature} signal={focusSignal} />
+  </>;
+  const historicalDate = (phase: "pre" | "post") => analysisVisible
+    ? (phase === "pre" ? displayPreDate : displayPostDate) ?? undefined
+    : historicalDateForSource(phase === "pre" ? preSource : postSource, phase === "pre" ? preDate : postDate);
+  const renderMap = (phase: "pre" | "post", globeControl: boolean) => {
+    const tile = phase === "pre" ? displayPreTile : displayPostTile;
+    const resolutionM = phase === "pre" ? displayPreResolution : displayPostResolution;
+    const nativeZoom = phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom;
+    const image = phase === "pre" ? preImg : postImg;
+    return <MapView id={`disasterSatMap-${phase}`} showGlobeControl={globeControl} historicalDate={historicalDate(phase)}>
+      <BasemapSwitcher />
+      <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
+      <HistoricalAoiClipController aoi={displayAoi} paneName={DISASTER_IMAGERY_PANE} />
+      <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={opacityLabel} />
+      {tile && <TileLayer key={tile} url={tile} opacity={opacity}
+        attribution={phase === "pre" ? displayPreAttribution : displayPostAttribution}
+        crossOrigin={!analysisVisible && image?.source_kind === "local_upload" ? "use-credentials" : undefined}
+        pane={DISASTER_IMAGERY_PANE} bounds={displayBounds} maxNativeZoom={nativeZoom} maxZoom={DISASTER_SCENE_MAX_ZOOM}
+        eventHandlers={{ tileerror: () => setTileErrorSource(tileErrorKey) }} />}
+      {sharedLayers}
+      <RasterResolutionNotice layers={[{ label: phase === "pre" ? preLabel : postLabel, resolutionM, nativeZoom }]} />
+    </MapView>;
+  };
+
+  if (!imagery.pre.length && !imagery.post.length && !aoiFeature && !comparison) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
         Belum ada citra satelit pre/post untuk event ini.
@@ -614,52 +735,58 @@ export default function SatelliteViewer({
     <div className="card mb-3 pb-4 disaster-modern-card disaster-satellite-card">
       <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap disaster-soft-header">
         <span className="fw-semibold disaster-panel-title">
-          <i className="bi bi-images" /> Citra Satelit
+          <i className="bi bi-images" /> {language === "id" ? "Citra Satelit" : "Satellite Imagery"}
         </span>
         <div
           className="btn-group btn-group-sm ms-auto disaster-view-toggle"
           role="group"
-          aria-label="Tampilan citra"
+          aria-label={language === "id" ? "Tampilan citra" : "Imagery view"}
         >
           <button
             type="button"
-            className={`btn btn-outline-secondary ${view === "pre" ? "active" : ""}`}
-            onClick={() => setView("pre")}
+            className={`btn btn-outline-secondary ${activeOutput !== "change" && displayView === "pre" ? "active" : ""}`}
+            aria-pressed={activeOutput !== "change" && displayView === "pre"}
+            onClick={() => chooseView("pre")}
           >
             Pre
           </button>
           <button
             type="button"
-            className={`btn btn-outline-secondary ${view === "post" ? "active" : ""}`}
-            onClick={() => setView("post")}
+            className={`btn btn-outline-secondary ${activeOutput !== "change" && displayView === "post" ? "active" : ""}`}
+            aria-pressed={activeOutput !== "change" && displayView === "post"}
+            onClick={() => chooseView("post")}
           >
             Post
           </button>
           <button
             type="button"
-            className={`btn btn-outline-secondary ${view === "split" ? "active" : ""}`}
-            onClick={() => setView("split")}
+            className={`btn btn-outline-secondary ${activeOutput !== "change" && displayView === "split" ? "active" : ""}`}
+            aria-pressed={activeOutput !== "change" && displayView === "split"}
+            onClick={() => chooseView("split")}
           >
-            <i className="fas fa-columns" /> Berdampingan
+            <i className="fas fa-columns" /> {language === "id" ? "Berdampingan" : "Side by side"}
           </button>
           <button
             type="button"
-            className={`btn btn-outline-secondary ${view === "swipe" ? "active" : ""}`}
-            onClick={() => setView("swipe")}
+            className={`btn btn-outline-secondary ${activeOutput !== "change" && displayView === "swipe" ? "active" : ""}`}
+            aria-pressed={activeOutput !== "change" && displayView === "swipe"}
+            onClick={() => chooseView("swipe")}
           >
-            <i className="fas fa-arrows-alt-h" /> Geser
+            <i className="fas fa-arrows-alt-h" /> {language === "id" ? "Geser" : "Swipe"}
           </button>
         </div>
       </div>
       <div className="card-body">
-        <div className="row g-2 mb-3 disaster-imagery-selectors">
+        {(imagery.pre.length > 0 || imagery.post.length > 0 || aoiFeature) && <div className="row g-2 mb-3 disaster-imagery-selectors">
           <div className="col-sm-6">
-            <label className="form-label small fw-semibold mb-1">Citra Sebelum (Pre)</label>
+            <label className="form-label small fw-semibold mb-1" htmlFor="disaster-pre-scene">{language === "id" ? "Citra Sebelum (Pre)" : "Before Imagery (Pre)"}</label>
             <select
               className="form-select form-select-sm"
+              id="disaster-pre-scene"
               value={preSelection}
               onChange={(e) => {
                 const value = e.target.value;
+                setOutput("imagery");
                 if (value.startsWith("source:")) {
                   setPreId(null);
                   setPreSource(value.slice("source:".length) as DynamicImagerySource);
@@ -692,12 +819,14 @@ export default function SatelliteViewer({
             {dynamicPreError && <div className="small text-danger mt-1" role="alert">{dynamicPreError}</div>}
           </div>
           <div className="col-sm-6">
-            <label className="form-label small fw-semibold mb-1">Citra Sesudah (Post)</label>
+            <label className="form-label small fw-semibold mb-1" htmlFor="disaster-post-scene">{language === "id" ? "Citra Sesudah (Post)" : "After Imagery (Post)"}</label>
             <select
               className="form-select form-select-sm"
+              id="disaster-post-scene"
               value={postSelection}
               onChange={(e) => {
                 const value = e.target.value;
+                setOutput("imagery");
                 if (value.startsWith("source:")) {
                   setPostId(null);
                   setPostSource(value.slice("source:".length) as DynamicImagerySource);
@@ -729,207 +858,58 @@ export default function SatelliteViewer({
             {dynamicPostLoading && <div className="small text-muted mt-1" role="status">Memuat citra pasca-bencana dan memotong sesuai AOI…</div>}
             {dynamicPostError && <div className="small text-danger mt-1" role="alert">{dynamicPostError}</div>}
           </div>
-        </div>
+        </div>}
 
-        {(view === "pre" || view === "post") && (
-          <MapView id={`disasterSatMap-${view}`} showGlobeControl={showGlobeControl} historicalDate={view === "pre" ? historicalDateForSource(preSource, preDate) : historicalDateForSource(postSource, postDate)}>
-            <BasemapSwitcher />
-            <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
-            <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
-            <LayerOpacityControl
-              opacity={imageryOpacity}
-              onChange={setImageryOpacity}
-              label="Opacity citra"
-            />
-            {view === "pre" && preTile && (
-              <TileLayer
-                url={preTile}
-                opacity={imageryOpacity}
-                attribution={preAttribution}
-                crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                pane={DISASTER_IMAGERY_PANE}
-                bounds={aoiBounds}
-                maxNativeZoom={preNativeZoom}
-                maxZoom={DISASTER_SCENE_MAX_ZOOM}
-              />
-            )}
-            {view === "post" && postTile && (
-              <TileLayer
-                url={postTile}
-                opacity={imageryOpacity}
-                attribution={postAttribution}
-                crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                pane={DISASTER_IMAGERY_PANE}
-                bounds={aoiBounds}
-                maxNativeZoom={postNativeZoom}
-                maxZoom={DISASTER_SCENE_MAX_ZOOM}
-              />
-            )}
-            <ViewerLayers
-              aoi={aoi}
-              showAoi={showAoi}
-              satellite={satellite}
-              showSatellite={showSatellite}
-              analyses={analyses}
-              checkedAnalyses={checkedAnalyses}
-              hotspots={hotspots}
-              showHotspots={showHotspots}
-              highlightedHotspotId={highlightedHotspotId}
-              onHotspotClick={onHotspotClick}
-              firmsFeatures={firmsFeatures}
-              firmsShowLabels={firmsShowLabels}
-              firmsCluster={firmsCluster}
-            />
-            <RasterResolutionNotice layers={[view === "pre" ? {label: "Pre", resolutionM: preResolutionM, nativeZoom: preNativeZoom} : {label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
-                <FitToAoi aoi={aoi} />
-            <FitToFeature feature={focusFeature} signal={focusSignal} />
-          </MapView>
-        )}
-
-        {view === "split" && (
-          <div className="row g-2">
-            <div className="col-md-6">
-              <MapView id="disasterSatMapPre" showGlobeControl={showGlobeControl} historicalDate={historicalDateForSource(preSource, preDate)}>
-                <BasemapSwitcher />
-                <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
-                <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
-                <LayerOpacityControl
-                  opacity={imageryOpacity}
-                  onChange={setImageryOpacity}
-                  label="Opacity citra"
-                />
-                {preTile && (
-                  <TileLayer
-                    url={preTile}
-                    opacity={imageryOpacity}
-                    attribution={preAttribution}
-                    crossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                    pane={DISASTER_IMAGERY_PANE}
-                    bounds={aoiBounds}
-                    maxNativeZoom={preNativeZoom}
-                    maxZoom={DISASTER_SCENE_MAX_ZOOM}
-                  />
-                )}
-                <ViewerLayers
-                  aoi={aoi}
-                  showAoi={showAoi}
-                  satellite={satellite}
-                  showSatellite={showSatellite}
-                  analyses={analyses}
-                  checkedAnalyses={checkedAnalyses}
-                  hotspots={hotspots}
-                  showHotspots={showHotspots}
-                  highlightedHotspotId={highlightedHotspotId}
-                  onHotspotClick={onHotspotClick}
-                  firmsFeatures={firmsFeatures}
-                  firmsShowLabels={firmsShowLabels}
-                  firmsCluster={firmsCluster}
-                />
-                <RasterResolutionNotice layers={[{label: "Pre", resolutionM: preResolutionM, nativeZoom: preNativeZoom}]} />
-                <FitToAoi aoi={aoi} />
-                <FitToFeature feature={focusFeature} signal={focusSignal} />
-              </MapView>
-              <div className="text-center small text-muted mt-1">
-                Sebelum {preDate ? `· ${preDate}` : ""}
-              </div>
+        {comparison && <div className="disaster-comparison-controls mb-3">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+            {comparisonEntries.length > 1 && <>
+              <label className="small fw-semibold" htmlFor="disaster-comparison-result">{language === "id" ? "Hasil analisis" : "Analysis result"}</label>
+              <select id="disaster-comparison-result" className="form-select form-select-sm disaster-comparison-result"
+                value={comparisonEntry.model_id} onChange={e => setComparisonId(e.target.value)}>
+                {comparisonEntries.map(entry => <option key={entry.model_id} value={entry.model_id}>{entry.user_label}</option>)}
+              </select>
+            </>}
+            <div className="btn-group btn-group-sm" role="group" aria-label={language === "id" ? "Layer yang ditampilkan" : "Displayed layer"}>
+              {([
+                ["imagery", language === "id" ? "Citra satelit" : "Satellite imagery", true],
+                ["classes", language === "id" ? "Segmentasi multi-kelas" : "Multi-class segmentation", !!(comparison.pre_tile_url || comparison.post_tile_url)],
+                ["change", language === "id" ? "Perubahan" : "Change", !!comparison.change_tile_url],
+              ] as const).map(([key, label, available]) => <button key={key} type="button"
+                className={`btn btn-outline-secondary ${activeOutput === key ? "active" : ""}`}
+                aria-pressed={activeOutput === key} disabled={!available} onClick={() => setOutput(key)}>{label}</button>)}
             </div>
-            <div className="col-md-6">
-              <MapView id="disasterSatMapPost" showGlobeControl={false} historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? undefined}>
-                <BasemapSwitcher />
-                <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
-                <HistoricalAoiClipController aoi={aoiFeature} paneName={DISASTER_IMAGERY_PANE} />
-                <LayerOpacityControl
-                  opacity={imageryOpacity}
-                  onChange={setImageryOpacity}
-                  label="Opacity citra"
-                />
-                {postTile && (
-                  <TileLayer
-                    url={postTile}
-                    opacity={imageryOpacity}
-                    attribution={postAttribution}
-                    crossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-                    pane={DISASTER_IMAGERY_PANE}
-                    bounds={aoiBounds}
-                    maxNativeZoom={postNativeZoom}
-                    maxZoom={DISASTER_SCENE_MAX_ZOOM}
-                  />
-                )}
-                <ViewerLayers
-                  aoi={aoi}
-                  showAoi={showAoi}
-                  satellite={satellite}
-                  showSatellite={showSatellite}
-                  analyses={analyses}
-                  checkedAnalyses={checkedAnalyses}
-                  hotspots={hotspots}
-                  showHotspots={showHotspots}
-                  highlightedHotspotId={highlightedHotspotId}
-                  onHotspotClick={onHotspotClick}
-                  firmsFeatures={firmsFeatures}
-                  firmsShowLabels={firmsShowLabels}
-                  firmsCluster={firmsCluster}
-                />
-                <RasterResolutionNotice layers={[{label: "Post", resolutionM: postResolutionM, nativeZoom: postNativeZoom}]} />
-                <FitToAoi aoi={aoi} />
-                <FitToFeature feature={focusFeature} signal={focusSignal} />
-              </MapView>
-              <div className="text-center small text-muted mt-1">
-                Sesudah {postDate ? `· ${postDate}` : ""}
-              </div>
-            </div>
+            <label className="small segmentation-comparison__opacity">{opacityLabel}
+              <input aria-label={opacityLabel} type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))} />
+            </label>
           </div>
-        )}
+          <SegmentationSummary result={comparison} tileError={analysisVisible && tileErrorSource === tileErrorKey} />
+          <p className="small text-muted mb-0">{language === "id"
+            ? "Dropdown scene menampilkan citra referensi. Segmentasi dan perubahan memakai tanggal hasil analisis yang tercantum di atas."
+            : "Scene selectors show reference imagery. Segmentation and change use the analysis dates shown above."}</p>
+        </div>}
 
-        {view === "swipe" && (
-          <SwipeCompareMap
-            id="disasterSatSwipeMap"
-            beforeUrl={preTile}
-            afterUrl={postTile}
-            beforeLabel={`Sebelum${preDate ? ` · ${preDate}` : ""}`}
-            afterLabel={`Sesudah${postDate ? ` · ${postDate}` : ""}`}
-            beforeAttribution={preAttribution}
-            afterAttribution={postAttribution}
-            orientation={swipeOrientation}
-            beforeCrossOrigin={preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-            afterCrossOrigin={postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-            onOrientationChange={setSwipeOrientation}
-            opacity={imageryOpacity}
-            maxZoom={DISASTER_SCENE_MAX_ZOOM}
-            beforeResolutionM={preResolutionM ?? undefined}
-            afterResolutionM={postResolutionM ?? undefined}
-            beforeMaxNativeZoom={preNativeZoom}
-            afterMaxNativeZoom={postNativeZoom}
-            historicalDate={postSource === "esri_wayback" ? undefined : postDate ?? historicalDateForSource(preSource, preDate)}
-            showGlobeControl={showGlobeControl}
-            initialPercent={35}
-            bounds={aoi?.geojson ? L.geoJSON(aoi.geojson as GeoJSON.Feature).getBounds() : undefined}
-            clipGeometry={aoiFeature}
-          >
-            <LayerOpacityControl
-              opacity={imageryOpacity}
-              onChange={setImageryOpacity}
-              label="Opacity citra"
-            />
-            <ViewerLayers
-              aoi={aoi}
-              showAoi={showAoi}
-              satellite={satellite}
-              showSatellite={showSatellite}
-              analyses={analyses}
-              checkedAnalyses={checkedAnalyses}
-              hotspots={hotspots}
-              showHotspots={showHotspots}
-              highlightedHotspotId={highlightedHotspotId}
-              onHotspotClick={onHotspotClick}
-              firmsFeatures={firmsFeatures}
-              firmsShowLabels={firmsShowLabels}
-              firmsCluster={firmsCluster}
-            />
-            <FitToAoi aoi={aoi} />
-            <FitToFeature feature={focusFeature} signal={focusSignal} />
-          </SwipeCompareMap>
-        )}
+        {(displayView === "pre" || displayView === "post") && <>
+          {renderMap(displayView, showGlobeControl)}
+          <div className="text-center small text-muted mt-1">{displayView === "pre" ? preLabel : postLabel}</div>
+        </>}
+        {displayView === "split" && <div className="row g-2">
+          <div className="col-md-6">{renderMap("pre", showGlobeControl)}<div className="text-center small text-muted mt-1">{preLabel}</div></div>
+          <div className="col-md-6">{renderMap("post", false)}<div className="text-center small text-muted mt-1">{postLabel}</div></div>
+        </div>}
+        {displayView === "swipe" && <SwipeCompareMap id="disasterSatSwipeMap"
+          beforeUrl={displayPreTile} afterUrl={displayPostTile} beforeLabel={preLabel} afterLabel={postLabel}
+          beforeAttribution={displayPreAttribution} afterAttribution={displayPostAttribution}
+          orientation={swipeOrientation} onOrientationChange={setSwipeOrientation} opacity={opacity}
+          beforeCrossOrigin={!analysisVisible && preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
+          afterCrossOrigin={!analysisVisible && postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
+          maxZoom={DISASTER_SCENE_MAX_ZOOM} beforeResolutionM={displayPreResolution ?? undefined} afterResolutionM={displayPostResolution ?? undefined}
+          beforeMaxNativeZoom={displayPreNativeZoom} afterMaxNativeZoom={displayPostNativeZoom}
+          historicalDate={historicalDate("post") ?? historicalDate("pre")} showGlobeControl={showGlobeControl}
+          initialPercent={35} bounds={displayBounds} clipGeometry={displayAoi}>
+          <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={opacityLabel} />
+          {sharedLayers}
+        </SwipeCompareMap>}
+        {comparison && <SegmentationStatistics key={comparisonEntry.model_id} result={comparison} />}
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-import SegmentationComparison from "./components/SegmentationComparison";
 import AnalysisCompleteness from "./components/AnalysisCompleteness";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -369,7 +368,6 @@ export default function DisasterDashboard() {
   const { event, aoi, imagery, primary_imagery } = detail;
   const analyses = layers?.analyses ?? [];
   const satellite = layers?.satellite ?? null;
-  const comparisonEntries = analyses.filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.comparison);
   const availableAnalyses = analyses.filter((entry) => entry.available).length;
   const totalImagery = imagery.pre.length + imagery.post.length;
   const eventDescription = event.description ? splitFirstSentence(event.description) : null;
@@ -495,9 +493,8 @@ export default function DisasterDashboard() {
           {hotspotsError && <div className="alert alert-warning py-2 mb-3">{hotspotsError}</div>}
         </aside>
 
-        {/* The old duplicate analysis map is intentionally removed. */}
+        {/* Imagery and analysis outputs use the same comparison viewer. */}
         <div className="disaster-map-column">
-          {comparisonEntries.map((entry, index) => <SegmentationComparison key={`${entry.model_id}-${entry.run?.id}`} result={entry.result!.comparison!} showGlobeControl={index === 0} />)}
           <SatelliteViewer
             event={event}
             aoi={aoi}
@@ -505,9 +502,9 @@ export default function DisasterDashboard() {
             primaryImagery={primary_imagery}
             satellite={satellite}
             showSatellite={showSatellite}
-            analyses={analyses.filter(entry => !entry.result?.comparison)}
+            analyses={analyses}
             checkedAnalyses={checkedAnalyses}
-            showGlobeControl={comparisonEntries.length === 0}
+            showGlobeControl
             showAoi={showAoi}
             hotspots={hotspots}
             showHotspots={showHotspots}

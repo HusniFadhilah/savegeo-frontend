@@ -1,4 +1,4 @@
-import SegmentationComparison from "@/features/disaster/components/SegmentationComparison";
+import SatelliteViewer from "@/features/disaster/components/SatelliteViewer";
 import { useEffect, useMemo, useState } from "react";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
@@ -148,7 +148,12 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
         {selected && selected.result && (
           <>
             <div style={{ marginBottom: 10 }}>
-              {selected.result.comparison ? <SegmentationComparison key={selected.run.id} result={selected.result.comparison} /> : <MapView id={`disaster-review-map-${eventId}`}>
+              {selected.result.comparison ? <SatelliteViewer key={selected.run.id}
+                aoi={null} imagery={{ pre: [], post: [] }} primaryImagery={{ pre: null, post: null }}
+                initialOutput="classes" comparisonResults={[{
+                  model_id: selected.run.model_id, user_label: selected.run.model_id,
+                  runId: selected.run.id, comparison: selected.result.comparison,
+                }]} /> : <MapView id={`disaster-review-map-${eventId}`}>
                 <BasemapSwitcher />
                 {selected.result.tile_url && (
                   <ResultTileLayer

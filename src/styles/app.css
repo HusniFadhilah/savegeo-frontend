@@ -9167,6 +9167,30 @@ html[data-theme="dark"] .cs-status-summary,
 .segmentation-comparison__meta > span > i { color: #43865a; }
 .segmentation-comparison__opacity { display: inline-flex; align-items: center; gap: .45rem; }
 .segmentation-comparison__opacity input { width: min(150px, 28vw); }
+.disaster-comparison-result { width: auto; max-width: 100%; }
+.disaster-comparison-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: .75rem 0;
+}
+.disaster-comparison-totals > div {
+  display: grid;
+  gap: .15rem;
+  min-width: 90px;
+  padding: .45rem .65rem;
+  border: 1px solid #dbe5ee;
+  border-radius: .4rem;
+  background: #f8fafc;
+}
+.disaster-comparison-totals span { color: #627083; font-size: .75rem; }
+.disaster-comparison-totals strong { color: #273545; font-size: .86rem; }
+html[data-theme="dark"] .disaster-comparison-totals > div,
+.dark-mode .disaster-comparison-totals > div { border-color: #344252; background: #17251d; }
+html[data-theme="dark"] .disaster-comparison-totals span,
+.dark-mode .disaster-comparison-totals span { color: #aab7c7; }
+html[data-theme="dark"] .disaster-comparison-totals strong,
+.dark-mode .disaster-comparison-totals strong { color: #e5e7eb; }
 .segmentation-comparison__error {
   margin-bottom: .55rem;
   padding: .5rem .7rem;
