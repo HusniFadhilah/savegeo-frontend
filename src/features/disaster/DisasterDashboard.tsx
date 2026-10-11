@@ -544,8 +544,12 @@ export default function DisasterDashboard() {
       ) : statistics ? (
         <>
           {statistics.event && (
-            <div className="alert alert-info py-2 small mb-3">
-              <i className="bi bi-shield-check me-1" /> Hasil yang dipublikasikan untuk kejadian <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type}</strong> — {statistics.event.name}. Jenis hasil dan batas interpretasi dijelaskan pada tiap analisis.
+            <div className="disaster-stats-context">
+              <i className="bi bi-patch-check-fill" aria-hidden="true" />
+              <span>{language === "id" ? "Hasil terpublikasi" : "Published results"}</span>
+              <InfoTip label={language === "id" ? "Info hasil statistik" : "Statistics details"} content={language === "id"
+                ? <>Hasil untuk kejadian <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type} · {statistics.event.name}</strong>. Angka di bawah berasal dari analisis yang telah dipublikasikan; batas interpretasi dijelaskan pada detail tiap analisis.</>
+                : <>Results for <strong>{EVENT_DISASTER_TYPE_LABELS[statistics.event.disaster_type as EventDisasterType] ?? statistics.event.disaster_type} · {statistics.event.name}</strong>. Values come from published analyses; interpretation limits are available in each analysis detail.</>} />
             </div>
           )}
           <KpiTiles kpis={statistics.kpis} analyses={analyses} />

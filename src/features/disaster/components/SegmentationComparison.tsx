@@ -122,7 +122,12 @@ export default function SegmentationComparison({result, showGlobeControl = true}
       <span><i className="bi bi-calendar3" aria-hidden="true" /> {result.pre.date} → {result.post.date}</span>
       <span><i className="bi bi-images" aria-hidden="true" /> {result.pre.scene_count} → {result.post.scene_count} {indonesian ? "scene" : "scenes"}</span>
       <span><i className="bi bi-rulers" aria-hidden="true" /> {result.resolution_m} m</span>
-      <InfoTip label={indonesian ? "Detail CRS" : "CRS details"} content={<>{indonesian ? "Sistem koordinat" : "Coordinate system"}: {result.crs}</>} />
+      <InfoTip label={indonesian ? "Detail cakupan dan CRS" : "Coverage and CRS details"} content={<>
+        <div><strong>CRS</strong>: {result.crs}</div>
+        <p className="my-1">{result.coverage_note}</p>
+        <div>{indonesian ? "Luas AOI" : "AOI area"}: {number(result.aoi_area_ha)} ha · {indonesian ? "Valid" : "Valid"}: {number(result.valid_area_ha)} ha</div>
+        <div>{indonesian ? "Tanpa data" : "No data"}: {number(result.no_data_area_ha)} ha · {indonesian ? "Berubah" : "Changed"}: {number(result.changed_area_ha)} ha · {indonesian ? "Tetap" : "Unchanged"}: {number(result.unchanged_area_ha)} ha</div>
+      </>} />
     </div>
 
     <div className="d-flex flex-wrap gap-2 mb-2" role="group" aria-label={indonesian ? "Mode segmentasi" : "Segmentation mode"}>
@@ -148,15 +153,6 @@ export default function SegmentationComparison({result, showGlobeControl = true}
       : single(mode === "pre" ? "pre" : mode === "change" ? "change" : "post")}
 
     {mode === "change" && result.changed_area_ha === 0 && <p className="small text-muted mb-2">{indonesian ? "Tidak ada perubahan kelas pada piksel valid bersama." : "No class changes were found in shared valid pixels."}</p>}
-    <div className="segmentation-comparison__summary" aria-label={indonesian ? "Ringkasan area" : "Area summary"}>
-      <span><small>{indonesian ? "Valid" : "Valid"}</small><strong>{number(result.valid_area_ha)} ha</strong></span>
-      <span><small>{indonesian ? "Berubah" : "Changed"}</small><strong>{number(result.changed_area_ha)} ha</strong></span>
-      <span><small>{indonesian ? "Tetap" : "Unchanged"}</small><strong>{number(result.unchanged_area_ha)} ha</strong></span>
-      <InfoTip label={indonesian ? "Detail cakupan analisis" : "Analysis coverage details"} content={<>
-        {result.coverage_note}<br />{indonesian ? "Luas AOI" : "AOI area"}: {number(result.aoi_area_ha)} ha · {indonesian ? "area tanpa data" : "no-data area"}: {number(result.no_data_area_ha)} ha
-      </>} />
-    </div>
-
     <details className="segmentation-comparison__details">
       <summary>{indonesian ? "Lihat statistik kelas dan transisi" : "View class and transition statistics"}<span>{result.classes.length} {indonesian ? "kelas" : "classes"}</span></summary>
       <div className="table-responsive"><table className="table table-sm" aria-label={indonesian ? "Statistik kelas segmentasi" : "Segmentation class statistics"}>

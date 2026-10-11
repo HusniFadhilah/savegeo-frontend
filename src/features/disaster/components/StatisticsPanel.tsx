@@ -9,6 +9,7 @@ import {
 } from "chart.js";
 import type { DisasterAnalysisEntry, DisasterStatisticsResponse } from "../types";
 import { statisticMetric } from "../lib/statisticMetrics";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 // Same chart.js registration pattern as lc-change/components/TimeSeriesChart.tsx
 // / NetChangeChart.tsx - this repo uses chart.js + react-chartjs-2, not
@@ -38,23 +39,31 @@ interface Props {
  * output.
  */
 export default function StatisticsPanel({ kpis, analyses }: Props) {
+  const { language } = useI18nStore();
+  const indonesian = language === "id";
   const entries = Object.entries(kpis).filter(([modelId, stats]) =>
-    stats && Object.keys(stats).length && analyses.some((analysis) => analysis.model_id === modelId && analysis.available),
+    stats && Object.entries(stats).some(([key, value]) => key !== "aoi_area_ha" && statisticMetric(key) && typeof value === "number" && Number.isFinite(value)) && analyses.some((analysis) => analysis.model_id === modelId && analysis.available),
   );
   if (!entries.length) {
     return (
-      <div className="alert alert-secondary py-2 mb-3">
-        Belum ada data statistik untuk ditampilkan sebagai grafik.
+      <div className="disaster-stats-empty">
+        <i className="bi bi-bar-chart" aria-hidden="true" />
+        {indonesian ? "Belum ada data statistik untuk ditampilkan sebagai grafik." : "No statistics are available to chart."}
       </div>
     );
   }
 
   return (
-    <div className="row g-3 disaster-stat-grid">
-      {entries.map(([modelId, stats]) => {
+    <details className="disaster-statistics-details">
+      <summary>
+        <span><i className="bi bi-bar-chart-line-fill" aria-hidden="true" /> {indonesian ? "Grafik statistik" : "Statistics charts"}</span>
+        <small>{entries.length} {indonesian ? "dataset" : "datasets"}</small>
+      </summary>
+      <div className="row g-3 disaster-stat-grid">
+        {entries.map(([modelId, stats]) => {
         const analysis = analyses.find((a) => a.model_id === modelId);
         const label = analysis?.user_label ?? modelId;
-        const rows = Object.entries(stats).filter((entry): entry is [string, number] => statisticMetric(entry[0]) !== null && typeof entry[1] === "number" && Number.isFinite(entry[1]));
+        const rows = Object.entries(stats).filter((entry): entry is [string, number] => entry[0] !== "aoi_area_ha" && statisticMetric(entry[0]) !== null && typeof entry[1] === "number" && Number.isFinite(entry[1]));
         if (!rows.length) return null;
         const groups = new Map<string, [string, number][]>();
         for (const row of rows) {
@@ -65,9 +74,9 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
         return (
           <div className="col-lg-6" key={modelId}>
             <div className="card h-100 disaster-modern-card disaster-chart-card">
-              <div className="card-header py-2 disaster-soft-header">{label}</div>
+              <div className="card-header py-2 disaster-soft-header"><i className="bi bi-map me-2" aria-hidden="true" />{label}</div>
               <div className="card-body">
-                {[...groups].map(([unit, group]) => <div key={unit} className="mb-3" style={{ height: Math.max(220, group.length * 42) }}>
+                {[...groups].map(([unit, group]) => <div key={unit} className="mb-3 disaster-chart-unit" style={{ height: Math.max(180, Math.min(320, group.length * 34)) }}>
                   <Bar
                     data={{ labels: group.map(([key]) => statisticMetric(key)?.label ?? key), datasets: [{label, data: group.map(([, value]) => value), backgroundColor: group.map((_, i) => BAR_COLORS[i % BAR_COLORS.length])}] }}
                     options={{
@@ -90,7 +99,8 @@ export default function StatisticsPanel({ kpis, analyses }: Props) {
             </div>
           </div>
         );
-      })}
-    </div>
+        })}
+      </div>
+    </details>
   );
 }
