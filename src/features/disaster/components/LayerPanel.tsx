@@ -1,4 +1,5 @@
 import type { DisasterAnalysisEntry, DisasterSatelliteLayers } from "../types";
+import InfoTip from "@/components/ui/InfoTip";
 
 interface Props {
   satellite: DisasterSatelliteLayers | null;
@@ -120,17 +121,10 @@ export default function LayerPanel({
                 <label className={`form-check-label small ${entry.available ? "" : "text-muted"}`} htmlFor={`layer-${entry.model_id}`}>
                   {LAYER_LABELS[entry.model_id] ?? entry.user_label}
                 </label>
-                {layerInfo(entry) && (
-                  <button
-                    type="button"
-                    className="btn p-0 border-0 text-secondary"
-                    style={{ lineHeight: 1, flex: "0 0 auto" }}
-                    title={layerInfo(entry)}
-                    aria-label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}: ${layerInfo(entry)}`}
-                  >
-                    <i className="bi bi-info-circle" aria-hidden="true" />
-                  </button>
-                )}
+                {layerInfo(entry) && <InfoTip
+                  label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}`}
+                  content={layerInfo(entry)}
+                />}
               </div>
             ))}
           </div>
