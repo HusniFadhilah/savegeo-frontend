@@ -22,10 +22,10 @@ interface Props {
 
 /**
  * Layer-switcher control (top-right), mirrors legacy `addBasemapSwitcher`.
- * Collapsed into a single icon button by default - the basemap list only
- * shows on hover, so it doesn't permanently cover map content. Satellite
- * stays the layer added to the map by MapView; this control only lets the
- * user opt into Roads/others, it never changes the initial default.
+ * Collapsed into a single icon button by default. Click toggles the panel;
+ * pointer movement never changes its open state. Satellite stays the layer
+ * added to the map by MapView; this control only lets the user opt into
+ * Roads/others, it never changes the initial default.
  */
 export default function BasemapSwitcher({ extraOptions = [] }: Props) {
   const map = useMap();
@@ -146,8 +146,6 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     <div className="leaflet-top leaflet-right basemap-switcher-control">
       <div ref={rootRef}
         className="leaflet-control leaflet-bar basemap-switcher"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
       >
         <button type="button" className="basemap-trigger" title={t("map.basemap.title")} aria-label={t("map.basemap.title")} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           <i className="bi bi-stack" />
