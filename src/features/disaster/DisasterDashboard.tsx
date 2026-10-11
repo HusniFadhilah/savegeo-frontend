@@ -41,6 +41,13 @@ import FirmsHotspotPanel from "./components/FirmsHotspotPanel";
 import SamGeoSegmentationPanel from "./components/SamGeoSegmentationPanel";
 import { clearFirmsQuery } from "./lib/firmsQueryState";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import InfoTip from "@/components/ui/InfoTip";
+
+function splitFirstSentence(value: string): { first: string; rest: string } {
+  const match = value.trim().match(/^[\s\S]*?[.!?](?=\s|$)/);
+  if (!match) return { first: value.trim(), rest: "" };
+  return { first: match[0].trim(), rest: value.trim().slice(match[0].length).trim() };
+}
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
@@ -90,7 +97,7 @@ const EMPTY_FIRMS_LAYER: FirmsLayerState = {
  * this app's other multi-section modules (carbon/lc-change).
  */
 export default function DisasterDashboard() {
-  const { t } = useI18nStore();
+  const { t, language } = useI18nStore();
   const { eventId } = useParams<{ eventId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -365,6 +372,7 @@ export default function DisasterDashboard() {
   const comparisonEntries = analyses.filter((entry) => checkedAnalyses.has(entry.model_id) && entry.result?.comparison);
   const availableAnalyses = analyses.filter((entry) => entry.available).length;
   const totalImagery = imagery.pre.length + imagery.post.length;
+  const eventDescription = event.description ? splitFirstSentence(event.description) : null;
 
   return (
     <div className="disaster-shell disaster-detail-shell">
@@ -393,7 +401,22 @@ export default function DisasterDashboard() {
               .filter(Boolean)
               .join(" - ")}
           </p>
-          {event.description && <p className="disaster-detail-description">{event.description}</p>}
+          {eventDescription?.first && (
+            eventDescription.rest ? (
+              <details className="disaster-detail-description-toggle">
+                <summary>
+                  <span>{eventDescription.first}</span>
+                  <span className="disaster-detail-description-toggle__label disaster-detail-description-toggle__more">
+                    {language === "id" ? "Selengkapnya" : "Read more"}
+                  </span>
+                  <span className="disaster-detail-description-toggle__label disaster-detail-description-toggle__less">
+                    {language === "id" ? "Ringkas" : "Show less"}
+                  </span>
+                </summary>
+                <p>{eventDescription.rest}</p>
+              </details>
+            ) : <p className="disaster-detail-description">{eventDescription.first}</p>
+          )}
         </div>
         <div className="disaster-detail-facts">
           <div>
@@ -420,9 +443,27 @@ export default function DisasterDashboard() {
 
       {layersError && <div className="alert alert-warning py-2 mb-3">{layersError}</div>}
       {analyses.some((entry) => !entry.available) && (
-        <div className="alert alert-secondary py-2 mb-3 small">
-          <i className="bi bi-info-circle me-1" />
-          Analisis yang belum kompatibel atau belum tersedia tidak ditampilkan sebagai layer valid. {analyses.filter((entry) => !entry.available && entry.availability_reason?.length).map((entry) => `${entry.user_label}: ${entry.availability_reason?.join("; ")}`).join(" | ")}
+        <div className="disaster-unavailable-summary mb-3">
+          <i className="bi bi-info-circle" aria-hidden="true" />
+          <span>{language === "id" ? "Beberapa analisis belum tersedia" : "Some analyses are unavailable"}</span>
+          <InfoTip
+            label={language === "id" ? "Detail analisis yang belum tersedia" : "Unavailable analysis details"}
+            content={(
+              <>
+                <p>{language === "id"
+                  ? "Analisis ini belum kompatibel atau belum memiliki hasil yang dipublikasikan, jadi tidak ditampilkan sebagai layer valid."
+                  : "These analyses are incompatible or have no published results, so they are not shown as valid layers."}</p>
+                <ul className="mb-0 ps-3">
+                  {analyses.filter((entry) => !entry.available).map((entry) => (
+                    <li key={entry.model_id}>
+                      <strong>{entry.user_label}</strong>
+                      {entry.availability_reason?.length ? `: ${entry.availability_reason.join("; ")}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          />
         </div>
       )}
 
