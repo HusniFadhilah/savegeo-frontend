@@ -169,7 +169,9 @@ export function withOptionalMapboxBasemap(basemaps: BasemapDefinition[]): Basema
   const mapbox: BasemapDefinition = {
     id: "mapbox-satellite",
     name: "Mapbox Satellite",
-    url: `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=${encodeURIComponent(token)}`,
+    // Request Mapbox's 2x raster tile for sharper rendering on high-DPI displays.
+    // The imagery's ground resolution still varies by location and zoom level.
+    url: `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${encodeURIComponent(token)}`,
     attribution: '<a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a> <a href="https://www.maxar.com/" target="_blank" rel="noreferrer">© Maxar</a> <a href="https://apps.mapbox.com/feedback/" target="_blank" rel="noreferrer">Improve this map</a>',
     maxZoom: 22,
     maxNativeZoom: 22,

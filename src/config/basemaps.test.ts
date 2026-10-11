@@ -35,7 +35,7 @@ describe("optional Mapbox satellite basemap", () => {
   it("uses Mapbox's raster satellite tiles when a token is configured", () => {
     vi.stubEnv("VITE_MAPBOX_ACCESS_TOKEN", "pk.example");
     const basemap = withOptionalMapboxBasemap(FALLBACK_BASEMAPS).find((item) => item.id === "mapbox-satellite");
-    expect(basemap?.url).toBe("https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=pk.example");
+    expect(basemap?.url).toBe("https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.example");
     expect(basemap?.attribution).toContain("© Maxar");
     expect(basemap?.maxNativeZoom).toBe(22);
   });
