@@ -4,6 +4,10 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
+  // Keep the app root and VITE_ env files anchored to this frontend package,
+  // even when Vite is launched from the repository's parent directory.
+  root: fileURLToPath(new URL(".", import.meta.url)),
+  envDir: fileURLToPath(new URL(".", import.meta.url)),
   define: { CESIUM_BASE_URL: JSON.stringify("/cesium/") },
   optimizeDeps: {
     // Globe3DView is lazy-loaded; pre-bundle Cesium before the first globe click
