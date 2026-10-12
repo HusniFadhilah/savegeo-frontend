@@ -29,7 +29,7 @@ export default function RasterResolutionNotice({
             data-native-zoom={nativeZoom}
             data-tile-url={import.meta.env.DEV ? layer.tileUrl : undefined}
           >
-            {layer.resolutionM ? `${layer.resolutionM} m` : "resolusi belum tersedia"}
+            {layer.resolutionM ? `${layer.resolutionM.toFixed(2)} m` : "resolusi belum tersedia"}
             {(zoom ?? map.getZoom()) > nativeZoom && " · diperbesar, tanpa detail tambahan"}
           </div>
         );
