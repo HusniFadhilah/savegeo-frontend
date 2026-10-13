@@ -19,3 +19,4 @@ SENTINEL2_RESOLUTION_VERIFICATION.md
 SWIPE_COMPARE_VERIFICATION.md
 .tmp-chrome-profile/
 .ruff_cache/
+.security-audit-cache/

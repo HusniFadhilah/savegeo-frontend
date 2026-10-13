@@ -1,6 +1,7 @@
 import { env } from "@/config/env";
 import { clearAuthToken } from "@/services/authService";
 import { handleAppUnauthorized } from "@/services/appSession";
+import { handleUserUnauthorized } from "@/services/userAuthService";
 
 export class ApiError extends Error {
   status: number;
@@ -100,6 +101,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (res.status === 401 && auth) {
     if (auth === "app") {
       handleAppUnauthorized();
+    } else if (auth === "user") {
+      handleUserUnauthorized();
     } else if (auth === true || auth === "admin") {
       clearAuthToken();
       onUnauthorized?.();
@@ -107,7 +110,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const contentType = res.headers.get("content-type") || "";
-  const parsed = contentType.includes("application/json")
+  const parsed = (contentType.includes("application/json") || contentType.includes("+json"))
     ? await res.json().catch(() => null)
     : await res.text().catch(() => null);
 

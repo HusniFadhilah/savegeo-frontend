@@ -98,6 +98,7 @@ export function useChatSession() {
   const isLoadingRef = useRef(isLoading);
   const sessionIdRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
   /** Set right before an intentional abort-and-immediately-retry, so the AbortError handler in
    *  callBackend knows to skip showing a "Permintaan dibatalkan" retry chip for this one. */
   const suppressAbortChipRef = useRef(false);

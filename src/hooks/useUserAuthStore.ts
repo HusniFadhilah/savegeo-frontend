@@ -24,7 +24,7 @@ interface UserAuthState {
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   initialize: () => Promise<void>;
 }
 
@@ -66,10 +66,17 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
       return false;
     }
   },
-  logout: () => {
+  logout: async () => {
+    try {
+      await userAuthService.logout();
+    } catch {
+      set({ error: useI18nStore.getState().t("auth.logoutFailed") });
+      return false;
+    }
     useViewerFeatures.getState().reset();
-    void userAuthService.logout();
-    set({ user: null, isAuthenticated: false });
+    window.dispatchEvent(new Event("savegeo:logout"));
+    set({ user: null, isAuthenticated: false, error: null });
+    return true;
   },
   initialize: async () => {
     try {

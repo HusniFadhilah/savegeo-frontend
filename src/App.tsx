@@ -9,12 +9,15 @@ export default function App() {
   const location = useLocation();
   const isAdminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
+  const adminId = useAuthStore((state) => state.user?.id);
+  const userId = useUserAuthStore((state) => state.user?.id);
+  const chatPrincipal = `${isAdminAuthenticated ? adminId : ""}:${isUserAuthenticated ? userId : ""}`;
 
   return (
     <>
       <AppRoutes />
       <LoadingOverlay />
-      {location.pathname !== "/" && (isAdminAuthenticated || isUserAuthenticated) && <ChatWidget />}
+      {location.pathname !== "/" && (isAdminAuthenticated || isUserAuthenticated) && <ChatWidget key={chatPrincipal} />}
     </>
   );
 }

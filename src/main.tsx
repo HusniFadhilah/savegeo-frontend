@@ -15,6 +15,15 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 });
 
+window.addEventListener("savegeo:logout", () => {
+  void queryClient.cancelQueries();
+  queryClient.clear();
+});
+window.addEventListener("savegeo:app-auth-expired", () => {
+  void queryClient.cancelQueries();
+  queryClient.clear();
+});
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

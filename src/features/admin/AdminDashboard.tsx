@@ -89,7 +89,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
 };
 
 export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, error: authError } = useAuthStore();
   const { language, setLanguage, t } = useI18nStore();
   const navigate = useNavigate();
   const [section, setSection] = useState<AdminSection>(routeSection);
@@ -250,7 +250,8 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
             <div className="sb-foot">
               <div className="sb-avatar">{initials}</div>
               <span className="sb-foot-name">{user?.username ?? t("admin.defaultUser")}</span>
-              <span className="sb-foot-logout" onClick={logout} title={t("auth.logout")}>
+              {authError && <span role="alert">{authError}</span>}
+              <span className="sb-foot-logout" onClick={() => { void logout(); }} title={t("auth.logout")}>
                 <i className="bi bi-box-arrow-right" />
               </span>
             </div>

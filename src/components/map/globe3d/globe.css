@@ -90,8 +90,6 @@
 .globe-status { pointer-events: none; position: absolute; bottom: 32px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 4px; color: white; font-size: 11px; }
 .globe-status span { padding: 3px 6px; background: #102338dd; border-radius: 3px; }
 .map-view-shell { position: relative; }
-.savegeo-mapbox-logo { position: absolute; z-index: 1002; left: 48px; bottom: 32px; display: flex; align-items: center; justify-content: center; min-width: 92px; height: 34px; padding: 2px 6px; background: #fff; }
-.savegeo-mapbox-logo img { display: block; height: 30px; width: auto; }
 .cesium-credit-textContainer .savegeo-google-maps-attribution { color: #fff; }
 .map-view-shell .map-globe-overlay { position: absolute; inset: 0; z-index: 1001; }
 .map-globe-overlay .cesium-globe { height: 100%; min-height: 100%; }

@@ -19,6 +19,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   const statusLabel =
     state === "online"
@@ -45,9 +47,19 @@ export default function Navbar() {
   // destination. Viewer/admin-less sessions still need the regular app link.
   const showRegularDashboard = !isAuthenticated || isViewer;
 
-  const handleLogout = () => {
-    if (isAuthenticated) logout();
-    if (isUserAuthenticated) logoutUser();
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError(null);
+    const results = await Promise.all([
+      ...(isAuthenticated ? [logout()] : []),
+      ...(isUserAuthenticated ? [logoutUser()] : []),
+    ]);
+    setLoggingOut(false);
+    if (results.some((success) => !success)) {
+      setLogoutError(t("auth.logoutFailed"));
+      return;
+    }
     setMenuOpen(false);
     navigate("/");
   };
@@ -55,6 +67,7 @@ export default function Navbar() {
   return (
     <nav className="navbar navbar-dark bg-dark app-navbar">
       <div className="container-fluid d-flex align-items-center gap-3">
+        {logoutError && <span role="alert" className="text-warning">{logoutError}</span>}
         <Link to="/" className="navbar-brand app-brand m-0 p-0" aria-label={t("home.homeLink")}>
           <img src="/images/savegeo-logo.svg" alt={t("home.brand")} className="app-brand-logo" />
           <div>
@@ -117,7 +130,7 @@ export default function Navbar() {
                     </li>
                   )}
                   <li>
-                    <button type="button" className="dropdown-item text-danger" onClick={handleLogout}>
+                    <button type="button" className="dropdown-item text-danger" onClick={handleLogout} disabled={loggingOut}>
                       <i className="bi bi-box-arrow-right me-2" /> {t("auth.logout")}
                     </button>
                   </li>

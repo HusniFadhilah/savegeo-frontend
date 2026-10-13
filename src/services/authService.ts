@@ -1,5 +1,5 @@
 import type { LoginResponse, AdminUser } from "@/types/api";
-import { apiClient } from "@/services/apiClient";
+import { ApiError, apiClient } from "@/services/apiClient";
 
 /** The JWT is held by the backend in an HttpOnly cookie, never Web Storage. */
 const TOKEN_KEY = "savegeo_admin_token";
@@ -8,6 +8,8 @@ const USER_KEY = "savegeo_admin_user";
 function clearLegacyStorage(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
 }
 
 clearLegacyStorage();
@@ -35,7 +37,11 @@ export const authService = {
     return apiClient.post<{ message: string }>("/admin/auth/reset-password", { token, password });
   },
   async logout(): Promise<void> {
-    await apiClient.post("/admin/auth/logout").catch(() => undefined);
+    try {
+      await apiClient.post("/admin/auth/logout");
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) throw err;
+    }
     clearAuthToken();
   },
   isAuthenticated(): boolean {

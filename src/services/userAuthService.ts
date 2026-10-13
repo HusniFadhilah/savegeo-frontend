@@ -1,4 +1,4 @@
-import { apiClient } from "@/services/apiClient";
+import { ApiError, apiClient } from "@/services/apiClient";
 
 /**
  * Mirrors `services/authService.ts` exactly, but for the new public-facing
@@ -79,7 +79,11 @@ export const userAuthService = {
     return apiClient.post<{ message: string }>("/auth/reset-password", { token, password });
   },
   async logout(): Promise<void> {
-    await apiClient.post("/auth/logout").catch(() => undefined);
+    try {
+      await apiClient.post("/auth/logout");
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) throw err;
+    }
     clearUserAuthToken();
   },
   isAuthenticated(): boolean {
