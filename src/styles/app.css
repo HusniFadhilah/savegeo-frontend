@@ -2288,7 +2288,8 @@
   color: #fff;
 }
 .disaster-satellite-card .card-header {
-  padding: 0 0 0.75rem 0 !important;
+  min-height: 54px;
+  padding: .55rem 1rem !important;
 }
 .disaster-satellite-card .card-body { padding: .85rem 1rem 1rem; }
 .disaster-satellite-card .disaster-panel-title {
@@ -6802,6 +6803,16 @@ html[data-theme="dark"] .disaster-kpi-group .metric-label {
   color: #cbd5e1 !important;
 }
 
+html[data-theme="dark"] .disaster-detail-title .disaster-muted-chip {
+  border-color: rgba(148, 163, 184, 0.42) !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .disaster-detail-title .disaster-muted-chip i {
+  color: #86efac !important;
+}
+
 html[data-theme="dark"] .disaster-hero-metrics strong,
 html[data-theme="dark"] .disaster-detail-facts strong,
 html[data-theme="dark"] .disaster-event-card h2,
@@ -9412,6 +9423,25 @@ html[data-theme="dark"] .disaster-comparison-totals strong,
   list-style: none;
 }
 .segmentation-comparison__details > summary::-webkit-details-marker { display: none; }
+.segmentation-comparison__details--metadata { margin: .2rem 0 .45rem; }
+.segmentation-comparison__details--metadata > summary {
+  min-height: 48px;
+  gap: .55rem;
+  padding: .4rem .65rem;
+}
+.segmentation-comparison__details--metadata .segmentation-comparison__summary-icon {
+  flex-basis: 30px;
+  width: 30px;
+  height: 30px;
+  font-size: .82rem;
+}
+.segmentation-comparison__metadata-content { padding: .25rem .65rem .6rem; }
+.segmentation-comparison__metadata-content .segmentation-comparison__header {
+  margin: .15rem 0 .4rem;
+  padding-bottom: .35rem;
+}
+.segmentation-comparison__metadata-content .segmentation-comparison__notices { margin: .35rem 0; }
+.segmentation-comparison__metadata-content .segmentation-comparison__meta { margin: .35rem 0 0; }
 .segmentation-comparison__summary-icon {
   display: grid;
   flex: 0 0 36px;
@@ -9552,7 +9582,7 @@ html[data-theme="dark"] .disaster-comparison-totals strong,
 .segmentation-stats__empty { display: flex; align-items: center; gap: .5rem; min-height: 68px; padding: .8rem; border: 1px dashed #d8e1e6; border-radius: .65rem; color: #718093; background: #fafcfb; font-size: .8rem; }
 .segmentation-stats__empty > i { color: #3b8d55; font-size: 1rem; }
 .segmentation-comparison__attribution {
-  margin-top: .55rem;
+  margin-top: 1rem;
   color: #788596;
   font-size: .72rem;
 }
@@ -9653,6 +9683,7 @@ html[data-theme="dark"] .segmentation-comparison__attribution,
   .segmentation-comparison__model { max-width: calc(100% - 1.5rem); }
   .segmentation-comparison__details > summary { gap: .55rem; padding-inline: .65rem; }
   .segmentation-comparison__summary-copy small { display: none; }
+  .segmentation-comparison__details--metadata > summary .segmentation-comparison__summary-copy small { display: block; line-height: 1.3; }
   .segmentation-stats { padding-inline: .6rem; }
   .segmentation-stats__class-row { grid-template-columns: minmax(0, 1fr) auto 24px; gap: .45rem; padding-inline: .2rem; }
   .segmentation-stats__bars { grid-column: 1 / -1; }

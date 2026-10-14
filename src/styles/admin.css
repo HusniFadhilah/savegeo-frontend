@@ -669,6 +669,10 @@
   box-shadow: none;
 }
 
+.admin-panel .analysis-review__map .disaster-satellite-card .card-header {
+  padding: 0 0 0.75rem 0 !important;
+}
+
 .admin-panel .analysis-review__map .disaster-satellite-card > .card-body {
   padding: 0;
 }

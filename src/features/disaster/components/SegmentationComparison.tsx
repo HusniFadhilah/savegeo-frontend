@@ -33,6 +33,16 @@ export function SegmentationSummary({result, tileError = false}: {result: Segmen
     indonesian ? "Perubahan kelas perlu diperiksa dengan citra referensi dan validasi." : "Class changes need reference imagery and validation.",
   ];
   return <section className="segmentation-comparison" aria-label={indonesian ? "Metadata segmentasi" : "Segmentation metadata"}>
+    <details className="segmentation-comparison__details segmentation-comparison__details--metadata">
+      <summary>
+        <span className="segmentation-comparison__summary-icon"><i className="bi bi-info-circle" aria-hidden="true" /></span>
+        <span className="segmentation-comparison__summary-copy">
+          <strong>{indonesian ? "Informasi segmentasi" : "Segmentation details"}</strong>
+          <small>{result.pre.date} → {result.post.date} · {result.pre.scene_count} → {result.post.scene_count} {indonesian ? "scene" : "scenes"} · {result.resolution_m} m</small>
+        </span>
+        <i className="bi bi-chevron-down segmentation-comparison__summary-chevron" aria-hidden="true" />
+      </summary>
+      <div className="segmentation-comparison__metadata-content">
     <header className="segmentation-comparison__header">
       <strong>{indonesian ? "Segmentasi pre/post" : "Pre/post segmentation"}</strong>
       <span className="segmentation-comparison__model">{result.model_id} · v{result.model_version}</span>
@@ -77,6 +87,8 @@ export function SegmentationSummary({result, tileError = false}: {result: Segmen
         <div>{indonesian ? "Tanpa data" : "No data"}: {number(result.no_data_area_ha)} ha · {indonesian ? "Berubah" : "Changed"}: {number(result.changed_area_ha)} ha · {indonesian ? "Tetap" : "Unchanged"}: {number(result.unchanged_area_ha)} ha</div>
       </>} />
     </div>
+      </div>
+    </details>
 
     {(!result.pre_tile_url || !result.post_tile_url || !result.classes.length) && <div role="alert" className="alert alert-warning py-2">
       {indonesian ? "Hasil segmentasi belum lengkap. Layer yang tersedia tetap dapat ditampilkan." : "Segmentation results are incomplete. Available layers can still be displayed."}

@@ -732,8 +732,8 @@ export default function SatelliteViewer({
   }
 
   return (
-    <div className="card mb-3 pb-4 disaster-modern-card disaster-satellite-card">
-      <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap disaster-soft-header">
+    <div className="card mb-3 pb-2 disaster-modern-card disaster-satellite-card">
+      <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap disaster-soft-header border-none">
         <span className="fw-semibold disaster-panel-title">
           <i className="bi bi-images" /> {language === "id" ? "Citra Satelit" : "Satellite Imagery"}
         </span>
