@@ -7,7 +7,7 @@ import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import DisasterListPage from "@/features/disaster/DisasterListPage";
 import DisasterDashboard from "@/features/disaster/DisasterDashboard";
-import { DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
+import { ADMIN_DISASTER_EVENT_ROUTE, ADMIN_DISASTER_NEW_PATH, DEFAULT_ADMIN_SECTION } from "@/routes/adminSectionRoutes";
 import type { DashboardModule } from "@/hooks/useUiStore";
 import type { AdminSection } from "@/features/admin/types";
 import ProtectedAppRoute from "@/components/auth/ProtectedAppRoute";
@@ -70,6 +70,8 @@ export default function AppRoutes() {
     { path: "/admin/viewer-features", section: "vf" },
     { path: "/admin/satellite-providers", section: "sp" },
     { path: "/admin/company-boundaries", section: "co" },
+    { path: ADMIN_DISASTER_NEW_PATH, section: "ds" },
+    { path: ADMIN_DISASTER_EVENT_ROUTE, section: "ds" },
     { path: "/admin/disasters", section: "ds" },
     { path: "/admin/geospatial-data", section: "gd" },
     { path: "/admin/research-information", section: "ri" },

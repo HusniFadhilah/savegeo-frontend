@@ -78,6 +78,15 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   },
 };
 
+export const ADMIN_DISASTER_NEW_PATH = "/admin/disasters/new";
+export const ADMIN_DISASTER_EVENT_ROUTE = "/admin/disasters/:eventId/:tab?";
+
+export type AdminDisasterTab = "info" | "aoi" | "imagery" | "analysis" | "review" | "audit";
+
+export function getAdminDisasterEventPath(eventId: number, tab: AdminDisasterTab = "info"): string {
+  return `${ADMIN_SECTION_PATHS.ds}/${eventId}/${tab}`;
+}
+
 export function getAdminSectionPath(section: AdminSection): string {
   return ADMIN_SECTION_PATHS[section];
 }
