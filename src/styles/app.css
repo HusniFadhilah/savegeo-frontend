@@ -2382,7 +2382,8 @@
   margin: .5rem 0;
 }
 .disaster-satellite-card .segmentation-comparison__notice {
-  width: fit-content;
+  display: inline-flex !important;
+  width: max-content !important;
   max-width: 100%;
   flex: 0 1 auto;
   align-self: flex-start;
@@ -2393,6 +2394,7 @@
   font-size: .76rem;
 }
 .disaster-satellite-card .segmentation-comparison__notice > span { white-space: nowrap; }
+.disaster-satellite-card .segmentation-comparison__notice > .inline-info-tip { margin-left: 0 !important; }
 .disaster-satellite-card .segmentation-comparison__meta {
   gap: .35rem;
   margin: .5rem 0;
@@ -2412,12 +2414,15 @@
 .disaster-comparison-controls__help {
   display: flex;
   align-items: center;
-  gap: .35rem;
-  margin: -.15rem 0 .5rem;
-  color: #788595;
-  font-size: .72rem;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 0 .4rem auto;
+  border: 1px solid #dce9e0;
+  border-radius: .55rem;
+  background: #fff;
 }
-.disaster-comparison-controls__help .inline-info-tip__trigger { color: #368052; }
+.disaster-comparison-controls__help .inline-info-tip__trigger { width: 28px; height: 28px; color: #368052; }
 
 .disaster-imagery-selectors .form-select,
 .disaster-filter-panel .form-select,
@@ -9659,8 +9664,8 @@ html[data-theme="dark"] .segmentation-comparison__attribution,
   .disaster-satellite-card .segmentation-comparison__opacity input { width: min(180px, 48vw); }
   .disaster-satellite-card .segmentation-comparison__meta { gap: .3rem; }
   .disaster-satellite-card .segmentation-comparison__meta > span { padding-inline: .35rem; }
-  .segmentation-comparison__notices { align-items: stretch; }
-  .disaster-satellite-card .segmentation-comparison__notice { width: auto; }
+  .segmentation-comparison__notices { align-items: flex-start; }
+  .disaster-satellite-card .segmentation-comparison__notice { width: max-content !important; }
   .disaster-satellite-card .segmentation-comparison__notice > span { white-space: normal; }
   .segmentation-comparison__header { flex-wrap: wrap; }
   .segmentation-comparison__model { max-width: calc(100% - 1.5rem); }

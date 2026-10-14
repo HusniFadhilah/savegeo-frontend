@@ -892,7 +892,6 @@ export default function SatelliteViewer({
             <InfoTip label={language === "id" ? "Cara membaca tanggal citra" : "About imagery dates"} content={language === "id"
               ? "Pilihan scene menampilkan citra referensi. Segmentasi dan perubahan menggunakan tanggal hasil analisis yang tercantum di atas."
               : "Scene selections show reference imagery. Segmentation and change use the analysis dates shown above."} />
-            <span>{language === "id" ? "Citra referensi dan tanggal analisis" : "Reference imagery and analysis dates"}</span>
           </div>
         </div>}
 
