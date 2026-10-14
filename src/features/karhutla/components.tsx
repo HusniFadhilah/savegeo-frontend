@@ -14,13 +14,13 @@ import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/se
 import {
   fetchWildfireEvent,
   fetchWildfireCamsArchive,
-  fetchWildfireEvents,
   fetchWildfireHotspots,
   fetchWildfireRegionStatistics,
   syncWildfireHotspots,
 } from "@/features/disaster/api";
-import { FALLBACK_KALIMANTAN_TIMELINE, FALLBACK_WILDFIRE_EVENTS } from "./data";
+import { FALLBACK_WILDFIRE_EVENTS } from "./data";
 import { isConfirmedWildfireEventForRoute } from "./eventAvailability";
+import { useWildfireEventQuery, useWildfireEventsQuery } from "./useWildfireCatalog";
 import { parseWildfireQuery, writeWildfireQuery, type WildfireQueryState } from "./queryState";
 import type {
   WildfireEvent,
@@ -425,7 +425,6 @@ function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
 
 export function KarhutlaIndexPage() {
   const { t, language } = useI18nStore();
-  const [events, setEvents] = useState<WildfireEvent[]>(FALLBACK_WILDFIRE_EVENTS);
   const [filters, setFilters] = useState<WildfireFilters>({
     search: "",
     year: "",
@@ -434,26 +433,10 @@ export function KarhutlaIndexPage() {
     severity: "",
     sort: "latest",
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    fetchWildfireEvents(filters)
-      .then((response) => {
-        if (!cancelled && response.events.length) setEvents(response.events.map(adaptLegacyEvent));
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : t("wildfire.errors.load"));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [filters, t]);
+  const catalog = useWildfireEventsQuery(filters);
+  const events = useMemo(() => catalog.data?.events.map(adaptLegacyEvent) ?? [], [catalog.data]);
+  const loading = catalog.isPending;
+  const error = catalog.error instanceof ApiError ? catalog.error.message : catalog.error ? t("wildfire.errors.load") : null;
 
   const filtered = useMemo(
     () =>
@@ -1125,6 +1108,7 @@ export function KarhutlaDetailPage() {
   const { t, language } = useI18nStore();
   const { eventSlug = "kalimantan-2026" } = useParams<{ eventSlug?: string }>();
   const slug = eventSlug;
+  const eventQuery = useWildfireEventQuery(slug);
   const [searchParams, setSearchParams] = useSearchParams();
   const [event, setEvent] = useState<WildfireEvent | null>(
     FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === slug) ?? null,
@@ -1211,25 +1195,13 @@ export function KarhutlaDetailPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    setEventLookup({ slug, status: "loading" });
-    setEvent(FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === slug) ?? null);
-    fetchWildfireEvent(slug)
-      .then((response) => {
-        if (cancelled) return;
-        const apiEvent = adaptLegacyEvent(response.event);
-        if (apiEvent.slug !== slug) {
-          setEventLookup({ slug, status: "unavailable" });
-          return;
-        }
-        setEvent(apiEvent);
-        setEventLookup({ slug, status: "ready" });
-      })
-      .catch(() => {
-        if (!cancelled) setEventLookup({ slug, status: "unavailable" });
-      });
-    return () => { cancelled = true; };
-  }, [slug]);
+    if (eventQuery.data) {
+      setEvent(adaptLegacyEvent(eventQuery.data.event));
+      setEventLookup({ slug, status: "ready" });
+    } else {
+      setEventLookup({ slug, status: eventQuery.isPending ? "loading" : "unavailable" });
+    }
+  }, [slug, eventQuery.data, eventQuery.isPending]);
   useEffect(() => {
     if (!event) return undefined;
     let cancelled = false;
@@ -1334,9 +1306,9 @@ export function KarhutlaDetailPage() {
     if (currentEventLookupStatus === "loading") return;
     if (!eventBackedByApi) {
       setLoading(false);
-      setDataError(translate("wildfire.errors.eventUnavailable", language));
+      setDataError(null);
       setMapNotice(null);
-      setSummary(summaryFromEvent(event));
+      setSummary(null);
       setFeatures([]);
       setTimeline([]);
       return;
@@ -1378,7 +1350,7 @@ export function KarhutlaDetailPage() {
           error instanceof ApiError ? error.message : "Data hotspot tidak dapat dimuat.",
         );
         setMapNotice(null);
-        setSummary(summaryFromEvent(event));
+        setSummary(null);
         setFeatures([]);
         setTimeline([]);
       })
@@ -1485,10 +1457,15 @@ export function KarhutlaDetailPage() {
       updateQuery({ village: region.name, villageCode: code, hotspot: "" });
     }
   };
-  if (!event)
+  if (!eventBackedByApi || !event)
     return (
       <div className="wildfire-shell">
-        <div className="alert alert-danger">{t("wildfire.errors.notFound")}</div>
+        <div className={`alert ${eventQuery.isFetching ? "alert-info" : "alert-danger"}`} role="status">
+          {eventQuery.isFetching ? t("wildfire.loading") : t("wildfire.errors.load")}
+        </div>
+        <button type="button" className="btn btn-primary" disabled={eventQuery.isFetching} onClick={() => void eventQuery.refetch()}>
+          {t("wildfire.cams.retry")}
+        </button>{" "}
         <Link to="/pemetaan-bencana/karhutla">{t("wildfire.backIndex")}</Link>
       </div>
     );
@@ -1497,12 +1474,7 @@ export function KarhutlaDetailPage() {
   const regionStatisticsNotice = regionStatisticsError ?? (
     eventApiUnavailable ? t("wildfire.errors.regionStatisticsUnavailable") : null
   );
-  const summaryUnavailable = Boolean(
-    selectedRegion && (dataError || (loading && summary == null)),
-  );
-  // When the API has no daily timeline yet, the fallback histogram contains
-  // the event total. Include that total in the scale so its inline height
-  // stays within 0–100% instead of becoming 697000% for 6,970 hotspots.
+  const summaryUnavailable = Boolean(dataError || (loading && summary == null));
   const timelineStart = query.from || event.monitoring_from || event.start_date;
   const timelineEnd =
     query.to ||
@@ -1510,14 +1482,7 @@ export function KarhutlaDetailPage() {
     event.end_date ||
     event.last_data_at?.slice(0, 10) ||
     timelineStart;
-  const sourceTimeline = timeline.length
-    ? timeline
-    : !selectedRegion && dataError && event.slug === "kalimantan-2026"
-      ? FALLBACK_KALIMANTAN_TIMELINE
-      : !selectedRegion && activeSummary.total_hotspots > 0
-        ? [{ date: timelineStart, count: activeSummary.total_hotspots }]
-        : [];
-  const timelineData = completeTimeline(sourceTimeline, timelineStart, timelineEnd);
+  const timelineData = completeTimeline(timeline, timelineStart, timelineEnd);
   const sortedTimelineData = [...timelineData].sort((a, b) => {
     if (timelineSort === "date-desc") return b.date.localeCompare(a.date);
     if (timelineSort === "count-desc") return b.count - a.count || a.date.localeCompare(b.date);
