@@ -9917,103 +9917,130 @@ html[data-theme="dark"] .disaster-statistics-details .disaster-chart-card .card-
 .dark-mode .disaster-statistics-details .disaster-chart-card .card-header { color: #e2e8f0 !important; background: #111d2a !important; }
 
 /* Keep the land-cover dataset picker and vegetation index pills readable in dark mode. */
-html[data-theme="dark"] #landcoverParams .sg-msel-control {
+html[data-theme="dark"] #landcoverParams .sg-msel-control,
+.dark-mode #landcoverParams .sg-msel-control {
   border-color: #475569;
   background: #0b1220;
   color: #e2e8f0;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-control.open {
+html[data-theme="dark"] #landcoverParams .sg-msel-control.open,
+.dark-mode #landcoverParams .sg-msel-control.open {
   border-color: #43a85f;
   box-shadow: 0 0 0 3px rgba(67, 168, 95, 0.2);
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-control.disabled {
+html[data-theme="dark"] #landcoverParams .sg-msel-control.disabled,
+.dark-mode #landcoverParams .sg-msel-control.disabled {
   background: #172033;
   color: #94a3b8;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-input {
+html[data-theme="dark"] #landcoverParams .sg-msel-input,
+.dark-mode #landcoverParams .sg-msel-input {
   color: #e2e8f0;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-input::placeholder {
+html[data-theme="dark"] #landcoverParams .sg-msel-input::placeholder,
+.dark-mode #landcoverParams .sg-msel-input::placeholder {
   color: #94a3b8;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-chip {
+html[data-theme="dark"] #landcoverParams .sg-msel-chip,
+.dark-mode #landcoverParams .sg-msel-chip {
   background: #173823;
   color: #b7f7c7;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-dropdown {
+html[data-theme="dark"] #landcoverParams .sg-msel-dropdown,
+.dark-mode #landcoverParams .sg-msel-dropdown {
   border-color: #334155;
   background: #111827;
   color: #e5e7eb;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-option {
+html[data-theme="dark"] #landcoverParams .sg-msel-option,
+.dark-mode #landcoverParams .sg-msel-option {
   border-bottom-color: #263449;
   color: #e5e7eb;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-option.checked {
+html[data-theme="dark"] #landcoverParams .sg-msel-option.checked,
+.dark-mode #landcoverParams .sg-msel-option.checked {
   background: #142b20;
 }
 
 html[data-theme="dark"] #landcoverParams .sg-msel-option.active,
-html[data-theme="dark"] #landcoverParams .sg-msel-option:hover {
+html[data-theme="dark"] #landcoverParams .sg-msel-option:hover,
+.dark-mode #landcoverParams .sg-msel-option.active,
+.dark-mode #landcoverParams .sg-msel-option:hover {
   background: #1d3a29;
   color: #f8fafc;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-check {
+html[data-theme="dark"] #landcoverParams .sg-msel-check,
+.dark-mode #landcoverParams .sg-msel-check {
   border-color: #64748b;
 }
 
-html[data-theme="dark"] #landcoverParams .sg-msel-check.on {
+html[data-theme="dark"] #landcoverParams .sg-msel-check.on,
+.dark-mode #landcoverParams .sg-msel-check.on {
   border-color: #43a85f;
   background: #43a85f;
   color: #fff;
 }
 
 html[data-theme="dark"] #landcoverParams .sg-msel-opt-desc,
-html[data-theme="dark"] #landcoverParams .sg-msel-empty {
+html[data-theme="dark"] #landcoverParams .sg-msel-empty,
+.dark-mode #landcoverParams .sg-msel-opt-desc,
+.dark-mode #landcoverParams .sg-msel-empty {
   color: #94a3b8;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge {
+html[data-theme="dark"] #landcoverParams .sg-msel-opt-label,
+.dark-mode #landcoverParams .sg-msel-opt-label {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] #indicesContainer .index-badge,
+.dark-mode #indicesContainer .index-badge {
   border-color: #475569;
   background: #1e293b;
   color: #e2e8f0;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge:hover {
+html[data-theme="dark"] #indicesContainer .index-badge:hover,
+.dark-mode #indicesContainer .index-badge:hover {
   border-color: #43a85f;
   background: #263548;
   color: #f8fafc;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge.active {
+html[data-theme="dark"] #indicesContainer .index-badge.active,
+.dark-mode #indicesContainer .index-badge.active {
   border-color: #43a85f;
   background: linear-gradient(135deg, #2e8f4b 0%, #43a85f 100%);
   color: #fff;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge-avatar {
+html[data-theme="dark"] #indicesContainer .index-badge-avatar,
+.dark-mode #indicesContainer .index-badge-avatar {
   background: #20352a;
   color: #9ee0b1;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge.active .index-badge-avatar {
+html[data-theme="dark"] #indicesContainer .index-badge.active .index-badge-avatar,
+.dark-mode #indicesContainer .index-badge.active .index-badge-avatar {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
 
-html[data-theme="dark"] #indicesContainer .index-badge:focus-visible {
+html[data-theme="dark"] #indicesContainer .index-badge:focus-visible,
+.dark-mode #indicesContainer .index-badge:focus-visible {
   outline: 2px solid #9ee0b1;
   outline-offset: 2px;
 }
+
 @media (max-width: 640px) {
   .disaster-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .disaster-completeness > summary,
