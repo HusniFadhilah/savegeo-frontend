@@ -258,6 +258,12 @@ body {
   z-index: 1065;
 }
 
+.language-menu {
+  z-index: 1065;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+
 .language-toggle {
   width: 100%;
   min-height: 34px;

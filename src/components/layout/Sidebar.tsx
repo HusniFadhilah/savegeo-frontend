@@ -32,7 +32,7 @@ export default function Sidebar() {
   );
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ bottom: number; left: number; width: number } | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
 
@@ -71,8 +71,20 @@ export default function Sidebar() {
       setMenuPos(null);
       return;
     }
-    const rect = toggleRef.current.getBoundingClientRect();
-    setMenuPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    const updateMenuPosition = () => {
+      const rect = toggleRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = Math.min(Math.max(rect.width, 150), window.innerWidth - 16);
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      setMenuPos({ bottom: window.innerHeight - rect.top + 6, left, width });
+    };
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
   }, [langOpen]);
 
   useEffect(() => {
@@ -133,7 +145,7 @@ export default function Sidebar() {
                 <ul
                   ref={menuRef}
                   className="dropdown-menu shadow language-menu show"
-                  style={{ position: "fixed", top: menuPos.top, left: menuPos.left, minWidth: Math.max(menuPos.width, 150) }}
+                  style={{ position: "fixed", top: "auto", bottom: menuPos.bottom, left: menuPos.left, minWidth: menuPos.width }}
                 >
                   <li>
                     <button type="button" className="dropdown-item language-option" onClick={() => selectLanguage("id")}>
