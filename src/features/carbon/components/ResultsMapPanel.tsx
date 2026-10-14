@@ -456,7 +456,13 @@ export default function ResultsMapPanel({
               {aoi?.feature && <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
               {activeTab?.tileUrl && (
                 <>
-                  <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} resolutionM={activeTab.resolutionM} opacity={opacity} />
+                  <ResultTileLayer
+                    layerKey={activeTab.key}
+                    tileUrl={activeTab.tileUrl}
+                    resolutionM={activeTab.resolutionM}
+                    opacity={opacity}
+                    clipGeometry={aoi?.feature}
+                  />
                   <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
                 </>
               )}
