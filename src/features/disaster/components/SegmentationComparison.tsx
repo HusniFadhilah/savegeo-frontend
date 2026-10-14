@@ -43,20 +43,22 @@ export function SegmentationSummary({result, tileError = false}: {result: Segmen
       </>} />
     </header>
 
-    {result.damage_model === false && <div className="segmentation-comparison__notice" role="status">
-      <i className="bi bi-info-circle" aria-hidden="true" />
-      <span>{indonesian ? "Proksi tutupan lahan · bukan klasifikasi kerusakan" : "Land-cover proxy · not damage classification"}</span>
-      <InfoTip label={indonesian ? "Batas interpretasi model" : "Model interpretation limits"} content={<>
-        <strong>{indonesian ? "Proksi tutupan lahan" : "Land-cover proxy"}</strong>
-        <p>{indonesian ? "Model ini tidak dilatih untuk mengidentifikasi kerusakan bencana. Perubahan pre/post hanya menunjukkan perubahan kelas tutupan lahan; jangan menafsirkannya langsung sebagai area terbakar, longsor, tsunami, atau kerusakan bangunan." : "This model was not trained to identify disaster damage. Pre/post changes only show land-cover class changes; do not interpret them directly as burned areas, landslides, tsunamis, or building damage."}</p>
-        <ul className="mb-0 ps-3">{interpretationLimits.map(item => <li key={item}>{item}</li>)}</ul>
-      </>} />
-    </div>}
+    {(result.damage_model === false || result.review_reasons?.length) ? <div className="segmentation-comparison__notices">
+      {result.damage_model === false && <div className="segmentation-comparison__notice" role="status">
+        <i className="bi bi-info-circle" aria-hidden="true" />
+        <span>{indonesian ? "Proksi tutupan lahan" : "Land-cover proxy"}</span>
+        <InfoTip label={indonesian ? "Batas interpretasi model" : "Model interpretation limits"} content={<>
+          <strong>{indonesian ? "Proksi tutupan lahan · bukan klasifikasi kerusakan" : "Land-cover proxy · not damage classification"}</strong>
+          <p>{indonesian ? "Model ini tidak dilatih untuk mengidentifikasi kerusakan bencana. Perubahan pre/post hanya menunjukkan perubahan kelas tutupan lahan; jangan menafsirkannya langsung sebagai area terbakar, longsor, tsunami, atau kerusakan bangunan." : "This model was not trained to identify disaster damage. Pre/post changes only show land-cover class changes; do not interpret them directly as burned areas, landslides, tsunamis, or building damage."}</p>
+          <ul className="mb-0 ps-3">{interpretationLimits.map(item => <li key={item}>{item}</li>)}</ul>
+        </>} />
+      </div>}
 
-    {result.review_reasons?.length ? <div className="segmentation-comparison__notice segmentation-comparison__notice--warning" role="status">
-      <i className="bi bi-exclamation-triangle" aria-hidden="true" />
-      <span>{indonesian ? "Catatan interpretasi" : "Interpretation notes"}</span>
-      <InfoTip label={indonesian ? "Detail catatan interpretasi" : "Interpretation note details"} content={<ul className="mb-0 ps-3">{result.review_reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>} />
+      {result.review_reasons?.length ? <div className="segmentation-comparison__notice segmentation-comparison__notice--warning" role="status">
+        <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+        <span>{indonesian ? "Catatan interpretasi" : "Interpretation notes"}</span>
+        <InfoTip label={indonesian ? "Detail catatan interpretasi" : "Interpretation note details"} content={<ul className="mb-0 ps-3">{result.review_reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>} />
+      </div> : null}
     </div> : null}
 
     <div className="segmentation-comparison__meta" aria-label={indonesian ? "Metadata perbandingan" : "Comparison metadata"}>

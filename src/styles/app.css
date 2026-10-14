@@ -2287,6 +2287,106 @@
   border-color: #0f766e;
   color: #fff;
 }
+.disaster-satellite-card .card-header {
+  min-height: 54px;
+  padding: .55rem 1rem !important;
+}
+.disaster-satellite-card .card-body { padding: .85rem 1rem 1rem; }
+.disaster-satellite-card .disaster-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .94rem;
+  letter-spacing: -.01em;
+}
+.disaster-satellite-card .disaster-panel-title > i { color: #287a4c; }
+.disaster-satellite-card .disaster-view-toggle .btn {
+  min-height: 34px;
+  padding-inline: .68rem;
+  font-size: .8rem;
+}
+.disaster-comparison-controls > .d-flex:first-child {
+  min-height: 46px;
+  margin-bottom: .6rem !important;
+  padding: .35rem .45rem;
+  border: 1px solid #e6ecef;
+  border-radius: .7rem;
+  background: #f8fafb;
+}
+.disaster-comparison-controls .btn-group .btn {
+  min-height: 34px;
+  padding-inline: .68rem;
+  font-size: .78rem;
+}
+.disaster-comparison-controls .btn-group .btn.active {
+  border-color: #287a4c;
+  background: #287a4c;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(32, 104, 61, .16);
+}
+.disaster-comparison-controls .disaster-comparison-result { max-width: min(280px, 32vw); }
+.disaster-satellite-card .segmentation-comparison__opacity {
+  min-height: 34px;
+  margin: 0 0 0 auto;
+  padding: .25rem .55rem;
+  border: 1px solid #e2e8ec;
+  border-radius: .55rem;
+  color: #536273;
+  background: #fff;
+  font-size: .74rem;
+  white-space: nowrap;
+}
+.disaster-satellite-card .segmentation-comparison__opacity input {
+  width: min(145px, 20vw);
+  accent-color: #287a4c;
+}
+.disaster-comparison-controls > .segmentation-comparison > .segmentation-comparison__header {
+  margin: .15rem 0 .55rem;
+  padding-bottom: .55rem;
+  border-bottom: 1px solid #edf0f2;
+}
+.disaster-comparison-controls > .segmentation-comparison > .segmentation-comparison__header strong { font-size: .9rem; }
+.segmentation-comparison__notices {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .5rem 0;
+}
+.disaster-satellite-card .segmentation-comparison__notice {
+  width: fit-content;
+  min-height: 32px;
+  margin: 0;
+  padding: .32rem .55rem;
+  border-radius: .55rem;
+  font-size: .76rem;
+}
+.disaster-satellite-card .segmentation-comparison__meta {
+  gap: .35rem;
+  margin: .5rem 0;
+  padding: .35rem .45rem;
+  border: 1px solid #e9eef0;
+  border-radius: .65rem;
+  background: #f8fafb;
+  font-size: .74rem;
+}
+.disaster-satellite-card .segmentation-comparison__meta > span {
+  min-height: 27px;
+  padding: .25rem .45rem;
+  border: 1px solid #e8edef;
+  border-radius: .45rem;
+  background: #fff;
+}
+.disaster-comparison-controls > p {
+  margin: .45rem 0 .75rem;
+  padding: .35rem .55rem;
+  border-left: 2px solid #cfe2d4;
+  border-radius: 0 .35rem .35rem 0;
+  color: #728092;
+  background: #fafcfb;
+  font-size: .74rem !important;
+  line-height: 1.45;
+}
 
 .disaster-imagery-selectors .form-select,
 .disaster-filter-panel .form-select,
@@ -6714,6 +6814,21 @@ html[data-theme="dark"] .disaster-modern-card .card-header {
   color: #f8fafc !important;
 }
 
+html[data-theme="dark"] .disaster-comparison-controls > .d-flex:first-child,
+html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__meta,
+.dark-mode .disaster-comparison-controls > .d-flex:first-child,
+.dark-mode .disaster-satellite-card .segmentation-comparison__meta { border-color: #344252; background: #141f1d; }
+html[data-theme="dark"] .disaster-comparison-controls .btn-group .btn,
+.dark-mode .disaster-comparison-controls .btn-group .btn { border-color: #475569; color: #cbd5e1; }
+html[data-theme="dark"] .disaster-comparison-controls .btn-group .btn.active,
+.dark-mode .disaster-comparison-controls .btn-group .btn.active { border-color: #287a4c; color: #fff; }
+html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__opacity,
+.dark-mode .disaster-satellite-card .segmentation-comparison__opacity,
+html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__meta > span,
+.dark-mode .disaster-satellite-card .segmentation-comparison__meta > span { border-color: #344252; color: #cbd5e1; background: #17212e; }
+html[data-theme="dark"] .disaster-comparison-controls > p,
+.dark-mode .disaster-comparison-controls > p { border-left-color: #315440; color: #aab7c7; background: #141f1d; }
+
 html[data-theme="dark"] .disaster-imagery-selectors .form-select,
 html[data-theme="dark"] .disaster-filter-panel .form-select,
 html[data-theme="dark"] .disaster-filter-panel .form-control {
@@ -9496,6 +9611,20 @@ html[data-theme="dark"] .segmentation-comparison__details > summary > span,
 html[data-theme="dark"] .segmentation-comparison__attribution,
 .dark-mode .segmentation-comparison__attribution { color: #aab7c7; }
 @media (max-width: 640px) {
+  .disaster-satellite-card .card-header { align-items: flex-start !important; }
+  .disaster-satellite-card .disaster-view-toggle { width: 100%; margin-left: 0 !important; }
+  .disaster-satellite-card .disaster-view-toggle .btn { flex: 1 1 auto; padding-inline: .35rem; }
+  .disaster-satellite-card .card-body { padding: .7rem; }
+  .disaster-comparison-controls > .d-flex:first-child { align-items: stretch !important; }
+  .disaster-comparison-controls .disaster-comparison-result { max-width: 100%; }
+  .disaster-comparison-controls > .d-flex:first-child > .btn-group { width: 100%; }
+  .disaster-comparison-controls > .d-flex:first-child > .btn-group .btn { flex: 1 1 0; padding-inline: .3rem; }
+  .disaster-satellite-card .segmentation-comparison__opacity { width: 100%; margin-left: 0; justify-content: space-between; }
+  .disaster-satellite-card .segmentation-comparison__opacity input { width: min(180px, 48vw); }
+  .disaster-satellite-card .segmentation-comparison__meta { gap: .3rem; }
+  .disaster-satellite-card .segmentation-comparison__meta > span { padding-inline: .35rem; }
+  .segmentation-comparison__notices { align-items: stretch; }
+  .disaster-satellite-card .segmentation-comparison__notice { width: 100%; }
   .segmentation-comparison__header { flex-wrap: wrap; }
   .segmentation-comparison__model { max-width: calc(100% - 1.5rem); }
   .segmentation-comparison__details > summary { gap: .55rem; padding-inline: .65rem; }
