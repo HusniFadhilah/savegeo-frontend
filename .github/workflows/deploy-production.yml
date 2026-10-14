@@ -12,6 +12,8 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      build_artifact_outcome: ${{ steps.build_artifact.outcome }}
     permissions:
       contents: read
 
@@ -41,11 +43,14 @@ jobs:
           node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-environment production
 
       - name: Upload production build
+        id: build_artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: savegeo-frontend-dist
           path: dist/
           if-no-files-found: error
+          retention-days: 7
 
   deploy:
     runs-on: ubuntu-latest
@@ -73,10 +78,24 @@ jobs:
           node-version: "20"
 
       - name: Download production build
+        if: needs.validate.outputs.build_artifact_outcome == 'success'
         uses: actions/download-artifact@v4
         with:
           name: savegeo-frontend-dist
           path: dist/
+
+      - name: Rebuild validated source when artifact storage is unavailable
+        if: needs.validate.outputs.build_artifact_outcome == 'failure'
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_APP_ENV: production
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          SAVEGEO_DEPLOYMENT_ENVIRONMENT: production
+        run: |
+          echo '::warning::Build artifact upload failed; rebuilding this validated commit with the lockfile and production configuration.'
+          npm ci
+          npm run build
 
       - name: Validate deployed artifact provenance
         env:
@@ -157,14 +176,22 @@ jobs:
           fi
 
       - name: Record production deployment
-        run: node scripts/write-deployment-record.mjs dist/build-metadata.json frontend-production-deployment-record.json production
+        run: |
+          node scripts/write-deployment-record.mjs dist/build-metadata.json frontend-production-deployment-record.json production
+          {
+            printf '### Verified frontend production deployment\n\n```json\n'
+            cat frontend-production-deployment-record.json
+            printf '\n```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload production deployment record
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: savegeo-frontend-production-deployment-record
           path: frontend-production-deployment-record.json
           if-no-files-found: error
+          retention-days: 7
 
   gitleaks:
     runs-on: ubuntu-latest
