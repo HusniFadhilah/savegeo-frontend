@@ -1,13 +1,29 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import LoginIllustration from "@/components/auth/LoginIllustration";
 import { ApiError } from "@/services/apiClient";
 import { authService } from "@/services/authService";
 import { userAuthService } from "@/services/userAuthService";
 
 export default function ResetPasswordPage() {
-  const [params] = useSearchParams();
-  const token = useMemo(() => params.get("token") || "", [params]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [token, setToken] = useState(() =>
+    new URLSearchParams(location.hash.slice(1)).get("token") ||
+    new URLSearchParams(location.search).get("token") || "",
+  );
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const fragment = new URLSearchParams(location.hash.slice(1));
+    if (!query.has("token") && !fragment.has("token")) return;
+    query.delete("token");
+    fragment.delete("token");
+    navigate({
+      pathname: location.pathname,
+      search: query.size ? `?${query}` : "",
+      hash: fragment.size ? `#${fragment}` : "",
+    }, { replace: true });
+  }, [location.pathname, location.search, location.hash, navigate]);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -42,6 +58,7 @@ export default function ResetPasswordPage() {
         res = await authService.resetPassword(token, password);
       }
       setMessage(res.message);
+      setToken("");
       setPassword("");
       setConfirm("");
     } catch (err) {
