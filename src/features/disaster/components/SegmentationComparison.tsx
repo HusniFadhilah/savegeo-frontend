@@ -1,5 +1,6 @@
 import InfoTip from "@/components/ui/InfoTip";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useState } from "react";
 
 export interface SegmentationResult {
   model_id: string; model_version: string; method: string;
@@ -86,7 +87,18 @@ export function SegmentationSummary({result, tileError = false}: {result: Segmen
 export function SegmentationStatistics({result}: {result: SegmentationResult}) {
   const { language } = useI18nStore();
   const indonesian = language === "id";
-  const transitions = result.transitions.filter(item => item.pre_class_id !== item.post_class_id);
+  const transitions = result.transitions
+    .filter(item => item.pre_class_id !== item.post_class_id)
+    .sort((left, right) => right.area_ha - left.area_ha);
+  const [view, setView] = useState<"composition" | "change" | "transitions">("composition");
+  const maxClassChange = Math.max(1, ...result.classes.flatMap(item => [item.gained_area_ha ?? 0, item.lost_area_ha ?? 0]));
+
+  const views = [
+    { id: "composition" as const, icon: "bi-bar-chart-line", label: indonesian ? "Komposisi kelas" : "Class composition" },
+    { id: "change" as const, icon: "bi-arrow-left-right", label: indonesian ? "Bertambah & berkurang" : "Gains & losses" },
+    { id: "transitions" as const, icon: "bi-shuffle", label: indonesian ? "Transisi utama" : "Top transitions" },
+  ];
+
   return <section aria-label={indonesian ? "Statistik segmentasi" : "Segmentation statistics"}>
     <div className="disaster-comparison-totals" aria-label={indonesian ? "Ringkasan luas segmentasi" : "Segmentation area summary"}>
       {[
@@ -98,21 +110,94 @@ export function SegmentationStatistics({result}: {result: SegmentationResult}) {
     </div>
     {result.changed_area_ha === 0 && <p className="small text-muted mb-2">{indonesian ? "Tidak ada perubahan kelas pada piksel valid bersama." : "No class changes were found in shared valid pixels."}</p>}
     <details className="segmentation-comparison__details">
-      <summary>{indonesian ? "Lihat statistik kelas dan transisi" : "View class and transition statistics"}<span>{result.classes.length} {indonesian ? "kelas" : "classes"}</span></summary>
-      <div className="table-responsive"><table className="table table-sm" aria-label={indonesian ? "Statistik kelas segmentasi" : "Segmentation class statistics"}>
-        <thead><tr><th>{indonesian ? "Kelas" : "Class"}</th><th>Pre ha / %</th><th>Post ha / %</th><th>{indonesian ? "Selisih ha" : "Change ha"}</th><th>{indonesian ? "Piksel pre / post" : "Pre / post pixels"}</th><th>{indonesian ? "Probabilitas pre / post" : "Pre / post probability"}</th></tr></thead>
-        <tbody>{result.classes.map(c => <tr key={c.class_id}>
-          <td><span style={{background: c.color, display: "inline-block", width: 12, height: 12, marginRight: 5}} />{c.label}</td>
-          <td>{number(c.pre_area_ha)} / {number(c.pre_percentage)}%</td><td>{number(c.post_area_ha)} / {number(c.post_percentage)}%</td><td>{number(c.change_area_ha)}</td>
-          <td>{c.pre_pixel_count} / {c.post_pixel_count}</td><td>{c.pre_confidence == null ? "—" : number(c.pre_confidence)} / {c.post_confidence == null ? "—" : number(c.post_confidence)}</td>
-        </tr>)}</tbody>
-      </table></div>
-      <>
-        <div className="table-responsive"><table className="table table-sm"><thead><tr><th>{indonesian ? "Kelas" : "Class"}</th><th>{indonesian ? "Bertambah ha" : "Gained ha"}</th><th>{indonesian ? "Berkurang ha" : "Lost ha"}</th><th>{indonesian ? "Tetap ha" : "Unchanged ha"}</th></tr></thead><tbody>
-          {result.classes.map(c => <tr key={c.class_id}><td>{c.label}</td><td>{c.gained_area_ha == null ? "—" : number(c.gained_area_ha)}</td><td>{c.lost_area_ha == null ? "—" : number(c.lost_area_ha)}</td><td>{c.unchanged_area_ha == null ? "—" : number(c.unchanged_area_ha)}</td></tr>)}
-        </tbody></table></div>
-        {transitions.length > 0 && <ul className="segmentation-comparison__transitions">{transitions.map(item => <li key={`${item.pre_class_id}-${item.post_class_id}`}>{item.label}: {number(item.area_ha)} ha</li>)}</ul>}
-      </>
+      <summary>
+        <span className="segmentation-comparison__summary-icon"><i className="bi bi-bar-chart-fill" aria-hidden="true" /></span>
+        <span className="segmentation-comparison__summary-copy">
+          <strong>{indonesian ? "Statistik kelas & transisi" : "Class & transition statistics"}</strong>
+          <small>{indonesian ? "Bandingkan tutupan lahan sebelum dan sesudah" : "Compare land cover before and after"}</small>
+        </span>
+        <span className="segmentation-comparison__class-count">{result.classes.length} {indonesian ? "kelas" : "classes"}</span>
+        <i className="bi bi-chevron-down segmentation-comparison__summary-chevron" aria-hidden="true" />
+      </summary>
+
+      <div className="segmentation-stats">
+        <div className="segmentation-stats__tabs" role="group" aria-label={indonesian ? "Tampilan statistik" : "Statistics views"}>
+          {views.map(item => <button
+            key={item.id}
+            type="button"
+            id={`segmentation-stats-tab-${item.id}`}
+            aria-pressed={view === item.id}
+            aria-controls={`segmentation-stats-panel-${item.id}`}
+            className={view === item.id ? "is-active" : ""}
+            onClick={() => setView(item.id)}
+          ><i className={`bi ${item.icon}`} aria-hidden="true" />{item.label}</button>)}
+        </div>
+
+        {view === "composition" && <div
+          id="segmentation-stats-panel-composition"
+          className="segmentation-stats__panel"
+          aria-labelledby="segmentation-stats-tab-composition"
+        >
+          <div className="segmentation-stats__legend"><span><i className="segmentation-stats__legend-dot segmentation-stats__legend-dot--pre" />{indonesian ? "Sebelum" : "Before"}</span><span><i className="segmentation-stats__legend-dot segmentation-stats__legend-dot--post" />{indonesian ? "Sesudah" : "After"}</span><span className="segmentation-stats__legend-hint">{indonesian ? "Panjang bar menunjukkan persentase area valid" : "Bar length represents the share of valid area"}</span></div>
+          <div className="segmentation-stats__composition">
+            {result.classes.map(item => <article className="segmentation-stats__class-row" key={item.class_id}>
+              <div className="segmentation-stats__class-name"><i style={{ backgroundColor: item.color }} /><span>{item.label}</span></div>
+              <div className="segmentation-stats__bars">
+                <div className="segmentation-stats__bar-row"><span>{indonesian ? "Pra" : "Pre"}</span><div className="segmentation-stats__track"><i style={{ width: `${Math.max(0, Math.min(100, item.pre_percentage))}%`, backgroundColor: item.color }} /></div><strong>{number(item.pre_area_ha)} ha <small>({number(item.pre_percentage)}%)</small></strong></div>
+                <div className="segmentation-stats__bar-row"><span>{indonesian ? "Pasca" : "Post"}</span><div className="segmentation-stats__track"><i style={{ width: `${Math.max(0, Math.min(100, item.post_percentage))}%`, backgroundColor: item.color }} /></div><strong>{number(item.post_area_ha)} ha <small>({number(item.post_percentage)}%)</small></strong></div>
+              </div>
+              <span className={`segmentation-stats__delta ${item.change_area_ha > 0 ? "is-positive" : item.change_area_ha < 0 ? "is-negative" : ""}`}>
+                <i className={`bi ${item.change_area_ha > 0 ? "bi-arrow-up-right" : item.change_area_ha < 0 ? "bi-arrow-down-right" : "bi-dash"}`} aria-hidden="true" />{number(item.change_area_ha)} ha
+              </span>
+              <details className="segmentation-stats__technical">
+                <summary aria-label={`${indonesian ? "Detail teknis" : "Technical details"}: ${item.label}`}><i className="bi bi-info-circle" aria-hidden="true" /></summary>
+                <div>{indonesian ? "Piksel pra / pasca" : "Pre / post pixels"}: {number(item.pre_pixel_count)} / {number(item.post_pixel_count)}</div>
+                <div>{indonesian ? "Probabilitas pra / pasca" : "Pre / post probability"}: {item.pre_confidence == null ? "—" : number(item.pre_confidence)} / {item.post_confidence == null ? "—" : number(item.post_confidence)}</div>
+              </details>
+            </article>)}
+          </div>
+        </div>}
+
+        {view === "change" && <div
+          id="segmentation-stats-panel-change"
+          className="segmentation-stats__panel"
+          aria-labelledby="segmentation-stats-tab-change"
+        >
+          <div className="segmentation-stats__change-legend"><span><i className="is-loss" />{indonesian ? "Berkurang" : "Lost"}</span><span><i className="is-gain" />{indonesian ? "Bertambah" : "Gained"}</span><span className="segmentation-stats__legend-hint">{indonesian ? "Skala bar sebanding antar kelas" : "Bar scale is comparable across classes"}</span></div>
+          <div className="segmentation-stats__change-list">
+            {result.classes.map(item => {
+              const gained = item.gained_area_ha ?? 0;
+              const lost = item.lost_area_ha ?? 0;
+              return <article className="segmentation-stats__change-row" key={item.class_id}>
+                <div className="segmentation-stats__class-name"><i style={{ backgroundColor: item.color }} /><span>{item.label}</span></div>
+                <strong className="segmentation-stats__change-value is-loss">{item.lost_area_ha == null ? "—" : `${number(lost)} ha`}</strong>
+                <div className="segmentation-stats__diverging" aria-label={`${indonesian ? "Berkurang" : "Lost"} ${number(lost)} ha, ${indonesian ? "bertambah" : "gained"} ${number(gained)} ha`}>
+                  <i className="segmentation-stats__diverging-loss" style={{ width: `${Math.max(0, Math.min(100, lost / maxClassChange * 100))}%` }} />
+                  <b />
+                  <i className="segmentation-stats__diverging-gain" style={{ width: `${Math.max(0, Math.min(100, gained / maxClassChange * 100))}%` }} />
+                </div>
+                <strong className="segmentation-stats__change-value is-gain">{item.gained_area_ha == null ? "—" : `${number(gained)} ha`}</strong>
+                <span className="segmentation-stats__stable"><i className="bi bi-check2" aria-hidden="true" />{indonesian ? "Tetap" : "Stable"} <strong>{item.unchanged_area_ha == null ? "—" : `${number(item.unchanged_area_ha)} ha`}</strong></span>
+              </article>;
+            })}
+          </div>
+        </div>}
+
+        {view === "transitions" && <div
+          id="segmentation-stats-panel-transitions"
+          className="segmentation-stats__panel"
+          aria-labelledby="segmentation-stats-tab-transitions"
+        >
+          {transitions.length ? <div className="segmentation-stats__transition-list">
+            {transitions.map((item, index) => <article className="segmentation-stats__transition" key={`${item.pre_class_id}-${item.post_class_id}`}>
+              <span className="segmentation-stats__transition-rank">{index + 1}</span>
+              <span className="segmentation-stats__transition-name"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+              <div className="segmentation-stats__track"><i style={{ width: `${Math.max(0, Math.min(100, item.area_ha / Math.max(1, transitions[0].area_ha) * 100))}%`, backgroundColor: item.color }} /></div>
+              <strong>{number(item.area_ha)} ha</strong>
+            </article>)}
+          </div> : <div className="segmentation-stats__empty"><i className="bi bi-check2-circle" aria-hidden="true" />{indonesian ? "Tidak ditemukan transisi antar kelas." : "No between-class transitions found."}</div>}
+        </div>}
+      </div>
     </details>
 
     {result.model_id.startsWith("dynamic_world") && <div className="segmentation-comparison__attribution">
