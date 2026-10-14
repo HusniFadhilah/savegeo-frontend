@@ -149,8 +149,87 @@
     display: none;
   }
   .savegeo-map-export__trigger {
-    width: 36px;
-    justify-content: center;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
     padding: 0;
+    justify-content: center;
   }
+}
+
+[data-theme="dark"] .savegeo-map-export {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .savegeo-map-export__trigger {
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .savegeo-map-export__trigger:hover,
+[data-theme="dark"] .savegeo-map-export__trigger[aria-expanded="true"] {
+  border-color: #4ade80;
+  background: #1e293b;
+  color: #bbf7d0;
+}
+
+[data-theme="dark"] .savegeo-map-export__menu {
+  border-color: #334155;
+  background: #111827;
+  color: #e2e8f0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+}
+
+[data-theme="dark"] .savegeo-map-export__header {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .savegeo-map-export__header button {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .savegeo-map-export__header button:hover {
+  color: #fff;
+}
+
+[data-theme="dark"] .savegeo-map-export__label,
+[data-theme="dark"] .savegeo-map-export__section-title {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .savegeo-map-export__menu input {
+  border-color: #475569;
+  background: #1f2937;
+  color: #f8fafc;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .savegeo-map-export__menu input:focus {
+  border-color: #4ade80;
+  outline: 2px solid rgba(74, 222, 128, 0.2);
+}
+
+[data-theme="dark"] .savegeo-map-export__item {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .savegeo-map-export__item:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .savegeo-map-export__item i,
+[data-theme="dark"] .savegeo-map-export__status {
+  color: #86efac;
+}
+
+[data-theme="dark"] .savegeo-map-export__hint {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .savegeo-map-export__message {
+  border: 1px solid #854d0e;
+  background: #422006;
+  color: #fde68a;
 }
