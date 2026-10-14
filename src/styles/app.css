@@ -2058,6 +2058,59 @@
   object-fit: cover;
 }
 
+.disaster-island-thumbnail {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(255, 255, 255, 0.88), rgba(222, 239, 228, 0.68) 58%, rgba(194, 221, 204, 0.86)),
+    #dcebe2;
+}
+
+.disaster-island-thumbnail::before,
+.disaster-island-thumbnail::after {
+  position: absolute;
+  inset: 18% 12%;
+  border: 1px solid rgba(46, 110, 75, 0.11);
+  border-radius: 50%;
+  content: "";
+}
+
+.disaster-island-thumbnail::after {
+  inset: 7% 25%;
+  border-color: rgba(46, 110, 75, 0.08);
+}
+
+.disaster-island-thumbnail svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.disaster-island-thumbnail > i {
+  color: #347a55;
+  font-size: 2rem;
+}
+
+.disaster-island-thumbnail-label {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 999px;
+  background: rgba(18, 57, 39, 0.82);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
 .disaster-event-placeholder {
   display: grid;
   place-items: center;

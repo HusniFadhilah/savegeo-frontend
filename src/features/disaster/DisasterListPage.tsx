@@ -6,6 +6,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/features/admin/components/SearchableSelect";
 import { fetchDisasterEvents } from "./api";
+import IslandThumbnail from "./IslandThumbnail";
 import { KarhutlaOverviewCard, adaptLegacyEvent } from "@/features/karhutla/components";
 import { FALLBACK_WILDFIRE_EVENTS } from "@/features/karhutla/data";
 import { isKarhutlaDisasterType } from "./types";
@@ -112,7 +113,7 @@ export default function DisasterListPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters]);
+  }, [filters, t]);
 
   useEffect(() => {
     setPage(0);
@@ -345,10 +346,13 @@ export default function DisasterListPage() {
       <div className="disaster-event-grid">
         {visibleEvents.map((event) => {
           const thumbnailUrl = resolveThumbnailUrl(event.thumbnail);
+          const isWildfire = isKarhutlaDisasterType(event.disaster_type);
           return (
             <article className="disaster-event-card" key={event.id}>
               <div className="disaster-event-media">
-                {thumbnailUrl ? (
+                {isWildfire ? (
+                  <IslandThumbnail slug={event.slug} title={event.name} />
+                ) : thumbnailUrl ? (
                   <img src={thumbnailUrl} alt={event.name} />
                 ) : (
                   <div className="disaster-event-placeholder">
