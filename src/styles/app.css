@@ -2411,19 +2411,6 @@
   border-radius: .45rem;
   background: #fff;
 }
-.disaster-comparison-controls__help {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin: 0 0 .4rem auto;
-  border: 1px solid #dce9e0;
-  border-radius: .55rem;
-  background: #fff;
-}
-.disaster-comparison-controls__help .inline-info-tip__trigger { width: 28px; height: 28px; color: #368052; }
-
 .disaster-imagery-selectors .form-select,
 .disaster-filter-panel .form-select,
 .disaster-filter-panel .form-control {
@@ -6855,9 +6842,7 @@ html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__meta,
 .dark-mode .disaster-comparison-controls__toolbar,
 .dark-mode .disaster-satellite-card .segmentation-comparison__meta { border-color: #344252; background: #141f1d; }
 html[data-theme="dark"] .disaster-comparison-controls__field-label,
-.dark-mode .disaster-comparison-controls__field-label,
-html[data-theme="dark"] .disaster-comparison-controls__help,
-.dark-mode .disaster-comparison-controls__help { color: #aab7c7; }
+.dark-mode .disaster-comparison-controls__field-label { color: #aab7c7; }
 html[data-theme="dark"] .disaster-comparison-controls .btn-group .btn,
 .dark-mode .disaster-comparison-controls .btn-group .btn { border-color: #475569; color: #cbd5e1; }
 html[data-theme="dark"] .disaster-comparison-controls .btn-group .btn.active,
@@ -6866,8 +6851,6 @@ html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__opaci
 .dark-mode .disaster-satellite-card .segmentation-comparison__opacity,
 html[data-theme="dark"] .disaster-satellite-card .segmentation-comparison__meta > span,
 .dark-mode .disaster-satellite-card .segmentation-comparison__meta > span { border-color: #344252; color: #cbd5e1; background: #17212e; }
-html[data-theme="dark"] .disaster-comparison-controls__help .inline-info-tip__trigger,
-.dark-mode .disaster-comparison-controls__help .inline-info-tip__trigger { color: #9bdbac; }
 
 html[data-theme="dark"] .disaster-imagery-selectors .form-select,
 html[data-theme="dark"] .disaster-filter-panel .form-select,

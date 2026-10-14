@@ -62,7 +62,12 @@ export function SegmentationSummary({result, tileError = false}: {result: Segmen
     </div> : null}
 
     <div className="segmentation-comparison__meta" aria-label={indonesian ? "Metadata perbandingan" : "Comparison metadata"}>
-      <span><i className="bi bi-calendar3" aria-hidden="true" /> {result.pre.date} → {result.post.date}</span>
+      <span>
+        <i className="bi bi-calendar3" aria-hidden="true" /> {result.pre.date} → {result.post.date}
+        <InfoTip label={indonesian ? "Cara membaca tanggal citra" : "About imagery dates"} content={indonesian
+          ? "Pilihan scene menampilkan citra referensi. Segmentasi dan perubahan menggunakan tanggal hasil analisis yang tercantum di atas."
+          : "Scene selections show reference imagery. Segmentation and change use the analysis dates shown above."} />
+      </span>
       <span><i className="bi bi-images" aria-hidden="true" /> {result.pre.scene_count} → {result.post.scene_count} {indonesian ? "scene" : "scenes"}</span>
       <span><i className="bi bi-rulers" aria-hidden="true" /> {result.resolution_m} m</span>
       <InfoTip label={indonesian ? "Detail cakupan dan CRS" : "Coverage and CRS details"} content={<>
