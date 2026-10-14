@@ -1,6 +1,6 @@
 import AnalysisCompleteness from "./components/AnalysisCompleteness";
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/services/apiClient";
 import type { AoiFeature } from "@/types/map";
 import {
@@ -98,6 +98,7 @@ const EMPTY_FIRMS_LAYER: FirmsLayerState = {
 export default function DisasterDashboard() {
   const { t, language } = useI18nStore();
   const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [detail, setDetail] = useState<DisasterEventDetailResponse | null>(null);
@@ -153,6 +154,10 @@ export default function DisasterDashboard() {
     fetchDisasterEvent(eventId)
       .then((res) => {
         if (cancelled) return;
+        if (isKarhutlaDisasterType(res.event.disaster_type) && res.event.slug) {
+          navigate(`/pemetaan-bencana/karhutla/${encodeURIComponent(res.event.slug)}`, { replace: true });
+          return;
+        }
         setDetail(res);
         if (res.aoi?.geojson) {
           setFocusFeature(res.aoi.geojson);
@@ -171,7 +176,7 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, navigate]);
 
   // FIRMS is a wildfire-only layer. Reset local state and remove stale URL
   // controls when the selected event is a flood, earthquake, or another type.
