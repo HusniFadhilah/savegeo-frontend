@@ -24,6 +24,7 @@ import { registerMap } from "@/features/chatbot/mapActions";
 import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapClickPicker from "@/components/map/MapClickPicker";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
+import { isFiniteMapBounds, isValidMapCenter, safeMapZoom } from "@/components/map/mapViewValidation";
 
 interface Props {
   aoi: AoiState | null;
@@ -142,16 +143,14 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
       const map = mapRef.current;
       if (!map) return;
       if (bbox && bbox.length >= 4) {
-        map.fitBounds(
-          [
-            [bbox[1], bbox[0]],
-            [bbox[3], bbox[2]],
-          ],
-          { padding: [30, 30], maxZoom: HIGH_DETAIL_MAX_ZOOM },
-        );
-      } else {
-        map.flyTo([lat, lng], zoom ?? 12, { duration: 1.2 });
+        const bounds = L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
+        if (isFiniteMapBounds(bounds)) {
+          map.fitBounds(bounds, { padding: [30, 30], maxZoom: HIGH_DETAIL_MAX_ZOOM });
+          return;
+        }
       }
+      if (!isValidMapCenter([lat, lng])) return;
+      map.flyTo([lat, lng], safeMapZoom(zoom ?? 12, HIGH_DETAIL_MAX_ZOOM, 12), { duration: 1.2 });
     };
 
     window.setAOIFromGeoJSON = (geojson, name = t("carbon.aoi.fromChatbot")) => {

@@ -1,5 +1,6 @@
 import L from "leaflet";
 import type { AoiFeature } from "@/types/map";
+import { isFiniteMapBounds } from "@/components/map/mapViewValidation";
 
 /**
  * Spherical-excess polygon area (m^2), ported 1:1 from legacy
@@ -85,7 +86,7 @@ export function boundsFromGeoJSON(geojson: unknown): L.LatLngBounds | null {
   try {
     const layer = L.geoJSON(geojson as GeoJSON.GeoJSON);
     const bounds = layer.getBounds();
-    return bounds.isValid() ? bounds : null;
+    return isFiniteMapBounds(bounds) ? bounds : null;
   } catch {
     return null;
   }

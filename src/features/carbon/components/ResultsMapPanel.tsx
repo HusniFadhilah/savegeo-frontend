@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, useMap } from "react-leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
 import MapView from "@/components/map/MapView";
+import { isFiniteMapBounds, safeMapCenter } from "@/components/map/mapViewValidation";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
@@ -34,7 +35,7 @@ function carbonQuantityLabel(layer?: CarbonLayerResult): string {
 function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    if (aoi.bounds?.isValid()) map.fitBounds(aoi.bounds, { maxZoom: zoom, animate: false });
+    if (isFiniteMapBounds(aoi.bounds)) map.fitBounds(aoi.bounds, { maxZoom: zoom, animate: false });
   }, [aoi.bounds, map, zoom]);
   return null;
 }
@@ -334,9 +335,10 @@ export default function ResultsMapPanel({
 
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
   const legend = buildLegend(activeKey, results, visMin, visMax, visPalette, legendBins);
-  const center: [number, number] = aoi?.bounds
+  const center: [number, number] = aoi?.bounds && isFiniteMapBounds(aoi.bounds)
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
+  const safeCenter = safeMapCenter(center, [-2.5, 118]);
 
   const compareTabs = useMemo(() => tabs.filter((t) => t.key !== activeKey), [tabs, activeKey]);
   useEffect(() => {
@@ -414,7 +416,7 @@ export default function ResultsMapPanel({
               afterMaxNativeZoom={nativeZoomForResolution(compareTab.resolutionM)}
               orientation={compareOrientation}
               onOrientationChange={setCompareOrientation}
-              center={center}
+              center={safeCenter}
               zoom={zoom}
               opacity={opacity}
               historicalDate={analysisDate}

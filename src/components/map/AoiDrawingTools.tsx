@@ -6,6 +6,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import "./map-tools.css";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import type { AoiFeature } from "@/types/map";
+import { isFiniteMapBounds } from "./mapViewValidation";
 
 interface Props {
   onChange: (feature: AoiFeature | null) => void;
@@ -466,7 +467,7 @@ export function setAoiOnMap(map: L.Map, group: L.FeatureGroup, feature: AoiFeatu
   const layer = L.geoJSON(feature as GeoJSON.Feature);
   layer.eachLayer((l) => group.addLayer(l));
   const bounds = group.getBounds();
-  if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: HIGH_DETAIL_MAX_ZOOM });
+  if (isFiniteMapBounds(bounds)) map.fitBounds(bounds, { padding: [20, 20], maxZoom: HIGH_DETAIL_MAX_ZOOM });
 }
 
 /**

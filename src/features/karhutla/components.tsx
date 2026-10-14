@@ -3,6 +3,7 @@ import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, useMap } from "r
 import L from "leaflet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import MapView from "@/components/map/MapView";
+import { isFiniteMapBounds } from "@/components/map/mapViewValidation";
 import MapExportControl from "@/components/map/MapExportControl";
 import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
@@ -1099,7 +1100,7 @@ function FitBoundaryToMap({
     const bounds = fitEventBbox && focusKey.startsWith("event:")
       ? L.latLngBounds([[eventBbox[1], eventBbox[0]], [eventBbox[3], eventBbox[2]]])
       : geoJSONBounds(boundary);
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+    if (isFiniteMapBounds(bounds)) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
   }, [boundary, eventBbox, fitEventBbox, camsWorldEnabled, focusKey, map]);
   return null;
 }

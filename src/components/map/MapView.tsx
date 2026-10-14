@@ -19,6 +19,7 @@ import {
   RESULT_PANE_Z_INDEX,
 } from "@/config/mapPanes";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
+import { safeMapCenter, safeMapZoom, safeTileSize, safeZoomOffset } from "./mapViewValidation";
 
 import GlobeView, { type GlobeLayer } from "./GlobeView";
 import { GlobeLayerBridge, LeafletUserLocation } from "./GlobeLayerBridge";
@@ -117,8 +118,14 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
   const globeAoi = globeLayers.find((layer) => layer.type === "geojson" && layer.data.type === "Feature" && ["Polygon", "MultiPolygon"].includes(layer.data.geometry.type));
   const analysisLayers = useMemo(() => globeLayers.filter(layer => layer !== globeAoi), [globeLayers, globeAoi]);
   const defaultBasemap = basemaps.find(b => b.id === query.get("basemap")) ?? basemaps.find((b) => b.isDefault) ?? basemaps[0];
-  const effectiveMaxZoom = Math.max(maxZoom ?? 0, defaultBasemap?.maxZoom ?? 0, HIGH_DETAIL_MAX_ZOOM);
-  const defaultMaxNativeZoom = defaultBasemap?.maxNativeZoom ?? defaultBasemap?.maxZoom;
+  const zoomCeilings = [maxZoom, defaultBasemap?.maxZoom]
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const effectiveMaxZoom = Math.min(22, Math.max(HIGH_DETAIL_MAX_ZOOM, ...zoomCeilings));
+  const defaultMaxNativeZoom = safeMapZoom(defaultBasemap?.maxNativeZoom ?? defaultBasemap?.maxZoom, effectiveMaxZoom, effectiveMaxZoom);
+  const defaultTileSize = safeTileSize(defaultBasemap?.tileSize);
+  const defaultZoomOffset = safeZoomOffset(defaultBasemap?.zoomOffset);
+  const safeCenter = safeMapCenter(center, INDONESIA_CENTER);
+  const safeZoom = safeMapZoom(zoom, effectiveMaxZoom, INDONESIA_ZOOM);
 
   // Tracks which basemap this map instance is showing, for ImageryAttribution
   // (satellite capture-date lookup) - defaults to whatever's actually
@@ -134,8 +141,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
     <div ref={mapShellRef} className="map-view-shell"><div className={globe ? "map-flat-hidden" : ""}><BasemapContext.Provider value={{ activeBasemapId, setActiveBasemapId, historicalImageryDate, setHistoricalImageryDate }}>
       <MapContainer
         id={id}
-        center={center ?? INDONESIA_CENTER}
-        zoom={zoom ?? INDONESIA_ZOOM}
+        center={safeCenter}
+        zoom={safeZoom}
         maxZoom={effectiveMaxZoom}
         preferCanvas={preferCanvas}
         className={className ?? "savegeo-map"}
@@ -146,8 +153,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
             <TileLayer
               url={defaultBasemap.url}
               attribution={defaultBasemap.attribution}
-              tileSize={defaultBasemap.tileSize}
-              zoomOffset={defaultBasemap.zoomOffset}
+              tileSize={defaultTileSize}
+              zoomOffset={defaultZoomOffset}
               maxNativeZoom={defaultMaxNativeZoom}
               maxZoom={effectiveMaxZoom}
               className="savegeo-basemap-layer"

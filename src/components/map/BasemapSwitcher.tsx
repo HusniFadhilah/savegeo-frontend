@@ -7,6 +7,7 @@ import { useBasemapContext } from "./BasemapContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { BASEMAP_REFERENCE_PANE } from "@/config/mapPanes";
 import { SATELLITE_BASEMAP_GROUPS, SATELLITE_BASEMAP_IDS, satelliteBasemapGroupId } from "@/config/satelliteBasemapGroups";
+import { safeMapZoom, safeTileSize, safeZoomOffset } from "./mapViewValidation";
 
 interface ExtraBasemapOption {
   id: string;
@@ -73,21 +74,23 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
 
     const layers: Record<string, L.Layer> = {};
     basemaps.forEach((b) => {
-      const mapMaxZoom = map.getMaxZoom();
-      const effectiveMaxZoom = Number.isFinite(mapMaxZoom) ? Math.max(b.maxZoom, mapMaxZoom) : b.maxZoom;
+      const maxZoom = safeMapZoom(b.maxZoom, 22, 22);
+      const mapMaxZoom = safeMapZoom(map.getMaxZoom(), 22, 22);
+      const effectiveMaxZoom = Math.max(maxZoom, mapMaxZoom);
+      const maxNativeZoom = safeMapZoom(b.maxNativeZoom ?? b.maxZoom, effectiveMaxZoom, effectiveMaxZoom);
       const baseLayer = L.tileLayer(b.url, {
         className: "savegeo-basemap-layer",
         attribution: b.attribution,
-        tileSize: b.tileSize,
-        zoomOffset: b.zoomOffset,
-        maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
+        tileSize: safeTileSize(b.tileSize),
+        zoomOffset: safeZoomOffset(b.zoomOffset),
+        maxNativeZoom,
         maxZoom: effectiveMaxZoom,
       });
       if (b.overlayUrl) {
         const overlayLayer = L.tileLayer(b.overlayUrl, {
           className: "savegeo-basemap-layer",
           attribution: b.overlayAttribution,
-          maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
+          maxNativeZoom,
           maxZoom: effectiveMaxZoom,
           pane: BASEMAP_REFERENCE_PANE,
         });
