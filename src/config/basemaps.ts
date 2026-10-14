@@ -178,6 +178,19 @@ export function withOptionalMapboxBasemap(basemaps: BasemapDefinition[]): Basema
     isDefault: false,
     order: 1.8,
   };
-  return [...basemaps.filter((basemap) => basemap.id !== mapbox.id), mapbox]
+  const mapboxSatelliteRoads: BasemapDefinition = {
+    id: "mapbox-satellite-roads",
+    name: "Mapbox Satellite + Roads",
+    // Mapbox's rasterized Satellite Streets style combines its satellite imagery
+    // and its road/place cartography in one tile layer, suitable for Leaflet.
+    url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}?access_token=${encodeURIComponent(token)}`,
+    attribution: '<a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a> <a href="https://www.maxar.com/" target="_blank" rel="noreferrer">© Maxar</a>',
+    maxZoom: 22,
+    maxNativeZoom: 22,
+    isDefault: false,
+    order: 1.81,
+  };
+  const mapboxIds = new Set([mapbox.id, mapboxSatelliteRoads.id]);
+  return [...basemaps.filter((basemap) => !mapboxIds.has(basemap.id)), mapbox, mapboxSatelliteRoads]
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 }

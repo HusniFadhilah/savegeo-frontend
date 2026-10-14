@@ -3,7 +3,7 @@ export const SATELLITE_BASEMAP_GROUPS = [
   { id: "nasa-gibs", label: "NASA GIBS", basemapIds: ["nasa-gibs", "nasa-gibs-viirs-night", "nasa-gibs-black-marble", "nasa-gibs-blue-marble"] },
   { id: "eox", label: "EOX", basemapIds: ["eox-sentinel2-cloudless"] },
   { id: "usgs", label: "USGS", basemapIds: ["usgs-imagery"] },
-  { id: "mapbox", label: "Mapbox", basemapIds: ["mapbox-satellite"] },
+  { id: "mapbox", label: "Mapbox", basemapIds: ["mapbox-satellite", "mapbox-satellite-roads"] },
   { id: "google", label: "Google", basemapIds: ["google-satellite"] },
 ] as const;
 

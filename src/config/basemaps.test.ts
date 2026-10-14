@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_BASEMAPS, withEoxCloudlessBasemap, withNasaGibsBasemap, withOptionalMapboxBasemap, withUsgsImageryBasemap } from "./basemaps";
+import { SATELLITE_BASEMAP_GROUPS } from "./satelliteBasemapGroups";
 
 describe("NASA GIBS basemap", () => {
   it("is available as a daily, coarse-resolution satellite layer", () => {
@@ -29,15 +30,32 @@ describe("optional Mapbox satellite basemap", () => {
 
   it("is omitted when no public token is configured", () => {
     vi.stubEnv("VITE_MAPBOX_ACCESS_TOKEN", "");
-    expect(withOptionalMapboxBasemap(FALLBACK_BASEMAPS).some((basemap) => basemap.id === "mapbox-satellite")).toBe(false);
+    const basemaps = withOptionalMapboxBasemap(FALLBACK_BASEMAPS);
+    expect(basemaps.some((basemap) => basemap.id === "mapbox-satellite")).toBe(false);
+    expect(basemaps.some((basemap) => basemap.id === "mapbox-satellite-roads")).toBe(false);
   });
 
-  it("uses Mapbox's raster satellite tiles when a token is configured", () => {
+  it("provides Mapbox satellite-only and satellite-with-roads layers when a token is configured", () => {
     vi.stubEnv("VITE_MAPBOX_ACCESS_TOKEN", "pk.example");
-    const basemap = withOptionalMapboxBasemap(FALLBACK_BASEMAPS).find((item) => item.id === "mapbox-satellite");
-    expect(basemap?.url).toBe("https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.example");
-    expect(basemap?.attribution).toContain("© Maxar");
-    expect(basemap?.maxNativeZoom).toBe(22);
+    const basemaps = withOptionalMapboxBasemap(FALLBACK_BASEMAPS);
+    const satellite = basemaps.find((item) => item.id === "mapbox-satellite");
+    const satelliteRoads = basemaps.find((item) => item.id === "mapbox-satellite-roads");
+
+    expect(satellite?.url).toBe("https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.example");
+    expect(satellite?.attribution).toContain("Maxar");
+    expect(satellite?.maxNativeZoom).toBe(22);
+    expect(satelliteRoads?.url).toBe("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}?access_token=pk.example");
+    expect(satelliteRoads?.attribution).toContain("OpenStreetMap");
+    expect(satelliteRoads?.maxNativeZoom).toBe(22);
+    expect(basemaps.findIndex((item) => item.id === "mapbox-satellite-roads"))
+      .toBe(basemaps.findIndex((item) => item.id === "mapbox-satellite") + 1);
+  });
+});
+
+describe("Mapbox satellite basemap group", () => {
+  it("shows plain and road-overlay styles together under Mapbox", () => {
+    const group = SATELLITE_BASEMAP_GROUPS.find((item) => item.id === "mapbox");
+    expect(group?.basemapIds).toEqual(["mapbox-satellite", "mapbox-satellite-roads"]);
   });
 });
 
