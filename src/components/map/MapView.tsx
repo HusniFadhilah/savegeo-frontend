@@ -146,6 +146,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
             <TileLayer
               url={defaultBasemap.url}
               attribution={defaultBasemap.attribution}
+              tileSize={defaultBasemap.tileSize}
+              zoomOffset={defaultBasemap.zoomOffset}
               maxNativeZoom={defaultMaxNativeZoom}
               maxZoom={effectiveMaxZoom}
               className="savegeo-basemap-layer"

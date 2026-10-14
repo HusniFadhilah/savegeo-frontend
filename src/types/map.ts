@@ -14,6 +14,8 @@ export interface BasemapDefinition {
   overlayUrl?: string;
   overlayAttribution?: string;
   attribution: string;
+  tileSize?: number;
+  zoomOffset?: number;
   maxZoom: number;
   maxNativeZoom?: number;
   isDefault: boolean;

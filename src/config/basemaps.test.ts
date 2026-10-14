@@ -44,8 +44,10 @@ describe("optional Mapbox satellite basemap", () => {
     expect(satellite?.url).toBe("https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.example");
     expect(satellite?.attribution).toContain("Maxar");
     expect(satellite?.maxNativeZoom).toBe(22);
-    expect(satelliteRoads?.url).toBe("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}?access_token=pk.example");
+    expect(satelliteRoads?.url).toBe("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=pk.example");
     expect(satelliteRoads?.attribution).toContain("OpenStreetMap");
+    expect(satelliteRoads?.tileSize).toBe(512);
+    expect(satelliteRoads?.zoomOffset).toBe(-1);
     expect(satelliteRoads?.maxNativeZoom).toBe(22);
     expect(basemaps.findIndex((item) => item.id === "mapbox-satellite-roads"))
       .toBe(basemaps.findIndex((item) => item.id === "mapbox-satellite") + 1);

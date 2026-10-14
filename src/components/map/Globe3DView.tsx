@@ -168,7 +168,7 @@ export default function Globe3DView(props: GlobeViewProps) {
     const removers: (() => void)[] = [];
     setImageryError(false);
     const add = (url: string, credit: string | undefined, index: number, overlay = false) => {
-      const provider = imageryProvider(url, credit, basemap.maxNativeZoom ?? basemap.maxZoom, overlay ? undefined : basemap.wmts);
+      const provider = imageryProvider(url, credit, basemap.maxNativeZoom ?? basemap.maxZoom, overlay ? undefined : basemap.wmts, overlay ? 256 : basemap.tileSize);
       removers.push(provider.errorEvent.addEventListener(() => setImageryError(true)));
       installed.push(viewer.imageryLayers.addImageryProvider(provider, index));
     };

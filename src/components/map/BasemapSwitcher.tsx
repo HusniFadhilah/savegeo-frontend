@@ -78,6 +78,8 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
       const baseLayer = L.tileLayer(b.url, {
         className: "savegeo-basemap-layer",
         attribution: b.attribution,
+        tileSize: b.tileSize,
+        zoomOffset: b.zoomOffset,
         maxNativeZoom: b.maxNativeZoom ?? b.maxZoom,
         maxZoom: effectiveMaxZoom,
       });
