@@ -191,7 +191,7 @@ export function SegmentationStatistics({result}: {result: SegmentationResult}) {
           {transitions.length ? <div className="segmentation-stats__transition-list">
             {transitions.map((item, index) => <article className="segmentation-stats__transition" key={`${item.pre_class_id}-${item.post_class_id}`}>
               <span className="segmentation-stats__transition-rank">{index + 1}</span>
-              <span className="segmentation-stats__transition-name"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+              <span className="segmentation-stats__transition-name"><i style={{ backgroundColor: item.color }} />{item.label}:{" "}</span>
               <div className="segmentation-stats__track"><i style={{ width: `${Math.max(0, Math.min(100, item.area_ha / Math.max(1, transitions[0].area_ha) * 100))}%`, backgroundColor: item.color }} /></div>
               <strong>{number(item.area_ha)} ha</strong>
             </article>)}

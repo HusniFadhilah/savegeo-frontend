@@ -103,6 +103,7 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
     expect(screen.getByTestId("swipe").dataset.pre).toBe(comparison.pre_tile_url);
     expect(screen.getByTestId("swipe").textContent).toContain(comparison.pre.date);
+    fireEvent.click(screen.getByRole("button", { name: "Transisi utama" }));
     expect(screen.getByRole("region", { name: "Statistik segmentasi" }).textContent).toContain("Air → Pohon: 20 ha");
     fireEvent.click(screen.getByRole("button", { name: "Perubahan" }));
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
