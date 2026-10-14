@@ -6,6 +6,7 @@ import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
+import InfoTip from "@/components/ui/InfoTip";
 import { HistoricalAoiClipController } from "@/components/map/HistoricalImageryControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { env } from "@/config/env";
@@ -861,7 +862,7 @@ export default function SatelliteViewer({
         </div>}
 
         {comparison && <div className="disaster-comparison-controls mb-3">
-          <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <div className="disaster-comparison-controls__toolbar">
             {comparisonEntries.length > 1 && <>
               <label className="small fw-semibold" htmlFor="disaster-comparison-result">{language === "id" ? "Hasil analisis" : "Analysis result"}</label>
               <select id="disaster-comparison-result" className="form-select form-select-sm disaster-comparison-result"
@@ -869,23 +870,30 @@ export default function SatelliteViewer({
                 {comparisonEntries.map(entry => <option key={entry.model_id} value={entry.model_id}>{entry.user_label}</option>)}
               </select>
             </>}
-            <div className="btn-group btn-group-sm" role="group" aria-label={language === "id" ? "Layer yang ditampilkan" : "Displayed layer"}>
-              {([
-                ["imagery", language === "id" ? "Citra satelit" : "Satellite imagery", true],
-                ["classes", language === "id" ? "Segmentasi multi-kelas" : "Multi-class segmentation", !!(comparison.pre_tile_url || comparison.post_tile_url)],
-                ["change", language === "id" ? "Perubahan" : "Change", !!comparison.change_tile_url],
-              ] as const).map(([key, label, available]) => <button key={key} type="button"
-                className={`btn btn-outline-secondary ${activeOutput === key ? "active" : ""}`}
-                aria-pressed={activeOutput === key} disabled={!available} onClick={() => setOutput(key)}>{label}</button>)}
+            <div className="disaster-comparison-controls__layer-control">
+              <span className="disaster-comparison-controls__field-label"><i className="bi bi-layers" aria-hidden="true" />{language === "id" ? "Layer hasil" : "Result layer"}</span>
+              <div className="btn-group btn-group-sm" role="group" aria-label={language === "id" ? "Layer yang ditampilkan" : "Displayed layer"}>
+                {([
+                  ["imagery", language === "id" ? "Citra satelit" : "Satellite imagery", true],
+                  ["classes", language === "id" ? "Segmentasi multi-kelas" : "Multi-class segmentation", !!(comparison.pre_tile_url || comparison.post_tile_url)],
+                  ["change", language === "id" ? "Perubahan" : "Change", !!comparison.change_tile_url],
+                ] as const).map(([key, label, available]) => <button key={key} type="button"
+                  className={`btn btn-outline-secondary ${activeOutput === key ? "active" : ""}`}
+                  aria-pressed={activeOutput === key} disabled={!available} onClick={() => setOutput(key)}>{label}</button>)}
+              </div>
             </div>
-            <label className="small segmentation-comparison__opacity">{opacityLabel}
+            <label className="segmentation-comparison__opacity"><span className="disaster-comparison-controls__field-label"><i className="bi bi-circle-half" aria-hidden="true" />{opacityLabel}</span>
               <input aria-label={opacityLabel} type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))} />
+              <output>{Math.round(opacity * 100)}%</output>
             </label>
           </div>
           <SegmentationSummary result={comparison} tileError={analysisVisible && tileErrorSource === tileErrorKey} />
-          <p className="small text-muted mb-0">{language === "id"
-            ? "Dropdown scene menampilkan citra referensi. Segmentasi dan perubahan memakai tanggal hasil analisis yang tercantum di atas."
-            : "Scene selectors show reference imagery. Segmentation and change use the analysis dates shown above."}</p>
+          <div className="disaster-comparison-controls__help">
+            <InfoTip label={language === "id" ? "Cara membaca tanggal citra" : "About imagery dates"} content={language === "id"
+              ? "Pilihan scene menampilkan citra referensi. Segmentasi dan perubahan menggunakan tanggal hasil analisis yang tercantum di atas."
+              : "Scene selections show reference imagery. Segmentation and change use the analysis dates shown above."} />
+            <span>{language === "id" ? "Citra referensi dan tanggal analisis" : "Reference imagery and analysis dates"}</span>
+          </div>
         </div>}
 
         {(displayView === "pre" || displayView === "post") && <>
