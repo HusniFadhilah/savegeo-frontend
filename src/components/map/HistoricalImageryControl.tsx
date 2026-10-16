@@ -16,7 +16,6 @@ import { useBasemapContext } from "./BasemapContext";
 import { writeGlobeQuery } from "./globe3d/query";
 import "./map-tools.css";
 
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
 const CURRENT_SCENE_ID = "current";
 const COPERNICUS_S2_FIRST_DATE = "2015-06-27";
 
@@ -121,7 +120,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const map = useMap();
   const { activeBasemapId, setActiveBasemapId, setHistoricalImageryDate } = useBasemapContext();
   const { basemaps } = useBasemaps();
+  const language = useI18nStore((state) => state.language);
   const t = useI18nStore((state) => state.t);
+  const monthLabels = useMemo(() => Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(
+    language === "en" ? "en-US" : "id-ID", { month: "short" },
+  ).format(new Date(Date.UTC(2026, index, 1))).toUpperCase()), [language]);
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const sentinelToday = now.toISOString().slice(0, 10);
@@ -389,7 +392,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
         ? `<a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus Sentinel-2 L1C</a> - Contains modified Copernicus Sentinel data ${copernicusTileScene?.acquired_at.slice(0, 4) ?? sentinelToday.slice(0, 4)}, via <a href="https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_HARMONIZED" target="_blank" rel="noreferrer">Earth Engine</a>`
       : historySource === "eox-cloudless"
           ? `<a href="https://cloudless.eox.at/" target="_blank" rel="noreferrer">EOxCloudless</a> by EOX IT Services GmbH - modified Copernicus Sentinel data ${eoxYear} - <a href="${eoxYear === 2016 ? "https://creativecommons.org/licenses/by/4.0/" : "https://creativecommons.org/licenses/by-nc-sa/4.0/"}" target="_blank" rel="noreferrer">${eoxYear === 2016 ? "CC BY 4.0" : "CC BY-NC-SA 4.0 (non-commercial use)"}</a>`
-          : `Esri World Imagery Wayback · Rilis ${selectedReleaseDate}`;
+          : `Esri World Imagery Wayback · ${t("map.history.release", { date: selectedReleaseDate })}`;
     const maxNativeZoom = historySource === "nasa-gibs" ? 9 : historySource === "nasa-black-marble" || historySource === "nasa-viirs-night" ? 8 : historySource === "eox-cloudless" ? 14 : historySource === "copernicus-sentinel2" ? 16 : 19;
     const layer = L.tileLayer(tileUrl, {
       pane: paneName,
@@ -417,7 +420,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       map.removeLayer(layer);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, visible]);
+  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, t, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];
@@ -457,56 +460,56 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const sourceLabel = isCurrentBasemapSource
     ? activeBasemapName
     : historySource === "nasa-gibs"
-    ? "NASA GIBS - MODIS Terra"
+    ? t("map.history.modisSource")
     : historySource === "nasa-viirs-night"
-      ? "NASA GIBS - VIIRS nighttime"
+      ? t("map.history.viirsSource")
       : historySource === "nasa-black-marble"
-        ? "NASA GIBS - Black Marble"
+        ? t("map.history.blackMarbleSource")
         : historySource === "copernicus-sentinel2"
-          ? "Copernicus - Sentinel-2 L1C"
+          ? t("map.history.copernicusSource")
         : historySource === "eox-cloudless"
-          ? "EOX - Sentinel-2 Cloudless"
-          : "Esri Wayback";
+          ? t("map.history.eoxSource")
+          : t("map.history.esriSource");
 
   return <>
     {host && createPortal(<button ref={triggerRef} type="button" className="history-trigger" hidden={!enabled}
-      title="Citra historis" aria-label="Citra historis" aria-expanded={visible} aria-controls={panelId}
+      title={t("map.history.title")} aria-label={t("map.history.title")} aria-expanded={visible} aria-controls={panelId}
       onClick={() => setOpen(value => !value)}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}
-    {visible && createPortal(<div ref={panelRef} id={panelId} className="map-history-panel" role="region" aria-label="Citra historis"
+    {visible && createPortal(<div ref={panelRef} id={panelId} className="map-history-panel" role="region" aria-label={t("map.history.title")}
       onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}>
-      <div className="map-history-heading"><span>{isCurrentBasemapSource ? "Basemap terkini" : "Citra historis"} <small>{sourceLabel}</small></span><button type="button" onClick={close} aria-label="Tutup citra historis" title="Tutup panel"><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
-      <label className="map-history-source">Sumber citra
-        <select aria-label="Sumber citra historis" value={historySource} onChange={event => chooseHistorySource(event.target.value as HistoricalImagerySource)}>
-          <option value="current-basemap">Basemap terkini · {activeBasemapName}</option>
+      <div className="map-history-heading"><span>{isCurrentBasemapSource ? t("map.history.activeBasemap") : t("map.history.title")} <small>{sourceLabel}</small></span><button type="button" onClick={close} aria-label={t("map.history.close")} title={t("map.history.closePanel")}><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
+      <label className="map-history-source">{t("map.history.source")}
+        <select aria-label={t("map.history.sourceLabel")} value={historySource} onChange={event => chooseHistorySource(event.target.value as HistoricalImagerySource)}>
+          <option value="current-basemap">{t("map.history.currentSource", { name: activeBasemapName })}</option>
           {mapboxAvailable && <option value="mapbox-satellite">{t("map.history.mapboxSource")}</option>}
-          <option value="esri-wayback">Esri Wayback · mosaik resolusi tinggi</option>
-          <option value="nasa-gibs">NASA GIBS - MODIS Terra True Color (harian)</option>
-          <option value="nasa-black-marble">NASA GIBS · Black Marble (snapshot 2012/2016)</option>
-          <option value="nasa-viirs-night">NASA GIBS - VIIRS Day/Night harian (sejak 2016)</option>
-          <option value="eox-cloudless">EOX · Sentinel-2 Cloudless (tahunan)</option>
-          <option value="copernicus-sentinel2">Copernicus · Sentinel-2 L1C (scene asli)</option>
+          <option value="esri-wayback">{t("map.history.esriSource")}</option>
+          <option value="nasa-gibs">{t("map.history.modisSource")}</option>
+          <option value="nasa-black-marble">{t("map.history.blackMarbleSource")}</option>
+          <option value="nasa-viirs-night">{t("map.history.viirsSource")}</option>
+          <option value="eox-cloudless">{t("map.history.eoxSource")}</option>
+          <option value="copernicus-sentinel2">{t("map.history.copernicusSource")}</option>
         </select>
       </label>
-      {activeBasemapId === "nasa-gibs-viirs-night" && <p className="map-history-note">Basemap Earth at Night 2012 adalah komposit tetap. Untuk menelusuri citra malam harian, pilih NASA GIBS - VIIRS malam harian.</p>}
-      {activeBasemapId === "nasa-gibs-blue-marble" && <p className="map-history-note">Blue Marble Next Generation adalah komposit global tanpa tanggal historis. Gunakan Esri Wayback, MODIS, atau EOX untuk melihat citra pada waktu berbeda.</p>}
-      {historySource === "esri-wayback" && analysisDate && !isCurrent && <p className="map-history-note">Sinkron dengan waktu analisis: <strong>{analysisDate}</strong>. Menampilkan rilis arsip Wayback terdekat yang tersedia.</p>}
-      {historySource === "esri-wayback" && isFetching && !scenes.length && <p role="status">Memuat arsip citra...</p>}
-      {historySource === "esri-wayback" && isError && <p role="alert">Arsip citra Wayback gagal dimuat. Basemap tetap tersedia. <button type="button" onClick={() => void refetch()}>Coba lagi</button></p>}
+      {activeBasemapId === "nasa-gibs-viirs-night" && <p className="map-history-note">{t("map.history.earthAtNightNote")}</p>}
+      {activeBasemapId === "nasa-gibs-blue-marble" && <p className="map-history-note">{t("map.history.blueMarbleNote")}</p>}
+      {historySource === "esri-wayback" && analysisDate && !isCurrent && <p className="map-history-note">{t("map.history.analysisSync", { date: analysisDate })}</p>}
+      {historySource === "esri-wayback" && isFetching && !scenes.length && <p role="status">{t("map.history.loadingArchive")}</p>}
+      {historySource === "esri-wayback" && isError && <p role="alert">{t("map.history.archiveFailed")} <button type="button" onClick={() => void refetch()}>{t("map.history.retry")}</button></p>}
       {isCurrentBasemapSource
         ? <p className="map-history-note">{historySource === "mapbox-satellite"
           ? t("map.history.mapboxNote")
-          : <>Peta menampilkan basemap aktif: <strong>{activeBasemapName}</strong>. Pilih sumber lain untuk menampilkan citra historis.</>}</p>
+          : <>{t("map.history.activeBasemapNote", { name: activeBasemapName })}</>}</p>
         : historySource === "nasa-gibs" || historySource === "nasa-viirs-night" ? <>
         <div className="map-history-body map-history-nasa-body">
-          <div className="map-history-nasa-selected-date"><small>{isViirsNight ? "Tanggal malam VIIRS" : "Tanggal citra"}</small><strong>{nasaTimelineDate}</strong></div>
+            <div className="map-history-nasa-selected-date"><small>{isViirsNight ? t("map.history.viirsDate") : t("map.history.imageryDate")}</small><strong>{nasaTimelineDate}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
-              <button type="button" aria-label={isViirsNight ? "Tanggal VIIRS sebelumnya" : "Tanggal NASA sebelumnya"} disabled={nasaTimelineIndex === 0}
+              <button type="button" aria-label={isViirsNight ? t("map.history.previousViirsDate") : t("map.history.previousNasaDate")} disabled={nasaTimelineIndex === 0}
                 onClick={() => setNasaTimelineDateAt(nasaTimelineIndex - 1)}>&lsaquo;</button>
-              <input id={`${panelId}-nasa-date`} type="range" aria-label={isViirsNight ? "Linimasa malam VIIRS harian" : "Linimasa citra MODIS harian"}
+              <input id={`${panelId}-nasa-date`} type="range" aria-label={isViirsNight ? t("map.history.viirsTimeline") : t("map.history.modisTimeline")}
                 aria-valuetext={nasaTimelineDate} min={0} max={nasaTimelineMaxDateIndex} step={1} value={nasaTimelineIndex}
                 onChange={event => setNasaTimelineDateAt(Number(event.target.value))} />
-              <button type="button" aria-label={isViirsNight ? "Tanggal VIIRS berikutnya" : "Tanggal NASA berikutnya"} disabled={nasaTimelineIndex === nasaTimelineMaxDateIndex}
+              <button type="button" aria-label={isViirsNight ? t("map.history.nextViirsDate") : t("map.history.nextNasaDate")} disabled={nasaTimelineIndex === nasaTimelineMaxDateIndex}
                 onClick={() => setNasaTimelineDateAt(nasaTimelineIndex + 1)}>&rsaquo;</button>
             </div>
             <div className="map-history-ruler" aria-hidden="true">
@@ -515,20 +518,20 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
           </div>
         </div>
         {isViirsNight
-          ? <p className="map-history-note">Citra malam VIIRS Day/Night Band tersedia harian sejak 3 Desember 2016. Tampilan skala abu-abu dapat berubah karena pantulan cahaya Bulan, awan, dan sumber cahaya di permukaan.</p>
-          : <p className="map-history-note">Citra harian MODIS Terra, hingga sekitar 250 m/piksel. Area hitam dapat muncul sebagai celah sapuan orbit pada tanggal tersebut; tutupan awan juga memengaruhi citra.</p>}
-        {analysisDate && analysisDate !== nasaTimelineDate && <p className="map-history-note">Tanggal analisis berada di luar rentang arsip; menampilkan <strong>{nasaTimelineDate}</strong>.</p>}
+          ? <p className="map-history-note">{t("map.history.viirsNote")}</p>
+          : <p className="map-history-note">{t("map.history.modisNote")}</p>}
+        {analysisDate && analysisDate !== nasaTimelineDate && <p className="map-history-note">{t("map.history.archiveDateFallback", { date: nasaTimelineDate })}</p>}
       </> : historySource === "nasa-black-marble" ? <>
         <div className="map-history-body map-history-nasa-body">
-          <div className="map-history-nasa-selected-date"><small>Snapshot komposit</small><strong>{blackMarbleYear}</strong></div>
+            <div className="map-history-nasa-selected-date"><small>{t("map.history.compositeSnapshot")}</small><strong>{blackMarbleYear}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
-              <button type="button" aria-label="Snapshot Black Marble sebelumnya" disabled={blackMarbleIndex === 0}
+              <button type="button" aria-label={t("map.history.previousBlackMarble")} disabled={blackMarbleIndex === 0}
                 onClick={() => chooseBlackMarbleIndex(blackMarbleIndex - 1)}>‹</button>
-              <input type="range" aria-label="Snapshot Black Marble" aria-valuetext={`Komposit ${blackMarbleYear}`} min={0}
+              <input type="range" aria-label={t("map.history.blackMarbleTimeline")} aria-valuetext={t("map.history.composite", { year: blackMarbleYear })} min={0}
                 max={NASA_GIBS_BLACK_MARBLE_YEARS.length - 1} step={1} value={blackMarbleIndex}
                 onChange={event => chooseBlackMarbleIndex(Number(event.target.value))} />
-              <button type="button" aria-label="Snapshot Black Marble berikutnya" disabled={blackMarbleIndex === NASA_GIBS_BLACK_MARBLE_YEARS.length - 1}
+              <button type="button" aria-label={t("map.history.nextBlackMarble")} disabled={blackMarbleIndex === NASA_GIBS_BLACK_MARBLE_YEARS.length - 1}
                 onClick={() => chooseBlackMarbleIndex(blackMarbleIndex + 1)}>›</button>
             </div>
             <div className="map-history-ruler" aria-hidden="true">
@@ -536,18 +539,18 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
             </div>
           </div>
         </div>
-        <p className="map-history-note">Black Marble adalah peta cahaya malam antropogenik berbasis VIIRS, bukan peta jalan atau batas administrasi. NASA GIBS menyediakan dua snapshot komposit—2012 dan 2016—bukan arsip tahunan; untuk citra malam harian pilih VIIRS Day/Night.</p>
+        <p className="map-history-note">{t("map.history.blackMarbleNote")}</p>
       </> : historySource === "eox-cloudless" ? <>
         <div className="map-history-body map-history-nasa-body">
-          <div className="map-history-nasa-selected-date"><small>Tahun mosaik</small><strong>{eoxYear}</strong></div>
+            <div className="map-history-nasa-selected-date"><small>{t("map.history.mosaicYear")}</small><strong>{eoxYear}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
-              <button type="button" aria-label="Mosaik EOX sebelumnya" disabled={eoxYearIndex === 0}
+              <button type="button" aria-label={t("map.history.previousEox")} disabled={eoxYearIndex === 0}
                 onClick={() => chooseEoxYearIndex(eoxYearIndex - 1)}>‹</button>
-              <input type="range" aria-label="Linimasa mosaik EOX Sentinel-2" aria-valuetext={String(eoxYear)} min={0}
+              <input type="range" aria-label={t("map.history.eoxTimeline")} aria-valuetext={String(eoxYear)} min={0}
                 max={EOX_CLOUDLESS_YEARS.length - 1} step={1} value={eoxYearIndex}
                 onChange={event => chooseEoxYearIndex(Number(event.target.value))} />
-              <button type="button" aria-label="Mosaik EOX berikutnya" disabled={eoxYearIndex === EOX_CLOUDLESS_YEARS.length - 1}
+              <button type="button" aria-label={t("map.history.nextEox")} disabled={eoxYearIndex === EOX_CLOUDLESS_YEARS.length - 1}
                 onClick={() => chooseEoxYearIndex(eoxYearIndex + 1)}>›</button>
             </div>
             <div className="map-history-ruler" aria-hidden="true">
@@ -555,18 +558,18 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
             </div>
           </div>
         </div>
-        <p className="map-history-note">Mosaik tahunan tersedia untuk 2016 dan 2018–2025; data 2017 tidak tersedia. Mosaik 2018–2025 berlisensi CC BY-NC-SA 4.0 dan hanya untuk penggunaan nonkomersial; mosaik 2016 berlisensi CC BY 4.0.</p>
+        <p className="map-history-note">{t("map.history.eoxNote")}</p>
       </> : historySource === "copernicus-sentinel2" ? <>
         <div className="map-history-body map-history-copernicus-body">
-          <div className="map-history-nasa-selected-date"><small>Tanggal akuisisi scene</small><strong>{copernicusSelectedScene ? `${acquiredDate(copernicusSelectedScene)} · ${copernicusSelectedScene.acquired_at.slice(11, 16)} UTC` : "—"}</strong></div>
+            <div className="map-history-nasa-selected-date"><small>{t("map.history.sceneAcquisitionDate")}</small><strong>{copernicusSelectedScene ? `${acquiredDate(copernicusSelectedScene)} · ${copernicusSelectedScene.acquired_at.slice(11, 16)} UTC` : "—"}</strong></div>
           <div className="map-history-slider">
             <div className="map-history-track">
-              <button type="button" aria-label="Scene Sentinel-2 sebelumnya" disabled={copernicusIndex <= 0}
+              <button type="button" aria-label={t("map.history.previousScene")} disabled={copernicusIndex <= 0}
                 onClick={() => chooseCopernicusIndex(copernicusIndex - 1)}>&lsaquo;</button>
-              <input type="range" aria-label="Linimasa scene Copernicus Sentinel-2" aria-valuetext={copernicusSelectedScene?.acquired_at ?? "Belum ada scene"}
+              <input type="range" aria-label={t("map.history.sceneTimeline")} aria-valuetext={copernicusSelectedScene?.acquired_at ?? t("map.history.noScene")}
                 min={0} max={Math.max(0, copernicusScenes.length - 1)} step={1} value={Math.max(0, copernicusIndex)} disabled={!copernicusScenes.length}
                 onChange={(event) => chooseCopernicusIndex(Number(event.target.value))} />
-              <button type="button" aria-label="Scene Sentinel-2 berikutnya" disabled={copernicusIndex < 0 || copernicusIndex >= copernicusScenes.length - 1}
+              <button type="button" aria-label={t("map.history.nextScene")} disabled={copernicusIndex < 0 || copernicusIndex >= copernicusScenes.length - 1}
                 onClick={() => chooseCopernicusIndex(copernicusIndex + 1)}>&rsaquo;</button>
             </div>
             <div className="map-history-ruler" aria-hidden="true">
@@ -574,38 +577,38 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
             </div>
           </div>
         </div>
-        {copernicusScenesQuery.isFetching && !copernicusScenes.length && <p role="status" className="map-history-note">Mencari tanggal akuisisi Sentinel-2 di area peta...</p>}
-        {copernicusScenesQuery.isError && <p role="alert" className="map-history-note">Daftar scene Sentinel-2 gagal dimuat. <button type="button" onClick={() => void copernicusScenesQuery.refetch()}>Coba lagi</button></p>}
-        {!copernicusScenesQuery.isFetching && !copernicusScenesQuery.isError && !copernicusScenes.length && <p role="status" className="map-history-note">Tidak ada scene Sentinel-2 pada area peta.</p>}
-        {copernicusTileQuery.isFetching && <p role="status" className="map-history-note">Menyiapkan tile scene Sentinel-2...</p>}
-        {copernicusTileQuery.isError && <p role="alert" className="map-history-note">Tile scene Sentinel-2 gagal dimuat. <button type="button" onClick={() => void copernicusTileQuery.refetch()}>Coba lagi</button></p>}
-        {copernicusScenes.length > 0 && <p className="map-history-note">{copernicusScenes.length}{copernicusScenesQuery.data?.truncated ? "+" : ""} akuisisi tersedia untuk area peta. Tiap posisi slider menampilkan satu scene L1C pada tanggal dan waktu akuisisinya.</p>}
-        {copernicusScenesTruncated && <p className="map-history-note">Jumlah scene di area ini melewati batas hasil. Perbesar peta atau geser ke area yang lebih kecil untuk memuat arsip lokal.</p>}
-        <p className="map-history-note">Arsip Copernicus Sentinel-2 L1C tersedia sejak 27 Juni 2015. L1C adalah reflektansi TOA (belum dikoreksi atmosfer); awan tetap dapat terlihat.</p>
+        {copernicusScenesQuery.isFetching && !copernicusScenes.length && <p role="status" className="map-history-note">{t("map.history.searchingScenes")}</p>}
+        {copernicusScenesQuery.isError && <p role="alert" className="map-history-note">{t("map.history.sceneListFailed")} <button type="button" onClick={() => void copernicusScenesQuery.refetch()}>{t("map.history.retry")}</button></p>}
+        {!copernicusScenesQuery.isFetching && !copernicusScenesQuery.isError && !copernicusScenes.length && <p role="status" className="map-history-note">{t("map.history.noScenes")}</p>}
+        {copernicusTileQuery.isFetching && <p role="status" className="map-history-note">{t("map.history.preparingScene")}</p>}
+        {copernicusTileQuery.isError && <p role="alert" className="map-history-note">{t("map.history.sceneTileFailed")} <button type="button" onClick={() => void copernicusTileQuery.refetch()}>{t("map.history.retry")}</button></p>}
+        {copernicusScenes.length > 0 && <p className="map-history-note">{t("map.history.sceneCount", { count: `${copernicusScenes.length}${copernicusScenesQuery.data?.truncated ? "+" : ""}` })}</p>}
+        {copernicusScenesTruncated && <p className="map-history-note">{t("map.history.sceneLimit")}</p>}
+        <p className="map-history-note">{t("map.history.copernicusNote")}</p>
       </> : <>
         <div className="map-history-body">
           <div className="map-history-date">
-            <select aria-label="Tahun tampilan" value={date.slice(0, 4)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select>
-            <select aria-label="Bulan tampilan" value={date.slice(5, 7)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(`${date.slice(0, 4)}-${event.target.value}`)}>{months.map(month => <option key={month} value={month}>{MONTHS[Number(month) - 1]}</option>)}</select>
-            <select aria-label="Hari tampilan" value={selected.id} disabled={isFetching || !days.length} onChange={event => {
+            <select aria-label={t("map.history.displayYear")} value={date.slice(0, 4)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(event.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select>
+            <select aria-label={t("map.history.displayMonth")} value={date.slice(5, 7)} disabled={isFetching || !entries.length} onChange={event => choosePrefix(`${date.slice(0, 4)}-${event.target.value}`)}>{months.map(month => <option key={month} value={month}>{monthLabels[Number(month) - 1]}</option>)}</select>
+            <select aria-label={t("map.history.displayDay")} value={selected.id} disabled={isFetching || !days.length} onChange={event => {
               if (event.target.value === CURRENT_SCENE_ID) setHistorySource("current-basemap");
               else setSelectedId(event.target.value);
-            }}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === CURRENT_SCENE_ID ? " - Terkini" : ""}</option>)}</select>
+            }}>{days.map(scene => <option key={scene.id} value={scene.id}>{Number(scene.release_label.slice(8, 10))}{scene.id === CURRENT_SCENE_ID ? ` - ${t("map.history.current")}` : ""}</option>)}</select>
           </div>
           <div className="map-history-slider">
-            <div className="map-history-track"><button type="button" aria-label="Rilis sebelumnya" disabled={index === 0} onClick={() => choose(index - 1)}>‹</button>
-              <input type="range" aria-label="Linimasa citra historis" aria-valuetext={isCurrent ? `Basemap terkini, diakses ${today}` : `Rilis ${date}`} min={0} max={entries.length - 1} value={index} onChange={event => choose(Number(event.target.value))} />
-              <button type="button" aria-label="Rilis berikutnya" disabled={index === entries.length - 1} onClick={() => choose(index + 1)}>›</button></div>
+            <div className="map-history-track"><button type="button" aria-label={t("map.history.previousRelease")} disabled={index === 0} onClick={() => choose(index - 1)}>‹</button>
+              <input type="range" aria-label={t("map.history.releaseTimeline")} aria-valuetext={isCurrent ? t("map.history.currentBasemapAccessed", { date: today }) : t("map.history.release", { date })} min={0} max={entries.length - 1} value={index} onChange={event => choose(Number(event.target.value))} />
+              <button type="button" aria-label={t("map.history.nextRelease")} disabled={index === entries.length - 1} onClick={() => choose(index + 1)}>›</button></div>
             <div className="map-history-ruler" aria-hidden="true">{years.filter((_, i) => i % Math.max(1, Math.ceil(years.length / 6)) === 0).map(year => <span key={year} style={{ left: `${entries.findIndex(scene => scene.release_label.startsWith(year)) / Math.max(1, entries.length - 1) * 100}%` }}>{year}</span>)}</div>
           </div>
         </div>
         <p className="map-history-note">{isCurrent
-          ? `Diakses ${today}. Basemap terbaru yang tersedia; bukan tanggal perekaman citra.`
-          : "Tanggal rilis arsip; tanggal perekaman citra dapat berbeda menurut lokasi."}
-          {!isCurrent && <> <button type="button" onClick={() => { setSelectedId(CURRENT_SCENE_ID); setTileError(false); }}>Kembali ke terkini</button></>}
+          ? t("map.history.accessed", { date: today })
+          : t("map.history.releaseDateNote")}
+          {!isCurrent && <> <button type="button" onClick={() => { setSelectedId(CURRENT_SCENE_ID); setTileError(false); }}>{t("map.history.backToCurrent")}</button></>}
         </p>
       </>}
-      {tileError && <p role="alert">Sebagian citra gagal dimuat. Coba tanggal lain atau perkecil zoom.</p>}
+      {tileError && <p role="alert">{t("map.history.tileError")}</p>}
     </div>, map.getContainer())}
   </>;
 }

@@ -9,6 +9,7 @@ import RasterResolutionNotice from "./RasterResolutionNotice";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ParentFallbackTileLayer, { type ParentFallbackTileStatus } from "@/components/map/ParentFallbackTileLayer";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import "@/styles/disaster-swipe.css";
 
 export type SwipeOrientation = "vertical" | "horizontal";
@@ -384,6 +385,7 @@ export default function SwipeCompareMap({
   historicalDate,
   fallbackToParentTiles = false,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [percent, setPercent] = useState(Math.min(100, Math.max(0, initialPercent)));
   const [panLocked, setPanLocked] = useState(true);
   const [afterPaneReady, setAfterPaneReady] = useState(false);
@@ -606,21 +608,21 @@ export default function SwipeCompareMap({
         <div className="swipe-status" aria-live="polite">
           {hasError ? (
             <>
-              Sebagian tile gagal dimuat.{" "}
+              {t("map.swipe.tileError")} {" "}
               <button
                 type="button"
                 className="swipe-retry"
                 onClick={() => setRetry((value) => value + 1)}
               >
-                Coba lagi
+                {t("map.history.retry")}
               </button>
             </>
           ) : hasFallback ? (
-            `Tile ${fallbackSources.join(" dan ")} memakai zoom sumber lebih rendah karena tile resolusi tinggi tidak tersedia di area ini.`
+            t("map.swipe.fallback", { sources: fallbackSources.join(", ") })
           ) : !beforeUrl || !afterUrl ? (
-            "Perbandingan memerlukan dua layer. Layer yang tersedia tetap ditampilkan."
+            t("map.swipe.requiresTwoLayers")
           ) : (
-            "Memuat kedua citra…"
+            t("map.swipe.loading")
           )}
         </div>
       )}
@@ -696,13 +698,13 @@ export default function SwipeCompareMap({
       </div>
 
       {
-        <div className="swipe-orientation-toggle" role="group" aria-label="Arah slider">
+        <div className="swipe-orientation-toggle" role="group" aria-label={t("map.swipe.direction")}>
           {onOrientationChange && (
             <>
               <button
                 type="button"
                 className={`btn btn-sm ${orientation === "vertical" ? "btn-primary" : "btn-outline-secondary"}`}
-                title="Slider vertikal (kiri/kanan)"
+                title={t("map.swipe.vertical")}
                 onClick={() => onOrientationChange("vertical")}
               >
                 <i className="fas fa-grip-lines-vertical" />
@@ -710,7 +712,7 @@ export default function SwipeCompareMap({
               <button
                 type="button"
                 className={`btn btn-sm ${orientation === "horizontal" ? "btn-primary" : "btn-outline-secondary"}`}
-                title="Slider horizontal (atas/bawah)"
+                title={t("map.swipe.horizontal")}
                 onClick={() => onOrientationChange("horizontal")}
               >
                 <i className="fas fa-grip-lines" />
@@ -722,8 +724,8 @@ export default function SwipeCompareMap({
             className={`btn btn-sm ${panLocked ? "btn-primary" : "btn-outline-secondary"}`}
             title={
               panLocked
-                ? "Posisi peta terkunci (geser divider tidak menggeser peta) - klik untuk buka kunci"
-                : "Posisi peta bebas digeser - klik untuk kunci lagi"
+                ? t("map.swipe.locked")
+                : t("map.swipe.unlocked")
             }
             onClick={() => setPanLocked((v) => !v)}
           >

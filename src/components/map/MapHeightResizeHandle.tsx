@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import "./map-height-resize.css";
 
 const MIN_MAP_HEIGHT = 220;
@@ -34,6 +35,7 @@ function applyHeight(shell: HTMLElement, height: number) {
 
 export default function MapHeightResizeHandle({ mapShellRef }: Props) {
   const dragRef = useRef<DragState | null>(null);
+  const t = useI18nStore((state) => state.t);
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -77,8 +79,8 @@ export default function MapHeightResizeHandle({ mapShellRef }: Props) {
     <button
       type="button"
       className="map-height-resize-handle"
-      title="Seret tepi bawah untuk mengatur tinggi peta"
-      aria-label="Atur tinggi peta; gunakan panah atas dan bawah"
+      title={t("map.height.dragTitle")}
+      aria-label={t("map.height.dragLabel")}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishDrag}

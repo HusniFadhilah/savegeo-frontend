@@ -1,4 +1,5 @@
 import type { MapLegendEntry } from "@/types/map";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface DensityScale {
   min: number;
@@ -18,6 +19,7 @@ function formatScaleValue(value: number) {
 }
 
 export default function MapLegend({ title, entries, scale }: Props) {
+  const t = useI18nStore((state) => state.t);
   if (!entries.length && !scale) return null;
 
   return (
@@ -27,7 +29,7 @@ export default function MapLegend({ title, entries, scale }: Props) {
         <div className="mb-1">
           <div
             role="img"
-            aria-label={"Skala densitas " + formatScaleValue(scale.min) + " sampai " + formatScaleValue(scale.max) + " " + scale.unit}
+            aria-label={t("map.legend.densityScale", { min: formatScaleValue(scale.min), max: formatScaleValue(scale.max), unit: scale.unit })}
             style={{
               height: 14,
               borderRadius: 4,

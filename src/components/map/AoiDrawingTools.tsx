@@ -5,6 +5,7 @@ import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import "./map-tools.css";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import type { AoiFeature } from "@/types/map";
 import { isFiniteMapBounds } from "./mapViewValidation";
 
@@ -106,6 +107,7 @@ function smoothPolygonFeature(feature: AoiFeature, iterations: number): AoiFeatu
 export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
   const map = useMap();
   const groupRef = useRef<L.FeatureGroup | null>(null);
+  const t = useI18nStore((state) => state.t);
 
   useEffect(() => {
     const drawnItems = new L.FeatureGroup();
@@ -147,7 +149,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
     if (polygonButton) {
       polygonButton.classList.add("savegeo-draw-polygon");
       polygonButton.innerHTML = '<i class="bi bi-pentagon" aria-hidden="true"></i>';
-      polygonButton.title = "Gambar polygon AOI";
+      polygonButton.title = t("map.aoi.drawPolygon");
       polygonButton.setAttribute("aria-label", polygonButton.title);
     }
 
@@ -186,8 +188,8 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
       const container = L.DomUtil.create("div", "leaflet-bar leaflet-control aoi-curve-control");
       const button = L.DomUtil.create("button", "aoi-curve-control__button", container);
       button.type = "button";
-      button.title = "Haluskan sisi polygon";
-      button.setAttribute("aria-label", "Haluskan sisi polygon");
+      button.title = t("map.aoi.smoothPolygon");
+      button.setAttribute("aria-label", t("map.aoi.smoothPolygon"));
       button.innerHTML = '<i class="bi bi-bezier2" aria-hidden="true"></i>';
 
       L.DomEvent.disableClickPropagation(container);
@@ -197,7 +199,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
         L.DomEvent.stopPropagation(event);
         smoothLevel = smoothLevel >= 2 ? 0 : smoothLevel + 1;
         button.classList.toggle("is-active", smoothLevel > 0);
-        button.title = smoothLevel === 0 ? "Haluskan sisi polygon" : `Haluskan sisi polygon level ${smoothLevel}`;
+        button.title = smoothLevel === 0 ? t("map.aoi.smoothPolygon") : t("map.aoi.smoothPolygonLevel", { level: smoothLevel });
         if (smoothLevel > 0) applySmoothing(1);
       });
 
@@ -231,8 +233,8 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
       if (!rectangleButton) return;
       rectangleButton.classList.toggle("is-active", rectangleModeActive);
       rectangleButton.title = rectangleModeActive
-        ? "Batalkan gambar kotak"
-        : "Gambar rectangle dengan klik sudut awal lalu klik sudut akhir";
+        ? t("map.aoi.cancelRectangle")
+        : t("map.aoi.drawRectangle");
       rectangleButton.setAttribute("aria-label", rectangleButton.title);
       rectangleButton.innerHTML = rectangleModeActive
         ? '<i class="bi bi-x-lg" aria-hidden="true"></i>'
@@ -294,12 +296,12 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
       const container = L.DomUtil.create("div", "leaflet-control aoi-tools-control");
       const trigger = L.DomUtil.create("button", "aoi-tools-trigger", container);
       trigger.type = "button";
-      trigger.title = "Alat gambar AOI";
+      trigger.title = t("map.aoi.tools");
       trigger.setAttribute("aria-label", trigger.title);
       trigger.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
       const panel = L.DomUtil.create("div", "aoi-tools-panel", container);
       panel.setAttribute("role", "group");
-      panel.setAttribute("aria-label", "Alat gambar AOI");
+      panel.setAttribute("aria-label", t("map.aoi.tools"));
       panel.id = `${map.getContainer().id}-aoi-tools`;
       trigger.setAttribute("aria-controls", panel.id);
       const setOpen = (open: boolean) => {
@@ -411,7 +413,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
           if (index === 0) return sum;
           return sum + polygonVertices[index - 1].distanceTo(point);
         }, 0);
-        showDistanceTooltip(e.latlng, `Segmen ${formatDistance(segment)} · Total ${formatDistance(total + segment)}`);
+        showDistanceTooltip(e.latlng, `${t("map.aoi.segment")} ${formatDistance(segment)} · ${t("map.aoi.total")} ${formatDistance(total + segment)}`);
         return;
       }
 
@@ -419,7 +421,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
         const horizontal = L.latLng(rectangleStart.lat, e.latlng.lng).distanceTo(rectangleStart);
         const vertical = L.latLng(e.latlng.lat, rectangleStart.lng).distanceTo(rectangleStart);
         const diagonal = rectangleStart.distanceTo(e.latlng);
-        showDistanceTooltip(e.latlng, `${formatDistance(horizontal)} × ${formatDistance(vertical)} · diagonal ${formatDistance(diagonal)}`);
+        showDistanceTooltip(e.latlng, `${formatDistance(horizontal)} × ${formatDistance(vertical)} · ${t("map.aoi.diagonal")} ${formatDistance(diagonal)}`);
       }
     };
 
@@ -456,7 +458,7 @@ export default function AoiDrawingTools({ onChange, externalGroupRef }: Props) {
       map.removeLayer(drawnItems);
       if (externalGroupRef) externalGroupRef.current = null;
     };
-  }, [map, onChange, externalGroupRef]);
+  }, [map, onChange, externalGroupRef, t]);
 
   return null;
 }

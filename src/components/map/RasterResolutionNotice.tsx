@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMapEvents } from "react-leaflet";
 import { nativeZoomForResolution } from "@/config/mapZoom";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 export default function RasterResolutionNotice({
   layers,
@@ -14,11 +15,12 @@ export default function RasterResolutionNotice({
 }) {
   const [zoom, setZoom] = useState<number>();
   const map = useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+  const t = useI18nStore((state) => state.t);
   return (
     <div
       className="raster-resolution-notice"
-      title="Resolusi spasial layer"
-      aria-label="Resolusi spasial layer"
+      title={t("map.resolution.label")}
+      aria-label={t("map.resolution.label")}
     >
       {layers.map((layer, index) => {
         const nativeZoom = layer.nativeZoom ?? nativeZoomForResolution(layer.resolutionM);
@@ -29,8 +31,8 @@ export default function RasterResolutionNotice({
             data-native-zoom={nativeZoom}
             data-tile-url={import.meta.env.DEV ? layer.tileUrl : undefined}
           >
-            {layer.resolutionM ? `${layer.resolutionM.toFixed(2)} m` : "resolusi belum tersedia"}
-            {(zoom ?? map.getZoom()) > nativeZoom && " · diperbesar, tanpa detail tambahan"}
+            {layer.resolutionM ? `${layer.resolutionM.toFixed(2)} m` : t("map.resolution.unavailable")}
+            {(zoom ?? map.getZoom()) > nativeZoom && ` ${t("map.resolution.enlarged")}`}
           </div>
         );
       })}
