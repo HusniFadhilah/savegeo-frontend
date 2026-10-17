@@ -19,6 +19,7 @@ interface ExtraBasemapOption {
 
 interface Props {
   extraOptions?: ExtraBasemapOption[];
+  enhanceSatelliteImagery?: boolean;
 }
 
 /**
@@ -28,7 +29,7 @@ interface Props {
  * added to the map by MapView; this control only lets the user opt into
  * Roads/others, it never changes the initial default.
  */
-export default function BasemapSwitcher({ extraOptions = [] }: Props) {
+export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteImagery = false }: Props) {
   const map = useMap();
   const query = useGlobeQuery();
   const { basemaps } = useBasemaps();
@@ -52,6 +53,11 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     items: satelliteBasemaps.filter((basemap) => group.basemapIds.some((id) => id === basemap.id)),
   })).filter((group) => group.items.length > 0 || group.id === "google");
   const basemapLabel = (id: string) => t(`map.basemap.${id === "satellite_roads" ? "satelliteRoads" : id === "topo" ? "topographic" : id === "terrain" ? "terrainRelief" : id}`);
+  useEffect(() => {
+    const container = map.getContainer();
+    container.classList.toggle("savegeo-enhance-satellite-basemap", enhanceSatelliteImagery);
+    return () => container.classList.remove("savegeo-enhance-satellite-basemap");
+  }, [enhanceSatelliteImagery, map]);
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
@@ -79,7 +85,7 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
       const effectiveMaxZoom = Math.max(maxZoom, mapMaxZoom);
       const maxNativeZoom = safeMapZoom(b.maxNativeZoom ?? b.maxZoom, effectiveMaxZoom, effectiveMaxZoom);
       const baseLayer = L.tileLayer(b.url, {
-        className: "savegeo-basemap-layer",
+        className: `savegeo-basemap-layer${SATELLITE_BASEMAP_IDS.has(b.id) ? " savegeo-satellite-imagery-layer" : ""}`,
         attribution: b.attribution,
         tileSize: safeTileSize(b.tileSize),
         zoomOffset: safeZoomOffset(b.zoomOffset),
@@ -107,7 +113,8 @@ export default function BasemapSwitcher({ extraOptions = [] }: Props) {
     // MapView renders the default tile. Remove only layers explicitly marked
     // as basemap layers before installing the selected registry layer.
     map.eachLayer((layer) => {
-      if ((layer as L.TileLayer).options?.className === "savegeo-basemap-layer") map.removeLayer(layer);
+      const classNames = (layer as L.TileLayer).options?.className?.split(/\s+/) ?? [];
+      if (classNames.includes("savegeo-basemap-layer")) map.removeLayer(layer);
     });
     layers[def.id]?.addTo(map);
     setActiveId(def.id);

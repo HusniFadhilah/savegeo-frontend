@@ -67,6 +67,7 @@ function CompareTile({
         opacity={props.opacity}
         pane={props.pane}
         attribution={props.attribution}
+        className={props.className}
         bounds={props.bounds}
         maxZoom={props.maxZoom}
         maxNativeZoom={props.maxNativeZoom}
@@ -331,6 +332,11 @@ interface Props {
   afterMaxNativeZoom?: number;
   beforeCrossOrigin?: "anonymous" | "use-credentials";
   afterCrossOrigin?: "anonymous" | "use-credentials";
+  /** Apply display-only sharpening to the satellite base layer. */
+  enhanceSatelliteImagery?: boolean;
+  /** Apply display-only sharpening to raw imagery comparison tiles. */
+  sharpenBeforeImagery?: boolean;
+  sharpenAfterImagery?: boolean;
   /** Same AOI bounds for both imagery layers. Prevents a scene tile from
    * rendering outside the selected comparison area. */
   bounds?: LatLngBoundsExpression;
@@ -376,6 +382,9 @@ export default function SwipeCompareMap({
   afterMaxNativeZoom,
   beforeCrossOrigin,
   afterCrossOrigin,
+  enhanceSatelliteImagery = false,
+  sharpenBeforeImagery = false,
+  sharpenAfterImagery = false,
   bounds,
   initialPercent = 50,
   opacity = 1,
@@ -402,6 +411,8 @@ export default function SwipeCompareMap({
         afterMaxNativeZoom,
         maxNativeZoom,
         maxZoom,
+        sharpenBeforeImagery,
+        sharpenAfterImagery,
       ]),
     [
       beforeUrl,
@@ -413,6 +424,8 @@ export default function SwipeCompareMap({
       afterMaxNativeZoom,
       maxNativeZoom,
       maxZoom,
+      sharpenBeforeImagery,
+      sharpenAfterImagery,
     ],
   );
   const [beforeStatus, setBeforeStatus] = useState<{ key: string; status: TileStatus }>();
@@ -518,7 +531,7 @@ export default function SwipeCompareMap({
           mapRef.current = map;
         }}
       >
-        <BasemapSwitcher />
+        <BasemapSwitcher enhanceSatelliteImagery={enhanceSatelliteImagery} />
         <SwipePaneSetup onReady={markAfterPaneReady} />
         {children}
         {afterPaneReady && beforeUrl && (
@@ -528,6 +541,7 @@ export default function SwipeCompareMap({
             url={beforeUrl}
             opacity={opacity}
             pane={BEFORE_PANE}
+            className={sharpenBeforeImagery ? "savegeo-sharpened-imagery" : undefined}
             attribution={beforeAttribution}
             crossOrigin={beforeCrossOrigin}
             bounds={bounds}
@@ -543,6 +557,7 @@ export default function SwipeCompareMap({
             url={afterUrl}
             opacity={opacity}
             pane={AFTER_PANE}
+            className={sharpenAfterImagery ? "savegeo-sharpened-imagery" : undefined}
             attribution={afterAttribution}
             crossOrigin={afterCrossOrigin}
             bounds={bounds}

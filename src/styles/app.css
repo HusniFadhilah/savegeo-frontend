@@ -2455,6 +2455,63 @@
   line-height: 1.35;
 }
 
+.disaster-layer-satellite-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.disaster-layer-accordion-toggle {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  line-height: 1;
+}
+
+.disaster-layer-accordion-toggle:hover,
+.disaster-layer-accordion-toggle:focus-visible {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.disaster-layer-panel .disaster-layer-enhancement {
+  min-height: 28px;
+  margin: 4px 0 2px 22px;
+  padding: 5px 8px;
+  border-left: 2px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.disaster-imagery-filter-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.savegeo-sharpened-imagery .leaflet-tile,
+.savegeo-enhance-satellite-basemap .savegeo-satellite-imagery-layer .leaflet-tile {
+  filter: url(#savegeo-image-sharpen);
+}
+
+.disaster-layer-enhancement .form-check-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.disaster-layer-enhancement > .inline-info-tip {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .disaster-section-heading {
   display: flex;
   align-items: center;
@@ -6874,6 +6931,25 @@ html[data-theme="dark"] .disaster-filter-panel label,
 html[data-theme="dark"] .disaster-imagery-selectors label,
 html[data-theme="dark"] .disaster-layer-panel .form-check-label {
   color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .disaster-layer-enhancement,
+.dark-mode .disaster-layer-enhancement {
+  border-left-color: #475569;
+  background: #17212e;
+}
+
+html[data-theme="dark"] .disaster-layer-accordion-toggle,
+.dark-mode .disaster-layer-accordion-toggle {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .disaster-layer-accordion-toggle:hover,
+html[data-theme="dark"] .disaster-layer-accordion-toggle:focus-visible,
+.dark-mode .disaster-layer-accordion-toggle:hover,
+.dark-mode .disaster-layer-accordion-toggle:focus-visible {
+  background: #334155;
+  color: #f8fafc;
 }
 
 html[data-theme="dark"] .disaster-kpi-group .metric-card {

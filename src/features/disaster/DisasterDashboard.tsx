@@ -119,6 +119,7 @@ export default function DisasterDashboard() {
 
   const [checkedAnalyses, setCheckedAnalyses] = useState<Set<string>>(new Set());
   const [showSatellite, setShowSatellite] = useState(false);
+  const [enhanceSatelliteImagery, setEnhanceSatelliteImagery] = useState(false);
   const [showAoi, setShowAoi] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
   const [highlightedHotspotId, setHighlightedHotspotId] = useState<number | null>(null);
@@ -132,6 +133,10 @@ export default function DisasterDashboard() {
   const readyEventId = detail && String(detail.event.id) === String(eventId)
     ? detail.event.id
     : null;
+
+  useEffect(() => {
+    setEnhanceSatelliteImagery(false);
+  }, [eventId]);
 
   const [additionalSourcesOpen, setAdditionalSourcesOpen] = useState(false);
   const [sources, setSources] = useState<DisasterSourcesMap | null>(null);
@@ -480,6 +485,8 @@ export default function DisasterDashboard() {
             onToggleAnalysis={toggleAnalysis}
             showSatellite={showSatellite}
             onToggleSatellite={() => setShowSatellite((v) => !v)}
+            enhanceSatelliteImagery={enhanceSatelliteImagery}
+            onToggleSatelliteEnhancement={() => setEnhanceSatelliteImagery((value) => !value)}
             showAoi={showAoi}
             onToggleAoi={() => setShowAoi((v) => !v)}
             showHotspots={showHotspots}
@@ -507,6 +514,7 @@ export default function DisasterDashboard() {
             primaryImagery={primary_imagery}
             satellite={satellite}
             showSatellite={showSatellite}
+            enhanceSatelliteImagery={enhanceSatelliteImagery}
             analyses={analyses}
             checkedAnalyses={checkedAnalyses}
             showGlobeControl

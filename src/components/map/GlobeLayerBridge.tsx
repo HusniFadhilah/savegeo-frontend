@@ -24,7 +24,8 @@ export function GlobeLayerBridge({ enabled, onLayers }: { enabled: boolean; onLa
         seen.add(id);
         if (layer instanceof L.TileLayer) {
           const url = (layer as L.TileLayer & { _url: string })._url;
-          if (baseUrls.has(url) || layer.options.className === "savegeo-basemap-layer") return;
+          const classNames = layer.options.className?.split(/\s+/) ?? [];
+          if (baseUrls.has(url) || classNames.includes("savegeo-basemap-layer")) return;
           const attribution = typeof layer.getAttribution === "function" ? layer.getAttribution?.() : undefined;
           layers.push({ id: String(id), type: "raster", url, opacity: layer.options.opacity, attribution: attribution ?? undefined, maxNativeZoom: layer.options.maxNativeZoom, maxZoom: layer.options.maxZoom });
         } else if (layer instanceof L.LayerGroup) {

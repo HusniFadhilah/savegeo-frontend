@@ -15,6 +15,7 @@ interface Props {
   opacity?: number;
   pane?: string;
   attribution?: string;
+  className?: string;
   bounds?: LatLngBoundsExpression;
   maxZoom?: number;
   /** Highest source zoom to try before falling back to an ancestor tile. */
@@ -124,6 +125,7 @@ export default function ParentFallbackTileLayer({
   opacity = 1,
   pane,
   attribution,
+  className,
   bounds,
   maxZoom,
   maxNativeZoom = 18,
@@ -138,6 +140,7 @@ export default function ParentFallbackTileLayer({
       opacity,
       pane,
       attribution,
+      className,
       bounds,
       maxZoom,
       sourceMaxNativeZoom: maxNativeZoom,

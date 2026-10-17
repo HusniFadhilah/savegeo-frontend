@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { DisasterAnalysisEntry, DisasterSatelliteLayers } from "../types";
 import InfoTip from "@/components/ui/InfoTip";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   satellite: DisasterSatelliteLayers | null;
@@ -8,6 +10,8 @@ interface Props {
   onToggleAnalysis: (modelId: string) => void;
   showSatellite: boolean;
   onToggleSatellite: () => void;
+  enhanceSatelliteImagery: boolean;
+  onToggleSatelliteEnhancement: () => void;
   showAoi: boolean;
   onToggleAoi: () => void;
   showHotspots: boolean;
@@ -49,7 +53,9 @@ function layerInfo(entry: DisasterAnalysisEntry): string {
     entry.damage_model === false ? "Indikator/paparan; bukan kerusakan terkonfirmasi." : null,
     entry.validation_status === "review_required" ? "Perlu ditinjau sebelum publikasi." : null,
     ...(entry.limitations ?? []).slice(0, 2),
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /**
@@ -68,11 +74,15 @@ export default function LayerPanel({
   onToggleAnalysis,
   showSatellite,
   onToggleSatellite,
+  enhanceSatelliteImagery,
+  onToggleSatelliteEnhancement,
   showAoi,
   onToggleAoi,
   showHotspots,
   onToggleHotspots,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
+  const [satelliteOptionsOpen, setSatelliteOptionsOpen] = useState(false);
   const groups = new Map<string, DisasterAnalysisEntry[]>();
   for (const entry of analyses) {
     const list = groups.get(entry.category) ?? [];
@@ -81,83 +91,161 @@ export default function LayerPanel({
   }
 
   return (
-    <div className="card mb-3 disaster-modern-card disaster-layer-panel">
-      <div className="card-header py-2 disaster-soft-header">
-        <i className="bi bi-layers-fill" /> Layer
-      </div>
-      <div className="card-body py-2">
-        <div className="mb-2">
-          <div className="fw-semibold small text-muted text-uppercase mb-1">Satellite</div>
-          <div className="form-check form-switch">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              id="layerSatellite"
-              checked={showSatellite}
-              disabled={!satellite?.post_tile_url && !satellite?.pre_tile_url}
-              onChange={onToggleSatellite}
+    <>
+      <svg
+        className="disaster-imagery-filter-defs"
+        aria-hidden="true"
+        focusable="false"
+        width="0"
+        height="0"
+      >
+        <defs>
+          <filter
+            id="savegeo-image-sharpen"
+            colorInterpolationFilters="sRGB"
+            x="-2%"
+            y="-2%"
+            width="104%"
+            height="104%"
+          >
+            <feConvolveMatrix
+              order="3"
+              kernelMatrix="-0.034 -0.069 -0.034 -0.069 1.412 -0.069 -0.034 -0.069 -0.034"
+              edgeMode="duplicate"
+              preserveAlpha="true"
             />
-            <label className="form-check-label small" htmlFor="layerSatellite">
-              Citra satelit (referensi)
-            </label>
-          </div>
+          </filter>
+        </defs>
+      </svg>
+      <div className="card mb-3 disaster-modern-card disaster-layer-panel">
+        <div className="card-header py-2 disaster-soft-header">
+          <i className="bi bi-layers-fill" /> Layer
         </div>
-
-        {[...groups.entries()].map(([category, entries]) => (
-          <div className="mb-2" key={category}>
-            <div className="fw-semibold small text-muted text-uppercase mb-1">
-              {categoryLabel(category)}
-            </div>
-            {entries.map((entry) => (
-              <div className="form-check form-switch" key={entry.model_id}>
+        <div className="card-body py-2">
+          <div className="mb-2">
+            <div className="fw-semibold small text-muted text-uppercase mb-1">Satellite</div>
+            <div className="disaster-layer-satellite-row">
+              <div className="form-check form-switch flex-grow-1">
                 <input
                   className="form-check-input"
                   type="checkbox"
-                  id={`layer-${entry.model_id}`}
-                  checked={checkedAnalyses.has(entry.model_id)}
-                  disabled={!entry.available}
-                  onChange={() => onToggleAnalysis(entry.model_id)}
+                  id="layerSatellite"
+                  checked={showSatellite}
+                  disabled={!satellite?.post_tile_url && !satellite?.pre_tile_url}
+                  onChange={onToggleSatellite}
                 />
-                <label className={`form-check-label small ${entry.available ? "" : "text-muted"}`} htmlFor={`layer-${entry.model_id}`}>
-                  {LAYER_LABELS[entry.model_id] ?? entry.user_label}
+                <label className="form-check-label small" htmlFor="layerSatellite">
+                  {t("disaster.layer.referenceSatellite")}
                 </label>
-                {layerInfo(entry) && <InfoTip
-                  label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}`}
-                  content={layerInfo(entry)}
-                />}
               </div>
-            ))}
+              <button
+                type="button"
+                className="disaster-layer-accordion-toggle"
+                aria-expanded={satelliteOptionsOpen}
+                aria-controls="layerSatelliteOptions"
+                aria-label={
+                  satelliteOptionsOpen
+                    ? t("disaster.layer.hideSatelliteOptions")
+                    : t("disaster.layer.showSatelliteOptions")
+                }
+                title={
+                  satelliteOptionsOpen
+                    ? t("disaster.layer.hideSatelliteOptions")
+                    : t("disaster.layer.showSatelliteOptions")
+                }
+                onClick={() => setSatelliteOptionsOpen((open) => !open)}
+              >
+                <i
+                  className={`bi bi-chevron-${satelliteOptionsOpen ? "up" : "down"}`}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+            {satelliteOptionsOpen && (
+              <div
+                id="layerSatelliteOptions"
+                className="form-check form-switch disaster-layer-enhancement"
+              >
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="layerSatelliteEnhancement"
+                  checked={enhanceSatelliteImagery}
+                  onChange={onToggleSatelliteEnhancement}
+                />
+                <label className="form-check-label small" htmlFor="layerSatelliteEnhancement">
+                  <i className="bi bi-magic me-1" aria-hidden="true" />
+                  {t("disaster.layer.visualEnhancement")}
+                </label>
+                <InfoTip
+                  label={t("disaster.layer.visualEnhancementInfo")}
+                  content={t("disaster.layer.visualEnhancementDescription")}
+                />
+              </div>
+            )}
           </div>
-        ))}
 
-        <div>
-          <div className="fw-semibold small text-muted text-uppercase mb-1">Reference</div>
-          <div className="form-check form-switch">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              id="layerAoi"
-              checked={showAoi}
-              onChange={onToggleAoi}
-            />
-            <label className="form-check-label small" htmlFor="layerAoi">
-              Batas AOI
-            </label>
-          </div>
-          <div className="form-check form-switch">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              id="layerHotspots"
-              checked={showHotspots}
-              onChange={onToggleHotspots}
-            />
-            <label className="form-check-label small" htmlFor="layerHotspots">
-              Hotspot
-            </label>
+          {[...groups.entries()].map(([category, entries]) => (
+            <div className="mb-2" key={category}>
+              <div className="fw-semibold small text-muted text-uppercase mb-1">
+                {categoryLabel(category)}
+              </div>
+              {entries.map((entry) => (
+                <div className="form-check form-switch" key={entry.model_id}>
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`layer-${entry.model_id}`}
+                    checked={checkedAnalyses.has(entry.model_id)}
+                    disabled={!entry.available}
+                    onChange={() => onToggleAnalysis(entry.model_id)}
+                  />
+                  <label
+                    className={`form-check-label small ${entry.available ? "" : "text-muted"}`}
+                    htmlFor={`layer-${entry.model_id}`}
+                  >
+                    {LAYER_LABELS[entry.model_id] ?? entry.user_label}
+                  </label>
+                  {layerInfo(entry) && (
+                    <InfoTip
+                      label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}`}
+                      content={layerInfo(entry)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+
+          <div>
+            <div className="fw-semibold small text-muted text-uppercase mb-1">Reference</div>
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="layerAoi"
+                checked={showAoi}
+                onChange={onToggleAoi}
+              />
+              <label className="form-check-label small" htmlFor="layerAoi">
+                Batas AOI
+              </label>
+            </div>
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="layerHotspots"
+                checked={showHotspots}
+                onChange={onToggleHotspots}
+              />
+              <label className="form-check-label small" htmlFor="layerHotspots">
+                Hotspot
+              </label>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

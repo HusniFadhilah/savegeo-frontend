@@ -199,6 +199,15 @@ function viewerUrl(url: string | null): string | null {
     : url;
 }
 
+function isLocalImagery(img: SatelliteImageryRecord | null): boolean {
+  return img?.source_kind === "local_upload";
+}
+
+function sharpenedTileUrl(url: string | null, enabled: boolean): string | null {
+  if (!url || !enabled) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}sharpen=true`;
+}
+
 interface DynamicImageryRequest {
   source: DynamicImagerySource;
   phase: "pre" | "post";
@@ -335,6 +344,8 @@ interface ViewerLayersProps {
   showAoi: boolean;
   satellite: DisasterSatelliteLayers | null;
   showSatellite: boolean;
+  sharpenReferenceSatellite: boolean;
+  enhanceReferenceSatellite: boolean;
   analyses: DisasterAnalysisEntry[];
   checkedAnalyses: Set<string>;
   hotspots: HotspotRecord[];
@@ -351,6 +362,8 @@ function ViewerLayers({
   showAoi,
   satellite,
   showSatellite,
+  sharpenReferenceSatellite,
+  enhanceReferenceSatellite,
   analyses,
   checkedAnalyses,
   hotspots,
@@ -366,7 +379,12 @@ function ViewerLayers({
       <ViewerLayerPane />
       {showSatellite && (satellite?.post_tile_url || satellite?.pre_tile_url) && (
         <TileLayer
-          url={viewerUrl(satellite.post_tile_url ?? satellite.pre_tile_url)!}
+          key={`${satellite.post_tile_url ?? satellite.pre_tile_url}-${sharpenReferenceSatellite}-${enhanceReferenceSatellite}`}
+          url={viewerUrl(sharpenedTileUrl(
+            satellite.post_tile_url ?? satellite.pre_tile_url,
+            sharpenReferenceSatellite,
+          ))!}
+          className={enhanceReferenceSatellite ? "savegeo-sharpened-imagery" : undefined}
           opacity={0.35}
           attribution="Citra satelit referensi"
           pane={DISASTER_ANALYSIS_PANE}
@@ -424,6 +442,7 @@ interface Props {
   primaryImagery: DisasterPrimaryImagery;
   satellite?: DisasterSatelliteLayers | null;
   showSatellite?: boolean;
+  enhanceSatelliteImagery?: boolean;
   analyses?: DisasterAnalysisEntry[];
   checkedAnalyses?: Set<string>;
   showAoi?: boolean;
@@ -457,6 +476,7 @@ export default function SatelliteViewer({
   primaryImagery,
   satellite = null,
   showSatellite = false,
+  enhanceSatelliteImagery = false,
   analyses = [],
   checkedAnalyses = new Set<string>(),
   showAoi = true,
@@ -560,6 +580,9 @@ export default function SatelliteViewer({
   const preLabel = `${analysisVisible ? "Segmentasi pre" : language === "id" ? "Sebelum" : "Before"}${displayPreDate ? ` · ${displayPreDate}` : ""}`;
   const postLabel = `${activeOutput === "change" ? language === "id" ? "Perubahan" : "Change" : analysisVisible ? "Segmentasi post" : language === "id" ? "Sesudah" : "After"}${displayPostDate ? ` · ${displayPostDate}` : ""}`;
   const tileErrorKey = `${comparisonEntry?.model_id}-${comparisonEntry?.runId}-${activeOutput}-${displayView}-${displayPreTile}-${displayPostTile}`;
+  const referenceImagery = primaryImagery.post ?? primaryImagery.pre;
+  const sharpenReferenceSatellite = enhanceSatelliteImagery && isLocalImagery(referenceImagery);
+  const enhanceReferenceSatellite = enhanceSatelliteImagery && !isLocalImagery(referenceImagery);
   const chooseView = (next: ViewMode) => {
     setView(next);
     if (activeOutput === "change") setOutput("classes");
@@ -693,6 +716,8 @@ export default function SatelliteViewer({
 
   const sharedLayers = <>
     <ViewerLayers aoi={aoi} showAoi={showAoi} satellite={satellite} showSatellite={showSatellite}
+      sharpenReferenceSatellite={sharpenReferenceSatellite}
+      enhanceReferenceSatellite={enhanceReferenceSatellite}
       analyses={analyses} checkedAnalyses={checkedAnalyses} hotspots={hotspots} showHotspots={showHotspots}
       highlightedHotspotId={highlightedHotspotId} onHotspotClick={onHotspotClick}
       firmsFeatures={firmsFeatures} firmsShowLabels={firmsShowLabels} firmsCluster={firmsCluster} />
@@ -708,12 +733,16 @@ export default function SatelliteViewer({
     const resolutionM = phase === "pre" ? displayPreResolution : displayPostResolution;
     const nativeZoom = phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom;
     const image = phase === "pre" ? preImg : postImg;
+    const sharpenLocally = !analysisVisible && enhanceSatelliteImagery && isLocalImagery(image);
+    const sharpenInBrowser = !analysisVisible && enhanceSatelliteImagery && !isLocalImagery(image);
+    const sharpenedTile = sharpenedTileUrl(tile, sharpenLocally);
     return <MapView id={`disasterSatMap-${phase}`} showGlobeControl={globeControl} historicalDate={historicalDate(phase)}>
-      <BasemapSwitcher />
+      <BasemapSwitcher enhanceSatelliteImagery={enhanceSatelliteImagery} />
       <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
       <HistoricalAoiClipController aoi={displayAoi} paneName={DISASTER_IMAGERY_PANE} />
       <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={opacityLabel} />
-      {tile && <TileLayer key={tile} url={tile} opacity={opacity}
+      {sharpenedTile && <TileLayer key={`${sharpenedTile}-${sharpenInBrowser}`} url={sharpenedTile} opacity={opacity}
+        className={sharpenInBrowser ? "savegeo-sharpened-imagery" : undefined}
         attribution={phase === "pre" ? displayPreAttribution : displayPostAttribution}
         crossOrigin={!analysisVisible && image?.source_kind === "local_upload" ? "use-credentials" : undefined}
         pane={DISASTER_IMAGERY_PANE} bounds={displayBounds} maxNativeZoom={nativeZoom} maxZoom={DISASTER_SCENE_MAX_ZOOM}
@@ -898,7 +927,12 @@ export default function SatelliteViewer({
           <div className="col-md-6">{renderMap("post", false)}<div className="text-center small text-muted mt-1">{postLabel}</div></div>
         </div>}
         {displayView === "swipe" && <SwipeCompareMap id="disasterSatSwipeMap"
-          beforeUrl={displayPreTile} afterUrl={displayPostTile} beforeLabel={preLabel} afterLabel={postLabel}
+          beforeUrl={sharpenedTileUrl(displayPreTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(preImg))}
+          afterUrl={sharpenedTileUrl(displayPostTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(postImg))}
+          enhanceSatelliteImagery={enhanceSatelliteImagery}
+          sharpenBeforeImagery={!analysisVisible && enhanceSatelliteImagery && !isLocalImagery(preImg)}
+          sharpenAfterImagery={!analysisVisible && enhanceSatelliteImagery && !isLocalImagery(postImg)}
+          beforeLabel={preLabel} afterLabel={postLabel}
           beforeAttribution={displayPreAttribution} afterAttribution={displayPostAttribution}
           orientation={swipeOrientation} onOrientationChange={setSwipeOrientation} opacity={opacity}
           beforeCrossOrigin={!analysisVisible && preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}

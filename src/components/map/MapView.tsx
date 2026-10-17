@@ -19,6 +19,7 @@ import {
   RESULT_PANE_Z_INDEX,
 } from "@/config/mapPanes";
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
+import { SATELLITE_BASEMAP_IDS } from "@/config/satelliteBasemapGroups";
 import { safeMapCenter, safeMapZoom, safeTileSize, safeZoomOffset } from "./mapViewValidation";
 
 import GlobeView, { type GlobeLayer } from "./GlobeView";
@@ -157,7 +158,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
               zoomOffset={defaultZoomOffset}
               maxNativeZoom={defaultMaxNativeZoom}
               maxZoom={effectiveMaxZoom}
-              className="savegeo-basemap-layer"
+              className={`savegeo-basemap-layer${SATELLITE_BASEMAP_IDS.has(defaultBasemap.id) ? " savegeo-satellite-imagery-layer" : ""}`}
             />
             {defaultBasemap.overlayUrl && (
               <TileLayer
