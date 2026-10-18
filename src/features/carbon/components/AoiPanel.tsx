@@ -9,13 +9,6 @@ import AoiDrawingTools, { setAoiOnMap, SyncAoiToGroup } from "@/components/map/A
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
 import type { AoiFeature, AoiGeometry } from "@/types/map";
-import {
-  fetchCities,
-  fetchDistricts,
-  fetchProvinces,
-  fetchRegionGeometry,
-  fetchVillages,
-} from "@/services/analysisService";
 import AoiRegionTab from "./AoiRegionTab";
 import AoiCoordinateTab from "./AoiCoordinateTab";
 import AoiUploadTab from "./AoiUploadTab";
@@ -23,8 +16,6 @@ import AoiCompanyTab from "./AoiCompanyTab";
 import { registerMap } from "@/features/chatbot/mapActions";
 import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapClickPicker from "@/components/map/MapClickPicker";
-import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
-import { isFiniteMapBounds, isValidMapCenter, safeMapZoom } from "@/components/map/mapViewValidation";
 
 interface Props {
   aoi: AoiState | null;
@@ -51,28 +42,6 @@ const TAB_ICONS: Record<TabKey, string> = {
   company: "bi-building-fill",
 };
 
-function normalizeName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/^(provinsi|province|kabupaten|kota|city|regency)\s+/i, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function geometryFromGeoJSON(input: GeoJSON.GeoJSON): AoiGeometry {
-  if (input.type === "Feature") return geometryFromGeoJSON(input.geometry);
-  if (input.type === "FeatureCollection") {
-    const geometries = input.features.map((f) => f.geometry).filter((g): g is GeoJSON.Geometry => Boolean(g));
-    if (!geometries.length) throw new Error(useI18nStore.getState().t("carbon.aoi.err.noGeometry"));
-    return mergeGeometry(geometries.map(geometryFromGeoJSON));
-  }
-  if (input.type === "Polygon" || input.type === "MultiPolygon") return input;
-  if (input.type === "GeometryCollection") {
-    return mergeGeometry(input.geometries.map(geometryFromGeoJSON));
-  }
-  throw new Error(`${useI18nStore.getState().t("carbon.aoi.err.unsupportedGeometry")}: ${input.type}`);
-}
-
 function mergeGeometry(geometries: AoiGeometry[]): AoiGeometry {
   if (geometries.length === 1) return geometries[0];
   const coordinates: GeoJSON.Position[][][] = [];
@@ -81,29 +50,6 @@ function mergeGeometry(geometries: AoiGeometry[]): AoiGeometry {
     else coordinates.push(...geometry.coordinates);
   }
   return { type: "MultiPolygon", coordinates };
-}
-
-function toAoiFeature(input: GeoJSON.GeoJSON): AoiFeature {
-  if (input.type === "Feature") {
-    return {
-      type: "Feature",
-      geometry: geometryFromGeoJSON(input),
-      properties: input.properties || {},
-    };
-  }
-  return {
-    type: "Feature",
-    geometry: geometryFromGeoJSON(input),
-    properties: {},
-  };
-}
-
-function findByDisplayName<T extends { name: string }>(items: T[], wanted: string): T | undefined {
-  const key = normalizeName(wanted);
-  return items.find((item) => {
-    const name = normalizeName(item.name);
-    return name === key || name.includes(key) || key.includes(name);
-  });
 }
 
 /**
@@ -134,82 +80,6 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
     },
     [onAoiChange],
   );
-
-  useEffect(() => {
-    (window as unknown as { L?: typeof L }).L = L;
-    (window as unknown as { map?: L.Map | null }).map = mapRef.current;
-
-    window.flyToLocation = (lat, lng, zoom, bbox) => {
-      const map = mapRef.current;
-      if (!map) return;
-      if (bbox && bbox.length >= 4) {
-        const bounds = L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
-        if (isFiniteMapBounds(bounds)) {
-          map.fitBounds(bounds, { padding: [30, 30], maxZoom: HIGH_DETAIL_MAX_ZOOM });
-          return;
-        }
-      }
-      if (!isValidMapCenter([lat, lng])) return;
-      map.flyTo([lat, lng], safeMapZoom(zoom ?? 12, HIGH_DETAIL_MAX_ZOOM, 12), { duration: 1.2 });
-    };
-
-    window.setAOIFromGeoJSON = (geojson, name = t("carbon.aoi.fromChatbot")) => {
-      const feature = toAoiFeature(geojson);
-      applyAoi(feature, name, "upload");
-    };
-    window.loadGeoJSONAsAOI = (geojson) => {
-      window.setAOIFromGeoJSON?.(geojson, t("carbon.aoi.fromFile"));
-    };
-    window.setAOIByAdminName = async (province, city, district, village) => {
-      try {
-        const provinces = await fetchProvinces();
-        const provinceMatch = findByDisplayName(provinces, province);
-        if (!provinceMatch) return false;
-
-        let endpoint: "province" | "city" | "district" | "village" = "province";
-        let code = provinceMatch.code;
-        let label = provinceMatch.name;
-
-        if (city) {
-          const cityMatch = findByDisplayName(await fetchCities(provinceMatch.code), city);
-          if (!cityMatch) return false;
-          endpoint = "city";
-          code = cityMatch.code;
-          label = cityMatch.name;
-
-          if (district) {
-            const districtMatch = findByDisplayName(await fetchDistricts(cityMatch.code), district);
-            if (!districtMatch) return false;
-            endpoint = "district";
-            code = districtMatch.code;
-            label = districtMatch.name;
-
-            if (village) {
-              const villageMatch = findByDisplayName(await fetchVillages(districtMatch.code), village);
-              if (!villageMatch) return false;
-              endpoint = "village";
-              code = villageMatch.code;
-              label = villageMatch.name;
-            }
-          }
-        }
-
-        const geometry = await fetchRegionGeometry(endpoint, code);
-        applyAoi(toAoiFeature(geometry), label, "admin");
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    return () => {
-      (window as unknown as { map?: L.Map | null }).map = null;
-      delete window.flyToLocation;
-      delete window.setAOIFromGeoJSON;
-      delete window.loadGeoJSONAsAOI;
-      delete window.setAOIByAdminName;
-    };
-  }, [applyAoi]);
 
   const handleDrawChange = useCallback(
     (feature: AoiFeature | null) => {
@@ -296,7 +166,6 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
           id="carbonAoiMap"
           onMapReady={(map) => {
             mapRef.current = map;
-            (window as unknown as { map?: L.Map | null }).map = map;
             registerMap("aoi", map);
           }}
         >

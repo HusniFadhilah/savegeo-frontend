@@ -1,7 +1,7 @@
-import { getActiveMap } from "./mapActions";
+import { setMapView } from "./mapActions";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
-import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
-import { resolveAoi } from "./aoiCommands";
+import { confirmActiveAoi, resolveAoi } from "./aoiCommands";
+import { isAssistantModule, openDashboardModule } from "./navigation";
 
 /** Commands are handled by the React module that owns the state. The assistant
  * never receives a DOM selector or an arbitrary callback to invoke. */
@@ -24,17 +24,24 @@ export interface UiCommandHandler {
 }
 
 const handlers = new Map<string, UiCommandHandler>();
+const handlerListeners = new Set<() => void>();
+
+function mismatchedKeys(command: UiCommand, state: Record<string, unknown>): string[] {
+  return Object.entries(command.expected_state ?? {})
+    .filter(([key, expected]) => JSON.stringify(state[key]) !== JSON.stringify(expected))
+    .map(([key]) => key);
+}
 
 function verifyExpected(command: UiCommand, state: Record<string, unknown>): void {
-  for (const [key, expected] of Object.entries(command.expected_state ?? {})) {
-    if (JSON.stringify(state[key]) !== JSON.stringify(expected)) {
-      throw new Error(`Perintah ${command.action} belum menghasilkan state ${key} yang diminta.`);
-    }
+  const [first] = mismatchedKeys(command, state);
+  if (first) {
+    throw new Error(`Perintah ${command.action} belum menghasilkan state ${first} yang diminta.`);
   }
 }
 
 export function registerUiCommands(namespace: string, handler: UiCommandHandler): () => void {
   handlers.set(namespace, handler);
+  handlerListeners.forEach((listener) => listener());
   return () => {
     if (handlers.get(namespace) === handler) handlers.delete(namespace);
   };
@@ -44,83 +51,87 @@ export function readUiCommandState(namespace: string): Record<string, unknown> |
   return handlers.get(namespace)?.read() ?? null;
 }
 
+/** Resolves when `namespace` registers (immediately if it already has), or false after `timeoutMs`. */
+function waitForHandler(namespace: string, timeoutMs: number): Promise<boolean> {
+  if (handlers.has(namespace)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const finish = (ok: boolean) => {
+      clearTimeout(timer);
+      handlerListeners.delete(listener);
+      resolve(ok);
+    };
+    const listener = () => {
+      if (handlers.has(namespace)) finish(true);
+    };
+    const timer = setTimeout(() => finish(handlers.has(namespace)), timeoutMs);
+    handlerListeners.add(listener);
+  });
+}
+
+const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Resolves after React has rendered and run effects for state set just before this call. */
+function commitBarrier(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    } else {
+      setTimeout(resolve, 16);
+    }
+  });
+}
+
+const MODULE_FOR_NAMESPACE: Record<string, DashboardModule> = {
+  carbon: "carbon",
+  lc_change: "lc-change",
+  scenes: "imagery",
+  crop: "crop-monitoring",
+  disaster: "disaster",
+};
+
 export async function executeUiCommand(command: UiCommand): Promise<Record<string, unknown>> {
   if (!command || typeof command.action !== "string" || typeof command.target !== "string") {
     throw new Error("Format perintah UI tidak valid.");
   }
   const namespace = command.target.split(".")[0];
+
   if (namespace === "aoi") {
-    if (command.action !== "select_aoi" || command.target !== "aoi.active")
-      throw new Error("Perintah AOI tidak dikenal.");
-    const state = await resolveAoi(command.parameters?.query);
+    if (command.target !== "aoi.active") throw new Error("Perintah AOI tidak dikenal.");
+    let state: Record<string, unknown>;
+    if (command.action === "select_aoi") state = await resolveAoi(command.parameters?.query);
+    else if (command.action === "use_active_aoi") state = await confirmActiveAoi();
+    else throw new Error("Perintah AOI tidak dikenal.");
+    // Modules follow the AOI store through effects; later steps (search, analysis)
+    // must not run against their previous AOI.
+    await commitBarrier();
     verifyExpected(command, state);
     return state;
   }
+
   if (namespace === "map") {
-    const map = getActiveMap();
-    if (!map) throw new Error("Peta belum tersedia pada layar.");
-    if (command.action !== "set_map_view" || command.target !== "map.main")
+    if (command.action !== "set_map_view" || command.target !== "map.main") {
       throw new Error("Perintah peta tidak dikenal.");
-    const center = command.parameters?.center;
-    const zoom = command.parameters?.zoom;
-    if (
-      !Array.isArray(center) ||
-      center.length !== 2 ||
-      !center.every((n) => typeof n === "number" && Number.isFinite(n)) ||
-      center[0] < -90 ||
-      center[0] > 90 ||
-      center[1] < -180 ||
-      center[1] > 180 ||
-      typeof zoom !== "number" ||
-      !Number.isFinite(zoom) ||
-      zoom < map.getMinZoom() ||
-      zoom > map.getMaxZoom()
-    ) {
-      throw new Error("Koordinat atau zoom peta tidak valid.");
     }
-    map.setView(center as [number, number], zoom);
-    const state = { center: [map.getCenter().lat, map.getCenter().lng], zoom: map.getZoom() };
+    const state = setMapView(command.parameters?.center, command.parameters?.zoom);
     verifyExpected(command, state);
     return state;
   }
+
   if (namespace === "navigation") {
-    if (command.action !== "open_module" || command.target !== "navigation.module")
+    if (command.action !== "open_module" || command.target !== "navigation.module") {
       throw new Error("Perintah navigasi tidak dikenal.");
+    }
     const module = command.parameters?.value;
-    const allowed: DashboardModule[] = [
-      "carbon",
-      "lc-change",
-      "imagery",
-      "disaster",
-      "crop-monitoring",
-      "guide",
-      "about",
-    ];
-    if (typeof module !== "string" || !allowed.some((item) => item === module))
-      throw new Error("Modul tidak tersedia.");
-    useUiStore.getState().setActiveModule(module as DashboardModule);
-    window.history.pushState(null, "", getDashboardModulePath(module as DashboardModule));
-    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    if (!isAssistantModule(module)) throw new Error("Modul tidak tersedia.");
+    openDashboardModule(module);
     const state = { module: useUiStore.getState().activeModule };
     verifyExpected(command, state);
     return state;
   }
-  const moduleForNamespace: Record<string, DashboardModule> = {
-    carbon: "carbon",
-    lc_change: "lc-change",
-    scenes: "imagery",
-    crop: "crop-monitoring",
-    disaster: "disaster",
-  };
-  if (!handlers.has(namespace) && moduleForNamespace[namespace]) {
-    await executeUiCommand({
-      action: "open_module",
-      target: "navigation.module",
-      parameters: { value: moduleForNamespace[namespace] },
-    });
-    const deadline = Date.now() + 8000;
-    while (!handlers.has(namespace) && Date.now() < deadline)
-      await new Promise((resolve) => setTimeout(resolve, 50));
+
+  if (!handlers.has(namespace) && MODULE_FOR_NAMESPACE[namespace]) {
+    openDashboardModule(MODULE_FOR_NAMESPACE[namespace]);
+    await waitForHandler(namespace, 8000);
   }
   const handler = handlers.get(namespace);
   if (!handler) throw new Error(`Modul ${namespace} belum menyediakan kontrol chatbot.`);
@@ -130,21 +141,20 @@ export async function executeUiCommand(command: UiCommand): Promise<Record<strin
       !(handlers.get(namespace)?.read().availableProviders as unknown[] | undefined)?.length &&
       Date.now() < deadline
     ) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await tick(50);
     }
   }
   const outcome = await (handlers.get(namespace) ?? handler).execute(command);
   // React batches state updates; let the owner commit before reading back.
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await tick(0);
   let state = handlers.get(namespace)?.read() ?? handler.read();
-  // Setters must observe the committed React state before the next action uses
-  // it. A fixed delay can read an old handler during a busy render.
-  if (["set_parameter", "set_analysis_type", "set_provider", "set_date_range", "accordion", "select_field"].includes(command.action)) {
-    const deadline = Date.now() + 1500;
-    while (Object.entries(command.expected_state ?? {}).some(([key, expected]) => JSON.stringify(state[key]) !== JSON.stringify(expected)) && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 25));
-      state = handlers.get(namespace)?.read() ?? handler.read();
-    }
+  // A setter must be observable before the next action builds on it. Poll only
+  // while the owner still disagrees with the state this command asked for.
+  // run_analysis reports its own outcome below, so it is not polled.
+  const deadline = Date.now() + (command.action === "run_analysis" ? 0 : 1500);
+  while (mismatchedKeys(command, state).length > 0 && Date.now() < deadline) {
+    await tick(25);
+    state = handlers.get(namespace)?.read() ?? handler.read();
   }
   // The owner may return the actual API outcome before React commits its
   // result/error state. Never turn a successful request into a render-timing

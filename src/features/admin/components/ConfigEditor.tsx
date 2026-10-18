@@ -231,7 +231,7 @@ export default function ConfigEditor() {
   }, []);
 
   const providerStatus = useMemo(() => {
-    const status: Record<string, boolean> = { ollama: true };
+    const status: Record<string, boolean> = {};
     const aiItems = categories?.ai || [];
     AI_PROVIDERS.forEach((p) => {
       if (p.keyField) {

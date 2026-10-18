@@ -6,6 +6,7 @@ import type {
   MlModel,
   AdminConfigCategories,
   KeyPoolStatus,
+  OllamaCatalog,
   OpenRouterModelInfo,
   CompanyBoundaryFull,
   AdminUserRow,
@@ -149,6 +150,9 @@ export const resetAllConfig = () =>
 
 export const getOpenRouterModels = () =>
   apiClient.get<{ models: OpenRouterModelInfo[]; error?: string }>("/admin/openrouter/models", { auth: true });
+
+export const getOllamaModels = () =>
+  apiClient.get<OllamaCatalog>("/admin/ollama/models", { auth: true });
 
 export const getKeyPoolStatus = () => apiClient.get<KeyPoolStatus>("/admin/key-pool/status", { auth: true });
 

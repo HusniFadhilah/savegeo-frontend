@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getOpenRouterModels } from "../api";
+import { getOllamaModels, getOpenRouterModels } from "../api";
 import { AI_PROVIDERS } from "../types";
-import type { AdminConfigItem, OpenRouterModelInfo } from "../types";
+import type { AdminConfigItem, OllamaCatalog, OpenRouterModelInfo } from "../types";
 import SearchableSelect, { type SearchableOption } from "./SearchableSelect";
 
 interface Props {
@@ -29,6 +29,23 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
   const [orModels, setOrModels] = useState<OpenRouterModelInfo[] | null>(null);
   const [orLoading, setOrLoading] = useState(false);
   const [orError, setOrError] = useState<string | null>(null);
+  // Real Ollama state from /admin/ollama/models - never assumed healthy.
+  const [ollama, setOllama] = useState<OllamaCatalog | null>(null);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+
+  const probeOllama = () => {
+    setOllamaLoading(true);
+    getOllamaModels()
+      .then(setOllama)
+      .catch(() =>
+        setOllama({ reachable: false, models: [], latency_ms: null, error: "request_failed", message: "Gagal memeriksa Ollama." }),
+      )
+      .finally(() => setOllamaLoading(false));
+  };
+
+  useEffect(() => {
+    probeOllama();
+  }, []);
 
   useEffect(() => {
     if (currentProvider !== "openrouter" || orModels !== null || orLoading) return;
@@ -79,7 +96,7 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
               <div className="cfg-val">
                 <div className="cfg-provider-list">
                   {AI_PROVIDERS.map((p) => {
-                    const ok = !p.needsKey || providerStatus[p.id];
+                    const ok = p.id === "ollama" ? Boolean(ollama?.reachable) : !p.needsKey || providerStatus[p.id];
                     const active = p.id === currentProvider;
                     return (
                       <label key={p.id} className={`cfg-provider-card ${active ? "active" : ""}`}>
@@ -95,7 +112,15 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                         <span className="cfg-provider-name">{p.label}</span>
                         <span className="cfg-provider-hint">{p.hint}</span>
                         <span className={ok ? "cfg-secret-ok" : "cfg-secret-empty"} style={{ fontSize: 10, marginLeft: "auto" }}>
-                          {ok ? "Siap" : "Perlu key"}
+                          {p.id === "ollama"
+                            ? ollama === null
+                              ? "Memeriksa…"
+                              : ok
+                                ? "Siap"
+                                : "Tidak terjangkau"
+                            : ok
+                              ? "Siap"
+                              : "Perlu key"}
                         </span>
                       </label>
                     );
@@ -109,6 +134,11 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
 
         if (item.key === "ai.model") {
           const isOR = currentProvider === "openrouter";
+          const isOllama = currentProvider === "ollama";
+          const ollamaOptions: SearchableOption[] = (ollama?.models ?? []).map((m) => ({
+            value: m.name,
+            label: m.parameter_size ? `${m.name} (${m.parameter_size})` : m.name,
+          }));
           return (
             <div className="cfg-row" key={item.key}>
               <span className="cfg-key" title={item.key}>
@@ -120,7 +150,7 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                   id="or-model-select"
                   value={values[item.key] ?? item.raw_value ?? ""}
                   onChange={(v) => onChange("ai.model", v)}
-                  options={isOR ? orOptions : []}
+                  options={isOR ? orOptions : isOllama ? ollamaOptions : []}
                   groupOrder={isOR ? GROUP_ORDER : undefined}
                   loading={isOR && orLoading}
                   placeholder={
@@ -130,12 +160,19 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                         ? "Contoh: qwen3:8b (sesuai ollama list)"
                         : "Kosong = default provider"
                   }
-                  allowCustomValue
+                  allowCustomValue={!isOllama || !ollama?.reachable}
                 />
-                {currentProvider === "ollama" && (
+                {isOllama && (
                   <small className="text-muted d-block mt-1">
-                    Isi nama model yang terpasang di server GPU (`ollama list`). URL Ollama diatur pada baris
-                    <code>ollama_base_url</code>.
+                    {ollamaLoading || ollama === null
+                      ? "Memeriksa server Ollama…"
+                      : ollama.reachable
+                        ? `Terhubung (${ollama.latency_ms ?? "?"} ms) · ${ollama.models.length} model terpasang. Hanya model terpasang yang dapat disimpan.`
+                        : `Ollama tidak terjangkau: ${ollama.message ?? "tidak ada respons"}. Nama model dapat diisi manual, tetapi belum diverifikasi.`}{" "}
+                    <button type="button" className="btn btn-link btn-sm p-0" onClick={probeOllama} disabled={ollamaLoading}>
+                      Periksa ulang
+                    </button>
+                    {" · "}URL diatur pada baris <code>ollama_base_url</code>.
                   </small>
                 )}
               </div>

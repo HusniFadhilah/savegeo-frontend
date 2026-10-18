@@ -94,6 +94,37 @@ export type ResultCard =
   | { type: "warning"; message: string }
   | { type: "suggested_action"; label: string; message: string };
 
+/** One provider/model choice from GET /agent/providers (no URLs, keys or raw errors). */
+export interface AiChoice {
+  id: string;
+  provider: string;
+  label: string;
+  model: string;
+  is_default: boolean;
+  is_fallback: boolean;
+  status: string;
+  available: boolean;
+  tool_calling: boolean | null;
+  latency_ms: number | null;
+  message: string;
+}
+
+export interface AiCatalog {
+  active: { provider: string; model: string };
+  selectable: boolean;
+  fallback: { provider: string; model: string } | null;
+  providers: AiChoice[];
+}
+
+/** Which provider/model actually answered, incl. fallback info. */
+export interface AiUsed {
+  provider: string;
+  model: string;
+  fallback_used: boolean;
+  fallback_from?: string;
+  fallback_reason?: string;
+}
+
 /** Response shape for POST /agent/control. */
 export interface AgentControlResponse {
   intent?: string;
@@ -105,6 +136,9 @@ export interface AgentControlResponse {
   /** geoai-mode only: structured result cards (spec section 14). */
   cards?: ResultCard[];
   session_id?: number;
+  ai?: AiUsed;
+  /** True when the failure is transient (outage/rate limit) and retrying may work. */
+  retryable?: boolean;
   retry_after?: number;
   error?: string;
   /** Legacy /agent/analyze-shaped fallback, handled defensively. */
@@ -123,7 +157,7 @@ export interface AgentControlResponse {
  * Richer grounding context sent to POST /agent/control when mode="geoai" -
  * the actual AOI geometry + already-computed analysis results (not just
  * booleans), so the assistant can answer without re-running anything. See
- * windowBridge.ts buildGeoAiContext().
+ * pageContext.ts buildGeoAiContext().
  */
 export interface GeoAiContext {
   jobs?: import("@/services/analysisJobStore").AnalysisJobRecord[];
@@ -250,5 +284,4 @@ export type LogEntry =
       file: PendingFileAttachment | null;
       cancelNote?: string;
     }
-  | { id: string; kind: "boundaryDownload"; name: string; downloadUrl: string; filename: string }
   | { id: string; kind: "resultCard"; card: ResultCard };

@@ -1,3 +1,5 @@
+import type { AiCatalog, AiUsed } from "../types";
+
 interface Props {
   status: string;
   onHistoryClick: () => void;
@@ -6,6 +8,10 @@ interface Props {
   /** Context bar (spec section 13 desktop mock) - AOI/period currently grounding the assistant. */
   aoiName?: string | null;
   period?: string | null;
+  aiCatalog?: AiCatalog | null;
+  selectedAiId?: string | null;
+  lastAi?: AiUsed | null;
+  onSelectAi?: (id: string | null) => void;
 }
 
 export default function ChatHeader({
@@ -15,7 +21,14 @@ export default function ChatHeader({
   onCloseClick,
   aoiName,
   period,
+  aiCatalog,
+  selectedAiId,
+  lastAi,
+  onSelectAi,
 }: Props) {
+  const activeChoice =
+    aiCatalog?.providers.find((p) => p.id === selectedAiId) ??
+    aiCatalog?.providers.find((p) => p.is_default);
   return (
     <>
       <div id="sgc-header">
@@ -42,6 +55,43 @@ export default function ChatHeader({
           </button>
         </div>
       </div>
+      {aiCatalog && (
+        <div id="sgc-model-bar">
+          <i className="bi bi-cpu" aria-hidden="true" />
+          {aiCatalog.selectable && onSelectAi ? (
+            <select
+              aria-label="Pilih model AI"
+              value={activeChoice?.id ?? ""}
+              onChange={(e) => onSelectAi(e.target.value || null)}
+            >
+              {aiCatalog.providers.map((p) => (
+                <option key={p.id} value={p.id} disabled={!p.available}>
+                  {p.label} · {p.model || "default"}
+                  {p.available ? "" : ` (${p.message})`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span>
+              {activeChoice?.label} · {activeChoice?.model || "default"}
+            </span>
+          )}
+          {activeChoice && (
+            <span
+              className={`sgc-model-status ${activeChoice.available ? "ok" : "down"}`}
+              title={activeChoice.message}
+            >
+              {activeChoice.available ? "siap" : "tidak tersedia"}
+              {activeChoice.tool_calling === false ? " · tanpa tool-calling" : ""}
+            </span>
+          )}
+          {lastAi?.fallback_used && (
+            <span className="sgc-model-status fallback" title="Provider utama tidak tersedia">
+              cadangan: {lastAi.provider}
+            </span>
+          )}
+        </div>
+      )}
       {(aoiName || period) && (
         <div id="sgc-context-bar">
           <span className="sgc-context-item">

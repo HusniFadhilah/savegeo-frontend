@@ -9,9 +9,12 @@ function directionLabel(degrees: number) {
 }
 
 function arrowIcon(direction: number) {
+  // The value comes from an API response and is interpolated into HTML; accept
+  // only a finite number at runtime.
+  const degrees = Number.isFinite(Number(direction)) ? Number(direction) : 0;
   return L.divIcon({
     className: "wildfire-wind-arrow-icon",
-    html: `<span style="transform: rotate(${direction}deg)" aria-hidden="true">➤</span>`,
+    html: `<span style="transform: rotate(${degrees}deg)" aria-hidden="true">➤</span>`,
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   });

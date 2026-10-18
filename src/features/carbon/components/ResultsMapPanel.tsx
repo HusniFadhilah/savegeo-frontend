@@ -298,24 +298,6 @@ export default function ResultsMapPanel({
     setOpacity(1);
   }, [activeKey]);
 
-  useEffect(() => {
-    window.activeResultLayerName = activeKey ?? undefined;
-    window.switchResultLayer = (layer) => {
-      const normalized = layer.toLowerCase();
-      const match = tabs.find(
-        (tab) =>
-          tab.key.toLowerCase() === normalized ||
-          tab.label.toLowerCase() === normalized ||
-          tab.key.toLowerCase().includes(normalized),
-      );
-      if (match) setActiveKey(match.key);
-    };
-    return () => {
-      delete window.activeResultLayerName;
-      delete window.switchResultLayer;
-    };
-  }, [activeKey, tabs]);
-
   useEffect(() => registerUiCommands("results", {
     read: () => ({ activeLayer: activeKey, availableLayers: tabs.map((tab) => tab.key), visible: activeKey !== null }),
     execute: ({ action, target, parameters }) => {

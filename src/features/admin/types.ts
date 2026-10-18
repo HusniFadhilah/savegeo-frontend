@@ -76,6 +76,22 @@ export interface KeyPoolKeyStatus {
 
 export type KeyPoolStatus = Record<string, KeyPoolKeyStatus[]>;
 
+export interface OllamaModelInfo {
+  name: string;
+  size_bytes: number | null;
+  parameter_size: string | null;
+  family: string | null;
+}
+
+/** Live result of probing the configured Ollama server (GET /admin/ollama/models). */
+export interface OllamaCatalog {
+  reachable: boolean;
+  models: OllamaModelInfo[];
+  latency_ms: number | null;
+  error: string | null;
+  message: string | null;
+}
+
 export interface OpenRouterModelInfo {
   id: string;
   name: string;

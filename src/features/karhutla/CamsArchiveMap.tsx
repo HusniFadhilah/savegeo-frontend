@@ -4,6 +4,7 @@ import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools from "@/components/map/AoiDrawingTools";
 import { env } from "@/config/env";
+import { plainTextContent } from "@/lib/leafletText";
 import { fetchWildfireCamsAggregate, fetchWildfireCamsArchive } from "@/features/disaster/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { AoiFeature } from "@/types/map";
@@ -80,7 +81,7 @@ function GridAggregationLayer({
     })}
     onEachFeature={(feature, layer) => {
       const value = feature.properties?.value;
-      if (typeof value === "number") layer.bindTooltip(`${value.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${result.unit}`);
+      if (typeof value === "number") layer.bindTooltip(plainTextContent(`${value.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${result.unit}`));
     }}
   />;
 }

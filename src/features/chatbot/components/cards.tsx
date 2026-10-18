@@ -244,29 +244,6 @@ export function RetryChip({ cancelNote, onRetry }: { cancelNote?: string; onRetr
   );
 }
 
-/* ── Boundary-download card (download_boundary_geojson action) ─────── */
-export function BoundaryDownloadCard({
-  name,
-  downloadUrl,
-  filename,
-}: {
-  name: string;
-  downloadUrl: string;
-  filename: string;
-}) {
-  return (
-    <div className="sgc-message sgc-assistant">
-      <div className="sgc-bubble">
-        Batas wilayah <strong>{name}</strong> sudah diset sebagai AOI.{" "}
-        <a href={downloadUrl} download={filename} className="sgc-download-link">
-          <i className="bi bi-download me-1" />
-          Unduh GeoJSON
-        </a>
-      </div>
-    </div>
-  );
-}
-
 /* ── SaveGeo Assistant result cards (spec section 14) ────────────────
  * Rendered from `resultCard` LogEntry items - one per entry in a geoai-mode
  * response's `cards[]`. Every card carries its `source` for provenance

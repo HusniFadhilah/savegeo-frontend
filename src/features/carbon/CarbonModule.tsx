@@ -46,6 +46,7 @@ import type { VegetationParams, VegetationTimeSeriesResponse } from "@/features/
 import type { LandCoverParams } from "@/features/landcover/types";
 import { parseCarbonQuery, serializeCarbonQuery } from "./lib/carbonQueryState";
 import { registerUiCommands, type UiCommandOutcome } from "@/features/chatbot/uiCommandBus";
+import { useChatContextStore } from "@/features/chatbot/chatContextStore";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
@@ -233,13 +234,6 @@ export default function CarbonModule() {
   }, [carbonParams.referenceOnly, directLoadEnabled, staticPoolModel]);
 
   useEffect(() => {
-    window.currentAOI = aoi ? { geojson: aoi.feature, name: aoi.name, areaKm2: aoi.areaKm2 } : null;
-    return () => {
-      window.currentAOI = null;
-    };
-  }, [aoi]);
-
-  useEffect(() => {
     setResults({});
     setDeltaResult(null);
     setVegTsResult(null);
@@ -263,11 +257,10 @@ export default function CarbonModule() {
   const hasResults = Object.keys(results).length > 0;
   const hasDirectResults = Boolean(results.direct?.length);
 
+  // Publish results to the assistant's grounding context while this module is mounted.
   useEffect(() => {
-    window.analysisResults = results as Record<string, unknown>;
-    return () => {
-      window.analysisResults = {};
-    };
+    useChatContextStore.getState().setAnalysisResults(results as Record<string, unknown>);
+    return () => useChatContextStore.getState().setAnalysisResults({});
   }, [results]);
 
   async function handleRunDelta(): Promise<UiCommandOutcome> {
@@ -323,7 +316,6 @@ export default function CarbonModule() {
       hideLoading();
       setDeltaRunning(false);
     }
-    window._onSaveGeoAnalysisDone?.();
     return outcome;
   }
 
@@ -377,7 +369,6 @@ export default function CarbonModule() {
       hideLoading();
       setVegTsRunning(false);
     }
-    window._onSaveGeoAnalysisDone?.();
     return outcome;
   }
 
@@ -514,7 +505,6 @@ export default function CarbonModule() {
     } else if (errors.length) {
       setRunError(errors.join(" "));
     }
-    window._onSaveGeoAnalysisDone?.();
     return { hasResult: Object.keys(newResults).length > 0, error: errors.join(" ") || (Object.keys(newResults).length === 0 ? t("carbon.err.noResults") : null) };
   }
 

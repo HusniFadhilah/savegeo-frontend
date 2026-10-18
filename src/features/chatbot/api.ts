@@ -1,7 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
 import type { ChatSession } from "@/types/api";
-import type { AgentControlResponse, ChatPageState, GeoAiContext, PendingFileAttachment } from "./types";
+import type { AgentControlResponse, AiCatalog, ChatPageState, GeoAiContext, PendingFileAttachment } from "./types";
 
 /**
  * Same endpoint family as the legacy vanilla chatbot (savegeo-chatbot.js
@@ -22,11 +22,13 @@ export interface SendAgentControlArgs {
   pageState: ChatPageState;
   /** "geoai" (default, grounded tool-calling assistant) or "control" (legacy UI-automation planner). */
   mode?: "geoai" | "control";
-  /** Required when mode="geoai" - see windowBridge.ts buildGeoAiContext(). */
+  /** Required when mode="geoai" - see pageContext.ts buildGeoAiContext(). */
   context?: GeoAiContext;
   imageB64?: string | null;
   attachment?: PendingFileAttachment | null;
   sessionId?: number | null;
+  /** Chosen provider/model; the backend rejects anything outside the admin allowlist. */
+  ai?: { provider: string; model: string } | null;
   signal?: AbortSignal;
 }
 
@@ -39,6 +41,7 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
   if (args.context) payload.context = args.context;
   if (args.imageB64) payload.image = args.imageB64;
   if (args.sessionId) payload.session_id = args.sessionId;
+  if (args.ai) payload.ai = args.ai;
   if (args.attachment) {
     payload.attachment = {
       name: args.attachment.name,
@@ -57,7 +60,9 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
   });
 
   const body = await res.json().catch(() => ({}));
-  if (!res.ok && res.status !== 429) {
+  // A 500 from the AI layer still carries a user-safe message plus `ai`/`retryable`; hand it to
+  // the caller as a normal response so the conversation stays intact.
+  if (!res.ok && res.status !== 429 && !(res.status === 500 && body?.intent === "error")) {
     throw new Error((body && (body.error as string)) || `HTTP ${res.status}`);
   }
   return body as AgentControlResponse;
@@ -65,6 +70,15 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
 
 export const chatbotApi = {
   sendAgentControl,
+
+  /** Provider/model choices this user may select, with live status. Null when unavailable. */
+  async fetchProviders(): Promise<AiCatalog | null> {
+    try {
+      return await apiClient.get<AiCatalog>("/agent/providers");
+    } catch {
+      return null;
+    }
+  },
 
   async fetchSessions(): Promise<ChatSession[]> {
     try {

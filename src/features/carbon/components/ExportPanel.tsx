@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { exportGeoTiff } from "@/features/carbon/api";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
@@ -51,19 +51,6 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
 
   const { results, year, startMonth, endMonth, cloudThreshold } = reportContext;
   const layerOptions = buildLayerOptions(results);
-
-  useEffect(() => {
-    window.downloadStatistics = () => downloadStatisticsJson(reportContext);
-    window.downloadExecutiveSummary = () => generateMarkdownReport(reportContext);
-    window.exportToGoogleDrive = openModal;
-    return () => {
-      delete window.downloadStatistics;
-      delete window.downloadExecutiveSummary;
-      delete window.exportToGoogleDrive;
-    };
-    // openModal intentionally uses latest render state and is only called from the active panel.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportContext, layerOptions.length]);
 
   function openModal() {
     const first = layerOptions[0];

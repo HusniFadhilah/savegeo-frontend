@@ -4,6 +4,7 @@ import L from "leaflet";
 import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { RESULT_PANE } from "@/config/mapPanes";
+import { plainTextContent } from "@/lib/leafletText";
 import { ApiError } from "@/services/apiClient";
 import { fetchCities, fetchProvinces } from "@/services/analysisService";
 import type { RegionOption } from "@/types/api";
@@ -512,7 +513,9 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   onEachFeature={(feature, layer) => {
                     const confidence = feature.properties?.fire_confidence;
                     layer.bindTooltip(
-                      `${feature.properties?.name ?? "Hotspot MODIS"}${confidence ? ` · confidence ${confidence}` : ""}`,
+                      plainTextContent(
+                        `${feature.properties?.name ?? "Hotspot MODIS"}${confidence ? ` · confidence ${confidence}` : ""}`,
+                      ),
                     );
                   }}
                 />
@@ -533,7 +536,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   data={boundary}
                   style={provinceStyle}
                   onEachFeature={(feature, layer) => {
-                    layer.bindTooltip(provinceName(feature), { sticky: true });
+                    layer.bindTooltip(plainTextContent(provinceName(feature)), { sticky: true });
                   }}
                 />
               )}

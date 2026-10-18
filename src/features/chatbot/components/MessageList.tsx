@@ -5,7 +5,6 @@ import LoadingBubble from "./LoadingBubble";
 import {
   ActionHistoryCard,
   AoiOfferCard,
-  BoundaryDownloadCard,
   ChoiceCard,
   ConfirmActionCard,
   GuideStepCard,
@@ -113,15 +112,6 @@ export default function MessageList({
           case "retryChip":
             return (
               <RetryChip key={entry.id} cancelNote={entry.cancelNote} onRetry={() => onRetryChip(entry.id)} />
-            );
-          case "boundaryDownload":
-            return (
-              <BoundaryDownloadCard
-                key={entry.id}
-                name={entry.name}
-                downloadUrl={entry.downloadUrl}
-                filename={entry.filename}
-              />
             );
           case "resultCard":
             return <ResultCardView key={entry.id} card={entry.card} onSend={onSendMessage} />;

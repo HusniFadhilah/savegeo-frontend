@@ -1237,3 +1237,25 @@
     display: none;
   }
 }
+/* Model/provider bar */
+#sgc-model-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.25);
+}
+#sgc-model-bar select {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11.5px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.sgc-model-status.ok { color: #1a7f37; }
+.sgc-model-status.down { color: #b42318; }
+.sgc-model-status.fallback { color: #b54708; }

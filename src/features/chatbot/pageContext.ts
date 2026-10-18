@@ -1,145 +1,27 @@
-import { useAnalysisJobStore } from "@/services/analysisJobStore";
-/** Assistant context reads the shared AOI and registered React module state. Legacy result globals remain adapters for existing modules. */
-
 import L from "leaflet";
+import { useAnalysisJobStore } from "@/services/analysisJobStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import type { GeoAiContext } from "./types";
 import { readUiCommandState } from "./uiCommandBus";
 import { getActiveMap } from "./mapActions";
+import { useChatContextStore } from "./chatContextStore";
 
-/** Minimal structural subset of a Leaflet map/tileLayer, enough for addMapLayer/flyTo fallbacks. */
-interface LeafletLikeMap {
-  flyTo: (latlng: [number, number], zoom?: number, opts?: Record<string, unknown>) => void;
-  fitBounds: (bounds: unknown, opts?: Record<string, unknown>) => void;
-}
-interface LeafletLikeNamespace {
-  tileLayer: (
-    url: string,
-    opts?: Record<string, unknown>,
-  ) => { addTo: (map: LeafletLikeMap) => unknown };
-}
-
-/** Mirrored by LcChangeModule.tsx - that module has its own AOI/results, separate
- * from CarbonModule's `window.currentAOI`/`window.analysisResults` (see
- * buildGeoAiContext() below for why the SaveGeo Assistant needs both). */
-interface LcChangeBridgeState {
-  aoi: GeoJSON.GeoJSON | null;
-  dataset: string | null;
-  from_year: number | null;
-  to_year: number | null;
-  transition: {
-    dataset: string | null;
-    from_year: number | null;
-    to_year: number | null;
-    gains: Record<string, number>;
-    losses: Record<string, number>;
-    matrix: Record<string, Record<string, number>>;
-  } | null;
-}
-
-declare global {
-  interface Window {
-    switchModule?: (module: string) => void;
-    switchResultLayer?: (layer: string) => void;
-    downloadExecutiveSummary?: () => void;
-    downloadStatistics?: () => void;
-    exportToGoogleDrive?: () => void;
-    flyToLocation?: (lat: number, lng: number, zoom?: number, bbox?: number[] | null) => void;
-    setAOIByAdminName?: (
-      province: string,
-      city: string,
-      district: string,
-      village: string,
-    ) => Promise<boolean>;
-    setAOIFromGeoJSON?: (feature: GeoJSON.GeoJSON, name?: string) => void;
-    loadGeoJSONAsAOI?: (feature: GeoJSON.GeoJSON) => void;
-    LCChange?: { runAnalysis?: () => void };
-    currentAOI?: { geojson?: GeoJSON.GeoJSON; name?: string; areaKm2?: number | null } | null;
-    lcChangeState?: LcChangeBridgeState | null;
-    drawnItems?: { toGeoJSON: () => GeoJSON.FeatureCollection } | null;
-    map?: LeafletLikeMap | null;
-    L?: LeafletLikeNamespace;
-    geeTileLayers?: Record<string, unknown>;
-    activeResultLayerName?: string;
-    analysisResults?: Record<string, unknown>;
-    API_BASE_URL?: string;
-    config?: { api?: { baseUrl?: string } };
-    _onSaveGeoAnalysisDone?: (() => void) | null;
-    $?: (el: unknown) => {
-      trigger: (...args: unknown[]) => unknown;
-      val: (v?: unknown) => unknown;
-    };
-  }
-}
-
-/** Typed, safe accessor for the optional globals described above. */
-export function getAppValue<K extends keyof Window>(name: K): Window[K] | undefined {
-  try {
-    return window[name];
-  } catch {
-    return undefined;
-  }
-}
-
-/** Context adapter - reads active AOI / current year from shared globals or DOM, defensively. */
+/**
+ * Page/AOI/result context sent with every chat message. Reads typed state only:
+ * `useAoiStore` (AOI), `useChatContextStore` (module results), the UI-command
+ * registry (`readUiCommandState`) and the active map. No `window.*` globals.
+ */
 export const SaveGeoContext = {
   getActiveAOI(): GeoJSON.GeoJSON | null {
-    const active = useAoiStore.getState().aoi;
-    if (active) return active.feature;
-    const aoi = getAppValue("currentAOI");
-    if (aoi && aoi.geojson) return aoi.geojson;
-    const drawn = getAppValue("drawnItems");
-    if (drawn && typeof drawn.toGeoJSON === "function") {
-      const fc = drawn.toGeoJSON();
-      if (fc && fc.features && fc.features.length > 0) return fc;
-    }
-    const shared = useAoiStore.getState().aoi;
-    if (shared?.feature) return shared.feature;
-    return null;
+    return useAoiStore.getState().aoi?.feature ?? null;
   },
   getActiveAOIName(): string | null {
-    const aoi = getAppValue("currentAOI");
-    return useAoiStore.getState().aoi?.name || (aoi && aoi.name) || null;
+    return useAoiStore.getState().aoi?.name || null;
   },
   getCurrentYear(): number {
-    const sp = document.getElementById("yearValue");
-    if (sp && sp.textContent?.trim()) {
-      const v = parseInt(sp.textContent.trim(), 10);
-      if (!isNaN(v)) return v;
-    }
-    const sl = document.getElementById("yearSlider") as HTMLInputElement | null;
-    if (sl && sl.value) {
-      const s = parseInt(sl.value, 10);
-      if (!isNaN(s)) return s;
-    }
-    return new Date().getFullYear();
-  },
-  addMapLayer(layer: {
-    url?: string;
-    tile_url?: string;
-    name?: string;
-    opacity?: number;
-  }): boolean {
-    const m = getAppValue("map");
-    const Lf = getAppValue("L");
-    if (!m || !Lf) return false;
-    try {
-      const url = layer.url || layer.tile_url;
-      if (!url) return false;
-      const name = layer.name || `chatbot_layer_${Date.now()}`;
-      const tl = Lf.tileLayer(url, {
-        opacity: layer.opacity != null ? layer.opacity : 0.8,
-        maxZoom: 20,
-      });
-      tl.addTo(m);
-      const layers = getAppValue("geeTileLayers");
-      if (layers) layers[name] = tl;
-      return true;
-    } catch (e) {
-      console.warn("SaveGeoChatbot: addMapLayer failed", e);
-    }
-    return false;
+    const year = readUiCommandState("carbon")?.analysisYear;
+    return typeof year === "number" && Number.isFinite(year) ? year : new Date().getFullYear();
   },
 };
 
@@ -153,7 +35,7 @@ function optionValues(id: string): string[] {
 
 /** Collects a page-state snapshot sent alongside every chat message, for AI context. */
 export function getPageState() {
-  const ar = getAppValue("analysisResults") || {};
+  const ar = useChatContextStore.getState().analysisResults;
   const currentModule = useUiStore.getState().activeModule.replace("-", "_");
 
   const carbonData = (ar.carbon as Record<string, unknown>) || {};
@@ -263,8 +145,8 @@ function bboxOfGeoJSON(geo: GeoJSON.GeoJSON): [number, number, number, number] |
  * Richer grounding context for the SaveGeo Assistant (mode="geoai") - the
  * actual AOI geometry and already-computed analysis results, not just
  * booleans (contrast with the legacy getPageState() above). Merges state
- * from both CarbonModule (`window.currentAOI`/`window.analysisResults`) and
- * LcChangeModule (`window.lcChangeState`) since DashboardPage keeps every
+ * from both CarbonModule (`useChatContextStore.analysisResults`) and
+ * LcChangeModule (`useChatContextStore.lcChange`) since DashboardPage keeps every
  * visited module mounted (see DashboardPage.tsx) - a user can be looking at
  * LC-Change while an earlier Carbon run is still valid grounding data, so
  * results are merged rather than switched on the active module; only the
@@ -273,19 +155,18 @@ function bboxOfGeoJSON(geo: GeoJSON.GeoJSON): [number, number, number, number] |
  */
 export function buildGeoAiContext(): GeoAiContext {
   const activeModule = useUiStore.getState().activeModule;
-  const carbonAoi = getAppValue("currentAOI") || null;
-  const lcState = getAppValue("lcChangeState") || null;
+  const lcState = useChatContextStore.getState().lcChange;
   const sharedAoi = useAoiStore.getState().aoi;
 
   const preferLc = activeModule === "lc-change" && !!lcState?.aoi;
-  const aoi =
-    sharedAoi?.feature || (preferLc ? lcState!.aoi : carbonAoi?.geojson || lcState?.aoi || null);
-  const aoiName = sharedAoi?.name || (preferLc ? "AOI (LC-Change)" : carbonAoi?.name || null);
-  const areaKm2 = sharedAoi?.areaKm2 ?? (!preferLc ? (carbonAoi?.areaKm2 ?? null) : null);
+  const aoi = sharedAoi?.feature || lcState?.aoi || null;
+  const aoiName = sharedAoi?.name || (preferLc ? "AOI (LC-Change)" : null);
+  const areaKm2 = sharedAoi?.areaKm2 ?? null;
 
-  const ar = getAppValue("analysisResults") || {};
+  const ar = useChatContextStore.getState().analysisResults;
   const disasterResult = readUiCommandState("disaster")?.result as
     Record<string, unknown> | undefined;
+  const resultsUi = readUiCommandState("results");
   const period =
     preferLc && lcState?.from_year && lcState?.to_year
       ? `${lcState.from_year}-${lcState.to_year}`
@@ -300,7 +181,8 @@ export function buildGeoAiContext(): GeoAiContext {
     current_module: activeModule.replace("-", "_"),
     period,
     selected_year: SaveGeoContext.getCurrentYear(),
-    active_layer: getAppValue("activeResultLayerName") || null,
+    active_layer:
+      typeof resultsUi?.activeLayer === "string" ? resultsUi.activeLayer : null,
     selected_feature: null, // no feature-selection concept wired in the app yet - honestly null, not fabricated
     landcover_dataset: lcState?.dataset || null,
     results: {
@@ -326,7 +208,9 @@ export function buildGeoAiContext(): GeoAiContext {
  */
 export async function captureMapScreenshot(): Promise<string> {
   const mapEl =
-    document.getElementById("map") || document.querySelector<HTMLElement>(".savegeo-map");
+    getActiveMap()?.getContainer() ??
+    document.getElementById("map") ??
+    document.querySelector<HTMLElement>(".savegeo-map");
   if (!mapEl) throw new Error("Elemen peta tidak ditemukan.");
 
   const { default: html2canvas } = await import("html2canvas");

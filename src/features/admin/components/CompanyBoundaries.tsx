@@ -49,7 +49,9 @@ function validateGeoJsonText(text: string): string | null {
 }
 
 async function waitForCompanyImport(jobId: string, onProgress: (message: string) => void) {
-  const deadline = Date.now() + 15 * 60 * 1000;
+  // The backend queries Overpass region by region and splits slow regions,
+  // so a nationwide multi-industry import can take well over 15 minutes.
+  const deadline = Date.now() + 60 * 60 * 1000;
   while (Date.now() < deadline) {
     const job = await getCompanyImportJob(jobId);
     if (job.status === "completed") {

@@ -23,6 +23,7 @@ import BeforeAfterMaps from "./components/BeforeAfterMaps";
 import HotspotPanel from "./components/HotspotPanel";
 import { parseQuery, updateUrlFromState } from "./lib/lcChangeQueryState";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
+import { useChatContextStore } from "@/features/chatbot/chatContextStore";
 
 type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
 
@@ -256,10 +257,9 @@ export default function LcChangeModule() {
   const { yearA, yearB } = periodYears;
 
   // Mirror AOI + transition summary for the SaveGeo Assistant's grounding context
-  // (windowBridge.ts buildGeoAiContext()) - this module has its own AOI, separate
-  // from CarbonModule's window.currentAOI, so it needs its own bridge global.
+  // (pageContext.ts buildGeoAiContext()) through the typed chat-context store.
   useEffect(() => {
-    window.lcChangeState = {
+    useChatContextStore.getState().setLcChange({
       aoi: aoi ? (aoi as unknown as GeoJSON.GeoJSON) : null,
       dataset,
       from_year: yearA,
@@ -274,10 +274,8 @@ export default function LcChangeModule() {
             matrix: trans.matrix,
           }
         : null,
-    };
-    return () => {
-      window.lcChangeState = null;
-    };
+    });
+    return () => useChatContextStore.getState().setLcChange(null);
   }, [aoi, dataset, yearA, yearB, trans]);
 
   const changeMapCacheKey =

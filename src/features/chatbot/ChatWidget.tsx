@@ -27,6 +27,10 @@ export default function ChatWidget() {
           onCloseClick={chat.close}
           aoiName={chat.aoiName}
           period={chat.period}
+          aiCatalog={chat.aiCatalog}
+          selectedAiId={chat.selectedAiId}
+          lastAi={chat.lastAi}
+          onSelectAi={chat.selectAi}
         />
         <SessionSidebar
           open={chat.sessionPanelOpen}

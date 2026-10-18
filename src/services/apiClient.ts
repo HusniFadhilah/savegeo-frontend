@@ -70,11 +70,22 @@ function formatApiErrorMessage(payload: unknown, status: number): string {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, auth = false, timeoutMs = DEFAULT_TIMEOUT_MS, isFormData, headers, ...rest } =
-    options;
+  const {
+    body,
+    auth = false,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    isFormData,
+    headers,
+    signal: callerSignal,
+    ...rest
+  } = options;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  // A caller-owned signal cancels this request without being reported as a timeout.
+  const abortFromCaller = () => controller.abort();
+  if (callerSignal?.aborted) controller.abort();
+  else callerSignal?.addEventListener("abort", abortFromCaller, { once: true });
 
   const finalHeaders: Record<string, string> = { ...(headers as Record<string, string>) };
   if (!isFormData && body !== undefined) {
@@ -91,12 +102,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     });
   } catch (err) {
     clearTimeout(timeout);
+    callerSignal?.removeEventListener("abort", abortFromCaller);
     if ((err as Error).name === "AbortError") {
+      if (callerSignal?.aborted) throw new DOMException("Request aborted", "AbortError");
       throw new ApiError("Request timed out", 0);
     }
     throw new ApiError("Network error - backend unreachable", 0);
   }
   clearTimeout(timeout);
+  callerSignal?.removeEventListener("abort", abortFromCaller);
 
   if (res.status === 401 && auth) {
     if (auth === "app") {

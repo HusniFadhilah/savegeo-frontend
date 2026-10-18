@@ -1,5 +1,13 @@
 import { useAoiStore } from "@/hooks/useAoiStore";
-import { AoiChoiceRequired, selectAoi, type AoiCandidate } from "../aoiCommands";
+import {
+  AoiChoiceRequired,
+  AoiRequestSuperseded,
+  applyGeoJsonAoi,
+  cancelAoiResolution,
+  LEVEL_LABELS,
+  selectAoi,
+  type AoiCandidate,
+} from "../aoiCommands";
 import { useAnalysisJobStore } from "@/services/analysisJobStore";
 import { useEffect, useRef, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -8,12 +16,7 @@ import { chatbotApi } from "../api";
 import { runActions, type ActionRunContext } from "../actionExecutor";
 import { CHAT_I18N } from "../i18n";
 import { buildSuggestedPrompts } from "../suggestedPrompts";
-import {
-  captureMapScreenshot,
-  getAppValue,
-  getPageState,
-  buildGeoAiContext,
-} from "../windowBridge";
+import { captureMapScreenshot, getPageState, buildGeoAiContext } from "../pageContext";
 import {
   aoiFeatureFromGeoJSON,
   aoiNameFromGeoJSON,
@@ -28,6 +31,8 @@ import {
 } from "../utils/fileHandling";
 import type {
   AgentControlResponse,
+  AiCatalog,
+  AiUsed,
   ChatAction,
   ChatWarning,
   GeoAiContext,
@@ -59,6 +64,16 @@ function makeId(prefix: string): string {
   return `sgc-${prefix}-${Date.now()}-${idSeq}`;
 }
 
+const AI_CHOICE_KEY = "savegeo.chat.ai";
+
+function readStoredAiChoice(): string | null {
+  try {
+    return window.sessionStorage.getItem(AI_CHOICE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function isAllowedFile(file: File): boolean {
   if ((file.type || "").startsWith("image/")) return true;
   const lower = file.name.toLowerCase();
@@ -87,6 +102,10 @@ export function useChatSession() {
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false);
   const [sessionSearch, setSessionSearch] = useState("");
   const [sessionId, setSessionIdState] = useState<number | null>(null);
+
+  const [aiCatalog, setAiCatalog] = useState<AiCatalog | null>(null);
+  const [selectedAiId, setSelectedAiIdState] = useState<string | null>(readStoredAiChoice);
+  const [lastAi, setLastAi] = useState<AiUsed | null>(null);
 
   const executionRef = useRef(false);
   const consumedCardsRef = useRef(new Set<string>());
@@ -181,6 +200,32 @@ export function useChatSession() {
   function open() {
     setIsOpen(true);
     setHasUnread(false);
+    void refreshAiCatalog();
+  }
+
+  async function refreshAiCatalog() {
+    const catalog = await chatbotApi.fetchProviders();
+    setAiCatalog(catalog);
+    // Forget a stored choice the admin has since removed or that is no longer offered.
+    if (catalog && selectedAiId && !catalog.providers.some((p) => p.id === selectedAiId)) {
+      selectAi(null);
+    }
+  }
+
+  function selectAi(id: string | null) {
+    setSelectedAiIdState(id);
+    try {
+      if (id) window.sessionStorage.setItem(AI_CHOICE_KEY, id);
+      else window.sessionStorage.removeItem(AI_CHOICE_KEY);
+    } catch {
+      // Storage can be blocked; the choice then lasts for this page view only.
+    }
+  }
+
+  /** The user's explicit provider/model pick, if any (the backend validates it again). */
+  function chosenAi(): { provider: string; model: string } | null {
+    const choice = aiCatalog?.providers.find((p) => p.id === selectedAiId);
+    return choice && !choice.is_default ? { provider: choice.provider, model: choice.model } : null;
   }
   function close() {
     setIsOpen(false);
@@ -430,23 +475,20 @@ export function useChatSession() {
 
     if (choice === "set") {
       const feature = aoiFeatureFromGeoJSON(entry.geo, entry.name);
-      const setAOIFromGeoJSON = getAppValue("setAOIFromGeoJSON");
-      const loadGeoJSONAsAOI = getAppValue("loadGeoJSONAsAOI");
-      if (typeof setAOIFromGeoJSON === "function") {
-        setAOIFromGeoJSON(feature, entry.name);
-        appendMessage(
-          "assistant",
-          `✅ AOI **${entry.name}** berhasil diset dari file GeoJSON. Wilayah ditampilkan di peta.`,
-        );
-      } else if (typeof loadGeoJSONAsAOI === "function") {
-        loadGeoJSONAsAOI(feature);
-        appendMessage("assistant", `✅ AOI dari file **${entry.fileName}** telah diset.`);
-      } else {
-        appendMessage(
-          "assistant",
-          "⚠️ Fungsi set AOI belum tersedia di modul peta saat ini. Coba gambar AOI manual di peta.",
-        );
-      }
+      applyGeoJsonAoi(feature, entry.name)
+        .then(() =>
+          appendMessage(
+            "assistant",
+            `✅ AOI **${entry.name}** berhasil diset dari file GeoJSON. Wilayah ditampilkan di peta.`,
+          ),
+        )
+        .catch((error: unknown) => {
+          if (error instanceof AoiRequestSuperseded) return;
+          appendMessage(
+            "assistant",
+            `⚠️ AOI dari file tidak dapat dipakai: ${error instanceof Error ? error.message : "kesalahan tidak diketahui"}`,
+          );
+        });
     } else {
       setPendingFile({
         name: entry.fileName,
@@ -467,18 +509,24 @@ export function useChatSession() {
     const pending = aoiChoicesRef.current.get(entryId);
     if (pending) {
       aoiChoicesRef.current.delete(entryId);
-      try {
-        selectAoi(pending.candidates[index]);
-        appendMessage(
-          "assistant",
-          `AOI ${pending.candidates[index].display_name} dipilih; peta telah diarahkan ke batasnya.`,
-        );
-        if (pending.cardEntryId) consumedCardsRef.current.delete(pending.cardEntryId);
-        if (pending.actions.length) void executeActionQueue(pending.actions, pending.cardEntryId);
-        else if (pending.cardEntryId) updateConfirmCard(pending.cardEntryId, { status: "done" });
-      } catch (error) {
-        appendMessage("assistant", error instanceof Error ? error.message : "Pemilihan AOI gagal.");
-      }
+      const candidate = pending.candidates[index];
+      selectAoi(candidate)
+        .then(() => {
+          appendMessage(
+            "assistant",
+            `AOI ${candidate.display_name} dipilih; peta telah diarahkan ke batasnya.`,
+          );
+          if (pending.cardEntryId) consumedCardsRef.current.delete(pending.cardEntryId);
+          if (pending.actions.length) void executeActionQueue(pending.actions, pending.cardEntryId);
+          else if (pending.cardEntryId) updateConfirmCard(pending.cardEntryId, { status: "done" });
+        })
+        .catch((error: unknown) => {
+          if (error instanceof AoiRequestSuperseded) return;
+          // Keep the card usable so the user can pick another candidate.
+          aoiChoicesRef.current.set(entryId, pending);
+          updateChoiceCard(entryId, { selectedIndex: null });
+          appendMessage("assistant", error instanceof Error ? error.message : "Pemilihan AOI gagal.");
+        });
       return;
     }
     const choice = entry.choices[index];
@@ -568,9 +616,11 @@ export function useChatSession() {
         imageB64: image,
         attachment: file,
         sessionId: sessionIdRef.current,
+        ai: chosenAi(),
         signal: controller.signal,
       });
       removeEntry(loadingId);
+      if (resp.ai) setLastAi(resp.ai);
 
       if (resp.session_id) {
         const isNew = !sessionIdRef.current;
@@ -581,6 +631,20 @@ export function useChatSession() {
       if (resp.intent === "rate_limited") {
         appendMessage("assistant", `⚠️ ${resp.message || "Rate limit tercapai."}`);
         return;
+      }
+      if (resp.intent === "error") {
+        // Provider outage: keep the conversation, say why, and offer a retry / another model.
+        appendMessage("assistant", `⚠️ ${resp.message || "Terjadi kesalahan pada AI."}`);
+        if (resp.retryable) appendRetryChip(message, image, file);
+        void refreshAiCatalog();
+        return;
+      }
+      if (resp.ai?.fallback_used) {
+        appendEntry({
+          id: makeId("warn"),
+          kind: "warnings",
+          warnings: [`Provider ${resp.ai.fallback_from ?? "utama"} tidak tersedia; dijawab oleh ${resp.ai.provider} (${resp.ai.model}).`],
+        });
       }
       handleResponse(resp);
     } catch (err) {
@@ -605,6 +669,7 @@ export function useChatSession() {
 
   function cancelLoading() {
     abortControllerRef.current?.abort();
+    cancelAoiResolution();
   }
 
   /** Inline 30s-slow "Coba Lagi" on the loading bubble itself: abort + immediately resend. */
@@ -705,6 +770,7 @@ export function useChatSession() {
         mode: "geoai",
         context: buildGeoAiContext(),
         sessionId: sessionIdRef.current,
+        ai: chosenAi(),
       });
       removeEntry(loadingId);
       if (resp.message) appendMessage("assistant", resp.message);
@@ -752,23 +818,6 @@ export function useChatSession() {
           choices,
           selectedIndex: null,
         }),
-      offerBoundaryDownload: (name, feature) => {
-        if (!feature) {
-          appendMessage("assistant", `Batas wilayah **${name}** sudah diset di peta.`);
-          return;
-        }
-        const geoText = JSON.stringify({ type: "FeatureCollection", features: [feature] }, null, 2);
-        const blob = new Blob([geoText], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const safeName = name.replace(/[^a-zA-Z0-9_\- ]/g, "_").slice(0, 60);
-        appendEntry({
-          id: makeId("bnd"),
-          kind: "boundaryDownload",
-          name,
-          downloadUrl: url,
-          filename: `${safeName}.geojson`,
-        });
-      },
       setFileInputAccept: (accept) => setFileInputAccept(accept),
       getHotspotGeometry: (hotspotId) => hotspotGeometriesRef.current[hotspotId] || null,
     };
@@ -792,7 +841,10 @@ export function useChatSession() {
           id,
           kind: "choiceCard",
           question: error.message,
-          choices: error.candidates.map((c) => ({ label: c.display_name, msg: c.display_name })),
+          choices: error.candidates.map((c) => ({
+            label: `${LEVEL_LABELS[c.level]} · ${c.display_name}`,
+            msg: c.display_name,
+          })),
           selectedIndex: null,
         });
       }
@@ -871,6 +923,11 @@ export function useChatSession() {
     sendMessage,
     cancelLoading,
     retryLoadingNow,
+    // model selection
+    aiCatalog,
+    selectedAiId,
+    selectAi,
+    lastAi,
     retryFromChip,
     // cards
     resolveAoiOffer,
