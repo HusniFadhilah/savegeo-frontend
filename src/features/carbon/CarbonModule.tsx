@@ -126,7 +126,7 @@ export default function CarbonModule() {
     modelName: null,
     referenceOnly: false,
     loadOnly: false,
-    showReference: true,
+    showReference: initialQuery.showReference ?? false,
     cloudMaskTechnique: "scl",
   });
   const [selectedModel, setSelectedModel] = useState<CarbonModelListItem | null>(null);
@@ -246,13 +246,18 @@ export default function CarbonModule() {
 
   const changeAnalysisType = useCallback((nextType: AnalysisType) => {
     if (!availableAnalysisTypes.includes(nextType)) return;
+    if (nextType === analysisType) return;
     setAnalysisType(nextType);
+    setResults({});
+    setProcessingTimes({});
+    setDeltaResult(null);
+    setVegTsResult(null);
     setRunError(null);
     if (nextType === "vegetation") {
       setDirectLoadEnabled(false);
       setCarbonPartial((previous) => ({ ...previous, referenceOnly: false, loadOnly: false }));
     }
-  }, [availableAnalysisTypes]);
+  }, [analysisType, availableAnalysisTypes]);
 
   const hasResults = Object.keys(results).length > 0;
   const hasDirectResults = Boolean(results.direct?.length);

@@ -282,14 +282,14 @@ export default function ResultsMapPanel({
   // Swipe/compare: overlays a second layer on the same map with a draggable
   // divider (satellite RGB vs. land cover vs. carbon stock, or the same
   // layer across two separate analysis runs kept in `results`).
-  const [compareOn, setCompareOn] = useState(true);
+  const [compareOn, setCompareOn] = useState(false);
   const [compareKey, setCompareKey] = useState<string | null>(null);
   const [compareOrientation, setCompareOrientation] = useState<SwipeOrientation>("vertical");
 
   useEffect(() => {
     setActiveKey(tabs[0]?.key ?? null);
     setOpacity(1);
-    setCompareOn(true);
+    setCompareOn(false);
     setCompareKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
@@ -345,7 +345,11 @@ export default function ResultsMapPanel({
                   <button
                     type="button"
                     className={`nav-link ${activeKey === tab.key ? "active" : ""}`}
-                    onClick={() => setActiveKey(tab.key)}
+                    onClick={() => {
+                      setActiveKey(tab.key);
+                      setCompareOn(false);
+                      setCompareKey(null);
+                    }}
                   >
                     <i className={`bi ${tab.icon} me-1`} />
                     {tab.label}

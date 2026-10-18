@@ -111,16 +111,31 @@ function completeTimeline(
   return result;
 }
 
-type TimelinePreset = "all" | "today" | "7d" | "30d" | "date" | "range";
-
 function isoDate(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
-function shiftIsoDate(value: string, days: number) {
-  const date = new Date(`${value}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return isoDate(date);
+function localIsoDate(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function wildfireDateRange(
+  preset: WildfireQueryState["datePreset"],
+  from: string,
+  to: string,
+  today = localIsoDate(new Date()),
+) {
+  if (preset === "today") return { start: today, end: today };
+  if (preset === "month") return { start: `${today.slice(0, 7)}-01`, end: today };
+  if (preset === "week") {
+    const monday = new Date(`${today}T00:00:00Z`);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    return { start: isoDate(monday), end: today };
+  }
+  return { start: from || today, end: to || today };
 }
 
 function timelineTickLabel(value: string, language: "id" | "en") {
@@ -637,6 +652,7 @@ function HotspotMap({
   dataRevision,
   camsSelection,
 }: HotspotMapProps) {
+  const mapDateRange = wildfireDateRange(query.datePreset, query.from, query.to);
   const { t, language } = useI18nStore();
   const [boundary, setBoundary] = useState<GeoJSON.GeoJSON | null>(null);
   const [boundaryFailed, setBoundaryFailed] = useState(false);
@@ -810,8 +826,8 @@ function HotspotMap({
       return undefined;
     }
     let cancelled = false;
-    const from = query.from || event.monitoring_from || event.start_date;
-    const to = query.to || event.last_data_at?.slice(0, 10) || from;
+    const from = mapDateRange.start;
+    const to = mapDateRange.end;
     fetchWildfireHotspots(event.slug, {
       from,
       to,
@@ -836,18 +852,15 @@ function HotspotMap({
     };
   }, [
     dataRevision,
-    event.last_data_at,
-    event.monitoring_from,
     event.slug,
-    event.start_date,
-    query.from,
-    query.to,
+    mapDateRange.start,
+    mapDateRange.end,
     viirsEnabled,
     selectedRegion?.code,
     selectedRegion?.level,
   ]);
 
-  const windDate = query.from || event.monitoring_from || event.start_date;
+  const windDate = mapDateRange.end;
   return (
     <div className="wildfire-map-wrap">
       <MapView
@@ -1129,9 +1142,6 @@ export function KarhutlaDetailPage() {
   const [camsSelection, setCamsSelection] = useState<CamsMapSelection>({});
   const [dataError, setDataError] = useState<string | null>(null);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
-  const [timelinePreset, setTimelinePreset] = useState<TimelinePreset>(() =>
-    query.from && query.from === query.to ? "date" : query.from || query.to ? "range" : "all",
-  );
   const [timelineChart, setTimelineChart] = useState<WildfireTimelineChart>("bar");
   const [timelineSort, setTimelineSort] = useState<WildfireTimelineSort>("date-asc");
   const [provinceOptions, setProvinceOptions] = useState<RegionOption[]>([]);
@@ -1150,6 +1160,7 @@ export function KarhutlaDetailPage() {
   const [regionStatisticsVisibleFor, setRegionStatisticsVisibleFor] = useState<string | null>(null);
   const currentEventLookupStatus = eventLookup.slug === slug ? eventLookup.status : "loading";
   const eventBackedByApi = isConfirmedWildfireEventForRoute(event?.slug, slug, currentEventLookupStatus);
+  const activeDateRange = wildfireDateRange(query.datePreset, query.from, query.to);
   const confidenceKey = query.confidence.join(",");
   const includeMapFeatures = query.layers.includes("hotspot");
   const regionStatisticsLevel: WildfireRegionLevel = query.districtCode
@@ -1314,9 +1325,8 @@ export function KarhutlaDetailPage() {
       setTimeline([]);
       return;
     }
-    const from = query.from || event.monitoring_from;
-    const to =
-      query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const from = activeDateRange.start;
+    const to = activeDateRange.end;
     let cancelled = false;
     setLoading(true);
     setDataError(null);
@@ -1361,7 +1371,7 @@ export function KarhutlaDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code, includeMapFeatures]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, activeDateRange.start, activeDateRange.end, query.sensor, confidenceKey, language, selectedRegion?.level, selectedRegion?.code, includeMapFeatures]);
   useEffect(() => {
     if (!event) return;
     if (regionStatisticsVisibleFor !== slug) {
@@ -1380,8 +1390,8 @@ export function KarhutlaDetailPage() {
       return;
     }
     let cancelled = false;
-    const from = query.from || event.monitoring_from;
-    const to = query.to || event.last_data_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const from = activeDateRange.start;
+    const to = activeDateRange.end;
     setRegionStatisticsLoading(true);
     setRegionStatisticsError(null);
     setRegionStatistics([]);
@@ -1402,18 +1412,14 @@ export function KarhutlaDetailPage() {
       })
       .finally(() => { if (!cancelled) setRegionStatisticsLoading(false); });
     return () => { cancelled = true; };
-  }, [event, currentEventLookupStatus, eventBackedByApi, query.from, query.to, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision, regionStatisticsVisibleFor, slug]);
+  }, [event, currentEventLookupStatus, eventBackedByApi, activeDateRange.start, activeDateRange.end, query.sensor, confidenceKey, regionStatisticsLevel, regionStatisticsParentCode, dataRevision, regionStatisticsVisibleFor, slug]);
   const syncData = async () => {
     setSyncing(true);
     setSyncError(null);
     try {
       await syncWildfireHotspots(slug, {
-        from_date: query.from || event?.monitoring_from,
-        to_date:
-          query.to ||
-          event?.monitoring_to ||
-          event?.end_date ||
-          new Date().toISOString().slice(0, 10),
+        from_date: activeDateRange.start,
+        to_date: activeDateRange.end,
       });
       const refreshed = await fetchWildfireEvent(slug);
       setEvent(adaptLegacyEvent(refreshed.event));
@@ -1476,13 +1482,8 @@ export function KarhutlaDetailPage() {
     eventApiUnavailable ? t("wildfire.errors.regionStatisticsUnavailable") : null
   );
   const summaryUnavailable = Boolean(dataError || (loading && summary == null));
-  const timelineStart = query.from || event.monitoring_from || event.start_date;
-  const timelineEnd =
-    query.to ||
-    event.monitoring_to ||
-    event.end_date ||
-    event.last_data_at?.slice(0, 10) ||
-    timelineStart;
+  const timelineStart = activeDateRange.start;
+  const timelineEnd = activeDateRange.end;
   const timelineData = completeTimeline(timeline, timelineStart, timelineEnd);
   const sortedTimelineData = [...timelineData].sort((a, b) => {
     if (timelineSort === "date-desc") return b.date.localeCompare(a.date);
@@ -1490,28 +1491,6 @@ export function KarhutlaDetailPage() {
     if (timelineSort === "count-asc") return a.count - b.count || a.date.localeCompare(b.date);
     return a.date.localeCompare(b.date);
   });
-  const datasetEnd =
-    event.last_data_at?.slice(0, 10) || event.monitoring_to || event.end_date || isoDate(new Date());
-  const timelineFromValue = query.from || timelineStart;
-  const timelineToValue = query.to || timelineEnd;
-  const applyTimelinePreset = (preset: TimelinePreset) => {
-    setTimelinePreset(preset);
-    if (preset === "all") {
-      updateQuery({ from: "", to: "" });
-      return;
-    }
-    if (preset === "today" || preset === "date") {
-      updateQuery({ from: datasetEnd, to: datasetEnd });
-      return;
-    }
-    if (preset === "7d") {
-      updateQuery({ from: shiftIsoDate(datasetEnd, -6), to: datasetEnd });
-      return;
-    }
-    if (preset === "30d") {
-      updateQuery({ from: shiftIsoDate(datasetEnd, -29), to: datasetEnd });
-    }
-  };
   const timelineTotal = timelineData.reduce((total, point) => total + point.count, 0);
   return (
     <div className="wildfire-shell wildfire-detail-shell">
@@ -1548,19 +1527,39 @@ export function KarhutlaDetailPage() {
       </div>
       <div className="wildfire-filter-toolbar">
         <label>
+          {t("wildfire.filters.period")}
+          <select
+            value={query.datePreset}
+            onChange={(event) => {
+              const datePreset = event.target.value as WildfireQueryState["datePreset"];
+              const range = wildfireDateRange(datePreset, activeDateRange.start, activeDateRange.end);
+              updateQuery({ datePreset, from: range.start, to: range.end });
+            }}
+          >
+            <option value="today">{t("wildfire.filters.periodToday")}</option>
+            <option value="week">{t("wildfire.filters.periodWeek")}</option>
+            <option value="month">{t("wildfire.filters.periodMonth")}</option>
+            <option value="range">{t("wildfire.filters.periodRange")}</option>
+          </select>
+        </label>
+        <label>
           {t("wildfire.filters.from")}
           <input
             type="date"
-            value={query.from || event.monitoring_from}
-            onChange={(e) => updateQuery({ from: e.target.value })}
+            value={activeDateRange.start}
+            max={activeDateRange.end}
+            disabled={query.datePreset !== "range"}
+            onChange={(e) => updateQuery({ datePreset: "range", from: e.target.value })}
           />
         </label>
         <label>
           {t("wildfire.filters.to")}
           <input
             type="date"
-            value={query.to || event.last_data_at?.slice(0, 10) || ""}
-            onChange={(e) => updateQuery({ to: e.target.value })}
+            value={activeDateRange.end}
+            min={activeDateRange.start}
+            disabled={query.datePreset !== "range"}
+            onChange={(e) => updateQuery({ datePreset: "range", to: e.target.value })}
           />
         </label>
         <label>
@@ -1759,53 +1758,6 @@ export function KarhutlaDetailPage() {
               </div>
             </div>
             <div className="wildfire-timeline-controls" aria-label={t("wildfire.timeline.filters")}>
-              <label>
-                {t("wildfire.timeline.period")}
-                <select
-                  value={timelinePreset}
-                  onChange={(event) => applyTimelinePreset(event.target.value as TimelinePreset)}
-                >
-                  <option value="all">{t("wildfire.timeline.periodAll")}</option>
-                  <option value="today">{t("wildfire.timeline.periodToday")}</option>
-                  <option value="7d">{t("wildfire.timeline.period7d")}</option>
-                  <option value="30d">{t("wildfire.timeline.period30d")}</option>
-                  <option value="date">{t("wildfire.timeline.periodDate")}</option>
-                  <option value="range">{t("wildfire.timeline.periodRange")}</option>
-                </select>
-              </label>
-              {timelinePreset === "date" && (
-                <label>
-                  {t("wildfire.timeline.date")}
-                  <input
-                    type="date"
-                    value={query.from || datasetEnd}
-                    onChange={(event) => {
-                      setTimelinePreset("date");
-                      updateQuery({ from: event.target.value, to: event.target.value });
-                    }}
-                  />
-                </label>
-              )}
-              {timelinePreset === "range" && (
-                <>
-                  <label>
-                    {t("wildfire.filters.from")}
-                    <input
-                      type="date"
-                      value={timelineFromValue}
-                      onChange={(event) => updateQuery({ from: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    {t("wildfire.filters.to")}
-                    <input
-                      type="date"
-                      value={timelineToValue}
-                      onChange={(event) => updateQuery({ to: event.target.value })}
-                    />
-                  </label>
-                </>
-              )}
               <label>
                 {t("wildfire.timeline.sort")}
                 <select

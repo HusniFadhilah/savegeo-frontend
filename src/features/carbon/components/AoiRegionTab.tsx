@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useAoiStore } from "@/hooks/useAoiStore";
 import {
   fetchProvinces,
   fetchCities,
@@ -23,6 +24,55 @@ interface Props {
 }
 
 type Scope = "admin" | "island" | "indonesia";
+type AdminHierarchy = {
+  province?: string;
+  regency_or_city?: string;
+  district?: string;
+  village?: string;
+};
+
+function normalizeRegionName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("id-ID")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function withoutAdminPrefix(value: string): string {
+  return normalizeRegionName(value).replace(
+    /^(?:provinsi|prov|kota administrasi|kota|kabupaten|kab|kecamatan|kec|desa|kelurahan|kel)\s+/,
+    "",
+  );
+}
+
+function matchRegionOption(
+  options: RegionOption[],
+  name: string | undefined,
+  level?: string,
+): RegionOption | undefined {
+  if (!name?.trim()) return undefined;
+  const normalized = normalizeRegionName(name);
+  const exact = options.find((option) => normalizeRegionName(option.name) === normalized);
+  if (exact) return exact;
+
+  const target = withoutAdminPrefix(name);
+  const matches = options.filter((option) => withoutAdminPrefix(option.name) === target);
+  if (matches.length <= 1) return matches[0];
+
+  const preferredPrefix = level === "city" ? "kota " : level === "regency" ? "kabupaten " : "";
+  if (!preferredPrefix) return undefined;
+  const preferred = matches.find((option) => normalizeRegionName(option.name).startsWith(preferredPrefix));
+  if (preferred) return preferred;
+  const otherPrefix = level === "city" ? "kabupaten " : "kota ";
+  const untyped = matches.filter((option) => !normalizeRegionName(option.name).startsWith(otherPrefix));
+  return untyped.length === 1 ? untyped[0] : undefined;
+}
+
+function uniqueOptions(options: RegionOption[]): RegionOption[] {
+  return Array.from(new Map(options.map((option) => [option.code, option])).values());
+}
 
 /**
  * The backend's /regions/geometry endpoint (and /regions/islands/*, /regions/indonesia)
@@ -96,6 +146,7 @@ function mergeToMultiPolygon(geoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[]):
  */
 export default function AoiRegionTab({ onApply }: Props) {
   const t = useI18nStore((s) => s.t);
+  const activeAoi = useAoiStore((s) => s.aoi);
   const [scope, setScope] = useState<Scope>("admin");
 
   const [islands, setIslands] = useState<RegionOption[]>([]);
@@ -109,9 +160,12 @@ export default function AoiRegionTab({ onApply }: Props) {
   const [districtCodes, setDistrictCodes] = useState<string[]>([]);
   const [villages, setVillages] = useState<RegionOption[]>([]);
   const [villageCodes, setVillageCodes] = useState<string[]>([]);
+  const provincesRef = useRef(provinces);
+  provincesRef.current = provinces;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastSyncedHierarchy = useRef("");
 
   // Optional free-text search inside the "Seluruh Indonesia" scope - if left
   // empty, "Muat Wilayah" still loads the whole-Indonesia geometry unchanged.
@@ -128,6 +182,119 @@ export default function AoiRegionTab({ onApply }: Props) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The assistant resolves a real boundary and stores its administrative
+  // hierarchy with the shared AOI. Reflect that selection in the same
+  // province -> city -> district -> village controls used for manual AOIs.
+  const assistantHierarchy = activeAoi?.feature.properties?.assistant_admin_hierarchy as
+    | AdminHierarchy
+    | undefined;
+  const hasAssistantHierarchy = Boolean(
+    assistantHierarchy && Object.values(assistantHierarchy).some((value) => typeof value === "string" && value.trim()),
+  );
+  const assistantHierarchyKey =
+    hasAssistantHierarchy && assistantHierarchy
+      ? `${activeAoi?.feature.properties?.area_id ?? activeAoi?.name}|${JSON.stringify(assistantHierarchy)}`
+      : "";
+
+  useEffect(() => {
+    if (
+      !hasAssistantHierarchy ||
+      !assistantHierarchy ||
+      !assistantHierarchyKey ||
+      lastSyncedHierarchy.current === assistantHierarchyKey
+    ) return;
+    lastSyncedHierarchy.current = assistantHierarchyKey;
+    let cancelled = false;
+
+    async function syncAdministrativeSelection() {
+      setScope("admin");
+      setError(null);
+      setProvinceCodes([]);
+      setCityCodes([]);
+      setDistrictCodes([]);
+      setVillageCodes([]);
+      setCities([]);
+      setDistricts([]);
+      setVillages([]);
+      try {
+        const nextProvinces = provincesRef.current.length ? provincesRef.current : await fetchProvinces();
+        if (cancelled) return;
+        setProvinces(nextProvinces);
+
+        const province = matchRegionOption(nextProvinces, assistantHierarchy?.province);
+        if (!province) {
+          setProvinceCodes([]);
+          setCityCodes([]);
+          setDistrictCodes([]);
+          setVillageCodes([]);
+          setCities([]);
+          setDistricts([]);
+          setVillages([]);
+          setError("AOI sudah dipilih, tetapi provinsinya tidak cocok dengan daftar wilayah administratif.");
+          return;
+        }
+
+        setProvinceCodes([province.code]);
+        const nextCities = uniqueOptions(await fetchCities(province.code));
+        if (cancelled) return;
+        setCities(nextCities);
+
+        const city = matchRegionOption(
+          nextCities,
+          assistantHierarchy?.regency_or_city,
+          activeAoi?.feature.properties?.level as string | undefined,
+        );
+        if (!city) {
+          setCityCodes([]);
+          setDistrictCodes([]);
+          setVillageCodes([]);
+          setDistricts([]);
+          setVillages([]);
+          if (assistantHierarchy?.regency_or_city) {
+            setError("AOI sudah dipilih, tetapi kota/kabupatennya tidak cocok dengan daftar wilayah administratif.");
+          }
+          return;
+        }
+
+        setCityCodes([city.code]);
+        const nextDistricts = uniqueOptions(await fetchDistricts(city.code));
+        if (cancelled) return;
+        setDistricts(nextDistricts);
+
+        const district = matchRegionOption(nextDistricts, assistantHierarchy?.district);
+        if (!district) {
+          setDistrictCodes([]);
+          setVillageCodes([]);
+          setVillages([]);
+          if (assistantHierarchy?.district) {
+            setError("AOI sudah dipilih, tetapi kecamatannya tidak cocok dengan daftar wilayah administratif.");
+          }
+          return;
+        }
+
+        setDistrictCodes([district.code]);
+        const nextVillages = uniqueOptions(await fetchVillages(district.code));
+        if (cancelled) return;
+        setVillages(nextVillages);
+
+        const village = matchRegionOption(nextVillages, assistantHierarchy?.village);
+        setVillageCodes(village ? [village.code] : []);
+        if (assistantHierarchy?.village && !village) {
+          setError("AOI sudah dipilih, tetapi desa/kelurahannya tidak cocok dengan daftar wilayah administratif.");
+        }
+      } catch {
+        if (!cancelled) {
+          setError("AOI sudah dipilih, tetapi daftar wilayah administratif gagal dimuat.");
+        }
+      }
+    }
+
+    void syncAdministrativeSelection();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAoi, assistantHierarchy, assistantHierarchyKey, hasAssistantHierarchy]);
 
   async function handleProvinceChange(codes: string[]) {
     setProvinceCodes(codes);
@@ -244,10 +411,6 @@ export default function AoiRegionTab({ onApply }: Props) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function uniqueOptions(options: RegionOption[]): RegionOption[] {
-    return Array.from(new Map(options.map((option) => [option.code, option])).values());
   }
 
   const SCOPES: { key: Scope; label: string }[] = [

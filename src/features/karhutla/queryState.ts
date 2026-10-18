@@ -1,6 +1,7 @@
 import type { WildfireConfidence } from "./types";
 
 export interface WildfireQueryState {
+  datePreset: "today" | "week" | "month" | "range";
   from: string;
   to: string;
   sensor: string;
@@ -23,6 +24,7 @@ export interface WildfireQueryState {
   panel: "overview" | "timeline" | "table" | "methodology";
 }
 export const DEFAULT_WILDFIRE_QUERY: WildfireQueryState = {
+  datePreset: "week",
   from: "",
   to: "",
   sensor: "all",
@@ -53,6 +55,7 @@ const PANELS = new Set<WildfireQueryState["panel"]>([
   "table",
   "methodology",
 ]);
+const DATE_PRESETS = new Set<WildfireQueryState["datePreset"]>(["today", "week", "month", "range"]);
 
 function validDate(value: string | null): string {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
@@ -60,6 +63,9 @@ function validDate(value: string | null): string {
 
 export function parseWildfireQuery(search: string): WildfireQueryState {
   const params = new URLSearchParams(search);
+  const from = validDate(params.get("from"));
+  const to = validDate(params.get("to"));
+  const requestedPreset = params.get("date_preset") as WildfireQueryState["datePreset"] | null;
   const confidence = (params.get("confidence") ?? "")
     .split(",")
     .filter((value): value is WildfireConfidence =>
@@ -70,8 +76,11 @@ export function parseWildfireQuery(search: string): WildfireQueryState {
   const zoom = Number(params.get("zoom"));
   const layers = (params.get("layers") ?? "hotspot,boundary").split(",").filter(Boolean);
   return {
-    from: validDate(params.get("from")),
-    to: validDate(params.get("to")),
+    datePreset: requestedPreset && DATE_PRESETS.has(requestedPreset)
+      ? requestedPreset
+      : from || to ? "range" : "week",
+    from,
+    to,
     sensor: SENSOR_VALUES.has(params.get("sensor") ?? "") ? (params.get("sensor") ?? "all") : "all",
     confidence: confidence.length ? [...new Set(confidence)] : DEFAULT_WILDFIRE_QUERY.confidence,
     province: params.get("province") ?? "",
@@ -119,6 +128,7 @@ export function writeWildfireQuery(
 ): URLSearchParams {
   const next = new URLSearchParams(params);
   const values: Record<string, string | null> = {
+    date_preset: state.datePreset === "week" && !state.from && !state.to ? null : state.datePreset,
     from: state.from || null,
     to: state.to || null,
     sensor: state.sensor === "all" ? null : state.sensor,

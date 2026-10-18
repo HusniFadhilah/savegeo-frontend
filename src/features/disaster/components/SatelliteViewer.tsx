@@ -14,7 +14,6 @@ import { getImagerySceneTile, listImageryScenes } from "@/features/imagery/api";
 import {
   ESRI_WAYBACK_START_DATE,
   listEsriWaybackScenes,
-  selectEsriWaybackScene,
   type WaybackScene,
 } from "@/features/imagery/wayback";
 import type { AoiFeature } from "@/types/map";
@@ -104,17 +103,48 @@ function shiftIsoDate(value: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function eventDateAnchor(event?: DisasterEventRecord): string | null {
+  return dateOnly(event?.event_date) ?? dateOnly(event?.start_date) ?? dateOnly(event?.end_date);
+}
+
 /** Search a bounded period immediately before the event for a dynamic pre image. */
 function preDateRange(event?: DisasterEventRecord): { startDate: string; endDate: string } {
-  const anchor = dateOnly(event?.start_date) ?? dateOnly(event?.event_date) ?? dateOnly(event?.end_date) ?? todayIso();
-  const endDate = shiftIsoDate(anchor, -1);
+  const anchor = eventDateAnchor(event) ?? todayIso();
+  const beforeEvent = shiftIsoDate(anchor, -1);
+  const endDate = beforeEvent < todayIso() ? beforeEvent : todayIso();
   return { startDate: shiftIsoDate(endDate, -365), endDate };
 }
 
 function postDateRange(event?: DisasterEventRecord): { startDate: string; endDate: string } {
   const endDate = todayIso();
-  const startDate = dateOnly(event?.end_date) ?? dateOnly(event?.event_date) ?? dateOnly(event?.start_date);
-  return { startDate: startDate && startDate <= endDate ? startDate : endDate, endDate };
+  const startDate = eventDateAnchor(event);
+  return { startDate: startDate ?? endDate, endDate };
+}
+
+function selectWaybackSceneForPhase(
+  scenes: WaybackScene[],
+  range: { startDate: string; endDate: string },
+  targetDate: string,
+): WaybackScene | null {
+  const candidates = scenes.filter(scene => scene.release_label >= range.startDate && scene.release_label <= range.endDate);
+  if (!candidates.length) return null;
+  return candidates.reduce((closest, scene) => {
+    const currentDistance = Math.abs(Date.parse(`${closest.release_label}T00:00:00Z`) - Date.parse(`${targetDate}T00:00:00Z`));
+    const nextDistance = Math.abs(Date.parse(`${scene.release_label}T00:00:00Z`) - Date.parse(`${targetDate}T00:00:00Z`));
+    return nextDistance < currentDistance ? scene : closest;
+  });
+}
+
+function beforeImageryForEvent(image: SatelliteImageryRecord, event?: DisasterEventRecord): boolean {
+  const eventStart = eventDateAnchor(event);
+  const acquisition = dateOnly(image.acquisition_date);
+  return !eventStart || !acquisition || acquisition < eventStart;
+}
+
+function afterImageryForEvent(image: SatelliteImageryRecord, event?: DisasterEventRecord): boolean {
+  const eventStart = eventDateAnchor(event);
+  const acquisition = dateOnly(image.acquisition_date);
+  return !eventStart || !acquisition || acquisition >= eventStart;
 }
 
 function FitToAoi({
@@ -252,8 +282,12 @@ async function loadDynamicImagery({ source, phase, aoi, range, targetDate }: Dyn
     };
   }
 
-  const scenes = await listEsriWaybackScenes(ESRI_WAYBACK_START_DATE, range.endDate, 2000);
-  const scene = selectEsriWaybackScene(scenes as WaybackScene[], targetDate);
+  const archiveStart = phase === "pre" || range.startDate < ESRI_WAYBACK_START_DATE
+    ? ESRI_WAYBACK_START_DATE
+    : range.startDate;
+  const phaseRange = { startDate: archiveStart, endDate: range.endDate };
+  const scenes = await listEsriWaybackScenes(archiveStart, range.endDate, 2000);
+  const scene = selectWaybackSceneForPhase(scenes as WaybackScene[], phaseRange, targetDate);
   if (!scene) throw new Error(`Snapshot Esri Wayback ${phaseLabel} tidak ditemukan.`);
   return {
     source,
@@ -445,6 +479,7 @@ interface Props {
   enhanceSatelliteImagery?: boolean;
   analyses?: DisasterAnalysisEntry[];
   checkedAnalyses?: Set<string>;
+  onAnalysisTileError?: (modelId: string, runId?: number) => void;
   showAoi?: boolean;
   hotspots?: HotspotRecord[];
   showHotspots?: boolean;
@@ -479,6 +514,7 @@ export default function SatelliteViewer({
   enhanceSatelliteImagery = false,
   analyses = [],
   checkedAnalyses = new Set<string>(),
+  onAnalysisTileError,
   showAoi = true,
   hotspots = [],
   showHotspots = true,
@@ -517,20 +553,39 @@ export default function SatelliteViewer({
   const [dynamicPost, setDynamicPost] = useState<DynamicImageryLayer | null>(null);
   const [dynamicPostLoading, setDynamicPostLoading] = useState(false);
   const [dynamicPostError, setDynamicPostError] = useState<string | null>(null);
+  const [preWaybackTarget, setPreWaybackTarget] = useState("");
+  const [postWaybackTarget, setPostWaybackTarget] = useState("");
 
   const aoiFeature = useMemo(() => aoiFeatureOf(aoi), [aoi]);
   const aoiBounds = useMemo(() => aoiBoundsOf(aoi), [aoi]);
-
-  const preImg = useMemo(
-    () => (preSource ? null : imagery.pre.find((i) => i.id === preId) ?? null),
-    [imagery.pre, preId, preSource],
-  );
-  const postImg = useMemo(
-    () => (postSource ? null : imagery.post.find((i) => i.id === postId) ?? null),
-    [imagery.post, postId, postSource],
-  );
   const preRange = useMemo(() => preDateRange(event), [event]);
   const postRange = useMemo(() => postDateRange(event), [event]);
+  const preSavedImagery = useMemo(() => imagery.pre.filter(image => beforeImageryForEvent(image, event)), [event, imagery.pre]);
+  const postSavedImagery = useMemo(() => imagery.post.filter(image => afterImageryForEvent(image, event)), [event, imagery.post]);
+  const effectivePreWaybackTarget = preWaybackTarget && preWaybackTarget >= ESRI_WAYBACK_START_DATE && preWaybackTarget <= preRange.endDate
+    ? preWaybackTarget : preRange.endDate;
+  const effectivePostWaybackTarget = postWaybackTarget && postWaybackTarget >= postRange.startDate && postWaybackTarget <= postRange.endDate
+    ? postWaybackTarget : postRange.startDate;
+
+  useEffect(() => {
+    setPreWaybackTarget("");
+    setPostWaybackTarget("");
+  }, [event?.id, preRange.endDate, postRange.startDate]);
+
+  const preImg = useMemo(
+    () => (preSource ? null : preSavedImagery.find((i) => i.id === preId)
+      ?? preSavedImagery.find(image => image.id === primaryImagery.pre?.id)
+      ?? preSavedImagery[0]
+      ?? null),
+    [preId, preSavedImagery, preSource, primaryImagery.pre?.id],
+  );
+  const postImg = useMemo(
+    () => (postSource ? null : postSavedImagery.find((i) => i.id === postId)
+      ?? postSavedImagery.find(image => image.id === primaryImagery.post?.id)
+      ?? postSavedImagery[0]
+      ?? null),
+    [postId, postSavedImagery, postSource, primaryImagery.post?.id],
+  );
   const preTile = dynamicPre?.tileUrl ?? viewerTileUrl(preImg);
   const preDate = dynamicPre?.acquisitionDate ?? preImg?.acquisition_date ?? null;
   const preResolutionM = dynamicPre?.resolutionM ?? preImg?.resolution_m ?? null;
@@ -539,8 +594,8 @@ export default function SatelliteViewer({
   const postDate = dynamicPost?.acquisitionDate ?? postImg?.acquisition_date ?? null;
   const postResolutionM = dynamicPost?.resolutionM ?? postImg?.resolution_m ?? null;
   const postAttribution = dynamicPost?.attribution ?? "Google Earth Engine";
-  const preSelection = preSource ? `source:${preSource}` : preId ? String(preId) : "";
-  const postSelection = postSource ? `source:${postSource}` : postId ? String(postId) : "";
+  const preSelection = preSource ? `source:${preSource}` : preImg ? String(preImg.id) : "";
+  const postSelection = postSource ? `source:${postSource}` : postImg ? String(postImg.id) : "";
   const comparisonEntries = comparisonResults ?? analyses.flatMap(entry =>
     entry.available && checkedAnalyses.has(entry.model_id) && entry.result?.comparison
       ? [{ model_id: entry.model_id, user_label: entry.user_label, runId: entry.run?.id, comparison: entry.result.comparison }]
@@ -579,6 +634,8 @@ export default function SatelliteViewer({
   const displayPostAttribution = analysisVisible ? analysisAttribution : postAttribution;
   const preLabel = `${analysisVisible ? "Segmentasi pre" : language === "id" ? "Sebelum" : "Before"}${displayPreDate ? ` · ${displayPreDate}` : ""}`;
   const postLabel = `${activeOutput === "change" ? language === "id" ? "Perubahan" : "Change" : analysisVisible ? "Segmentasi post" : language === "id" ? "Sesudah" : "After"}${displayPostDate ? ` · ${displayPostDate}` : ""}`;
+  const preImageryLabel = `${language === "id" ? "Citra pre" : "Pre imagery"}${preDate ? ` · ${preDate}` : ""}`;
+  const postImageryLabel = `${language === "id" ? "Citra post" : "Post imagery"}${postDate ? ` · ${postDate}` : ""}`;
   const tileErrorKey = `${comparisonEntry?.model_id}-${comparisonEntry?.runId}-${activeOutput}-${displayView}-${displayPreTile}-${displayPostTile}`;
   const referenceImagery = primaryImagery.post ?? primaryImagery.pre;
   const sharpenReferenceSatellite = enhanceSatelliteImagery && isLocalImagery(referenceImagery);
@@ -606,7 +663,7 @@ export default function SatelliteViewer({
     setDynamicPre(null);
     setDynamicPreLoading(true);
     setDynamicPreError(null);
-    const targetDate = preRange.endDate;
+    const targetDate = effectivePreWaybackTarget;
 
     void loadDynamicImagery({
       source: preSource,
@@ -628,7 +685,7 @@ export default function SatelliteViewer({
     return () => {
       cancelled = true;
     };
-  }, [aoiFeature, preRange, preSource]);
+  }, [aoiFeature, effectivePreWaybackTarget, preRange, preSource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -686,9 +743,9 @@ export default function SatelliteViewer({
             });
           }
         } else {
-          const scenes = await listEsriWaybackScenes(ESRI_WAYBACK_START_DATE, postRange.endDate, 2000);
-          const targetDate = dateOnly(event?.end_date) ?? dateOnly(event?.event_date) ?? postRange.endDate;
-          const scene = selectEsriWaybackScene(scenes as WaybackScene[], targetDate);
+          const archiveStart = postRange.startDate < ESRI_WAYBACK_START_DATE ? ESRI_WAYBACK_START_DATE : postRange.startDate;
+          const scenes = await listEsriWaybackScenes(archiveStart, postRange.endDate, 2000);
+          const scene = selectWaybackSceneForPhase(scenes as WaybackScene[], postRange, effectivePostWaybackTarget);
           if (!scene) throw new Error("Snapshot Esri Wayback pasca-bencana tidak ditemukan.");
           if (!cancelled) {
             setDynamicPost({
@@ -712,9 +769,10 @@ export default function SatelliteViewer({
     return () => {
       cancelled = true;
     };
-  }, [aoiFeature, event?.end_date, event?.event_date, postRange, postSource]);
+  }, [aoiFeature, effectivePostWaybackTarget, postRange, postSource]);
 
   const sharedLayers = <>
+    <Pane name={DISASTER_ANALYSIS_PANE} style={{ zIndex: DISASTER_ANALYSIS_PANE_Z_INDEX, pointerEvents: "none" }} />
     <ViewerLayers aoi={aoi} showAoi={showAoi} satellite={satellite} showSatellite={showSatellite}
       sharpenReferenceSatellite={sharpenReferenceSatellite}
       enhanceReferenceSatellite={enhanceReferenceSatellite}
@@ -728,31 +786,63 @@ export default function SatelliteViewer({
   const historicalDate = (phase: "pre" | "post") => analysisVisible
     ? (phase === "pre" ? displayPreDate : displayPostDate) ?? undefined
     : historicalDateForSource(phase === "pre" ? preSource : postSource, phase === "pre" ? preDate : postDate);
+  const useSwipeImageryUnderlay = analysisVisible && activeOutput === "classes" && !!preTile && !!postTile;
+  const swipeBeforeUrl = useSwipeImageryUnderlay
+    ? sharpenedTileUrl(preTile, enhanceSatelliteImagery && isLocalImagery(preImg))
+    : sharpenedTileUrl(displayPreTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(preImg));
+  const swipeAfterUrl = useSwipeImageryUnderlay
+    ? sharpenedTileUrl(postTile, enhanceSatelliteImagery && isLocalImagery(postImg))
+    : sharpenedTileUrl(displayPostTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(postImg));
+  const swipeBeforeLabel = useSwipeImageryUnderlay ? preImageryLabel : preLabel;
+  const swipeAfterLabel = useSwipeImageryUnderlay ? postImageryLabel : postLabel;
+  const swipeBeforeAttribution = useSwipeImageryUnderlay ? preAttribution : displayPreAttribution;
+  const swipeAfterAttribution = useSwipeImageryUnderlay ? postAttribution : displayPostAttribution;
+  const swipeBeforeResolution = useSwipeImageryUnderlay ? preResolutionM : displayPreResolution;
+  const swipeAfterResolution = useSwipeImageryUnderlay ? postResolutionM : displayPostResolution;
+  const swipeBeforeNativeZoom = useSwipeImageryUnderlay ? nativeZoomForResolution(preResolutionM) : displayPreNativeZoom;
+  const swipeAfterNativeZoom = useSwipeImageryUnderlay ? nativeZoomForResolution(postResolutionM) : displayPostNativeZoom;
   const renderMap = (phase: "pre" | "post", globeControl: boolean) => {
     const tile = phase === "pre" ? displayPreTile : displayPostTile;
+    const imageryTile = phase === "pre" ? preTile : postTile;
     const resolutionM = phase === "pre" ? displayPreResolution : displayPostResolution;
     const nativeZoom = phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom;
+    const imageryResolutionM = phase === "pre" ? preResolutionM : postResolutionM;
+    const imageryNativeZoom = nativeZoomForResolution(imageryResolutionM);
     const image = phase === "pre" ? preImg : postImg;
     const sharpenLocally = !analysisVisible && enhanceSatelliteImagery && isLocalImagery(image);
     const sharpenInBrowser = !analysisVisible && enhanceSatelliteImagery && !isLocalImagery(image);
+    const sharpenImageryLocally = analysisVisible && enhanceSatelliteImagery && isLocalImagery(image);
+    const sharpenImageryInBrowser = analysisVisible && enhanceSatelliteImagery && !isLocalImagery(image);
     const sharpenedTile = sharpenedTileUrl(tile, sharpenLocally);
+    const sharpenedImageryTile = sharpenedTileUrl(imageryTile, sharpenImageryLocally);
     return <MapView id={`disasterSatMap-${phase}`} showGlobeControl={globeControl} historicalDate={historicalDate(phase)}>
       <BasemapSwitcher enhanceSatelliteImagery={enhanceSatelliteImagery} />
       <Pane name={DISASTER_IMAGERY_PANE} style={{ zIndex: DISASTER_IMAGERY_PANE_Z_INDEX, pointerEvents: "none" }} />
+      <Pane name={DISASTER_ANALYSIS_PANE} style={{ zIndex: DISASTER_ANALYSIS_PANE_Z_INDEX, pointerEvents: "none" }} />
       <HistoricalAoiClipController aoi={displayAoi} paneName={DISASTER_IMAGERY_PANE} />
       <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={opacityLabel} />
+      {analysisVisible && sharpenedImageryTile && <TileLayer key={`reference-${sharpenedImageryTile}-${sharpenImageryInBrowser}`} url={sharpenedImageryTile} opacity={1}
+        className={sharpenImageryInBrowser ? "savegeo-sharpened-imagery" : undefined}
+        attribution={phase === "pre" ? preAttribution : postAttribution}
+        crossOrigin={image?.source_kind === "local_upload" ? "use-credentials" : undefined}
+        pane={DISASTER_IMAGERY_PANE} bounds={displayBounds} maxNativeZoom={imageryNativeZoom} maxZoom={DISASTER_SCENE_MAX_ZOOM} />}
       {sharpenedTile && <TileLayer key={`${sharpenedTile}-${sharpenInBrowser}`} url={sharpenedTile} opacity={opacity}
-        className={sharpenInBrowser ? "savegeo-sharpened-imagery" : undefined}
+        className={sharpenInBrowser && !analysisVisible ? "savegeo-sharpened-imagery" : undefined}
         attribution={phase === "pre" ? displayPreAttribution : displayPostAttribution}
         crossOrigin={!analysisVisible && image?.source_kind === "local_upload" ? "use-credentials" : undefined}
-        pane={DISASTER_IMAGERY_PANE} bounds={displayBounds} maxNativeZoom={nativeZoom} maxZoom={DISASTER_SCENE_MAX_ZOOM}
-        eventHandlers={{ tileerror: () => setTileErrorSource(tileErrorKey) }} />}
+        pane={analysisVisible ? DISASTER_ANALYSIS_PANE : DISASTER_IMAGERY_PANE} bounds={displayBounds} maxNativeZoom={nativeZoom} maxZoom={DISASTER_SCENE_MAX_ZOOM}
+        eventHandlers={{ tileerror: () => {
+          setTileErrorSource(tileErrorKey);
+          if (analysisVisible && comparisonEntry) {
+            onAnalysisTileError?.(comparisonEntry.model_id, comparisonEntry.runId);
+          }
+        } }} />}
       {sharedLayers}
       <RasterResolutionNotice layers={[{ label: phase === "pre" ? preLabel : postLabel, resolutionM, nativeZoom }]} />
     </MapView>;
   };
 
-  if (!imagery.pre.length && !imagery.post.length && !aoiFeature && !comparison) {
+  if (!preSavedImagery.length && !postSavedImagery.length && !aoiFeature && !comparison) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
         Belum ada citra satelit pre/post untuk event ini.
@@ -806,7 +896,7 @@ export default function SatelliteViewer({
         </div>
       </div>
       <div className="card-body">
-        {(imagery.pre.length > 0 || imagery.post.length > 0 || aoiFeature) && <div className="row g-2 mb-3 disaster-imagery-selectors">
+        {(preSavedImagery.length > 0 || postSavedImagery.length > 0 || aoiFeature) && <div className="row g-2 mb-3 disaster-imagery-selectors">
           <div className="col-sm-6">
             <label className="form-label small fw-semibold mb-1" htmlFor="disaster-pre-scene">{language === "id" ? "Citra Sebelum (Pre)" : "Before Imagery (Pre)"}</label>
             <select
@@ -824,12 +914,14 @@ export default function SatelliteViewer({
                   setPreId(value ? Number(value) : null);
                 }
               }}
-              disabled={!imagery.pre.length && !aoiFeature}
+              disabled={!preSavedImagery.length && !aoiFeature}
             >
-              {!imagery.pre.length && <option value="">Tidak tersedia</option>}
-              {imagery.pre.length > 0 && (
+              {!preSavedImagery.length && <option value="">{aoiFeature
+                ? language === "id" ? "Pilih sumber citra" : "Choose an imagery source"
+                : language === "id" ? "Tidak ada citra pra-bencana" : "No pre-event imagery"}</option>}
+              {preSavedImagery.length > 0 && (
                 <optgroup label="Citra tersimpan">
-                  {imagery.pre.map((img) => (
+                  {preSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
                       {imageryLabel(img)}
                       {img.is_primary ? " (utama)" : ""}
@@ -844,6 +936,16 @@ export default function SatelliteViewer({
                 </optgroup>
               )}
             </select>
+            {preSource === "esri_wayback" && <div className="mt-2">
+              <label className="form-label small fw-semibold mb-1" htmlFor="disaster-pre-wayback-date">
+                {language === "id" ? "Tanggal snapshot pra-bencana" : "Pre-event snapshot date"}
+              </label>
+              <input id="disaster-pre-wayback-date" className="form-control form-control-sm" type="date"
+                min={ESRI_WAYBACK_START_DATE} max={preRange.endDate} value={effectivePreWaybackTarget}
+                disabled={preRange.endDate < ESRI_WAYBACK_START_DATE}
+                onChange={event => setPreWaybackTarget(event.target.value)} />
+              <div className="form-text">{language === "id" ? "Memakai rilis Wayback terdekat pada periode pra-bencana." : "Uses the closest Wayback release in the pre-event period."}</div>
+            </div>}
             {dynamicPreLoading && <div className="small text-muted mt-1" role="status">Memuat citra pra-bencana dan memotong sesuai AOI...</div>}
             {dynamicPreError && <div className="small text-danger mt-1" role="alert">{dynamicPreError}</div>}
           </div>
@@ -864,12 +966,14 @@ export default function SatelliteViewer({
                   setPostId(value ? Number(value) : null);
                 }
               }}
-              disabled={!imagery.post.length && !aoiFeature}
+              disabled={!postSavedImagery.length && !aoiFeature}
             >
-              {!imagery.post.length && !aoiFeature && <option value="">Tidak tersedia</option>}
-              {imagery.post.length > 0 && (
+              {!postSavedImagery.length && <option value="">{aoiFeature
+                ? language === "id" ? "Pilih sumber citra" : "Choose an imagery source"
+                : language === "id" ? "Tidak ada citra pasca-bencana" : "No post-event imagery"}</option>}
+              {postSavedImagery.length > 0 && (
                 <optgroup label="Citra tersimpan">
-                  {imagery.post.map((img) => (
+                  {postSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
                       {imageryLabel(img)}
                       {img.is_primary ? " (utama)" : ""}
@@ -884,6 +988,16 @@ export default function SatelliteViewer({
                 </optgroup>
               )}
             </select>
+            {postSource === "esri_wayback" && <div className="mt-2">
+              <label className="form-label small fw-semibold mb-1" htmlFor="disaster-post-wayback-date">
+                {language === "id" ? "Tanggal snapshot pasca-bencana" : "Post-event snapshot date"}
+              </label>
+              <input id="disaster-post-wayback-date" className="form-control form-control-sm" type="date"
+                min={postRange.startDate} max={postRange.endDate} value={effectivePostWaybackTarget}
+                disabled={postRange.startDate > postRange.endDate}
+                onChange={event => setPostWaybackTarget(event.target.value)} />
+              <div className="form-text">{language === "id" ? "Memakai rilis Wayback terdekat pada periode pasca-bencana." : "Uses the closest Wayback release in the post-event period."}</div>
+            </div>}
             {dynamicPostLoading && <div className="small text-muted mt-1" role="status">Memuat citra pasca-bencana dan memotong sesuai AOI…</div>}
             {dynamicPostError && <div className="small text-danger mt-1" role="alert">{dynamicPostError}</div>}
           </div>
@@ -920,25 +1034,36 @@ export default function SatelliteViewer({
 
         {(displayView === "pre" || displayView === "post") && <>
           {renderMap(displayView, showGlobeControl)}
-          <div className="text-center small text-muted mt-1">{displayView === "pre" ? preLabel : postLabel}</div>
+          <div className="text-center small text-muted mt-1">{analysisVisible
+            ? displayView === "pre" ? preImageryLabel : postImageryLabel
+            : displayView === "pre" ? preLabel : postLabel}</div>
         </>}
         {displayView === "split" && <div className="row g-2">
-          <div className="col-md-6">{renderMap("pre", showGlobeControl)}<div className="text-center small text-muted mt-1">{preLabel}</div></div>
-          <div className="col-md-6">{renderMap("post", false)}<div className="text-center small text-muted mt-1">{postLabel}</div></div>
+          <div className="col-md-6">{renderMap("pre", showGlobeControl)}<div className="text-center small text-muted mt-1">{analysisVisible ? preImageryLabel : preLabel}</div></div>
+          <div className="col-md-6">{renderMap("post", false)}<div className="text-center small text-muted mt-1">{analysisVisible ? postImageryLabel : postLabel}</div></div>
         </div>}
         {displayView === "swipe" && <SwipeCompareMap id="disasterSatSwipeMap"
-          beforeUrl={sharpenedTileUrl(displayPreTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(preImg))}
-          afterUrl={sharpenedTileUrl(displayPostTile, !analysisVisible && enhanceSatelliteImagery && isLocalImagery(postImg))}
+          beforeUrl={swipeBeforeUrl}
+          afterUrl={swipeAfterUrl}
+          beforeOverlayUrl={useSwipeImageryUnderlay ? displayPreTile : null}
+          afterOverlayUrl={useSwipeImageryUnderlay ? displayPostTile : null}
+          overlayOpacity={opacity}
+          beforeOverlayAttribution={useSwipeImageryUnderlay ? displayPreAttribution : undefined}
+          afterOverlayAttribution={useSwipeImageryUnderlay ? displayPostAttribution : undefined}
+          beforeOverlayMaxNativeZoom={useSwipeImageryUnderlay ? displayPreNativeZoom : undefined}
+          afterOverlayMaxNativeZoom={useSwipeImageryUnderlay ? displayPostNativeZoom : undefined}
+          onBeforeOverlayError={() => setTileErrorSource(tileErrorKey)}
+          onAfterOverlayError={() => setTileErrorSource(tileErrorKey)}
           enhanceSatelliteImagery={enhanceSatelliteImagery}
-          sharpenBeforeImagery={!analysisVisible && enhanceSatelliteImagery && !isLocalImagery(preImg)}
-          sharpenAfterImagery={!analysisVisible && enhanceSatelliteImagery && !isLocalImagery(postImg)}
-          beforeLabel={preLabel} afterLabel={postLabel}
-          beforeAttribution={displayPreAttribution} afterAttribution={displayPostAttribution}
-          orientation={swipeOrientation} onOrientationChange={setSwipeOrientation} opacity={opacity}
-          beforeCrossOrigin={!analysisVisible && preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-          afterCrossOrigin={!analysisVisible && postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
-          maxZoom={DISASTER_SCENE_MAX_ZOOM} beforeResolutionM={displayPreResolution ?? undefined} afterResolutionM={displayPostResolution ?? undefined}
-          beforeMaxNativeZoom={displayPreNativeZoom} afterMaxNativeZoom={displayPostNativeZoom}
+          sharpenBeforeImagery={enhanceSatelliteImagery && !isLocalImagery(preImg) && (!analysisVisible || useSwipeImageryUnderlay)}
+          sharpenAfterImagery={enhanceSatelliteImagery && !isLocalImagery(postImg) && (!analysisVisible || useSwipeImageryUnderlay)}
+          beforeLabel={swipeBeforeLabel} afterLabel={swipeAfterLabel}
+          beforeAttribution={swipeBeforeAttribution} afterAttribution={swipeAfterAttribution}
+          orientation={swipeOrientation} onOrientationChange={setSwipeOrientation} opacity={useSwipeImageryUnderlay ? 1 : opacity}
+          beforeCrossOrigin={(!analysisVisible || useSwipeImageryUnderlay) && preImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
+          afterCrossOrigin={(!analysisVisible || useSwipeImageryUnderlay) && postImg?.source_kind === "local_upload" ? "use-credentials" : undefined}
+          maxZoom={DISASTER_SCENE_MAX_ZOOM} beforeResolutionM={swipeBeforeResolution ?? undefined} afterResolutionM={swipeAfterResolution ?? undefined}
+          beforeMaxNativeZoom={swipeBeforeNativeZoom} afterMaxNativeZoom={swipeAfterNativeZoom}
           historicalDate={historicalDate("post") ?? historicalDate("pre")} showGlobeControl={showGlobeControl}
           initialPercent={35} bounds={displayBounds} clipGeometry={displayAoi}>
           <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={opacityLabel} />

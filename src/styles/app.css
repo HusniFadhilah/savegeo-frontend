@@ -1353,6 +1353,15 @@
   overflow: hidden;
 }
 
+.disaster-detail-hero {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.disaster-detail-title {
+  min-width: 0;
+}
+
 .disaster-list-hero > div:first-child {
   align-self: center;
 }
@@ -2641,6 +2650,12 @@
   }
 }
 
+@media (max-width: 991px) {
+  .disaster-detail-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .disaster-shell {
     padding: 12px;
@@ -2684,10 +2699,28 @@
   }
 
   .disaster-hero-metrics,
-  .disaster-detail-facts,
   .disaster-filter-grid,
   .disaster-event-grid {
     grid-template-columns: 1fr;
+  }
+
+  .disaster-detail-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .disaster-detail-facts div {
+    padding: 10px;
+  }
+
+  .disaster-detail-facts div > i {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 7px;
+  }
+
+  .disaster-detail-facts strong {
+    font-size: 1.15rem;
   }
 
   .disaster-pagination-bar {
@@ -7898,7 +7931,7 @@ html[data-theme="dark"] .wildfire-shell { --card-bg: #17211d; --surface: #101714
 
 .wildfire-detail-shell .wildfire-filter-toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(145px, 180px)) minmax(0, 1fr) auto;
+  grid-template-columns: repeat(4, minmax(130px, 180px)) minmax(0, 1fr);
   align-items: end;
   max-width: 1480px;
   margin-bottom: 1.15rem;
@@ -8247,7 +8280,7 @@ html[data-theme="dark"] .wildfire-overview-value-skeleton,
 }
 
 @media (max-width: 1080px) {
-  .wildfire-detail-shell .wildfire-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wildfire-detail-shell .wildfire-filter-toolbar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wildfire-confidence-filter { grid-column: 1 / -1; justify-content: flex-start; margin-left: 0; }
   .wildfire-detail-shell .wildfire-mobile-filter { display: inline-flex; }
   .wildfire-region-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

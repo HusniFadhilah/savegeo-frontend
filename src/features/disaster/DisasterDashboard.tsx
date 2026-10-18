@@ -1,5 +1,5 @@
 import AnalysisCompleteness from "./components/AnalysisCompleteness";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/services/apiClient";
 import type { AoiFeature } from "@/types/map";
@@ -126,6 +126,8 @@ export default function DisasterDashboard() {
   const [focusFeature, setFocusFeature] = useState<GeoJSON.Feature | GeoJSON.Geometry | GeoJSON.FeatureCollection | null>(null);
   const [focusSignal, setFocusSignal] = useState(0);
   const [firmsLayer, setFirmsLayer] = useState<FirmsLayerState>(EMPTY_FIRMS_LAYER);
+  const tileRefreshInFlight = useRef(false);
+  const refreshedTileResults = useRef(new Set<string>());
 
   // Only load event subresources after the event itself has been confirmed.
   // This prevents stale, unpublished, or mistyped IDs from generating a
@@ -133,6 +135,27 @@ export default function DisasterDashboard() {
   const readyEventId = detail && String(detail.event.id) === String(eventId)
     ? detail.event.id
     : null;
+
+  useEffect(() => {
+    tileRefreshInFlight.current = false;
+    refreshedTileResults.current.clear();
+  }, [readyEventId]);
+
+  const refreshFailedAnalysisTiles = (modelId: string, runId?: number) => {
+    if (readyEventId == null || tileRefreshInFlight.current) return;
+    const resultKey = `${readyEventId}:${modelId}:${runId ?? "latest"}`;
+    if (refreshedTileResults.current.has(resultKey)) return;
+    refreshedTileResults.current.add(resultKey);
+    tileRefreshInFlight.current = true;
+    fetchDisasterLayers(readyEventId, true)
+      .then((response) => setLayers(response))
+      .catch(() => {
+        // The viewer keeps its tile error message if refresh itself is unavailable.
+      })
+      .finally(() => {
+        tileRefreshInFlight.current = false;
+      });
+  };
 
   useEffect(() => {
     setEnhanceSatelliteImagery(false);
@@ -482,6 +505,7 @@ export default function DisasterDashboard() {
             satellite={satellite}
             analyses={analyses}
             checkedAnalyses={checkedAnalyses}
+            onAnalysisTileError={refreshFailedAnalysisTiles}
             onToggleAnalysis={toggleAnalysis}
             showSatellite={showSatellite}
             onToggleSatellite={() => setShowSatellite((v) => !v)}

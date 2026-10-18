@@ -72,9 +72,7 @@ export default function ChatHeader({
               ))}
             </select>
           ) : (
-            <span>
-              {activeChoice?.label} · {activeChoice?.model || "default"}
-            </span>
+            <span>{activeChoice?.label}</span>
           )}
           {activeChoice && (
             <span

@@ -102,6 +102,13 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
     return () => clearTimeout(timer);
   }, [open]);
 
+  const assistantHierarchy = aoi?.feature.properties?.assistant_admin_hierarchy;
+  useEffect(() => {
+    if (!assistantHierarchy) return;
+    setActiveTab("admin");
+    setOpen(true);
+  }, [assistantHierarchy]);
+
   return (
     <div className="card">
       <button

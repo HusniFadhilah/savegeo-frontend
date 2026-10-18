@@ -2,6 +2,9 @@ import type { ImageryScene } from "./types";
 
 const WAYBACK_CAPABILITIES_URL =
   "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/1.0.0/WMTSCapabilities.xml";
+const WAYBACK_CATALOG_TTL_MS = 6 * 60 * 60 * 1000;
+
+let cachedCatalog: { expiresAt: number; promise: Promise<WaybackScene[]> } | null = null;
 
 /** The archive starts with the first 2014 release; use this for the initial
  * provider range because the archive is released monthly rather than daily. */
@@ -42,7 +45,7 @@ function parseWaybackDate(title: string): string | null {
   return match?.[1] ?? null;
 }
 
-export async function listEsriWaybackScenes(startDate: string, endDate: string, limit = 2000): Promise<WaybackScene[]> {
+async function loadWaybackCatalog(): Promise<WaybackScene[]> {
   const res = await fetch(WAYBACK_CAPABILITIES_URL);
   if (!res.ok) throw new Error(`Gagal memuat Esri Wayback (${res.status}).`);
 
@@ -62,7 +65,6 @@ export async function listEsriWaybackScenes(startDate: string, endDate: string, 
       const template = resource?.getAttribute("template")?.trim();
       const identifier = childText(layer, "Identifier");
       if (!date || !template || !identifier) return null;
-      if (date < startDate || date > endDate) return null;
       return {
         id: `esri_wayback:${identifier}`,
         acquired_at: `${date}T00:00:00Z`,
@@ -74,5 +76,21 @@ export async function listEsriWaybackScenes(startDate: string, endDate: string, 
     .filter((scene): scene is WaybackScene => Boolean(scene))
     .sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1));
 
-  return scenes.slice(0, limit);
+  return scenes;
+}
+
+function waybackCatalog(): Promise<WaybackScene[]> {
+  if (cachedCatalog && cachedCatalog.expiresAt > Date.now()) return cachedCatalog.promise;
+
+  const promise = loadWaybackCatalog().catch(error => {
+    if (cachedCatalog?.promise === promise) cachedCatalog = null;
+    throw error;
+  });
+  cachedCatalog = { expiresAt: Date.now() + WAYBACK_CATALOG_TTL_MS, promise };
+  return promise;
+}
+
+export async function listEsriWaybackScenes(startDate: string, endDate: string, limit = 2000): Promise<WaybackScene[]> {
+  const scenes = await waybackCatalog();
+  return scenes.filter(scene => scene.release_label >= startDate && scene.release_label <= endDate).slice(0, limit);
 }

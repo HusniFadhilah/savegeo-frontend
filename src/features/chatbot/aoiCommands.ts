@@ -243,6 +243,7 @@ export async function selectAoi(
     area_id: candidate.area_id,
     level: candidate.level,
     source: candidate.source,
+    assistant_admin_hierarchy: candidate.hierarchy,
   });
   const bounds = boundsFromGeoJSON(feature);
   if (!bounds) throw new Error("Batas AOI tidak dapat dihitung.");
@@ -250,8 +251,10 @@ export async function selectAoi(
   if (ticket !== generation) throw new AoiRequestSuperseded();
   commitAndFocus(feature, bounds, candidate.display_name, "admin");
   return stateOf(candidate.display_name, feature, bounds, {
+    aoi_name: candidate.display_name,
     areaId: candidate.area_id,
     level: candidate.level,
+    hierarchy: candidate.hierarchy,
   });
 }
 

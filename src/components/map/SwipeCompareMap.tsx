@@ -16,6 +16,8 @@ export type SwipeOrientation = "vertical" | "horizontal";
 
 const BEFORE_PANE = "swipe-before";
 const AFTER_PANE = "swipe-after";
+const BEFORE_OVERLAY_PANE = "swipe-before-overlay";
+const AFTER_OVERLAY_PANE = "swipe-after-overlay";
 // Above RESULT_PANE (350) so the "after" tile draws on top of the "before"
 // tile, below overlayPane (400) so AOI polygons/markers stay on top of both.
 const AFTER_PANE_Z_INDEX = 360;
@@ -81,26 +83,24 @@ function CompareTile({
 function SwipePaneSetup({ onReady }: { onReady: () => void }) {
   const map = useMap();
   useEffect(() => {
-    const beforePane = map.getPane(BEFORE_PANE) ?? map.createPane(BEFORE_PANE);
-    const pane = map.getPane(AFTER_PANE) ?? map.createPane(AFTER_PANE);
-    beforePane.style.zIndex = String(AFTER_PANE_Z_INDEX - 1);
-    beforePane.style.pointerEvents = "none";
-    beforePane.style.position = "absolute";
-    beforePane.style.left = "0";
-    beforePane.style.top = "0";
-    beforePane.style.width = `${map.getSize().x}px`;
-    beforePane.style.height = `${map.getSize().y}px`;
-    beforePane.style.clipPath = 'path("M 0 0 Z")';
-    beforePane.style.overflow = "visible";
-    pane.style.zIndex = String(AFTER_PANE_Z_INDEX);
-    pane.style.pointerEvents = "none";
-    pane.style.position = "absolute";
-    pane.style.left = "0";
-    pane.style.top = "0";
-    pane.style.width = `${map.getSize().x}px`;
-    pane.style.height = `${map.getSize().y}px`;
-    pane.style.clipPath = 'path("M 0 0 Z")';
-    pane.style.overflow = "visible";
+    const paneConfigs: Array<[string, number]> = [
+      [BEFORE_PANE, AFTER_PANE_Z_INDEX - 1],
+      [AFTER_PANE, AFTER_PANE_Z_INDEX],
+      [BEFORE_OVERLAY_PANE, AFTER_PANE_Z_INDEX + 1],
+      [AFTER_OVERLAY_PANE, AFTER_PANE_Z_INDEX + 2],
+    ];
+    paneConfigs.forEach(([name, zIndex]) => {
+      const pane = map.getPane(name) ?? map.createPane(name);
+      pane.style.zIndex = String(zIndex);
+      pane.style.pointerEvents = "none";
+      pane.style.position = "absolute";
+      pane.style.left = "0";
+      pane.style.top = "0";
+      pane.style.width = `${map.getSize().x}px`;
+      pane.style.height = `${map.getSize().y}px`;
+      pane.style.clipPath = 'path("M 0 0 Z")';
+      pane.style.overflow = "visible";
+    });
     onReady();
   }, [map, onReady]);
   return null;
@@ -316,6 +316,16 @@ interface Props {
   id: string;
   beforeUrl: string | null;
   afterUrl: string | null;
+  /** Optional per-side raster layers drawn over the comparison imagery. */
+  beforeOverlayUrl?: string | null;
+  afterOverlayUrl?: string | null;
+  overlayOpacity?: number;
+  beforeOverlayAttribution?: string;
+  afterOverlayAttribution?: string;
+  beforeOverlayMaxNativeZoom?: number;
+  afterOverlayMaxNativeZoom?: number;
+  onBeforeOverlayError?: () => void;
+  onAfterOverlayError?: () => void;
   beforeLabel?: string;
   afterLabel?: string;
   beforeAttribution?: string;
@@ -366,6 +376,15 @@ export default function SwipeCompareMap({
   id,
   beforeUrl,
   afterUrl,
+  beforeOverlayUrl = null,
+  afterOverlayUrl = null,
+  overlayOpacity = 1,
+  beforeOverlayAttribution = "",
+  afterOverlayAttribution = "",
+  beforeOverlayMaxNativeZoom,
+  afterOverlayMaxNativeZoom,
+  onBeforeOverlayError,
+  onAfterOverlayError,
   beforeLabel = "Sebelum",
   afterLabel = "Sesudah",
   beforeAttribution = "Google Earth Engine",
@@ -404,6 +423,8 @@ export default function SwipeCompareMap({
       JSON.stringify([
         beforeUrl,
         afterUrl,
+        beforeOverlayUrl,
+        afterOverlayUrl,
         bounds,
         clipGeometry,
         retry,
@@ -417,6 +438,8 @@ export default function SwipeCompareMap({
     [
       beforeUrl,
       afterUrl,
+      beforeOverlayUrl,
+      afterOverlayUrl,
       bounds,
       clipGeometry,
       retry,
@@ -566,12 +589,54 @@ export default function SwipeCompareMap({
             fallbackToParentTiles={fallbackToParentTiles}
           />
         )}
+        {afterPaneReady && beforeOverlayUrl && (
+          <TileLayer
+            key={`before-overlay-${sourceKey}`}
+            url={beforeOverlayUrl}
+            opacity={overlayOpacity}
+            pane={BEFORE_OVERLAY_PANE}
+            attribution={beforeOverlayAttribution}
+            bounds={bounds}
+            maxNativeZoom={beforeOverlayMaxNativeZoom ?? maxNativeZoom}
+            maxZoom={maxZoom}
+            eventHandlers={{ tileerror: () => onBeforeOverlayError?.() }}
+          />
+        )}
+        {afterPaneReady && afterOverlayUrl && (
+          <TileLayer
+            key={`after-overlay-${sourceKey}`}
+            url={afterOverlayUrl}
+            opacity={overlayOpacity}
+            pane={AFTER_OVERLAY_PANE}
+            attribution={afterOverlayAttribution}
+            bounds={bounds}
+            maxNativeZoom={afterOverlayMaxNativeZoom ?? maxNativeZoom}
+            maxZoom={maxZoom}
+            eventHandlers={{ tileerror: () => onAfterOverlayError?.() }}
+          />
+        )}
         <ClipController
           percent={!afterUrl ? 100 : !beforeUrl ? 0 : percent}
           orientation={orientation}
           paneReady={afterPaneReady}
           paneName={BEFORE_PANE}
           side="before"
+          clipGeometry={clipGeometry}
+        />
+        <ClipController
+          percent={!afterUrl ? 100 : !beforeUrl ? 0 : percent}
+          orientation={orientation}
+          paneReady={afterPaneReady}
+          paneName={BEFORE_OVERLAY_PANE}
+          side="before"
+          clipGeometry={clipGeometry}
+        />
+        <ClipController
+          percent={!afterUrl ? 100 : !beforeUrl ? 0 : percent}
+          orientation={orientation}
+          paneReady={afterPaneReady}
+          paneName={AFTER_OVERLAY_PANE}
+          side="after"
           clipGeometry={clipGeometry}
         />
         <ClipController

@@ -169,8 +169,9 @@ export function fetchDisasterAnalyses(eventId: number | string) {
   return userGet<DisasterAnalysesResponse>(`/disasters/${eventId}/analyses`);
 }
 
-export function fetchDisasterLayers(eventId: number | string) {
-  return userGet<DisasterLayersResponse>(`/disasters/${eventId}/layers`);
+export function fetchDisasterLayers(eventId: number | string, refreshTiles = false) {
+  const refresh = refreshTiles ? "?refresh_tiles=true" : "";
+  return userGet<DisasterLayersResponse>(`/disasters/${eventId}/layers${refresh}`);
 }
 
 export function fetchDisasterStatistics(eventId: number | string) {
