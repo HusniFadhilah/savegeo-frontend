@@ -72,20 +72,20 @@ export function fetchIndonesiaGeometry(): Promise<GeoJSON.GeoJSON> {
 }
 
 export interface GlobalBoundaryOption extends RegionOption {
-  level: "ADM0" | "ADM1" | "ADM2";
+  level: "ADM0" | "ADM1" | "ADM2" | "ADM3" | "ADM4";
   year?: string;
   source?: string;
   license?: string;
 }
 
-/** Global country boundaries and their first two administrative levels from the backend's geoBoundaries cache. */
+/** Global country boundaries and administrative levels 1-4 from the backend's geoBoundaries cache. */
 export function fetchGlobalCountries(): Promise<GlobalBoundaryOption[]> {
   return apiClient.get<GlobalBoundaryOption[]>("/regions/global/countries");
 }
 
 export function fetchGlobalBoundaries(
   iso3: string,
-  level: "ADM1" | "ADM2",
+  level: "ADM1" | "ADM2" | "ADM3" | "ADM4",
   parentIndex?: number,
 ): Promise<GlobalBoundaryOption[]> {
   const query = parentIndex === undefined ? "" : `?parent_index=${parentIndex}`;
@@ -96,7 +96,7 @@ export function fetchGlobalBoundaries(
 
 export function fetchGlobalBoundaryGeometry(
   iso3: string,
-  level: "ADM0" | "ADM1" | "ADM2",
+  level: "ADM0" | "ADM1" | "ADM2" | "ADM3" | "ADM4",
   index = 0,
 ): Promise<GeoJSON.GeoJSON> {
   return apiClient.get<GeoJSON.GeoJSON>(
