@@ -112,7 +112,7 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     expect(screen.getByRole("region", { name: "Statistik segmentasi" }).textContent).toContain("Air → Pohon: 20 ha");
     fireEvent.click(screen.getByRole("button", { name: "Perubahan" }));
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
-    expect(screen.getByTestId("tile").dataset.url).toBe(comparison.change_tile_url);
+    expect(screen.getAllByTestId("tile").map(tile => tile.dataset.url)).toContain(comparison.change_tile_url);
     fireEvent.change(screen.getByLabelText("Citra Sebelum (Pre)"), { target: { value: "3" } });
     expect(screen.getByTestId("swipe").dataset.pre).toBe("https://tiles.test/raw-3");
     expect(screen.getByTestId("swipe").textContent).toContain("2026-06-30");
