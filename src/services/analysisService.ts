@@ -71,6 +71,39 @@ export function fetchIndonesiaGeometry(): Promise<GeoJSON.GeoJSON> {
   return apiClient.get<GeoJSON.GeoJSON>("/regions/indonesia/geometry");
 }
 
+export interface GlobalBoundaryOption extends RegionOption {
+  level: "ADM0" | "ADM1" | "ADM2";
+  year?: string;
+  source?: string;
+  license?: string;
+}
+
+/** Global country boundaries and their first two administrative levels from the backend's geoBoundaries cache. */
+export function fetchGlobalCountries(): Promise<GlobalBoundaryOption[]> {
+  return apiClient.get<GlobalBoundaryOption[]>("/regions/global/countries");
+}
+
+export function fetchGlobalBoundaries(
+  iso3: string,
+  level: "ADM1" | "ADM2",
+  parentIndex?: number,
+): Promise<GlobalBoundaryOption[]> {
+  const query = parentIndex === undefined ? "" : `?parent_index=${parentIndex}`;
+  return apiClient.get<GlobalBoundaryOption[]>(
+    `/regions/global/${encodeURIComponent(iso3)}/${level}${query}`,
+  );
+}
+
+export function fetchGlobalBoundaryGeometry(
+  iso3: string,
+  level: "ADM0" | "ADM1" | "ADM2",
+  index = 0,
+): Promise<GeoJSON.GeoJSON> {
+  return apiClient.get<GeoJSON.GeoJSON>(
+    `/regions/global/${encodeURIComponent(iso3)}/${level}/geometry?index=${index}`,
+  );
+}
+
 /**
  * GET /regions/geometry passes through the upstream admin-boundary API's response
  * unmodified (matches the legacy Flask contract) - in practice this is usually a

@@ -505,7 +505,6 @@ export default function DisasterDashboard() {
             satellite={satellite}
             analyses={analyses}
             checkedAnalyses={checkedAnalyses}
-            onAnalysisTileError={refreshFailedAnalysisTiles}
             onToggleAnalysis={toggleAnalysis}
             showSatellite={showSatellite}
             onToggleSatellite={() => setShowSatellite((v) => !v)}
@@ -541,6 +540,7 @@ export default function DisasterDashboard() {
             enhanceSatelliteImagery={enhanceSatelliteImagery}
             analyses={analyses}
             checkedAnalyses={checkedAnalyses}
+            onAnalysisTileError={refreshFailedAnalysisTiles}
             showGlobeControl
             showAoi={showAoi}
             hotspots={hotspots}

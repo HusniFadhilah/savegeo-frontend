@@ -10,6 +10,10 @@ import {
   fetchIslandGeometry,
   fetchIndonesiaGeometry,
   fetchRegionGeometry,
+  fetchGlobalCountries,
+  fetchGlobalBoundaries,
+  fetchGlobalBoundaryGeometry,
+  type GlobalBoundaryOption,
   type LocationSearchResult,
 } from "@/services/analysisService";
 import { ApiError } from "@/services/apiClient";
@@ -23,7 +27,7 @@ interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
 }
 
-type Scope = "admin" | "island" | "indonesia";
+type Scope = "admin" | "island" | "indonesia" | "global";
 type AdminHierarchy = {
   province?: string;
   regency_or_city?: string;
@@ -171,6 +175,16 @@ export default function AoiRegionTab({ onApply }: Props) {
   // empty, "Muat Wilayah" still loads the whole-Indonesia geometry unchanged.
   const [searchedLocation, setSearchedLocation] = useState<LocationSearchResult | null>(null);
 
+  const [globalCountries, setGlobalCountries] = useState<GlobalBoundaryOption[]>([]);
+  const [globalCountryCode, setGlobalCountryCode] = useState("");
+  const [globalAdmin1, setGlobalAdmin1] = useState<GlobalBoundaryOption[]>([]);
+  const [globalAdmin1Code, setGlobalAdmin1Code] = useState("");
+  const [globalAdmin2, setGlobalAdmin2] = useState<GlobalBoundaryOption[]>([]);
+  const [globalAdmin2Code, setGlobalAdmin2Code] = useState("");
+  const [globalCountriesLoading, setGlobalCountriesLoading] = useState(false);
+  const [globalAdmin1Loading, setGlobalAdmin1Loading] = useState(false);
+  const [globalAdmin2Loading, setGlobalAdmin2Loading] = useState(false);
+
   useEffect(() => {
     fetchProvinces()
       .then((r) => setProvinces(r ?? []))
@@ -182,6 +196,42 @@ export default function AoiRegionTab({ onApply }: Props) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (scope !== "global" || globalCountries.length) return;
+    let cancelled = false;
+    setGlobalCountriesLoading(true);
+    setError(null);
+    fetchGlobalCountries()
+      .then((items) => { if (!cancelled) setGlobalCountries(items); })
+      .catch(() => { if (!cancelled) setError(t("carbon.aoiRegion.err.globalCountries")); })
+      .finally(() => { if (!cancelled) setGlobalCountriesLoading(false); });
+    return () => { cancelled = true; };
+  }, [scope, globalCountries.length, t]);
+
+  useEffect(() => {
+    if (scope !== "global" || !globalCountryCode) return;
+    let cancelled = false;
+    setGlobalAdmin1Loading(true);
+    setError(null);
+    fetchGlobalBoundaries(globalCountryCode, "ADM1")
+      .then((items) => { if (!cancelled) setGlobalAdmin1(items); })
+      .catch(() => { if (!cancelled) setError(t("carbon.aoiRegion.err.globalLevel")); })
+      .finally(() => { if (!cancelled) setGlobalAdmin1Loading(false); });
+    return () => { cancelled = true; };
+  }, [scope, globalCountryCode, t]);
+
+  useEffect(() => {
+    if (scope !== "global" || !globalCountryCode || !globalAdmin1Code) return;
+    let cancelled = false;
+    setGlobalAdmin2Loading(true);
+    setError(null);
+    fetchGlobalBoundaries(globalCountryCode, "ADM2", Number(globalAdmin1Code))
+      .then((items) => { if (!cancelled) setGlobalAdmin2(items); })
+      .catch(() => { if (!cancelled) setError(t("carbon.aoiRegion.err.globalLevel")); })
+      .finally(() => { if (!cancelled) setGlobalAdmin2Loading(false); });
+    return () => { cancelled = true; };
+  }, [scope, globalCountryCode, globalAdmin1Code, t]);
 
   // The assistant resolves a real boundary and stores its administrative
   // hierarchy with the shared AOI. Reflect that selection in the same
@@ -345,6 +395,24 @@ export default function AoiRegionTab({ onApply }: Props) {
     setError(null);
     setLoading(true);
     try {
+      if (scope === "global") {
+        if (!globalCountryCode) {
+          setError(t("carbon.aoiRegion.err.selectCountry"));
+          return;
+        }
+        const selectedLevel = globalAdmin2Code ? "ADM2" : globalAdmin1Code ? "ADM1" : "ADM0";
+        const selectedIndex = Number(globalAdmin2Code || globalAdmin1Code || 0);
+        const geometry = await fetchGlobalBoundaryGeometry(globalCountryCode, selectedLevel, selectedIndex);
+        const country = globalCountries.find((item) => item.code === globalCountryCode);
+        const region = selectedLevel === "ADM2"
+          ? globalAdmin2.find((item) => item.code === globalAdmin2Code)
+          : selectedLevel === "ADM1"
+            ? globalAdmin1.find((item) => item.code === globalAdmin1Code)
+            : country;
+        const name = [region?.name, selectedLevel !== "ADM0" ? country?.name : undefined].filter(Boolean).join(", ");
+        onApply(toFeature(geometry), name || country?.name || globalCountryCode);
+        return;
+      }
       if (scope === "indonesia") {
         if (searchedLocation) {
           const feature = searchedLocation.geojson
@@ -417,7 +485,12 @@ export default function AoiRegionTab({ onApply }: Props) {
     { key: "admin", label: t("carbon.aoiRegion.scope.admin") },
     { key: "island", label: t("carbon.aoiRegion.scope.island") },
     { key: "indonesia", label: t("carbon.aoiRegion.scope.indonesia") },
+    { key: "global", label: t("carbon.aoiRegion.scope.global") },
   ];
+
+  const selectedGlobalBoundary = globalAdmin2.find((item) => item.code === globalAdmin2Code)
+    || globalAdmin1.find((item) => item.code === globalAdmin1Code)
+    || globalCountries.find((item) => item.code === globalCountryCode);
 
   return (
     <div>
@@ -511,6 +584,78 @@ export default function AoiRegionTab({ onApply }: Props) {
                 : t("carbon.aoiRegion.bboxFallback")
               : t("carbon.aoiRegion.emptySearchHint")}
           </small>
+        </div>
+      )}
+
+      {scope === "global" && (
+        <div className="row">
+          <div className="col-md-12 mb-3">
+            <label className="form-label">{t("carbon.aoiRegion.country")}</label>
+            <SearchableSelect
+              value={globalCountryCode}
+              onChange={(code) => {
+                setGlobalCountryCode(code);
+                setGlobalAdmin1Code("");
+                setGlobalAdmin2Code("");
+                setGlobalAdmin1([]);
+                setGlobalAdmin2([]);
+                setGlobalAdmin1Loading(false);
+                setGlobalAdmin2Loading(false);
+              }}
+              options={globalCountries.map((country) => ({
+                value: country.code,
+                label: country.name,
+                description: country.code,
+              }))}
+              placeholder={t("carbon.aoiRegion.countryPlaceholder")}
+              loading={globalCountriesLoading}
+              clearable
+            />
+          </div>
+          <div className="col-md-6 mb-3">
+            <label className="form-label">{t("carbon.aoiRegion.admin1")}</label>
+            <SearchableSelect
+              value={globalAdmin1Code}
+              onChange={(code) => {
+                setGlobalAdmin1Code(code);
+                setGlobalAdmin2Code("");
+                setGlobalAdmin2([]);
+                setGlobalAdmin2Loading(false);
+              }}
+              options={globalAdmin1.map((region) => ({ value: region.code, label: region.name }))}
+              placeholder={t("carbon.aoiRegion.admin1Placeholder")}
+              disabled={!globalCountryCode}
+              loading={globalAdmin1Loading}
+              clearable
+            />
+          </div>
+          <div className="col-md-6 mb-3">
+            <label className="form-label">{t("carbon.aoiRegion.admin2")}</label>
+            <SearchableSelect
+              value={globalAdmin2Code}
+              onChange={setGlobalAdmin2Code}
+              options={globalAdmin2.map((region) => ({ value: region.code, label: region.name }))}
+              placeholder={t("carbon.aoiRegion.admin2Placeholder")}
+              disabled={!globalAdmin1Code}
+              loading={globalAdmin2Loading}
+              clearable
+            />
+          </div>
+          <div className="col-12">
+            <small className="text-muted d-block">
+              {t("carbon.aoiRegion.globalAttribution")}{" "}
+              <a href="https://www.geoboundaries.org/" target="_blank" rel="noreferrer">
+                {t("carbon.aoiRegion.globalAttributionLink")}
+              </a>
+            </small>
+            {selectedGlobalBoundary && (
+              <small className="text-muted d-block mt-1">
+                {t("carbon.aoiRegion.globalMetadataSource")} {selectedGlobalBoundary.source || "geoBoundaries"}
+                {selectedGlobalBoundary.year && <> · {t("carbon.aoiRegion.globalMetadataYear")} {selectedGlobalBoundary.year}</>}
+                {selectedGlobalBoundary.license && <> · {t("carbon.aoiRegion.globalMetadataLicense")} {selectedGlobalBoundary.license}</>}
+              </small>
+            )}
+          </div>
         </div>
       )}
 
