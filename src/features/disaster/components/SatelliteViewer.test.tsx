@@ -38,11 +38,14 @@ vi.mock("@/components/map/MapView", async () => {
 });
 vi.mock("@/components/map/SwipeCompareMap", async () => {
   const { default: MapView } = await import("@/components/map/MapView");
-  return { default: ({id, beforeUrl, afterUrl, beforeLabel, afterLabel, opacity, children}: {
+  return { default: ({id, beforeUrl, afterUrl, beforeOverlayUrl, afterOverlayUrl, beforeLabel, afterLabel, opacity, overlayOpacity, children}: {
     id: string; beforeUrl: string; afterUrl: string; beforeLabel: string; afterLabel: string;
-    opacity: number; children: React.ReactNode;
+    beforeOverlayUrl: string | null; afterOverlayUrl: string | null;
+    opacity: number; overlayOpacity: number; children: React.ReactNode;
   }) => <MapView id={id}>
-    <div data-testid="swipe" data-pre={beforeUrl} data-post={afterUrl} data-opacity={opacity}>
+    <div data-testid="swipe" data-pre={beforeUrl} data-post={afterUrl}
+      data-pre-overlay={beforeOverlayUrl ?? ""} data-post-overlay={afterOverlayUrl ?? ""}
+      data-opacity={opacity} data-overlay-opacity={overlayOpacity}>
       {beforeLabel} / {afterLabel}
     </div>{children}
   </MapView> };
@@ -101,13 +104,15 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     expect(screen.getByTestId("swipe").dataset.pre).toBe(pre.preview_tile_url);
     fireEvent.click(screen.getByRole("button", { name: "Segmentasi multi-kelas" }));
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
-    expect(screen.getByTestId("swipe").dataset.pre).toBe(comparison.pre_tile_url);
-    expect(screen.getByTestId("swipe").textContent).toContain(comparison.pre.date);
+    expect(screen.getByTestId("swipe").dataset.pre).toBe(pre.preview_tile_url);
+    expect(screen.getByTestId("swipe").dataset.preOverlay).toBe(comparison.pre_tile_url);
+    expect(screen.getByTestId("swipe").dataset.postOverlay).toBe(comparison.post_tile_url);
+    expect(screen.getByRole("region", { name: "Metadata segmentasi" }).textContent).toContain(comparison.pre.date);
     fireEvent.click(screen.getByRole("button", { name: "Transisi utama" }));
     expect(screen.getByRole("region", { name: "Statistik segmentasi" }).textContent).toContain("Air → Pohon: 20 ha");
     fireEvent.click(screen.getByRole("button", { name: "Perubahan" }));
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
-    expect(screen.getByTestId("tile").dataset.url).toBe(comparison.change_tile_url);
+    expect(screen.getAllByTestId("tile").map(tile => tile.dataset.url)).toContain(comparison.change_tile_url);
     fireEvent.change(screen.getByLabelText("Citra Sebelum (Pre)"), { target: { value: "3" } });
     expect(screen.getByTestId("swipe").dataset.pre).toBe("https://tiles.test/raw-3");
     expect(screen.getByTestId("swipe").textContent).toContain("2026-06-30");
@@ -118,7 +123,7 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     fireEvent.change(screen.getByLabelText("Opasitas citra"), { target: { value: "0.4" } });
     fireEvent.click(screen.getByRole("button", { name: "Segmentasi multi-kelas" }));
     fireEvent.change(screen.getByLabelText("Opasitas segmentasi"), { target: { value: "0.7" } });
-    expect(screen.getByTestId("swipe").dataset.opacity).toBe("0.7");
+    expect(screen.getByTestId("swipe").dataset.overlayOpacity).toBe("0.7");
     fireEvent.click(screen.getByRole("button", { name: "Citra satelit" }));
     expect(screen.getByTestId("swipe").dataset.opacity).toBe("0.4");
   });
@@ -128,7 +133,7 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     const { rerender } = render(<SatelliteViewer {...props} analyses={analyses} checkedAnalyses={new Set(analyses.map(a => a.model_id))} />);
     fireEvent.click(screen.getByRole("button", { name: "Segmentasi multi-kelas" }));
     fireEvent.change(screen.getByLabelText("Hasil analisis"), { target: { value: "second-model" } });
-    expect(screen.getByTestId("swipe").dataset.post).toBe("https://tiles.test/second");
+    expect(screen.getByTestId("swipe").dataset.postOverlay).toBe("https://tiles.test/second");
     expect(screen.queryByTestId("tile")).toBeNull();
     expect(screen.getAllByTestId("viewer-map")).toHaveLength(1);
     rerender(<SatelliteViewer {...props} checkedAnalyses={new Set()} />);
