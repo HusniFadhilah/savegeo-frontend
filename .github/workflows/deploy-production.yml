@@ -28,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Install, lint, test, audit, and build
@@ -79,7 +79,7 @@ jobs:
       - name: Set up Node.js for artifact validation
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Download production build
         if: needs.validate.outputs.build_artifact_outcome == 'success'
