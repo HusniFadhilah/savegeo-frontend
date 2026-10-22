@@ -44,6 +44,7 @@ export function listImageryScenes(params: ListScenesParams) {
     start_date: params.startDate,
     end_date: params.endDate,
     max_cloud_cover: params.maxCloudCover,
+    constellation: params.constellation,
     stac_catalog_url: params.stacCatalogUrl,
     stac_collections: params.stacCollections,
   }, { auth: "app" });

@@ -55,6 +55,8 @@ export interface ImageryProvider {
   license?: string;
   configuration_status?: "connected" | "not_configured" | "incomplete_configuration" | string;
   configuration_message?: string;
+  /** Non-secret STAC product collection IDs enabled by backend configuration. */
+  configured_stac_collections?: string[];
   stac_configured?: boolean;
   credential_configured?: boolean;
   capabilities?: {
@@ -116,6 +118,7 @@ export interface ImageryScene {
   /** Optional STAC/OpenAerialMap ground sample distance in metres. */
   resolution_m?: number | null;
   platform?: string | null;
+  collection?: string | null;
   producer?: string | null;
   title?: string | null;
   assets?: ImageryStacAssetOption[];
@@ -149,6 +152,8 @@ export interface ListScenesParams {
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   maxCloudCover?: number;
+  /** Airbus OneAtlas mission filter: PNEO (Pléiades Neo), PHR (Pléiades), or SPOT. */
+  constellation?: string;
   stacCatalogUrl?: string;
   stacCollections?: string;
 }

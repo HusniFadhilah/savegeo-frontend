@@ -39,8 +39,9 @@ function groupByAlgorithm(models: CarbonModelListItem[]) {
   return grouped;
 }
 
-function modelBadge(model: CarbonModelListItem): string {
+function modelBadge(model: CarbonModelListItem, t: (key: string) => string): string {
   const meta = model.metadata_json;
+  if (meta?.provider === "ibm_granite_hls") return ` [${t("carbon.params.compat.graniteHls")}]`;
   const isNonGeeStac = meta?.provider === "non_gee_stac" || meta?.provider === "local_raster";
   const isGee = !!meta?.gee_deployable;
   const geeType = meta?.gee_algorithm_type;
@@ -95,6 +96,7 @@ function compareModels(a: CarbonModelListItem, b: CarbonModelListItem): number {
 
 function pickDefaultModel(models: CarbonModelListItem[], referenceDataset: string): CarbonModelListItem | null {
   if (!models.length) return null;
+  if (models.every((model) => model.metadata_json?.provider === "ibm_granite_hls")) return null;
   if (referenceDataset === "ORNL_BGB") {
     return models.find((model) => model.metadata_json?.training_mode === "reference_raster") ?? models[0];
   }
@@ -113,6 +115,9 @@ function compatibilityInfo(
   algorithm?: string,
 ): { text: string; tone: CompatibilityTone } {
   if (!meta) return { text: "N/A", tone: "gray" };
+  if (meta.provider === "ibm_granite_hls") {
+    return { text: t("carbon.params.compat.graniteHls"), tone: "gray" };
+  }
   if (meta.provider === "non_gee_stac" || meta.provider === "local_raster") {
     return { text: t("carbon.params.compat.nonGeeStac"), tone: "gray" };
   }
@@ -272,6 +277,7 @@ export default function CarbonParamsPanel({
   }, [params.modelName]);
 
   const datasetMeta = datasets.find((d) => d.value === params.referenceDataset);
+  const isGraniteHlsModel = selectedModel?.metadata_json?.provider === "ibm_granite_hls";
   const canReferenceOnly = Boolean(datasetMeta?.referenceOnlyCapable || (datasetMeta?.source === "fallback" && !datasetMeta.requiresConfiguration));
   const analysisMode = directLoadEnabled ? "global" : params.referenceOnly ? "reference_aoi" : "model";
   const grouped = groupByAlgorithm(models);
@@ -438,7 +444,7 @@ export default function CarbonParamsPanel({
               );
               return {
                 value: m.name,
-                label: `${m.display_name || m.name}${modelBadge(m)}`,
+                label: `${m.display_name || m.name}${modelBadge(m, t)}`,
                 description: descParts.join(" · "),
                 group: algo.toUpperCase(),
               };
@@ -576,7 +582,7 @@ export default function CarbonParamsPanel({
         )}
       </div>
 
-      <div className="mb-3">
+      {(analysisMode !== "model" || !isGraniteHlsModel) && <div className="mb-3">
         <div className="carbon-info-label">
           <label className="form-label">{params.referenceOnly ? t("carbon.referenceYearLabel") : t("carbon.params.datasetYear")}</label>
           {params.referenceOnly && (
@@ -603,12 +609,12 @@ export default function CarbonParamsPanel({
             </option>
           ))}
         </select>
-      </div>
+      </div>}
 
       {analysisMode === "model" && !selectedModel?.metadata_json?.builtin && (
         <>
           <div className="mb-3">
-            <label className="form-label">{t("carbon.params.dateRange")}</label>
+            <label className="form-label">{t(isGraniteHlsModel ? "carbon.params.dateRangeHls" : "carbon.params.dateRange")}</label>
             <div className="d-flex gap-2 align-items-center">
               <select
                 className="form-select"
@@ -638,46 +644,50 @@ export default function CarbonParamsPanel({
             </div>
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">{t("carbon.params.cloudThreshold")}</label>
-            <input
-              id="carbonCloudSlider"
-              type="range"
-              className="form-range"
-              min={0}
-              max={30}
-              value={params.cloudThreshold}
-              onChange={(e) => onParamsChange({ cloudThreshold: Number(e.target.value) })}
-            />
-            <div className="text-center">
-              <strong>{params.cloudThreshold}</strong>%
-            </div>
-          </div>
+          {!isGraniteHlsModel && (
+            <>
+              <div className="mb-3">
+                <label className="form-label">{t("carbon.params.cloudThreshold")}</label>
+                <input
+                  id="carbonCloudSlider"
+                  type="range"
+                  className="form-range"
+                  min={0}
+                  max={30}
+                  value={params.cloudThreshold}
+                  onChange={(e) => onParamsChange({ cloudThreshold: Number(e.target.value) })}
+                />
+                <div className="text-center">
+                  <strong>{params.cloudThreshold}</strong>%
+                </div>
+              </div>
 
-          <div className="mb-3">
-            <div className="carbon-info-label">
-              <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
-              {techniques[params.cloudMaskTechnique] && (
-                <InfoTip label={t("carbon.params.moreInfo")} content={techniques[params.cloudMaskTechnique].description} />
-              )}
-            </div>
-            <select
-              className="form-select"
-              value={params.cloudMaskTechnique}
-              onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
-              disabled={Object.keys(techniques).length === 0}
-            >
-              {Object.entries(techniques).map(([key, info]) => (
-                <option key={key} value={key}>
-                  {info.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="mb-3">
+                <div className="carbon-info-label">
+                  <label className="form-label">{t("carbon.params.cloudTechnique")}</label>
+                  {techniques[params.cloudMaskTechnique] && (
+                    <InfoTip label={t("carbon.params.moreInfo")} content={techniques[params.cloudMaskTechnique].description} />
+                  )}
+                </div>
+                <select
+                  className="form-select"
+                  value={params.cloudMaskTechnique}
+                  onChange={(e) => onParamsChange({ cloudMaskTechnique: e.target.value as CloudMaskTechnique })}
+                  disabled={Object.keys(techniques).length === 0}
+                >
+                  {Object.entries(techniques).map(([key, info]) => (
+                    <option key={key} value={key}>
+                      {info.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
         </>
       )}
 
-      {analysisMode !== "global" && <div className="mb-3">
+      {analysisMode !== "global" && !isGraniteHlsModel && <div className="mb-3">
         <div className="carbon-info-label">
           <label className="form-label">
             <i className="bi bi-scissors me-1" /> {t("carbon.params.displayMode")}
@@ -702,7 +712,7 @@ export default function CarbonParamsPanel({
         </div>
       </div>}
 
-      {analysisMode === "model" && selectedModel && <div className="carbon-help-toggle-row form-check mb-2">
+      {analysisMode === "model" && selectedModel && !isGraniteHlsModel && <div className="carbon-help-toggle-row form-check mb-2">
         <input
           className="form-check-input"
           type="checkbox"

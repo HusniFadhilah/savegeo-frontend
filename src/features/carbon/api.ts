@@ -99,7 +99,7 @@ export async function listCarbonDatasets(): Promise<CarbonReferenceDatasetOption
 
 function isNonGeeModel(meta: CarbonModelListItem["metadata_json"]): boolean {
   const provider = meta?.provider;
-  return provider === "non_gee_stac" || provider === "local_raster";
+  return provider === "non_gee_stac" || provider === "local_raster" || provider === "ibm_granite_hls";
 }
 
 export interface AnalyzeCarbonArgs {
@@ -144,6 +144,23 @@ export async function analyzeCarbon({
   const meta = selectedModel?.metadata_json;
 
   if (selectedModel && isNonGeeModel(meta) && !params.loadOnly) {
+    if (meta?.provider === "ibm_granite_hls") {
+      return runAnalysisJob<CarbonResult>(
+        "carbon_local",
+        {
+          aoi,
+          model_name: selectedModel.name,
+          year: params.year,
+          start_month: params.startMonth,
+          end_month: params.endMonth,
+          scale: 30,
+          vis_min: visMin,
+          vis_max: visMax,
+          vis_palette: visPalette,
+        },
+        { timeoutMs: CARBON_TIMEOUT_MS },
+      );
+    }
     const pad = (n: number) => String(n).padStart(2, "0");
     // /analyze/carbon-local forwards these straight into a STAC API `datetime`
     // interval query (app/providers/stac_provider.py: `f"{start}/{end}"`),

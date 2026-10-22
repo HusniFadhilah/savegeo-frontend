@@ -172,6 +172,7 @@ export interface CarbonAreaInfo {
 }
 
 export interface CarbonModelRunInfo {
+  provider?: string;
   calculation_mode?: string;
   display_mode?: string;
   scale?: number;
@@ -274,5 +275,6 @@ export interface CompanyBoundary {
   industry_type: "mining" | "forestry" | "plantation" | "energy" | string;
   sub_type?: string;
   province?: string;
+  district?: string;
   area_ha?: number;
 }

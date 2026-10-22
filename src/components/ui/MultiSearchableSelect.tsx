@@ -10,6 +10,7 @@ interface Props {
   disabled?: boolean;
   emptyHint?: string;
   clearable?: boolean;
+  selectedSummary?: string;
   id?: string;
   className?: string;
 }
@@ -24,6 +25,7 @@ export default function MultiSearchableSelect({
   disabled = false,
   emptyHint = "Tidak ditemukan",
   clearable = false,
+  selectedSummary,
   id,
   className,
 }: Props) {
@@ -85,7 +87,7 @@ export default function MultiSearchableSelect({
   };
 
   const summary = selectedLabels.length
-    ? `${selectedLabels.length} wilayah dipilih`
+    ? (selectedSummary ?? `${selectedLabels.length} wilayah dipilih`)
     : placeholder;
 
   return (

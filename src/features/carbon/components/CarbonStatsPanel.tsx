@@ -23,6 +23,7 @@ export default function CarbonStatsPanel({ result }: Props) {
   const reference = result.carbon_reference;
   const unit = result.carbon_estimated.unit || reference?.unit || "Mg C/ha";
   const dataQuality = result.data_quality;
+  const isGraniteHlsModel = modelInfo.provider === "ibm_granite_hls";
   // `model_performance` was never actually populated by the backend (dead
   // field, verified live against app/services/carbon_service.py) - the real
   // R²/RMSE live under model_info.cv_metrics.
@@ -273,7 +274,7 @@ export default function CarbonStatsPanel({ result }: Props) {
             <div className="cs-popover-copy">
               {modelInfo.depth_cm && <div>{t("carbon.pool.depth")}: {modelInfo.depth_cm.join("–")} cm</div>}
               {modelInfo.source_period && <div>{t("carbon.pool.period")}: {modelInfo.source_period}</div>}
-              {modelInfo.method_description && <p>{modelInfo.method_description}</p>}
+              {modelInfo.method_description && <p>{isGraniteHlsModel ? t("carbon.model.granite.method") : modelInfo.method_description}</p>}
               {modelInfo.validation_metrics && (
                 <>
                   <strong>{t("carbon.pool.referenceAgreement")}</strong>
@@ -282,7 +283,7 @@ export default function CarbonStatsPanel({ result }: Props) {
                   <p>{t("carbon.pool.referenceValidationNote")}</p>
                 </>
               )}
-              {modelInfo.validation_note && <p>{modelInfo.validation_note}</p>}
+              {modelInfo.validation_note && <p>{isGraniteHlsModel ? t("carbon.model.granite.validationNote") : modelInfo.validation_note}</p>}
             </div>
           )} />
         </div>

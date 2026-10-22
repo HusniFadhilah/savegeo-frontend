@@ -5,7 +5,7 @@ import type { CompanyBoundary } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
 import { INDUSTRY_LABEL as TYPE_LABEL } from "@/types/api";
 import { ApiError } from "@/services/apiClient";
-import SearchableSelect from "@/components/ui/SearchableSelect";
+import MultiSearchableSelect from "@/components/ui/MultiSearchableSelect";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
@@ -23,7 +23,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
-  const [provinceFilter, setProvinceFilter] = useState<string>("");
+  const [provinceFilter, setProvinceFilter] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
 
@@ -58,7 +58,7 @@ export default function AoiCompanyTab({ onApply }: Props) {
     return companies.filter(
       (c) =>
         (!typeFilter || c.industry_type === typeFilter) &&
-        (!provinceFilter || c.province === provinceFilter) &&
+        (provinceFilter.length === 0 || (c.province != null && provinceFilter.includes(c.province))) &&
         (!q || c.name.toLowerCase().includes(q) || (c.company_name || "").toLowerCase().includes(q)),
     );
   }, [companies, search, typeFilter, provinceFilter]);
@@ -120,12 +120,13 @@ export default function AoiCompanyTab({ onApply }: Props) {
           </select>
         </div>
         <div className="col-md-4">
-          <SearchableSelect
+          <MultiSearchableSelect
             value={provinceFilter}
             onChange={setProvinceFilter}
             options={provinces.map((p) => ({ value: p, label: p }))}
             placeholder={t("carbon.aoiCompany.allProvinces")}
             clearable
+            selectedSummary={t("carbon.aoiCompany.selectedProvinces", { count: provinceFilter.length })}
           />
         </div>
       </div>
@@ -149,11 +150,17 @@ export default function AoiCompanyTab({ onApply }: Props) {
               ? `${c.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 0 })} ha`
               : "";
             const isSelected = selectedId === c.id;
+            const locationDetails = [
+              c.province && `${t("carbon.aoiCompany.provinceLabel")}: ${c.province}`,
+              c.district && `${t("carbon.aoiCompany.districtLabel")}: ${c.district}`,
+            ].filter(Boolean).join("\n");
             return (
               <div
                 key={c.id}
                 className={`co-aoi-item ${isSelected ? "selected" : ""}`}
                 onClick={() => setSelectedId(c.id)}
+                title={locationDetails || undefined}
+                aria-label={locationDetails ? `${c.name}. ${locationDetails.replace("\n", ". ")}` : c.name}
               >
                 <div className="co-aoi-item-check">
                   <i className={`bi ${isSelected ? "bi-check-circle-fill" : "bi-circle"}`} />

@@ -676,6 +676,8 @@ export default function ImageryModule() {
   const gpuEnhancement = useGpuSuperResolution(visualEnhancement);
   const [stacCatalogUrl, setStacCatalogUrl] = useState("");
   const [stacCollections, setStacCollections] = useState("");
+  const [planetProduct, setPlanetProduct] = useState("all");
+  const [airbusConstellation, setAirbusConstellation] = useState("");
   const [cogAssetKey, setCogAssetKey] = useState("visual");
   const [cogBands, setCogBands] = useState("");
   const [cogRescale, setCogRescale] = useState("");
@@ -797,6 +799,17 @@ export default function ImageryModule() {
     [satellites],
   );
   const satelliteMeta = imageryProviders[satellite];
+  const configuredPlanetCollections = satelliteMeta?.key === "planet_commercial"
+    ? satelliteMeta.configured_stac_collections ?? []
+    : [];
+  const planetProductOptions = [
+    { value: "planetscope", label: "PlanetScope · PSScene", collections: ["PSScene"] },
+    { value: "skysat", label: "SkySat · SkySatScene / SkySatCollect", collections: ["SkySatScene", "SkySatCollect"] },
+  ].map((option) => ({
+    ...option,
+    collections: option.collections.filter((collection) => configuredPlanetCollections.includes(collection)),
+  })).filter((option) => option.collections.length > 0);
+  const selectedPlanetCollections = planetProductOptions.find((option) => option.value === planetProduct)?.collections.join(",");
   const isEsriWayback = satellite === ESRI_WAYBACK_PROVIDER_KEY;
   const isHimawari = satellite === HIMAWARI_PROVIDER_KEY;
   const providerUi = getImageryUiCapabilities(satelliteMeta);
@@ -843,6 +856,8 @@ export default function ImageryModule() {
   }, [aoi, satellite, renderOptionsKey, compareSceneAId, compareSceneBId, invalidateCompare]);
   useEffect(() => {
     ++tileRequestRef.current;
+    setPlanetProduct("all");
+    setAirbusConstellation("");
     setScenes([]);
     setSceneTilesById({});
     setTruncated(false);
@@ -1104,7 +1119,12 @@ export default function ImageryModule() {
               endDate: supportsSceneMetadata ? endDate : inclusiveEnd.toISOString().slice(0, 10),
               maxCloudCover: supportsCloudFilter && cloudFilterEnabled ? maxCloudCover : undefined,
               stacCatalogUrl: satelliteMeta?.source_kind === "generic_stac" ? stacCatalogUrl.trim() : undefined,
-              stacCollections: satelliteMeta?.source_kind === "generic_stac" ? stacCollections.trim() || undefined : undefined,
+              stacCollections: satelliteMeta?.source_kind === "generic_stac"
+                ? stacCollections.trim() || undefined
+                : satelliteMeta?.key === "planet_commercial" && planetProduct !== "all"
+                  ? selectedPlanetCollections
+                  : undefined,
+              constellation: satelliteMeta?.key === "airbus_oneatlas" ? airbusConstellation || undefined : undefined,
             });
           })();
       if (requestId !== searchRequestRef.current) return;
@@ -1263,7 +1283,7 @@ export default function ImageryModule() {
   const filteredScenes = useMemo(() => {
     const needle = sceneSearch.trim().toLowerCase();
     if (!needle) return sortedScenes;
-    return sortedScenes.filter((scene) => [scene.id, scene.title, scene.acquired_at, scene.platform, scene.producer, scene.default_asset_key].some((value) => String(value ?? "").toLowerCase().includes(needle)));
+    return sortedScenes.filter((scene) => [scene.id, scene.title, scene.collection, scene.acquired_at, scene.platform, scene.producer, scene.default_asset_key].some((value) => String(value ?? "").toLowerCase().includes(needle)));
   }, [sceneSearch, sortedScenes]);
   const scenePageCount = Math.max(1, Math.ceil(filteredScenes.length / scenePageSize));
   const visibleScenes = useMemo(() => filteredScenes.slice((scenePage - 1) * scenePageSize, scenePage * scenePageSize), [filteredScenes, scenePage, scenePageSize]);
@@ -1602,6 +1622,52 @@ export default function ImageryModule() {
               </>
             )}
           </div>
+
+          {satelliteMeta?.key === "planet_commercial" && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryPlanetProduct">
+                <i className="bi bi-collection" /> Produk Planet
+              </label>
+              <select
+                id="imageryPlanetProduct"
+                className="form-select form-select-sm"
+                value={planetProduct}
+                onChange={(event) => setPlanetProduct(event.target.value)}
+              >
+                <option value="all">Semua produk terkonfigurasi</option>
+                {planetProductOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <small className="text-muted d-block mt-1">
+                {planetProductOptions.length
+                  ? "SkySat dan PlanetScope hanya muncul jika koleksi serta entitlement-nya tersedia pada akun Planet."
+                  : "Untuk membuka filter PlanetScope/SkySat, admin perlu mengonfigurasi koleksi PSScene, SkySatScene, atau SkySatCollect dan akun Planet yang berhak."}
+              </small>
+            </div>
+          )}
+
+          {satelliteMeta?.key === "airbus_oneatlas" && (
+            <div className="mb-3">
+              <label className="form-label fw-bold" htmlFor="imageryAirbusConstellation">
+                <i className="bi bi-collection" /> Konstelasi Airbus
+              </label>
+              <select
+                id="imageryAirbusConstellation"
+                className="form-select form-select-sm"
+                value={airbusConstellation}
+                onChange={(event) => setAirbusConstellation(event.target.value)}
+              >
+                <option value="">Semua produk yang tersedia di akun</option>
+                <option value="PNEO">Pléiades Neo · sekitar 0,3 m</option>
+                <option value="PHR">Pléiades · sekitar 0,5 m</option>
+                <option value="SPOT">SPOT · sekitar 1,5 m</option>
+              </select>
+              <small className="text-muted d-block mt-1">
+                Hasil bergantung pada cakupan archive dan hak akses workspace OneAtlas; filter ini hanya mencari scene.
+              </small>
+            </div>
+          )}
 
           {satelliteMeta?.source_kind === "generic_stac" && (
             <div className="mb-3">
@@ -2112,7 +2178,7 @@ export default function ImageryModule() {
                 <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">{isEsriWayback ? "Tanggal rilis arsip" : "Akuisisi (UTC)"}</span><strong>{formatSceneDate(selectedScene.acquired_at, isEsriWayback)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Tutupan awan</span><strong>{selectedScene.cloud_cover_pct == null ? "Tidak tersedia / tidak relevan" : `${selectedScene.cloud_cover_pct}%`}</strong></div>
-                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.title || activeCogAsset.key}` : "Asset tile provider"}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{selectedScene.collection ?? satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.title || activeCogAsset.key}` : "Asset tile provider"}</span></div>
                 <div className="col-md-4"><span className="text-muted d-block">Attribution / lisensi</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? "Gunakan sesuai ketentuan sumber."}</span></div>
               </div>
               {isEsriWayback && <div className="alert alert-info py-1 px-2 mt-2 mb-0">Tanggal di atas adalah tanggal rilis Wayback (referensi visual), bukan jaminan tanggal akuisisi sensor.</div>}
