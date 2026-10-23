@@ -223,8 +223,8 @@ export default function CarbonCalibration() {
     <section className="calibration-admin">
       <div className="calibration-header calibration-hero">
         <div>
-          <div className="calibration-eyebrow">PT DAHANA · SUBANG · 2026</div>
-          <h2>{t("admin.calibration.title")} <span>Ruang kerja referensi lapangan</span></h2>
+          <div className="calibration-eyebrow">{t("admin.calibration.scope")}</div>
+          <h2>{t("admin.calibration.title")} <span>{t("admin.calibration.projectExamples")}</span></h2>
           <p>{t("admin.calibration.subtitle")}</p>
           <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Penyimpanan terkelola</span><span><i className="bi bi-diagram-3" /> Provenans yang dapat direproduksi</span><span><i className="bi bi-lock" /> Dataset terbatas</span></div>
         </div>

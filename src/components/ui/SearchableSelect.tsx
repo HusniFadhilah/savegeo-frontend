@@ -72,7 +72,9 @@ export default function SearchableSelect({
     const q = query.trim().toLowerCase();
     if (!q) return options;
     return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || o.description?.toLowerCase().includes(q),
+      (o) => o.label.toLowerCase().includes(q)
+        || o.description?.toLowerCase().includes(q)
+        || o.group?.toLowerCase().includes(q),
     );
   }, [options, query]);
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/features/carbon/api";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
@@ -105,6 +105,33 @@ function pickDefaultModel(models: CarbonModelListItem[], referenceDataset: strin
     if (gediL4aModel) return gediL4aModel;
   }
   return models[0];
+}
+
+type CarbonDatasetGroupKey = "agb" | "bgb" | "mixed_biomass" | "soc" | "litter" | "ecosystem" | "other";
+
+const CARBON_DATASET_GROUPS: Record<CarbonDatasetGroupKey, { label: string; order: number }> = {
+  agb: { label: "carbon.datasetGroup.agb", order: 0 },
+  bgb: { label: "carbon.datasetGroup.bgb", order: 1 },
+  mixed_biomass: { label: "carbon.datasetGroup.mixedBiomass", order: 2 },
+  soc: { label: "carbon.datasetGroup.soc", order: 3 },
+  litter: { label: "carbon.datasetGroup.litter", order: 4 },
+  ecosystem: { label: "carbon.datasetGroup.ecosystem", order: 5 },
+  other: { label: "carbon.datasetGroup.other", order: 6 },
+};
+
+function carbonDatasetGroup(dataset: CarbonReferenceDatasetOption): CarbonDatasetGroupKey {
+  const pool = `${dataset.targetPool ?? ""} ${dataset.group ?? ""}`.toLowerCase();
+  if (/litter|detritus|serasah/.test(pool)) return "litter";
+  if (/soil_organic_carbon|soil organic carbon|soil carbon|\bsoc\b/.test(pool)) return "soc";
+  if (/total_ecosystem_carbon|total ecosystem carbon/.test(pool)) return "ecosystem";
+  if (/aboveground_belowground|above and belowground|combined_biomass|combined biomass/.test(pool)) {
+    return "mixed_biomass";
+  }
+  if (/belowground_biomass|belowground biomass|root_biomass|root biomass|\bbgb\b/.test(pool)) return "bgb";
+  if (/aboveground_biomass|aboveground biomass|forest_woody_biomass|woody biomass|\bagb\b/.test(pool)) {
+    return "agb";
+  }
+  return "other";
 }
 
 type CompatibilityTone = "green" | "gray" | "orange";
@@ -277,6 +304,28 @@ export default function CarbonParamsPanel({
   }, [params.modelName]);
 
   const datasetMeta = datasets.find((d) => d.value === params.referenceDataset);
+  const datasetOptions = useMemo(() => datasets
+    .map((dataset, index) => {
+      const groupKey = carbonDatasetGroup(dataset);
+      const group = CARBON_DATASET_GROUPS[groupKey];
+      const description = dataset.requiresConfiguration && dataset.isConfigured === false
+        ? "Perlu konfigurasi"
+        : dataset.compatibleModelCount !== undefined
+          ? `${dataset.compatibleModelCount} model ${t("status.compatible")}`
+          : undefined;
+      return {
+        index,
+        groupOrder: group.order,
+        option: {
+          value: dataset.value,
+          label: dataset.deprecated ? `${dataset.label} · legacy` : dataset.label,
+          group: t(group.label),
+          description,
+        },
+      };
+    })
+    .sort((a, b) => a.groupOrder - b.groupOrder || a.index - b.index)
+    .map(({ option }) => option), [datasets, t]);
   const isGraniteHlsModel = selectedModel?.metadata_json?.provider === "ibm_granite_hls";
   const canReferenceOnly = Boolean(datasetMeta?.referenceOnlyCapable || (datasetMeta?.source === "fallback" && !datasetMeta.requiresConfiguration));
   const analysisMode = directLoadEnabled ? "global" : params.referenceOnly ? "reference_aoi" : "model";
@@ -369,18 +418,7 @@ export default function CarbonParamsPanel({
                 : {}),
             });
           }}
-          options={datasets.map((d) => ({
-            value: d.value,
-            label: d.deprecated ? `${d.label} · legacy` : d.label,
-            description:
-              d.deprecated && d.replacementKey
-                ? `Legacy — gunakan ${d.replacementKey}`
-                : d.requiresConfiguration && d.isConfigured === false
-                ? `${d.group} - perlu konfigurasi`
-                : d.compatibleModelCount !== undefined
-                  ? `${d.group} - ${d.compatibleModelCount} model compatible`
-                  : d.group,
-          }))}
+          options={datasetOptions}
           placeholder={t("carbon.params.referenceDatasetPlaceholder")}
           loading={datasetsLoading}
           disabled={datasetsLoading || datasets.length === 0}
