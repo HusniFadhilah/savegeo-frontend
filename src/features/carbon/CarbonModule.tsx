@@ -16,6 +16,7 @@ import CarbonParamsPanel from "./components/CarbonParamsPanel";
 import ResultsMapPanel from "./components/ResultsMapPanel";
 import StatsCards from "./components/StatsCards";
 import CarbonStatsPanel from "./components/CarbonStatsPanel";
+import CarbonPoolsSummary from "./components/CarbonPoolsSummary";
 import ExportPanel from "./components/ExportPanel";
 import VegetationParamsPanel from "@/features/vegetation/components/VegetationParamsPanel";
 import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
@@ -34,11 +35,13 @@ import {
   carbonDatasetYearOptions,
 } from "@/features/carbon/referenceDatasets";
 import { boundsToPayload } from "@/features/carbon/lib/geo";
+import { buildBasicCarbonPlan } from "@/features/carbon/lib/basicCarbonPlan";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type {
   AnalysisType,
   CarbonParams,
   CarbonModelListItem,
+  CarbonPoolResults,
   CarbonDeltaResponse,
   AnalysisProcessingTimes,
 } from "@/features/carbon/types";
@@ -110,6 +113,7 @@ export default function CarbonModule() {
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
   const [analysisType, setAnalysisType] = useState<AnalysisType>(initialType);
+  const [carbonUiMode, setCarbonUiMode] = useState<"basic" | "advanced">("basic");
   useEffect(() => {
     if (availableAnalysisTypes.length && !availableAnalysisTypes.includes(analysisType)) {
       setAnalysisType(availableAnalysisTypes[0]);
@@ -377,7 +381,86 @@ export default function CarbonModule() {
     return outcome;
   }
 
+  async function handleRunBasicCarbon(): Promise<UiCommandOutcome> {
+    if (!aoi) {
+      const error = t("carbon.err.selectAoi");
+      setRunError(error);
+      return { hasResult: false, error };
+    }
+    const aoiPayload: AoiPayload = aoi.feature
+      ? { geojson: aoi.feature }
+      : aoi.bounds
+        ? boundsToPayload(aoi.bounds)
+        : null!;
+    if (!aoiPayload) {
+      const error = t("carbon.err.invalidAoi");
+      setRunError(error);
+      return { hasResult: false, error };
+    }
+
+    setRunning(true);
+    setRunError(null);
+    setDeltaResult(null);
+    setVegTsResult(null);
+    setResults({});
+    showLoading(t("carbon.loading.runningTitle"), t("carbon.basic.preparing"));
+    const poolResults: CarbonPoolResults = {};
+    const errors: string[] = [];
+    const startedAt = Date.now();
+    try {
+      const plan = await buildBasicCarbonPlan(carbonParams.datasetYear);
+      for (const [index, target] of plan.entries()) {
+        const poolLabel = t(`carbon.basic.${target.key}`);
+        setLoadingProgress(15 + Math.round((index / plan.length) * 75), `${poolLabel} (${index + 1}/${plan.length})`);
+        const params: CarbonParams = {
+          ...carbonParams,
+          referenceDataset: target.dataset.value,
+          datasetYear: target.datasetYear,
+          modelName: target.model?.name ?? null,
+          referenceOnly: target.referenceOnly,
+          loadOnly: false,
+          clipMode: "clipped",
+        };
+        try {
+          poolResults[target.key] = await analyzeCarbon({
+            aoi: aoiPayload,
+            params,
+            selectedModel: target.model,
+            visMin,
+            visMax,
+            visPalette,
+          });
+        } catch (err) {
+          errors.push(`${poolLabel}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
+        }
+      }
+
+      const elapsed = ((Date.now() - startedAt) / 1000).toFixed(2);
+      setResults({ carbonPools: poolResults });
+      setProcessingTimes({ carbon: elapsed, total: elapsed });
+      setMapKey((key) => key + 1);
+      if (!Object.keys(poolResults).length) {
+        const error = errors.join(" ") || t("carbon.basic.noResults");
+        setRunError(error);
+        return { hasResult: false, error };
+      }
+      if (errors.length) setRunError(errors.join(" "));
+      return { hasResult: true, error: errors.join(" ") || null };
+    } catch (err) {
+      const error = err instanceof ApiError ? err.message : err instanceof Error ? err.message : t("carbon.basic.noResults");
+      setRunError(error);
+      setResults({});
+      return { hasResult: false, error };
+    } finally {
+      hideLoading();
+      setRunning(false);
+    }
+  }
+
   async function handleRunAnalysis(): Promise<UiCommandOutcome> {
+    if (analysisType === "carbon" && carbonUiMode === "basic") {
+      return handleRunBasicCarbon();
+    }
     if (deltaEnabled && analysisType === "carbon") {
       return handleRunDelta();
     }
@@ -525,6 +608,7 @@ export default function CarbonModule() {
       referenceOnly: carbonPartial.referenceOnly,
       loadOnly: carbonPartial.loadOnly,
       directGlobal: directLoadEnabled,
+      carbonUiMode,
       modelName: selectedModel?.name ?? null,
       startMonth: analysisType === "vegetation" ? vegParams.startMonth : analysisType === "landcover" ? lcParams.startMonth : carbonPartial.startMonth,
       endMonth: analysisType === "vegetation" ? vegParams.endMonth : analysisType === "landcover" ? lcParams.endMonth : carbonPartial.endMonth,
@@ -543,7 +627,7 @@ export default function CarbonModule() {
       error: runError || (deltaEnabled && analysisType === "carbon" ? deltaError : null) || (vegTsEnabled && analysisType === "vegetation" ? vegTsError : null),
       hasResult: analysisType === "vegetation" ? Boolean(vegTsEnabled ? vegTsResult : results.vegetation)
         : analysisType === "landcover" ? Boolean(results.landcover || (directLoadEnabled && results.direct?.length))
-        : analysisType === "carbon" ? Boolean(deltaEnabled ? deltaResult : results.carbon || (directLoadEnabled && results.direct?.length))
+        : analysisType === "carbon" ? Boolean(deltaEnabled ? deltaResult : results.carbon || (results.carbonPools && Object.keys(results.carbonPools).length) || (directLoadEnabled && results.direct?.length))
         : Object.keys(results).length > 0,
     }),
     execute: async ({ action, target, parameters }) => {
@@ -649,7 +733,7 @@ export default function CarbonModule() {
         throw new Error(`Target ${target} tidak didukung oleh modul karbon.`);
       }
     },
-  }), [analysisType, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, viewerFeatures, isViewerPrincipal, availableAnalysisTypes, changeAnalysisType, deltaRunning, vegTsRunning, deltaEnabled, deltaError, deltaResult, vegTsEnabled, vegTsError, vegTsResult]);
+  }), [analysisType, carbonUiMode, year, carbonPartial, selectedModel, vegParams, lcParams, aoi, running, runError, results, directLoadEnabled, yearMin, yearMax, viewerFeatures, isViewerPrincipal, availableAnalysisTypes, changeAnalysisType, deltaRunning, vegTsRunning, deltaEnabled, deltaError, deltaResult, vegTsEnabled, vegTsError, vegTsResult]);
 
   const reportContext: ReportContext | null = aoi
     ? {
@@ -749,7 +833,51 @@ export default function CarbonModule() {
             onChange={changeAnalysisType}
           />
 
-          {(analysisType === "carbon" || analysisType === "combined") && (
+          {analysisType === "carbon" && (
+            <div className="carbon-mode-switch mb-3" role="group" aria-label={t("carbon.params.title")}>
+              <button
+                type="button"
+                className={`btn btn-sm ${carbonUiMode === "basic" ? "btn-success" : "btn-outline-secondary"}`}
+                aria-pressed={carbonUiMode === "basic"}
+                onClick={() => {
+                  setCarbonUiMode("basic");
+                  setDeltaEnabled(false);
+                  setDirectLoadEnabled(false);
+                  patchCarbon({ referenceOnly: false, loadOnly: false });
+                }}
+              >
+                <i className="bi bi-stars me-1" aria-hidden="true" />{t("carbon.mode.basic")}
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${carbonUiMode === "advanced" ? "btn-success" : "btn-outline-secondary"}`}
+                aria-pressed={carbonUiMode === "advanced"}
+                onClick={() => setCarbonUiMode("advanced")}
+              >
+                <i className="bi bi-sliders me-1" aria-hidden="true" />{t("carbon.mode.advanced")}
+              </button>
+            </div>
+          )}
+
+          {analysisType === "carbon" && carbonUiMode === "basic" && (
+            <details className="carbon-basic-intro mb-3">
+              <summary className="carbon-basic-intro__summary">
+                <strong><i className="bi bi-lightning-charge me-1" aria-hidden="true" />{t("carbon.basic.title")}</strong>
+                <i className="bi bi-chevron-down carbon-basic-intro__chevron" aria-hidden="true" />
+              </summary>
+              <div className="carbon-basic-intro__content">
+                <p className="mb-2">{t("carbon.basic.description")}</p>
+                <div className="carbon-basic-pool-tags">
+                  <span><i className="bi bi-tree" aria-hidden="true" />{t("carbon.basic.agb")}</span>
+                  <span><i className="bi bi-bezier2" aria-hidden="true" />{t("carbon.basic.bgb")}</span>
+                  <span><i className="bi bi-layers" aria-hidden="true" />{t("carbon.basic.soc")}</span>
+                </div>
+                <small>{t("carbon.basic.sourceNote")}</small>
+              </div>
+            </details>
+          )}
+
+          {(analysisType === "combined" || (analysisType === "carbon" && carbonUiMode === "advanced")) && (
             <CarbonParamsPanel
               params={carbonParams}
               onParamsChange={patchCarbon}
@@ -766,7 +894,7 @@ export default function CarbonModule() {
             />
           )}
 
-          {analysisType === "carbon" && (
+          {analysisType === "carbon" && carbonUiMode === "advanced" && (
             <div className="form-check form-switch mb-2">
               <input
                 id="enableCarbonDelta"
@@ -782,7 +910,7 @@ export default function CarbonModule() {
             </div>
           )}
 
-          {deltaEnabled && analysisType === "carbon" ? (
+          {deltaEnabled && analysisType === "carbon" && carbonUiMode === "advanced" ? (
             <div className="mb-3">
               <label className="form-label">{t("carbon.sidebar.yearRange")}</label>
               <div className="d-flex gap-2 align-items-center mb-1">
@@ -835,9 +963,9 @@ export default function CarbonModule() {
               </div>
               {deltaError && <div className="alert alert-danger py-1 px-2 mt-2 small">{deltaError}</div>}
             </div>
-          ) : !(analysisType === "carbon" && (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel)) ? (
+          ) : !(analysisType === "carbon" && carbonUiMode === "advanced" && (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel)) ? (
             <div className="mb-3">
-              <label className="form-label">{t("carbon.sidebar.year")}</label>
+              <label className="form-label">{t(analysisType === "carbon" && carbonUiMode === "basic" ? "carbon.basic.agbYear" : "carbon.sidebar.year")}</label>
               <input
                 id="yearSlider"
                 type="range"
@@ -997,7 +1125,8 @@ export default function CarbonModule() {
               </>
             ) : (
               <>
-                <i className="bi bi-play-fill me-1" /> {t("carbon.sidebar.runAnalysis")}
+                <i className={`bi ${analysisType === "carbon" && carbonUiMode === "basic" ? "bi-lightning-charge-fill" : "bi-play-fill"} me-1`} />
+                {analysisType === "carbon" && carbonUiMode === "basic" ? t("carbon.basic.run") : t("carbon.sidebar.runAnalysis")}
               </>
             )}
           </button>
@@ -1068,6 +1197,7 @@ export default function CarbonModule() {
                 <StatsCards results={results} processingTimes={processingTimes} />
                 {results.vegetation && <VegStatsTable result={results.vegetation} />}
                 {results.landcover && <LandCoverResultTables result={results.landcover} />}
+                {results.carbonPools && <CarbonPoolsSummary results={results.carbonPools} />}
                 {results.carbon && <CarbonStatsPanel result={results.carbon} />}
               </div>
             </div>}

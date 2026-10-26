@@ -11,6 +11,7 @@ const SOURCE_ROOTS = [path.join(ROOT, "src"), path.resolve(ROOT, "..", "backend"
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".html", ".css", ".scss", ".vue", ".py", ".php", ".sql", ".md"]);
 const EXCLUDED_DIRS = new Set(["node_modules", ".git", "dist", "coverage", ".vite", ".cache", "__pycache__"]);
 const MOJIBAKE_PATTERNS = [
+  /Â/u,
   /Ã¢/u,
   /Ã‚/u,
   /Ãƒ/u,

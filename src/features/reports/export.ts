@@ -1,5 +1,5 @@
 import type { AoiState, AnalysisProcessingTimes } from "@/features/carbon/types";
-import type { CarbonResult } from "@/features/carbon/types";
+import type { CarbonPoolResults, CarbonResult } from "@/features/carbon/types";
 import type { VegetationResult } from "@/features/vegetation/types";
 import type { LandCoverResult } from "@/features/landcover/types";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
@@ -9,6 +9,7 @@ export interface AnalysisResultsBundle {
   vegetation?: VegetationResult | null;
   landcover?: LandCoverResult | null;
   carbon?: CarbonResult | null;
+  carbonPools?: CarbonPoolResults | null;
   direct?: DirectReferenceLayer[] | null;
 }
 
@@ -107,13 +108,16 @@ export function generateMarkdownReport(ctx: ReportContext) {
     }
   }
 
-  const carbon = ctx.results.carbon;
-  if (carbon) {
+  const carbonResults = ctx.results.carbonPools
+    ? Object.entries(ctx.results.carbonPools).map(([pool, result]) => [pool.toUpperCase(), result] as const)
+    : ctx.results.carbon ? [["Carbon Stock", ctx.results.carbon] as const] : [];
+  for (const [poolLabel, carbon] of carbonResults) {
+    if (!carbon) continue;
     const stats = carbon.carbon_estimated?.statistics || {};
     const ai = carbon.area_info || {};
     const mi = carbon.model_info || {};
     const unit = carbon.carbon_estimated.unit || "Mg C/ha";
-    report += `## Carbon Stock Analysis\n\n`;
+    report += `## Carbon Stock Analysis - ${poolLabel}\n\n`;
     report += `### Carbon Density Statistics\n`;
     report += `- Mean: ${stats.mean?.toFixed(2) ?? "N/A"} ${unit}\n`;
     report += `- Std Dev: ${stats.std_dev?.toFixed(2) ?? "N/A"} ${unit}\n`;

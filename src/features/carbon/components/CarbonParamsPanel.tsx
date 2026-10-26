@@ -4,7 +4,6 @@ import { listCarbonDatasets, listCarbonModels, getCarbonModelInfo } from "@/feat
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechnique, CloudMaskTechniqueInfo } from "@/features/vegetation/types";
 import {
-  DEFAULT_CARBON_REFERENCE_DATASET,
   FALLBACK_CARBON_REFERENCE_DATASETS,
   carbonDatasetYearOptions,
   availableCarbonReferenceDatasets,
@@ -30,15 +29,6 @@ interface Props {
   onDirectLoadChange: (enabled: boolean) => void;
 }
 
-function groupByAlgorithm(models: CarbonModelListItem[]) {
-  const grouped: Record<string, CarbonModelListItem[]> = {};
-  for (const m of models) {
-    const algo = m.algorithm || "Other";
-    (grouped[algo] ??= []).push(m);
-  }
-  return grouped;
-}
-
 function modelBadge(model: CarbonModelListItem, t: (key: string) => string): string {
   const meta = model.metadata_json;
   if (meta?.provider === "ibm_granite_hls") return ` [${t("carbon.params.compat.graniteHls")}]`;
@@ -55,13 +45,42 @@ function modelBadge(model: CarbonModelListItem, t: (key: string) => string): str
   return tag + (meta?.preliminary ? " [PRELIMINARY]" : "");
 }
 
-function modelScore(model: CarbonModelListItem): number | undefined {
-  return (
-    model.metrics?.cv_metrics?.r2_mean ??
-    model.metrics?.r2_mean ??
-    model.metadata_json?.cv_metrics?.r2_mean ??
-    (model.metadata_json?.spatial_cv_metrics as { r2_mean?: number } | undefined)?.r2_mean
-  );
+type ModelValidationKind = "spatial" | "cross_validation" | "holdout";
+
+interface ModelValidationScore {
+  kind: ModelValidationKind;
+  r2?: number;
+  rmse?: number;
+}
+
+function finiteMetric(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function modelValidationScore(model: CarbonModelListItem): ModelValidationScore | null {
+  const metadata = model.metadata_json;
+  const spatialCv = metadata?.spatial_cv_metrics;
+  const cv = model.metrics?.cv_metrics ?? metadata?.cv_metrics;
+  const validation = model.metrics?.validation_metrics ?? metadata?.validation_metrics;
+  const validationType = metadata?.validation_type ?? "";
+
+  if (spatialCv && (finiteMetric(spatialCv.r2_mean) !== undefined || finiteMetric(spatialCv.rmse_mean) !== undefined)) {
+    return { kind: "spatial", r2: finiteMetric(spatialCv.r2_mean), rmse: finiteMetric(spatialCv.rmse_mean) };
+  }
+  if (cv && (finiteMetric(cv.r2_mean) !== undefined || finiteMetric(cv.rmse_mean) !== undefined)) {
+    return { kind: "cross_validation", r2: finiteMetric(cv.r2_mean), rmse: finiteMetric(cv.rmse_mean) };
+  }
+  if (
+    validation && /holdout|validation|independent/i.test(validationType)
+    && (finiteMetric(validation.r2) !== undefined || finiteMetric(validation.rmse) !== undefined)
+  ) {
+    return { kind: "holdout", r2: finiteMetric(validation.r2), rmse: finiteMetric(validation.rmse) };
+  }
+  return null;
+}
+
+function validationKindPriority(kind: ModelValidationKind): number {
+  return kind === "spatial" ? 0 : kind === "holdout" ? 1 : 2;
 }
 
 function modelDate(model: CarbonModelListItem): string | undefined {
@@ -81,30 +100,62 @@ function formatDateTime(iso: string | undefined, locale: string): string {
 }
 
 function compareModels(a: CarbonModelListItem, b: CarbonModelListItem): number {
+  const validationA = modelValidationScore(a);
+  const validationB = modelValidationScore(b);
+  if (validationA && !validationB) return -1;
+  if (!validationA && validationB) return 1;
+  if (validationA && validationB) {
+    const kindRank = validationKindPriority(validationA.kind) - validationKindPriority(validationB.kind);
+    if (kindRank) return kindRank;
+    const r2A = validationA.r2 ?? Number.NEGATIVE_INFINITY;
+    const r2B = validationB.r2 ?? Number.NEGATIVE_INFINITY;
+    if (r2A !== r2B) return r2B - r2A;
+    const rmseA = validationA.rmse ?? Number.POSITIVE_INFINITY;
+    const rmseB = validationB.rmse ?? Number.POSITIVE_INFINITY;
+    if (rmseA !== rmseB) return rmseA - rmseB;
+  }
   const geeRank = Number(Boolean(b.metadata_json?.gee_deployable)) - Number(Boolean(a.metadata_json?.gee_deployable));
   if (geeRank) return geeRank;
   const preliminaryRank = Number(Boolean(a.metadata_json?.preliminary)) - Number(Boolean(b.metadata_json?.preliminary));
   if (preliminaryRank) return preliminaryRank;
-  const scoreA = modelScore(a) ?? Number.NEGATIVE_INFINITY;
-  const scoreB = modelScore(b) ?? Number.NEGATIVE_INFINITY;
-  if (scoreA !== scoreB) return scoreB - scoreA;
   const dateA = Date.parse(modelDate(a) ?? "") || 0;
   const dateB = Date.parse(modelDate(b) ?? "") || 0;
   if (dateA !== dateB) return dateB - dateA;
   return a.name.localeCompare(b.name);
 }
 
+const MAX_RECOMMENDED_MODELS = 3;
+
+function getRecommendedModels(models: CarbonModelListItem[]): CarbonModelListItem[] {
+  const groups = new Map<ModelValidationKind, CarbonModelListItem[]>();
+  for (const model of models) {
+    const validation = modelValidationScore(model);
+    if (!validation) continue;
+    const group = groups.get(validation.kind) ?? [];
+    group.push(model);
+    groups.set(validation.kind, group);
+  }
+  const bestComparableGroup = [...groups.entries()].sort(([kindA, modelsA], [kindB, modelsB]) =>
+    modelsB.length - modelsA.length || validationKindPriority(kindA) - validationKindPriority(kindB),
+  )[0]?.[1];
+  return (bestComparableGroup ?? []).sort(compareModels).slice(0, MAX_RECOMMENDED_MODELS);
+}
+
 function pickDefaultModel(models: CarbonModelListItem[], referenceDataset: string): CarbonModelListItem | null {
   if (!models.length) return null;
   if (models.every((model) => model.metadata_json?.provider === "ibm_granite_hls")) return null;
+  const recommended = getRecommendedModels(models);
   if (referenceDataset === "ORNL_BGB") {
-    return models.find((model) => model.metadata_json?.training_mode === "reference_raster") ?? models[0];
+    return recommended.find((model) => model.metadata_json?.training_mode === "reference_raster")
+      ?? recommended[0]
+      ?? models.find((model) => model.metadata_json?.training_mode === "reference_raster")
+      ?? models[0];
   }
-  if (referenceDataset === DEFAULT_CARBON_REFERENCE_DATASET) {
-    const gediL4aModel = models.find((model) => /gedi[._-]?l4a/i.test(model.name));
-    if (gediL4aModel) return gediL4aModel;
-  }
-  return models[0];
+  return recommended[0] ?? models[0];
+}
+
+function modelValidationLabel(kind: ModelValidationKind, t: (key: string) => string): string {
+  return t(`carbon.params.validation.${kind}`);
 }
 
 type CarbonDatasetGroupKey = "agb" | "bgb" | "mixed_biomass" | "soc" | "litter" | "ecosystem" | "other";
@@ -175,6 +226,7 @@ export default function CarbonParamsPanel({
   const locale = language === "id" ? "id-ID" : "en-US";
   const [models, setModels] = useState<CarbonModelListItem[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [showAllModels, setShowAllModels] = useState(false);
   const [modelInfo, setModelInfo] = useState<CarbonModelInfo | null>(null);
   const [showModelInfo, setShowModelInfo] = useState(false);
   const [datasets, setDatasets] = useState<CarbonReferenceDatasetOption[]>([]);
@@ -250,6 +302,7 @@ export default function CarbonParamsPanel({
 
   useEffect(() => {
     let cancelled = false;
+    setShowAllModels(false);
     setModelsLoading(true);
     listCarbonModels(params.referenceDataset)
       .then((list) => {
@@ -329,7 +382,9 @@ export default function CarbonParamsPanel({
   const isGraniteHlsModel = selectedModel?.metadata_json?.provider === "ibm_granite_hls";
   const canReferenceOnly = Boolean(datasetMeta?.referenceOnlyCapable || (datasetMeta?.source === "fallback" && !datasetMeta.requiresConfiguration));
   const analysisMode = directLoadEnabled ? "global" : params.referenceOnly ? "reference_aoi" : "model";
-  const grouped = groupByAlgorithm(models);
+  const recommendedModels = useMemo(() => getRecommendedModels(models), [models]);
+  const showingAllModels = showAllModels || recommendedModels.length === 0;
+  const visibleModels = showingAllModels ? models : recommendedModels;
   const geeCount = models.filter((m) => m.metadata_json?.gee_deployable).length;
 
   const cv = modelInfo?.cv_metrics || modelInfo?.metrics?.cv_metrics;
@@ -473,21 +528,24 @@ export default function CarbonParamsPanel({
             onParamsChange({ modelName: name, referenceOnly: false, loadOnly: false });
             onModelSelect(models.find((m) => m.name === name) ?? null);
           }}
-          options={Object.entries(grouped).flatMap(([algo, list]) =>
-            list.map((m) => {
-              const score = modelScore(m);
-              const date = formatDate(modelDate(m), locale);
-              const descParts = [date, score !== undefined ? `R²: ${score.toFixed(3)}` : null].filter(
-                Boolean,
-              );
-              return {
-                value: m.name,
-                label: `${m.display_name || m.name}${modelBadge(m, t)}`,
-                description: descParts.join(" · "),
-                group: algo.toUpperCase(),
-              };
-            }),
-          )}
+          options={visibleModels.map((m) => {
+            const validation = modelValidationScore(m);
+            const date = formatDate(modelDate(m), locale);
+            const descParts = [
+              date,
+              validation ? modelValidationLabel(validation.kind, t) : t("carbon.params.modelNoValidationScore"),
+              validation?.r2 !== undefined ? `R²: ${validation.r2.toFixed(3)}` : null,
+              validation?.rmse !== undefined ? `RMSE: ${validation.rmse.toFixed(2)}` : null,
+            ].filter(Boolean);
+            return {
+              value: m.name,
+              label: `${m.display_name || m.name}${modelBadge(m, t)}`,
+              description: descParts.join(" · "),
+              group: validation
+                ? (showingAllModels ? t("carbon.params.modelValidatedGroup") : t("carbon.params.modelBestGroup"))
+                : t("carbon.params.modelUnvalidatedGroup"),
+            };
+          })}
           placeholder={t("carbon.params.modelPlaceholder")}
           loading={modelsLoading}
           disabled={modelsLoading}
@@ -505,7 +563,7 @@ export default function CarbonParamsPanel({
           }}
         >
           <option value="">{t("carbon.params.modelPlaceholder")}</option>
-          {models.map((m) => (
+          {visibleModels.map((m) => (
             <option key={m.name} value={m.name}>
               {m.name}
             </option>
@@ -525,7 +583,37 @@ export default function CarbonParamsPanel({
             </>
           ) : null}
         </small>
-
+        {models.length > 0 && (
+          <small className="text-muted d-block mt-1">
+            {recommendedModels.length === 0
+              ? t("carbon.params.modelNoValidation")
+              : showAllModels
+                ? t("carbon.params.modelAllHint", { total: models.length })
+                : t("carbon.params.modelBestHint", { count: recommendedModels.length, total: models.length })}
+          </small>
+        )}
+        {recommendedModels.length > 0 && models.length > recommendedModels.length && (
+          <button
+            type="button"
+            className="btn btn-sm btn-link px-0 mt-1"
+            onClick={() => {
+              if (showAllModels) {
+                setShowAllModels(false);
+                if (selectedModel && !recommendedModels.some((model) => model.name === selectedModel.name)) {
+                  const recommended = recommendedModels[0];
+                  onModelSelect(recommended);
+                  onParamsChange({ modelName: recommended.name, referenceOnly: false, loadOnly: false });
+                }
+              } else {
+                setShowAllModels(true);
+              }
+            }}
+          >
+            {showAllModels
+              ? t("carbon.params.modelShowBest")
+              : t("carbon.params.modelShowAll", { count: models.length })}
+          </button>
+        )}
         {selectedModel && (
           <button
             type="button"

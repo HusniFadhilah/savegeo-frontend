@@ -45,6 +45,12 @@ export interface CarbonModelCvMetrics {
   mae_std?: number;
 }
 
+export interface CarbonModelValidationMetrics {
+  r2?: number;
+  rmse?: number;
+  mae?: number;
+}
+
 /** Per-run data-quality/uncertainty signal (P0), distinct from the model's own
  * training-time cv_metrics: this describes *this specific* AOI/date-range
  * composite, not the model in general. See backend carbon_service.analyze_carbon. */
@@ -71,6 +77,10 @@ export interface CarbonModelMeta {
   trained_at?: string;
   n_samples?: number;
   cv_metrics?: CarbonModelCvMetrics;
+  spatial_cv_metrics?: CarbonModelCvMetrics;
+  validation_metrics?: CarbonModelValidationMetrics;
+  validation_type?: string;
+  validation_samples?: number;
   feature_importance?: Record<string, number>;
   [key: string]: unknown;
 }
@@ -81,7 +91,11 @@ export interface CarbonModelListItem {
   description?: string;
   algorithm?: string;
   uploaded_at?: string;
-  metrics?: { cv_metrics?: CarbonModelCvMetrics; r2_mean?: number };
+  metrics?: {
+    cv_metrics?: CarbonModelCvMetrics;
+    validation_metrics?: CarbonModelValidationMetrics;
+    r2_mean?: number;
+  };
   metadata_json?: CarbonModelMeta;
 }
 
@@ -92,7 +106,16 @@ export interface CarbonModelInfo {
   trained_at?: string;
   n_samples?: number;
   cv_metrics?: CarbonModelCvMetrics;
-  metrics?: { cv_metrics?: CarbonModelCvMetrics; n_samples?: number; trained_at?: string };
+  spatial_cv_metrics?: CarbonModelCvMetrics;
+  validation_metrics?: CarbonModelValidationMetrics;
+  validation_type?: string;
+  validation_samples?: number;
+  metrics?: {
+    cv_metrics?: CarbonModelCvMetrics;
+    validation_metrics?: CarbonModelValidationMetrics;
+    n_samples?: number;
+    trained_at?: string;
+  };
   metadata_json?: CarbonModelMeta;
   feature_importance?: Record<string, number>;
 }
@@ -214,6 +237,10 @@ export interface CarbonResult {
   data_quality?: CarbonDataQuality;
   processing_time?: string;
 }
+
+export type CarbonPoolKey = "agb" | "bgb" | "soc";
+
+export type CarbonPoolResults = Partial<Record<CarbonPoolKey, CarbonResult>>;
 
 export interface AnalysisProcessingTimes {
   vegetation?: string;

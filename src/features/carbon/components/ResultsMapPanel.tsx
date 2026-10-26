@@ -12,6 +12,7 @@ import { registerMap } from "@/features/chatbot/mapActions";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { AoiState } from "@/features/carbon/types";
 import type { CarbonLayerResult } from "@/features/carbon/types";
+import type { CarbonPoolKey } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
 import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
@@ -109,6 +110,20 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     }
   }
 
+  const poolLabels: Record<CarbonPoolKey, string> = { agb: "AGB", bgb: "BGB", soc: "SOC" };
+  for (const pool of ["agb", "bgb", "soc"] as const) {
+    const result = results.carbonPools?.[pool];
+    const tileUrl = result?.carbon_estimated?.tile_url ?? result?.carbon_reference?.tile_url;
+    if (!result || !tileUrl) continue;
+    tabs.push({
+      key: `carbon_pool:${pool}`,
+      label: poolLabels[pool],
+      icon: pool === "soc" ? "bi-layers" : "bi-tree",
+      tileUrl,
+      resolutionM: result.model_info?.scale,
+    });
+  }
+
   for (const layer of results.direct ?? []) {
     const datasetYear = layer.effective_year ?? layer.year;
     tabs.push({
@@ -159,6 +174,30 @@ function buildLegend(
     });
     const unit = layer?.unit || "Mg/ha";
     return { title: `${activeKey === "carbon_uncertainty" ? "Standard error BGB referensi" : carbonQuantityLabel(layer)} (${unit})`, entries };
+  }
+
+  if (activeKey.startsWith("carbon_pool:")) {
+    const pool = activeKey.slice("carbon_pool:".length) as CarbonPoolKey;
+    const result = results.carbonPools?.[pool];
+    const layer = result?.carbon_estimated?.tile_url ? result.carbon_estimated : result?.carbon_reference;
+    if (!layer) return { title: "", entries: [] };
+    const palette = layer.vis_params?.palette?.length ? layer.vis_params.palette : visPalette;
+    const colors = buildLegendColors(palette.length ? palette : ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"], legendBins);
+    const rawMin = Number(layer.vis_params?.min);
+    const rawMax = Number(layer.vis_params?.max);
+    const statsMin = Number(layer.statistics?.min);
+    const statsMax = Number(layer.statistics?.max);
+    const min = Number.isFinite(rawMin) ? rawMin : Number.isFinite(statsMin) ? statsMin : visMin;
+    const maxValue = Number.isFinite(rawMax) ? rawMax : Number.isFinite(statsMax) ? statsMax : visMax;
+    const max = maxValue > min ? maxValue : min + 1;
+    const unit = layer.unit || "Mg C/ha";
+    const fmt = (value: number) => (Math.abs(value) >= 100 ? Math.round(value).toString() : Number(value.toFixed(2)).toString());
+    const entries = colors.map((color, index) => {
+      const from = min + (index * (max - min)) / colors.length;
+      const to = min + ((index + 1) * (max - min)) / colors.length;
+      return { color, label: index === colors.length - 1 ? `${fmt(from)} - ${fmt(max)}` : `${fmt(from)} - ${fmt(to)}` };
+    });
+    return { title: `${pool.toUpperCase()} (${unit})`, entries };
   }
 
   if (activeKey.startsWith("direct:")) {

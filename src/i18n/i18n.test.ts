@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { translations, interpolate } from "@/i18n/translations";
 import { formatDate, formatNumber, formatPercent, translate, useI18nStore } from "@/hooks/useI18nStore";
 
+const strayMojibake = /Â/u;
 const placeholders = (value: string) => [...value.matchAll(/\{\{?\s*([\w.-]+)\s*\}?\}|%[sd]/g)].map((match) => match[0]).sort();
 
 describe("SaveGeo i18n", () => {
@@ -23,7 +24,10 @@ describe("SaveGeo i18n", () => {
   it("does not contain known mojibake or replacement characters", () => {
     const bad = /Ã¢|Ã‚|Ãƒ|Ã°Å¸|Ã¯Â¿Â½|ï¿½|�|&nbsp;|&#x/iu;
     for (const language of ["id", "en"] as const) {
-      for (const [key, value] of Object.entries(translations[language])) expect(value, key).not.toMatch(bad);
+      for (const [key, value] of Object.entries(translations[language])) {
+        expect(value, key).not.toMatch(bad);
+        expect(value, key).not.toMatch(strayMojibake);
+      }
     }
   });
 

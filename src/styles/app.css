@@ -8868,6 +8868,86 @@ html[data-theme="dark"] .lulc-source-summary > span { color: #a3b3a8; }
 .carbon-info-label {
   margin-bottom: .5rem;
 }
+.carbon-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+  padding: .25rem;
+  border: 1px solid var(--bs-border-color, #dbe5dd);
+  border-radius: .75rem;
+  background: var(--bs-tertiary-bg, #f4f7f5);
+}
+.carbon-mode-switch .btn { border-radius: .55rem; }
+.carbon-basic-intro {
+  display: grid;
+  gap: .45rem;
+  padding: .8rem;
+  padding-bottom:.4rem;
+  border: 1px solid #cde8d3;
+  border-radius: .75rem;
+  color: #244b32;
+  background: linear-gradient(145deg, #f2fbf4, #fff);
+  font-size: .85rem;
+  line-height: 1.45;
+}
+.carbon-basic-intro__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  cursor: pointer;
+  list-style: none;
+}
+.carbon-basic-intro__summary::-webkit-details-marker { display: none; }
+.carbon-basic-intro__chevron { flex: 0 0 auto; transition: transform .18s ease; }
+.carbon-basic-intro[open] .carbon-basic-intro__chevron { transform: rotate(180deg); }
+.carbon-basic-intro__content { display: grid; gap: .45rem; }
+.carbon-basic-intro p { color: var(--bs-secondary-color, #64748b); }
+.carbon-basic-intro small { color: var(--bs-secondary-color, #64748b); }
+.carbon-basic-pool-tags { display: grid; gap: .35rem; }
+.carbon-basic-pool-tags span {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .32rem .45rem;
+  border: 1px solid #dcebe0;
+  border-radius: .5rem;
+  background: rgba(255, 255, 255, .72);
+}
+.carbon-basic-pool-tags i { color: #21844a; }
+.carbon-basic-results { margin-top: 1rem; }
+.carbon-basic-results__note {
+  margin: -.45rem 0 1rem;
+  color: var(--bs-secondary-color, #64748b);
+  font-size: .88rem;
+}
+.carbon-basic-pool-card {
+  height: 100%;
+  padding: 1rem;
+  border: 1px solid var(--bs-border-color, #dce5df);
+  border-radius: .85rem;
+  background: var(--bs-body-bg, #fff);
+  box-shadow: 0 4px 16px rgba(15, 35, 24, .05);
+}
+.carbon-basic-pool-card__heading { display: flex; align-items: center; gap: .65rem; }
+.carbon-basic-pool-card__heading small { display: block; margin-top: .15rem; }
+.carbon-basic-pool-card__icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  border-radius: .65rem;
+  color: #18703b;
+  background: #e7f6eb;
+}
+.carbon-basic-pool-card__metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: .85rem; }
+.carbon-basic-pool-card__metrics > div { display: grid; gap: .15rem; min-width: 0; }
+.carbon-basic-pool-card__metrics span { color: var(--bs-secondary-color, #64748b); font-size: .75rem; }
+.carbon-basic-pool-card__metrics strong { overflow-wrap: anywhere; font-size: .9rem; }
+.carbon-basic-pool-card__details { margin-top: .8rem; padding-top: .65rem; border-top: 1px solid var(--bs-border-color, #e2e8f0); }
+.carbon-basic-pool-card__details summary { color: #19723d; cursor: pointer; font-size: .82rem; font-weight: 600; }
+.carbon-basic-pool-card__details[open] summary { margin-bottom: .65rem; }
 .carbon-help-toggle-row {
   align-items: flex-start;
 }
@@ -8903,6 +8983,32 @@ html[data-theme="dark"] .inline-info-tip__popover,
   background: #17251d;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .42);
 }
+html[data-theme="dark"] .carbon-basic-intro,
+.dark-mode .carbon-basic-intro {
+  border-color: #365b43;
+  color: #d8f3df;
+  background: linear-gradient(145deg, #15271b, #18202a);
+}
+html[data-theme="dark"] .carbon-basic-pool-card,
+.dark-mode .carbon-basic-pool-card {
+  border-color: #3b4b43;
+  color: #e2e8f0;
+  background: #17211b;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+}
+html[data-theme="dark"] .carbon-basic-intro p,
+html[data-theme="dark"] .carbon-basic-intro small,
+.dark-mode .carbon-basic-intro p,
+.dark-mode .carbon-basic-intro small { color: #aab8b0; }
+html[data-theme="dark"] .carbon-basic-pool-tags span,
+.dark-mode .carbon-basic-pool-tags span {
+  border-color: #365141;
+  background: rgba(16, 30, 22, .7);
+}
+html[data-theme="dark"] .carbon-basic-pool-card__icon,
+.dark-mode .carbon-basic-pool-card__icon { color: #a8e6b9; background: #1f3c2a; }
+html[data-theme="dark"] .carbon-basic-pool-card__details summary,
+.dark-mode .carbon-basic-pool-card__details summary { color: #9fe0b0; }
 
 /* Dark surfaces for AOI pickers and disaster filters. */
 html[data-theme="dark"] .co-aoi-empty,
