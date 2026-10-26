@@ -130,6 +130,11 @@ function wildfireDateRange(
 ) {
   if (preset === "today") return { start: today, end: today };
   if (preset === "month") return { start: `${today.slice(0, 7)}-01`, end: today };
+  if (preset === "last-week" || preset === "last-month") {
+    const start = new Date(`${today}T00:00:00Z`);
+    start.setUTCDate(start.getUTCDate() - (preset === "last-week" ? 6 : 29));
+    return { start: isoDate(start), end: today };
+  }
   if (preset === "week") {
     const monday = new Date(`${today}T00:00:00Z`);
     monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
@@ -1538,7 +1543,9 @@ export function KarhutlaDetailPage() {
           >
             <option value="today">{t("wildfire.filters.periodToday")}</option>
             <option value="week">{t("wildfire.filters.periodWeek")}</option>
+            <option value="last-week">{t("wildfire.filters.periodLastWeek")}</option>
             <option value="month">{t("wildfire.filters.periodMonth")}</option>
+            <option value="last-month">{t("wildfire.filters.periodLastMonth")}</option>
             <option value="range">{t("wildfire.filters.periodRange")}</option>
           </select>
         </label>

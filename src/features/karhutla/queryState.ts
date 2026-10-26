@@ -1,7 +1,7 @@
 import type { WildfireConfidence } from "./types";
 
 export interface WildfireQueryState {
-  datePreset: "today" | "week" | "month" | "range";
+  datePreset: "today" | "week" | "last-week" | "month" | "last-month" | "range";
   from: string;
   to: string;
   sensor: string;
@@ -55,7 +55,14 @@ const PANELS = new Set<WildfireQueryState["panel"]>([
   "table",
   "methodology",
 ]);
-const DATE_PRESETS = new Set<WildfireQueryState["datePreset"]>(["today", "week", "month", "range"]);
+const DATE_PRESETS = new Set<WildfireQueryState["datePreset"]>([
+  "today",
+  "week",
+  "last-week",
+  "month",
+  "last-month",
+  "range",
+]);
 
 function validDate(value: string | null): string {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
