@@ -41,6 +41,10 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 
 function formatErrorValue(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value;
+  if (Array.isArray(value)) {
+    const messages = value.map((item) => formatErrorValue(item)).filter((item): item is string => Boolean(item));
+    return messages.length ? messages.join("; ") : null;
+  }
   if (!value || typeof value !== "object") return null;
 
   const record = value as Record<string, unknown>;
@@ -59,6 +63,21 @@ function formatErrorValue(value: unknown): string | null {
 }
 
 function formatApiErrorMessage(payload: unknown, status: number): string {
+  if (typeof payload === "string") {
+    const plainText = payload
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (plainText) return plainText.slice(0, 500);
+  }
   if (payload && typeof payload === "object") {
     const record = payload as Record<string, unknown>;
     for (const key of ["message", "error", "detail"]) {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
@@ -265,6 +266,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
         {[{ id: "lcFusionMapT0", tile: leftTile, title: leftTitle }, { id: "lcFusionMapT1", tile: rightTile, title: rightTitle }].map((panel) => (
           <div className="col-md-6" key={panel.id}>
             <MapView id={panel.id} showGlobeControl={false}>
+              <MapCursorPosition />
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}

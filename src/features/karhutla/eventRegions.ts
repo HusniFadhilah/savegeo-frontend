@@ -14,5 +14,6 @@ export function wildfireEventIsland(slug: string): string | undefined {
 }
 
 export function wildfireEventRegionLabel(slug: string): string {
+  if (slug === "all") return "Indonesia";
   return wildfireEventIsland(slug)?.replace(/_/g, " ").replace("Bali Nusa", "Bali & Nusa") ?? "wilayah event";
 }

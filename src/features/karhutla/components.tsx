@@ -496,6 +496,9 @@ export function KarhutlaIndexPage() {
           <p>{t("wildfire.index.description")}</p>
         </div>
         <div className="wildfire-header-tools">
+          <Link className="btn btn-primary" to="/pemetaan-bencana/karhutla/all">
+            <i className="bi bi-globe" aria-hidden="true" /> {t("wildfire.allIndonesia")}
+          </Link>
           <LanguageToggle />
           <div className="wildfire-last-sync">
             <i className="bi bi-arrow-repeat" /> {t("wildfire.updated")}{" "}
@@ -770,6 +773,8 @@ function HotspotMap({
         : query.provinceCode
           ? { level: "province" as const, code: query.provinceCode }
           : null;
+  const selectedRegionLevel = selectedRegion?.level;
+  const selectedRegionCode = selectedRegion?.code;
 
   useEffect(() => {
     if (!boundaryEnabled) {
@@ -779,16 +784,18 @@ function HotspotMap({
     }
     let cancelled = false;
     setBoundaryFailed(false);
-    const selectedBoundary = selectedRegion
-      ? fetchRegionGeometry(selectedRegion.level, selectedRegion.code).then((geometry) => {
+    const selectedBoundary = selectedRegionLevel && selectedRegionCode
+      ? fetchRegionGeometry(selectedRegionLevel, selectedRegionCode).then((geometry) => {
           const features = geometry.type === "FeatureCollection"
             ? geometry.features
             : geometry.type === "Feature"
               ? [geometry]
-              : [{ type: "Feature", geometry, properties: { code: selectedRegion.code } } as GeoJSON.Feature];
+              : [{ type: "Feature", geometry, properties: { code: selectedRegionCode } } as GeoJSON.Feature];
           return { type: "FeatureCollection", features } as GeoJSON.FeatureCollection;
         })
-      : (async () => {
+      : event.slug === "all"
+        ? apiClient.get<GeoJSON.GeoJSON>("/regions/global/IDN/ADM0/geometry")
+        : (async () => {
           let codes = provinceCodeKey.split(",").filter(Boolean);
           if (query.province) {
             const provinces = await fetchProvinces(
@@ -823,7 +830,7 @@ function HotspotMap({
     return () => {
       cancelled = true;
     };
-  }, [boundaryEnabled, provinceCodeKey, query.province, selectedRegion?.code, selectedRegion?.level]);
+  }, [boundaryEnabled, event.slug, provinceCodeKey, query.province, selectedRegionCode, selectedRegionLevel]);
 
   useEffect(() => {
     if (!viirsEnabled) {
@@ -1116,10 +1123,12 @@ function FitBoundaryToMap({
       map.fitBounds([[-85, -180], [85, 180]], { padding: [20, 20], maxZoom: 2 });
       return;
     }
-    if (!boundary) return;
     const bounds = fitEventBbox && focusKey.startsWith("event:")
       ? L.latLngBounds([[eventBbox[1], eventBbox[0]], [eventBbox[3], eventBbox[2]]])
-      : geoJSONBounds(boundary);
+      : boundary
+        ? geoJSONBounds(boundary)
+        : null;
+    if (!bounds) return;
     if (isFiniteMapBounds(bounds)) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
   }, [boundary, eventBbox, fitEventBbox, camsWorldEnabled, focusKey, map]);
   return null;
@@ -1229,7 +1238,7 @@ export function KarhutlaDetailPage() {
     fetchProvinces(wildfireEventIsland(event.slug))
       .then((options) => {
         if (cancelled) return;
-        const allowedCodes = new Set(event.province_codes ?? []);
+        const allowedCodes = new Set(eventProvinceCodesKey.split(",").filter(Boolean));
         setProvinceOptions(allowedCodes.size ? options.filter((option) => allowedCodes.has(option.code)) : options);
       })
       .catch(() => {
@@ -2040,6 +2049,8 @@ export function adaptLegacyEvent(event: Partial<WildfireEvent> | DisasterEventLi
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+  const fallbackEvent = FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === slug)
+    ?? FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === "kalimantan-2026")!;
   const hideBoundaryProvider = (value?: string | null) =>
     value?.replace(/\bsp3stab\b/gi, "batas administratif") ?? value;
   return {
@@ -2051,16 +2062,16 @@ export function adaptLegacyEvent(event: Partial<WildfireEvent> | DisasterEventLi
     short_title: raw.short_title ?? raw.name ?? slug,
     disaster_type: "forest_fire",
     status: raw.status === "published" ? "active" : (raw.status ?? "monitoring"),
-    start_date: raw.start_date ?? raw.event_date ?? FALLBACK_WILDFIRE_EVENTS[0].start_date,
+    start_date: raw.start_date ?? raw.event_date ?? fallbackEvent.start_date,
     monitoring_from:
-      raw.monitoring_from ?? raw.start_date ?? FALLBACK_WILDFIRE_EVENTS[0].monitoring_from,
+      raw.monitoring_from ?? raw.start_date ?? fallbackEvent.monitoring_from,
     provinces: raw.provinces ?? raw.province ?? [],
     province_codes: raw.province_codes ?? [],
     city_codes: raw.city_codes ?? [],
-    bbox: raw.bbox ?? FALLBACK_WILDFIRE_EVENTS[0].bbox,
-    center_lat: raw.center_lat ?? FALLBACK_WILDFIRE_EVENTS[0].center_lat,
-    center_lon: raw.center_lon ?? FALLBACK_WILDFIRE_EVENTS[0].center_lon,
-    default_zoom: raw.default_zoom ?? 5,
+    bbox: raw.bbox ?? fallbackEvent.bbox,
+    center_lat: raw.center_lat ?? fallbackEvent.center_lat,
+    center_lon: raw.center_lon ?? fallbackEvent.center_lon,
+    default_zoom: raw.default_zoom ?? fallbackEvent.default_zoom,
     source: hideBoundaryProvider(raw.source) ?? "NASA FIRMS",
     boundary_source: hideBoundaryProvider(raw.boundary_source),
     methodology: hideBoundaryProvider(raw.methodology) ?? "",

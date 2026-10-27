@@ -5,6 +5,7 @@ import { nativeZoomForResolution } from "@/config/mapZoom";
 import RasterResolutionNotice from "@/components/map/RasterResolutionNotice";
 import ParentFallbackTileLayer from "@/components/map/ParentFallbackTileLayer";
 import MapView from "@/components/map/MapView";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
@@ -2249,6 +2250,7 @@ export default function ImageryModule() {
                   />
                 ) : (
                   <MapView id="imagerySceneMap" maxZoom={SCENE_TILE_MAX_ZOOM} historicalDate={isHimawari ? undefined : selectedScene?.acquired_at?.slice(0, 10)} historicalAoi={isHimawari ? null : aoi}>
+                    <MapCursorPosition />
                     <ImageryMapViewportReporter onChange={setMapViewportAoi} />
                     <BasemapSwitcher extraOptions={mapLayerOptions} />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
@@ -2467,6 +2469,7 @@ export default function ImageryModule() {
                     bounds={sceneSearchRegion ? L.geoJSON(sceneSearchRegion as GeoJSON.Feature).getBounds() : undefined}
                     clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
                   >
+                    <MapCursorPosition />
                     {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <FitToSceneOrAoi
                       aoi={aoi ?? sceneSearchRegion}

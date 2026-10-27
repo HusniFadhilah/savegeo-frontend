@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import type { AoiFeature } from "@/types/map";
 import type { LcDataset, LcHotspot, LcHotspotResponse } from "../types";
@@ -221,6 +222,7 @@ export default function HotspotPanel({
       <div className="row g-3">
         <div className="col-lg-7">
           <MapView id="lcHotspotMap">
+            <MapCursorPosition />
             <BasemapSwitcher />
             {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} pane={RESULT_PANE} />}
             {hotspots.map((h, i) => (

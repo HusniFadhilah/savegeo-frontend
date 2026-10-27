@@ -3,6 +3,7 @@ import { GeoJSON, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { nativeZoomForResolution, HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import MapView from "@/components/map/MapView";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
@@ -252,6 +253,7 @@ export default function BeforeAfterMaps({
         <div className="row g-2">
           <div className="col-md-6">
             <MapView id="lcChangeBeforeMap" showGlobeControl historicalDate={endDateA ?? (yearA != null ? `${yearA}-12-31` : undefined)}>
+              <MapCursorPosition />
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
@@ -264,6 +266,7 @@ export default function BeforeAfterMaps({
           </div>
           <div className="col-md-6">
             <MapView id="lcChangeAfterMap" showGlobeControl={false} historicalDate={endDateB ?? (yearB != null ? `${yearB}-12-31` : undefined)}>
+              <MapCursorPosition />
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               <MapClickInspector onClick={handleMapClick} />
@@ -315,6 +318,7 @@ export default function BeforeAfterMaps({
             bounds={aoi ? L.geoJSON(aoi as GeoJSON.Feature).getBounds() : undefined}
             clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
           >
+            <MapCursorPosition />
             <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
             <MapClickInspector onClick={handleMapClick} />
             {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}

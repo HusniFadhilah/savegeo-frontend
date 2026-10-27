@@ -14,6 +14,8 @@ describe("wildfire event regional coverage", () => {
     expect(wildfireEventIsland("maluku-2026")).toBe("Maluku");
     expect(wildfireEventIsland("papua-2026")).toBe("Papua");
     expect(wildfireEventRegionLabel("bali-nusa-tenggara-2026")).toBe("Bali & Nusa Tenggara");
+    expect(wildfireEventIsland("all")).toBeUndefined();
+    expect(wildfireEventRegionLabel("all")).toBe("Indonesia");
   });
   it("includes ten Sumatra provinces and eastern Kepulauan Riau", () => {
     const event = FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === "sumatra-2026")!;
@@ -21,5 +23,11 @@ describe("wildfire event regional coverage", () => {
     expect(event.provinces).toHaveLength(10);
     expect(event.bbox[2]).toBeGreaterThan(109.1);
     expect(event.bbox[1]).toBeLessThan(-5.93);
+  });
+  it("provides a country-wide monitoring event", () => {
+    const event = FALLBACK_WILDFIRE_EVENTS.find((item) => item.slug === "all")!;
+    expect(event.title).toContain("Seluruh Indonesia");
+    expect(event.bbox).toEqual([94, -11.5, 142, 7]);
+    expect(event.province_codes).toHaveLength(38);
   });
 });

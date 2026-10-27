@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parseWildfireQuery, writeWildfireQuery } from "./queryState";
 
 describe("wildfire query state", () => {
+  it("defaults to the current week for a new wildfire page", () => {
+    expect(parseWildfireQuery("").datePreset).toBe("week");
+  });
+
   it("normalizes invalid map and filter parameters", () => {
     const state = parseWildfireQuery("?from=nope&sensor=unknown&confidence=high,garbage&lat=99&zoom=99");
     expect(state.from).toBe("");
