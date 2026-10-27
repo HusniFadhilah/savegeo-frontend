@@ -41,6 +41,7 @@ export async function runAnalysisJob<T>(
     | "landcover_transition"
     | "landcover_change_map"
     | "landcover_hotspots"
+    | "landcover_fusion"
     | "crop_monitoring",
   payload: unknown,
   options: RunJobOptions,
@@ -55,8 +56,10 @@ export async function runAnalysisJob<T>(
 
   useAnalysisJobStore.getState().update({ job_id: job.job_id, type, status: job.status });
 
+  let firstPoll = true;
   while (Date.now() - started < options.timeoutMs) {
-    await wait(pollIntervalMs);
+    if (!(firstPoll && job.status === "succeeded")) await wait(pollIntervalMs);
+    firstPoll = false;
     const status = await apiClient.get<JobStatusResponse<T>>(job.status_url, {
       timeoutMs: JOB_REQUEST_TIMEOUT_MS,
       auth: "app",

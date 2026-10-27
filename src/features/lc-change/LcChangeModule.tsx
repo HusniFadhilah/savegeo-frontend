@@ -21,11 +21,12 @@ import TimeSeriesChart from "./components/TimeSeriesChart";
 import SummaryPanel from "./components/SummaryPanel";
 import BeforeAfterMaps from "./components/BeforeAfterMaps";
 import HotspotPanel from "./components/HotspotPanel";
+import FusionPanel from "./components/FusionPanel";
 import { parseQuery, updateUrlFromState } from "./lib/lcChangeQueryState";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import { useChatContextStore } from "@/features/chatbot/chatContextStore";
 
-type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot";
+type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot" | "fusion";
 
 /** Soft warning threshold - see same constant in carbon/components/AoiPanel.tsx for rationale. */
 const AOI_TIMEOUT_RISK_KM2 = 500;
@@ -1081,6 +1082,14 @@ export default function LcChangeModule() {
                         <i className="fas fa-map-pin" /> {t("lc.tab.hotspot")}
                       </button>
                     </li>
+                    <li className="nav-item">
+                      <button
+                        className={`nav-link ${tab === "fusion" ? "active" : "text-white"}`}
+                        onClick={() => setTab("fusion")}
+                      >
+                        <i className="fas fa-layer-group" /> {t("lc.tab.fusion")}
+                      </button>
+                    </li>
                   </ul>
                 </div>
                 <div className="card-body pt-3">
@@ -1135,6 +1144,19 @@ export default function LcChangeModule() {
                       startDateB={dateRangeB?.start}
                       endDateB={dateRangeB?.end}
                       dwProbabilityThreshold={hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined}
+                    />
+                  )}
+                  {tab === "fusion" && (
+                    <FusionPanel
+                      aoi={aoi}
+                      yearA={yearA}
+                      yearB={yearB}
+                      startMonth={dateMode === "year" ? 1 : startMonth}
+                      endMonth={dateMode === "year" ? 12 : endMonth}
+                      startDateA={dateRangeA?.start}
+                      endDateA={dateRangeA?.end}
+                      startDateB={dateRangeB?.start}
+                      endDateB={dateRangeB?.end}
                     />
                   )}
                 </div>

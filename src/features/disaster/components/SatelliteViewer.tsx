@@ -9,6 +9,7 @@ import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import { HistoricalAoiClipController } from "@/components/map/HistoricalImageryControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { env } from "@/config/env";
+import { useBasemaps } from "@/hooks/useBasemaps";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { getImagerySceneTile, listImageryScenes } from "@/features/imagery/api";
 import {
@@ -54,7 +55,7 @@ const DISASTER_ANALYSIS_PANE_Z_INDEX = 370;
 const DISASTER_IMAGERY_PANE = "disaster-imagery-pane";
 const DISASTER_IMAGERY_PANE_Z_INDEX = 350;
 
-type DynamicImagerySource = "sentinel2" | "esri_wayback";
+type DynamicImagerySource = "sentinel2" | "esri_wayback" | "mapbox-satellite";
 
 interface DynamicImageryLayer {
   source: DynamicImagerySource;
@@ -62,6 +63,7 @@ interface DynamicImageryLayer {
   tileUrl: string;
   acquisitionDate: string;
   resolutionM: number | null;
+  maxNativeZoom?: number;
   attribution: string;
 }
 
@@ -213,6 +215,43 @@ function imageryLabel(img: SatelliteImageryRecord): string {
   return `${img.satellite} · ${img.acquisition_date}`;
 }
 
+function uniqueImageryRecords(images: SatelliteImageryRecord[]): SatelliteImageryRecord[] {
+  const unique = new Map<string, SatelliteImageryRecord>();
+  for (const image of images) {
+    const identity = image.scene_id
+      ? `${image.source_kind ?? "gee"}|${image.satellite}|${image.scene_id}`
+      : `${image.source_kind ?? "gee"}|${image.satellite}|${image.acquisition_date}|${image.sensor ?? ""}|${image.resolution_m ?? ""}|${image.cloud_coverage_pct ?? ""}|${image.preview_tile_url ?? ""}`;
+    const existing = unique.get(identity);
+    if (!existing || (!existing.is_primary && image.is_primary)) unique.set(identity, image);
+  }
+  return [...unique.values()];
+}
+
+function imageryOptionLabels(images: SatelliteImageryRecord[]): Map<number, string> {
+  const groups = new Map<string, SatelliteImageryRecord[]>();
+  for (const image of images) {
+    const label = imageryLabel(image);
+    groups.set(label, [...(groups.get(label) ?? []), image]);
+  }
+
+  const labels = new Map<number, string>();
+  for (const [label, group] of groups) {
+    group.forEach((image, index) => {
+      if (group.length === 1) {
+        labels.set(image.id, label);
+        return;
+      }
+      const sceneId = image.scene_id?.split(/[/:]/).filter(Boolean).at(-1);
+      const detail = [image.sensor?.trim(), sceneId ? `scene ${sceneId.slice(-10)}` : null]
+        .filter(Boolean)
+        .join(" · ");
+      const suffix = `${detail || "scene"} #${index + 1}`;
+      labels.set(image.id, `${label} · ${suffix}`);
+    });
+  }
+  return labels;
+}
+
 function viewerTileUrl(img: SatelliteImageryRecord | null): string | null {
   const url = img?.preview_tile_url ?? null;
   if (!url) return null;
@@ -244,10 +283,25 @@ interface DynamicImageryRequest {
   aoi: AoiFeature;
   range: { startDate: string; endDate: string };
   targetDate: string;
+  basemaps: ReturnType<typeof useBasemaps>["basemaps"];
 }
 
-async function loadDynamicImagery({ source, phase, aoi, range, targetDate }: DynamicImageryRequest): Promise<DynamicImageryLayer> {
+async function loadDynamicImagery({ source, phase, aoi, range, targetDate, basemaps }: DynamicImageryRequest): Promise<DynamicImageryLayer> {
   const phaseLabel = phase === "pre" ? "pra-bencana" : "pasca-bencana";
+  if (source === "mapbox-satellite") {
+    const basemap = basemaps.find(item => item.id === "mapbox-satellite");
+    if (!basemap) throw new Error("Mapbox Satellite belum tersedia. Periksa konfigurasi token Mapbox.");
+    return {
+      source,
+      label: "Mapbox Satellite · referensi terkini (bukan arsip historis)",
+      tileUrl: basemap.url,
+      acquisitionDate: "",
+      resolutionM: null,
+      maxNativeZoom: basemap.maxNativeZoom ?? basemap.maxZoom,
+      attribution: basemap.attribution,
+    };
+  }
+
   if (source === "sentinel2") {
     const scenes = await listImageryScenes({
       aoi: { geojson: aoi },
@@ -300,7 +354,7 @@ async function loadDynamicImagery({ source, phase, aoi, range, targetDate }: Dyn
 }
 
 function historicalDateForSource(source: DynamicImagerySource | null, date: string | null): string | undefined {
-  return source === "esri_wayback" ? undefined : date ?? undefined;
+  return source === "esri_wayback" || source === "mapbox-satellite" ? undefined : date ?? undefined;
 }
 
 function ViewerLayerPane() {
@@ -501,8 +555,8 @@ interface Props {
  * `lc-change/components/BeforeAfterMaps.tsx`'s split-view toggle pattern
  * (two independent `MapView`s) for Side-by-Side; Pre/Post-only render a
  * single `MapView` with one tile layer. Saved imagery remains selectable from
- * the event record, while AOI-backed Sentinel-2 and Esri Wayback sources are
- * available as dynamic alternatives.
+ * the event record, while AOI-backed Sentinel-2, Esri Wayback, and Mapbox
+ * Satellite sources are available as dynamic alternatives.
  */
 export default function SatelliteViewer({
   event,
@@ -556,12 +610,16 @@ export default function SatelliteViewer({
   const [preWaybackTarget, setPreWaybackTarget] = useState("");
   const [postWaybackTarget, setPostWaybackTarget] = useState("");
 
+  const { basemaps } = useBasemaps();
+  const mapboxSatelliteAvailable = basemaps.some(basemap => basemap.id === "mapbox-satellite");
   const aoiFeature = useMemo(() => aoiFeatureOf(aoi), [aoi]);
   const aoiBounds = useMemo(() => aoiBoundsOf(aoi), [aoi]);
   const preRange = useMemo(() => preDateRange(event), [event]);
   const postRange = useMemo(() => postDateRange(event), [event]);
-  const preSavedImagery = useMemo(() => imagery.pre.filter(image => beforeImageryForEvent(image, event)), [event, imagery.pre]);
-  const postSavedImagery = useMemo(() => imagery.post.filter(image => afterImageryForEvent(image, event)), [event, imagery.post]);
+  const preSavedImagery = useMemo(() => uniqueImageryRecords(imagery.pre.filter(image => beforeImageryForEvent(image, event))), [event, imagery.pre]);
+  const postSavedImagery = useMemo(() => uniqueImageryRecords(imagery.post.filter(image => afterImageryForEvent(image, event))), [event, imagery.post]);
+  const preImageryOptionLabels = useMemo(() => imageryOptionLabels(preSavedImagery), [preSavedImagery]);
+  const postImageryOptionLabels = useMemo(() => imageryOptionLabels(postSavedImagery), [postSavedImagery]);
   const effectivePreWaybackTarget = preWaybackTarget && preWaybackTarget >= ESRI_WAYBACK_START_DATE && preWaybackTarget <= preRange.endDate
     ? preWaybackTarget : preRange.endDate;
   const effectivePostWaybackTarget = postWaybackTarget && postWaybackTarget >= postRange.startDate && postWaybackTarget <= postRange.endDate
@@ -632,10 +690,22 @@ export default function SatelliteViewer({
   const analysisAttribution = comparison?.model_id === "dynamic_world_v1" ? "Dynamic World · Google Earth Engine" : comparisonEntry?.user_label ?? "";
   const displayPreAttribution = analysisVisible ? analysisAttribution : preAttribution;
   const displayPostAttribution = analysisVisible ? analysisAttribution : postAttribution;
-  const preLabel = `${analysisVisible ? "Segmentasi pre" : language === "id" ? "Sebelum" : "Before"}${displayPreDate ? ` · ${displayPreDate}` : ""}`;
-  const postLabel = `${activeOutput === "change" ? language === "id" ? "Perubahan" : "Change" : analysisVisible ? "Segmentasi post" : language === "id" ? "Sesudah" : "After"}${displayPostDate ? ` · ${displayPostDate}` : ""}`;
-  const preImageryLabel = `${language === "id" ? "Citra pre" : "Pre imagery"}${preDate ? ` · ${preDate}` : ""}`;
-  const postImageryLabel = `${language === "id" ? "Citra post" : "Post imagery"}${postDate ? ` · ${postDate}` : ""}`;
+  const preDynamicLabel = dynamicPre?.source === "mapbox-satellite" && language !== "id"
+    ? "Mapbox Satellite · current reference"
+    : dynamicPre?.label;
+  const postDynamicLabel = dynamicPost?.source === "mapbox-satellite" && language !== "id"
+    ? "Mapbox Satellite · current reference"
+    : dynamicPost?.label;
+  const preLabel = analysisVisible
+    ? `Segmentasi pre${displayPreDate ? ` · ${displayPreDate}` : ""}`
+    : preDynamicLabel ?? `${language === "id" ? "Sebelum" : "Before"}${displayPreDate ? ` · ${displayPreDate}` : ""}`;
+  const postLabel = activeOutput === "change"
+    ? `${language === "id" ? "Perubahan" : "Change"}${displayPostDate ? ` · ${displayPostDate}` : ""}`
+    : analysisVisible
+      ? `Segmentasi post${displayPostDate ? ` · ${displayPostDate}` : ""}`
+      : postDynamicLabel ?? `${language === "id" ? "Sesudah" : "After"}${displayPostDate ? ` · ${displayPostDate}` : ""}`;
+  const preImageryLabel = preDynamicLabel ?? `${language === "id" ? "Citra pre" : "Pre imagery"}${preDate ? ` · ${preDate}` : ""}`;
+  const postImageryLabel = postDynamicLabel ?? `${language === "id" ? "Citra post" : "Post imagery"}${postDate ? ` · ${postDate}` : ""}`;
   const tileErrorKey = `${comparisonEntry?.model_id}-${comparisonEntry?.runId}-${activeOutput}-${displayView}-${displayPreTile}-${displayPostTile}`;
   const referenceImagery = primaryImagery.post ?? primaryImagery.pre;
   const sharpenReferenceSatellite = enhanceSatelliteImagery && isLocalImagery(referenceImagery);
@@ -671,6 +741,7 @@ export default function SatelliteViewer({
       aoi: aoiFeature,
       range: preRange,
       targetDate,
+      basemaps,
     })
       .then((layer) => {
         if (!cancelled) setDynamicPre(layer);
@@ -685,7 +756,7 @@ export default function SatelliteViewer({
     return () => {
       cancelled = true;
     };
-  }, [aoiFeature, effectivePreWaybackTarget, preRange, preSource]);
+  }, [aoiFeature, basemaps, effectivePreWaybackTarget, preRange, preSource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -706,70 +777,27 @@ export default function SatelliteViewer({
     setDynamicPostLoading(true);
     setDynamicPostError(null);
 
-    const loadDynamicPost = async () => {
-      try {
-        if (postSource === "sentinel2") {
-          const scenes = await listImageryScenes({
-            aoi: { geojson: aoiFeature },
-            satellite: "sentinel2",
-            startDate: postRange.startDate,
-            endDate: postRange.endDate,
-            maxCloudCover: 60,
-          });
-          const scene = scenes.scenes
-            .slice()
-            .sort((left, right) => right.acquired_at.localeCompare(left.acquired_at))[0];
-          if (!scene) throw new Error("Scene Sentinel-2 pasca-bencana tidak ditemukan pada rentang ini.");
-
-          const tile = await getImagerySceneTile({
-            satellite: "sentinel2",
-            sceneId: scene.id,
-            aoi: { geojson: aoiFeature },
-            forceMosaic: true,
-            startDate: postRange.startDate,
-            endDate: postRange.endDate,
-            maxCloudCover: 60,
-            cloudMaskTechnique: "scl",
-          });
-          if (!tile.tile_url) throw new Error("Tile Sentinel-2 tidak tersedia.");
-          if (!cancelled) {
-            setDynamicPost({
-              source: postSource,
-              label: `Sentinel-2 · ${dateOnly(scene.acquired_at) ?? scene.acquired_at}`,
-              tileUrl: viewerUrl(tile.tile_url) ?? tile.tile_url,
-              acquisitionDate: dateOnly(scene.acquired_at) ?? scene.acquired_at,
-              resolutionM: tile.satellite?.resolution_m ?? scene.resolution_m ?? 10,
-              attribution: "Sentinel-2 · Google Earth Engine",
-            });
-          }
-        } else {
-          const archiveStart = postRange.startDate < ESRI_WAYBACK_START_DATE ? ESRI_WAYBACK_START_DATE : postRange.startDate;
-          const scenes = await listEsriWaybackScenes(archiveStart, postRange.endDate, 2000);
-          const scene = selectWaybackSceneForPhase(scenes as WaybackScene[], postRange, effectivePostWaybackTarget);
-          if (!scene) throw new Error("Snapshot Esri Wayback pasca-bencana tidak ditemukan.");
-          if (!cancelled) {
-            setDynamicPost({
-              source: postSource,
-              label: `Esri Wayback · ${scene.release_label}`,
-              tileUrl: scene.tile_url,
-              acquisitionDate: scene.release_label,
-              resolutionM: null,
-              attribution: `Esri World Imagery Wayback · Rilis ${scene.release_label}`,
-            });
-          }
-        }
-      } catch (error) {
+    void loadDynamicImagery({
+      source: postSource,
+      phase: "post",
+      aoi: aoiFeature,
+      range: postRange,
+      targetDate: effectivePostWaybackTarget,
+      basemaps,
+    })
+      .then(layer => {
+        if (!cancelled) setDynamicPost(layer);
+      })
+      .catch((error: unknown) => {
         if (!cancelled) setDynamicPostError(error instanceof Error ? error.message : "Gagal memuat citra pasca-bencana.");
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setDynamicPostLoading(false);
-      }
-    };
-
-    void loadDynamicPost();
+      });
     return () => {
       cancelled = true;
     };
-  }, [aoiFeature, effectivePostWaybackTarget, postRange, postSource]);
+  }, [aoiFeature, basemaps, effectivePostWaybackTarget, postRange, postSource]);
 
   const sharedLayers = <>
     <Pane name={DISASTER_ANALYSIS_PANE} style={{ zIndex: DISASTER_ANALYSIS_PANE_Z_INDEX, pointerEvents: "none" }} />
@@ -799,13 +827,16 @@ export default function SatelliteViewer({
   const swipeAfterAttribution = useSwipeImageryUnderlay ? postAttribution : displayPostAttribution;
   const swipeBeforeResolution = useSwipeImageryUnderlay ? preResolutionM : displayPreResolution;
   const swipeAfterResolution = useSwipeImageryUnderlay ? postResolutionM : displayPostResolution;
-  const swipeBeforeNativeZoom = useSwipeImageryUnderlay ? nativeZoomForResolution(preResolutionM) : displayPreNativeZoom;
-  const swipeAfterNativeZoom = useSwipeImageryUnderlay ? nativeZoomForResolution(postResolutionM) : displayPostNativeZoom;
+  const swipeBeforeNativeZoom = useSwipeImageryUnderlay ? dynamicPre?.maxNativeZoom ?? nativeZoomForResolution(preResolutionM) : displayPreNativeZoom;
+  const swipeAfterNativeZoom = useSwipeImageryUnderlay ? dynamicPost?.maxNativeZoom ?? nativeZoomForResolution(postResolutionM) : displayPostNativeZoom;
   const renderMap = (phase: "pre" | "post", globeControl: boolean) => {
     const tile = phase === "pre" ? displayPreTile : displayPostTile;
     const imageryTile = phase === "pre" ? preTile : postTile;
     const resolutionM = phase === "pre" ? displayPreResolution : displayPostResolution;
-    const nativeZoom = phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom;
+    const phaseMaxNativeZoom = phase === "pre" ? dynamicPre?.maxNativeZoom : dynamicPost?.maxNativeZoom;
+    const nativeZoom = analysisVisible
+      ? phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom
+      : phaseMaxNativeZoom ?? (phase === "pre" ? displayPreNativeZoom : displayPostNativeZoom);
     const imageryResolutionM = phase === "pre" ? preResolutionM : postResolutionM;
     const imageryNativeZoom = nativeZoomForResolution(imageryResolutionM);
     const image = phase === "pre" ? preImg : postImg;
@@ -923,7 +954,7 @@ export default function SatelliteViewer({
                 <optgroup label="Citra tersimpan">
                   {preSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
-                      {imageryLabel(img)}
+                      {preImageryOptionLabels.get(img.id) ?? imageryLabel(img)}
                       {img.is_primary ? " (utama)" : ""}
                     </option>
                   ))}
@@ -933,9 +964,11 @@ export default function SatelliteViewer({
                 <optgroup label="Sumber tambahan · dipotong sesuai AOI">
                   <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
                   <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+                  {mapboxSatelliteAvailable && <option value="source:mapbox-satellite">Mapbox Satellite · {language === "id" ? "referensi terkini" : "current reference"}</option>}
                 </optgroup>
               )}
             </select>
+            {preSource === "mapbox-satellite" && <div className="form-text">{language === "id" ? "Mosaik referensi terkini; tanggal historis tidak tersedia." : "Current reference mosaic; historical dates are unavailable."}</div>}
             {preSource === "esri_wayback" && <div className="mt-2">
               <label className="form-label small fw-semibold mb-1" htmlFor="disaster-pre-wayback-date">
                 {language === "id" ? "Tanggal snapshot pra-bencana" : "Pre-event snapshot date"}
@@ -975,7 +1008,7 @@ export default function SatelliteViewer({
                 <optgroup label="Citra tersimpan">
                   {postSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
-                      {imageryLabel(img)}
+                      {postImageryOptionLabels.get(img.id) ?? imageryLabel(img)}
                       {img.is_primary ? " (utama)" : ""}
                     </option>
                   ))}
@@ -985,9 +1018,11 @@ export default function SatelliteViewer({
                 <optgroup label="Sumber tambahan · dipotong sesuai AOI">
                   <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
                   <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+                  {mapboxSatelliteAvailable && <option value="source:mapbox-satellite">Mapbox Satellite · {language === "id" ? "referensi terkini" : "current reference"}</option>}
                 </optgroup>
               )}
             </select>
+            {postSource === "mapbox-satellite" && <div className="form-text">{language === "id" ? "Mosaik referensi terkini; tanggal historis tidak tersedia." : "Current reference mosaic; historical dates are unavailable."}</div>}
             {postSource === "esri_wayback" && <div className="mt-2">
               <label className="form-label small fw-semibold mb-1" htmlFor="disaster-post-wayback-date">
                 {language === "id" ? "Tanggal snapshot pasca-bencana" : "Post-event snapshot date"}

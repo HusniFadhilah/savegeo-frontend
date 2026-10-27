@@ -64,6 +64,7 @@ export interface CarbonDataQuality {
   coefficient_of_variation_pct: number | null;
   model_r2: number | null;
   model_rmse: number | null;
+  analysis_year_partial?: boolean;
 }
 
 export interface CarbonModelMeta {
@@ -212,6 +213,10 @@ export interface CarbonModelRunInfo {
    * `carbon_reference.year`, the (usually much older) vintage of the
    * biomass ground-truth dataset the model was trained against. */
   analysis_year?: number | string;
+  requested_analysis_year?: number | string;
+  analysis_year_partial?: boolean;
+  analysis_year_mode?: "annual_covariate_inference" | "static_reference";
+  reference_year?: number | string;
   depth_cm?: number[];
   source_period?: string;
   method_description?: string;

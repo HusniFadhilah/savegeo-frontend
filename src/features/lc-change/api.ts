@@ -5,6 +5,8 @@ import type {
   LcAnalyzeResponse,
   LcChangeMapParams,
   LcChangeMapResponse,
+  LcFusionParams,
+  LcFusionResponse,
   LcIdentifyResponse,
   LcHotspotParams,
   LcHotspotResponse,
@@ -71,4 +73,9 @@ export function identifyLandCoverPoint(params: {
 /** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */
 export function analyzeLandCoverHotspots(params: LcHotspotParams) {
   return runAnalysisJob<LcHotspotResponse>("landcover_hotspots", params, { timeoutMs: 900_000 });
+}
+
+/** POST /analyze/landcover-fusion - quality-gated optical/SAR fusion classification and change. */
+export function analyzeLandCoverFusion(params: LcFusionParams) {
+  return runAnalysisJob<LcFusionResponse>("landcover_fusion", params, { timeoutMs: 1_200_000 });
 }

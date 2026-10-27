@@ -232,3 +232,80 @@ export interface LcModuleState {
   yearData: Record<number, LcYearResult>;
   activeYears: number[];
 }
+
+export type LcFusionMode = "routing" | "weighted";
+export type LcFusionRoute = "no_data" | "optical_dominant" | "sar_dominant" | "joint_fusion";
+
+/** Body of POST /analyze/landcover-fusion (job type "landcover_fusion"). */
+export interface LcFusionParams {
+  aoi: LcAoiPayload;
+  from_year: number;
+  to_year: number;
+  start_month?: number;
+  end_month?: number;
+  from_start_date?: string;
+  from_end_date?: string;
+  to_start_date?: string;
+  to_end_date?: string;
+  fusion_mode: LcFusionMode;
+  /** Minimum per-pixel input quality (0-1) for a source to be used. */
+  q_min: number;
+  /** Minimum change score D = 1/2 sum_k |P_t0,k - P_t1,k| (0-1). */
+  tau_change: number;
+  confidence_threshold?: number;
+  scale?: number;
+}
+
+export interface LcFusionPeriod {
+  start_date: string;
+  end_date: string;
+  scene_counts: { sentinel2: number; sentinel1: number };
+  mean_q_o: number;
+  mean_q_s: number;
+  mean_confidence: number;
+  routes: { area_ha: Record<LcFusionRoute, number>; percentage: Record<LcFusionRoute, number> };
+}
+
+export interface LcFusionFlow {
+  from: string;
+  to: string;
+  from_class: number;
+  to_class: number;
+  area: number;
+  changed: boolean;
+  from_color: string;
+  to_color: string;
+}
+
+export interface LcFusionResponse {
+  method: string;
+  fusion_mode: LcFusionMode;
+  parameters: { q_min: number; tau_change: number; confidence_threshold: number | null; optical_reference_count: number; sar_reference_count: number; scale: number };
+  formulas: Record<string, string>;
+  periods: { t0: LcFusionPeriod; t1: LcFusionPeriod };
+  statistics: {
+    aoi_area_ha: number;
+    valid_area_ha: number;
+    no_data_area_ha: number;
+    changed_area_ha: number;
+    stable_area_ha: number;
+    suppressed_change_area_ha: number;
+    changed_percentage: number;
+    mean_change_score: number;
+  };
+  flows: LcFusionFlow[];
+  net_changes: { class: string; gain: number; loss: number; net: number }[];
+  tiles: Record<
+    "route_t0" | "route_t1" | "q_o_t0" | "q_s_t0" | "q_o_t1" | "q_s_t1" | "landcover_t0" | "landcover_t1" | "change_score" | "changed",
+    string
+  >;
+  legends: {
+    route: { value: number; label: string; color: string }[];
+    landcover: { value: number; label: string; color: string }[];
+    quality: { min: number; max: number; palette: string[] };
+  };
+  resolution: string;
+  comparison_crs: string;
+  training: { training_sample_count?: number; missing_training_classes?: number[]; quality_note?: string };
+  limitations: string[];
+}

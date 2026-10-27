@@ -33,8 +33,14 @@ export default function CarbonPoolsSummary({ results }: Props) {
           const total = result.area_info?.total_carbon_tons;
           const reference = result.carbon_reference?.name || result.carbon_reference?.full_name
             || result.model_info?.reference_dataset || "";
-          const period = result.model_info?.source_period || result.model_info?.analysis_year
+          const period = result.model_info?.analysis_year || result.model_info?.source_period
             || result.model_info?.reference_dataset_year;
+          const referenceYear = result.model_info?.reference_dataset_year
+            || result.model_info?.reference_year || result.carbon_reference?.year;
+          const currentYearPartial = Boolean(result.model_info?.analysis_year_partial);
+          const staticReferenceOnly = result.model_info?.analysis_year_mode === "static_reference"
+            && result.model_info?.requested_analysis_year != null
+            && String(result.model_info.requested_analysis_year) !== String(result.model_info.analysis_year);
 
           return (
             <div className="col-12 col-xl-4" key={key}>
@@ -43,7 +49,23 @@ export default function CarbonPoolsSummary({ results }: Props) {
                   <span className="carbon-basic-pool-card__icon"><i className={`bi ${icon}`} aria-hidden="true" /></span>
                   <div>
                     <h6 className="mb-0">{t(labelKey)}</h6>
-                    <small className="text-muted">{[reference, period].filter(Boolean).join(" · ")}</small>
+                    <small className="text-muted d-block">{reference}</small>
+                    {period && <small className="text-muted d-block">{language === "id" ? "Estimasi" : "Estimate"} {period}</small>}
+                    {referenceYear != null && (
+                      <small className="text-muted d-block">
+                        {language === "id" ? "Referensi" : "Reference"} {referenceYear}
+                      </small>
+                    )}
+                    {currentYearPartial && (
+                      <span className="badge text-bg-info mt-1">
+                        {language === "id" ? "Komposit tahun berjalan (data terbaru)" : "Current-year composite (latest available data)"}
+                      </span>
+                    )}
+                    {staticReferenceOnly && (
+                      <span className="badge text-bg-warning mt-1">
+                        {language === "id" ? `Referensi statis ${result.model_info?.analysis_year}` : `Static reference ${result.model_info?.analysis_year}`}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="carbon-basic-pool-card__metrics">

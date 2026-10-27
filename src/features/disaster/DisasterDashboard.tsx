@@ -436,7 +436,7 @@ export default function DisasterDashboard() {
             eventDescription.rest ? (
               <details className="disaster-detail-description-toggle">
                 <summary>
-                  <span>{eventDescription.first}</span>
+                  <span className="disaster-detail-description-toggle__text">{eventDescription.first}</span>{" "}
                   <span className="disaster-detail-description-toggle__label disaster-detail-description-toggle__more">
                     {language === "id" ? "Selengkapnya" : "Read more"}
                   </span>

@@ -409,9 +409,10 @@ export default function CarbonModule() {
     const startedAt = Date.now();
     try {
       const plan = await buildBasicCarbonPlan(carbonParams.datasetYear);
-      for (const [index, target] of plan.entries()) {
+      let completedPools = 0;
+      const outcomes = await Promise.all(plan.map(async (target, index) => {
         const poolLabel = t(`carbon.basic.${target.key}`);
-        setLoadingProgress(15 + Math.round((index / plan.length) * 75), `${poolLabel} (${index + 1}/${plan.length})`);
+        setLoadingProgress(15 + Math.round((index / plan.length) * 25), `${poolLabel} (${index + 1}/${plan.length})`);
         const params: CarbonParams = {
           ...carbonParams,
           referenceDataset: target.dataset.value,
@@ -422,7 +423,7 @@ export default function CarbonModule() {
           clipMode: "clipped",
         };
         try {
-          poolResults[target.key] = await analyzeCarbon({
+          const result = await analyzeCarbon({
             aoi: aoiPayload,
             params,
             selectedModel: target.model,
@@ -430,9 +431,17 @@ export default function CarbonModule() {
             visMax,
             visPalette,
           });
+          return { key: target.key, result };
         } catch (err) {
           errors.push(`${poolLabel}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
+          return null;
+        } finally {
+          completedPools += 1;
+          setLoadingProgress(40 + Math.round((completedPools / plan.length) * 50), `${poolLabel} (${completedPools}/${plan.length})`);
         }
+      }));
+      for (const outcome of outcomes) {
+        if (outcome) poolResults[outcome.key] = outcome.result;
       }
 
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(2);

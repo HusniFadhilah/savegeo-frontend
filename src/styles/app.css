@@ -9487,22 +9487,24 @@ html[data-theme="dark"] .cs-status-summary,
   line-height: 1.55;
 }
 .disaster-detail-description-toggle > summary {
-  display: flex;
-  align-items: flex-start;
-  gap: .5rem;
+  position: relative;
+  display: block;
+  padding-left: 1.1rem;
   cursor: pointer;
   list-style: none;
 }
 .disaster-detail-description-toggle > summary::-webkit-details-marker { display: none; }
 .disaster-detail-description-toggle > summary::before {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 0;
+  left: 0;
   color: #268349;
   content: "▸";
 }
 .disaster-detail-description-toggle[open] > summary::before { content: "▾"; }
 .disaster-detail-description-toggle__label {
-  flex: 0 0 auto;
-  margin-left: auto;
+  display: inline-block;
+  margin-left: .65rem;
   color: #18723e;
   font-size: .82rem;
   font-weight: 650;

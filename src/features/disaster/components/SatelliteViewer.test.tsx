@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import L from "leaflet";
 import SatelliteViewer from "./SatelliteViewer";
@@ -6,11 +6,19 @@ import type { SegmentationResult } from "./SegmentationComparison";
 import type { DisasterAnalysisEntry, SatelliteImageryRecord } from "../types";
 
 const mountedMaps = vi.hoisted(() => new Set<import("leaflet").Map>());
+const testBasemaps = vi.hoisted(() => [{ id: "mapbox-satellite", name: "Mapbox Satellite", url: "https://tiles.mapbox.test/{z}/{x}/{y}.jpg",
+  attribution: "Mapbox", maxZoom: 22, maxNativeZoom: 22, isDefault: false, order: 1 }]);
 vi.mock("@/hooks/useI18nStore", () => ({
   useI18nStore: (selector?: (state: unknown) => unknown) => {
     const state = { language: "id", t: (key: string) => key };
     return selector ? selector(state) : state;
   },
+}));
+vi.mock("@/hooks/useBasemaps", () => ({
+  useBasemaps: () => ({
+    basemaps: testBasemaps,
+    loading: false,
+  }),
 }));
 vi.mock("react-leaflet", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-leaflet")>();
@@ -126,6 +134,27 @@ describe("Shared disaster imagery and segmentation viewer", () => {
     expect(screen.getByTestId("swipe").dataset.overlayOpacity).toBe("0.7");
     fireEvent.click(screen.getByRole("button", { name: "Citra satelit" }));
     expect(screen.getByTestId("swipe").dataset.opacity).toBe("0.4");
+  });
+
+  it("offers Mapbox imagery for both phases and distinguishes duplicate-date scenes", async () => {
+    const firstScene = { ...image(4, "pre", "2026-06-30"), scene_id: "sentinel-scene-a" };
+    const duplicate = { ...firstScene, id: 5 };
+    const sameDateScene = { ...image(6, "pre", "2026-06-30"), scene_id: "sentinel-scene-b" };
+    const aoi = { id: 1, event_id: 1, area_ha: 10, centroid: null, bbox: [122.1, -8.7, 122.3, -8.5] as [number, number, number, number],
+      source: "test", created_at: null, geojson: { type: "Feature" as const, properties: {}, geometry: polygon } };
+    const { container } = render(<SatelliteViewer {...props} aoi={aoi}
+      imagery={{ pre: [pre, firstScene, duplicate, sameDateScene], post: [post] }} />);
+    const preSelect = screen.getByLabelText("Citra Sebelum (Pre)") as HTMLSelectElement;
+    const postSelect = screen.getByLabelText("Citra Sesudah (Post)") as HTMLSelectElement;
+    expect([...preSelect.options].some(option => option.value === "source:mapbox-satellite")).toBe(true);
+    expect([...postSelect.options].some(option => option.value === "source:mapbox-satellite")).toBe(true);
+    const sameDateOptions = [...preSelect.options].filter(option => option.textContent?.includes("2026-06-30"));
+    expect(sameDateOptions).toHaveLength(2);
+    expect(sameDateOptions[0].textContent).not.toBe(sameDateOptions[1].textContent);
+
+    fireEvent.change(preSelect, { target: { value: "source:mapbox-satellite" } });
+    await waitFor(() => expect(screen.getByTestId("swipe").dataset.pre).toBe("https://tiles.mapbox.test/{z}/{x}/{y}.jpg"));
+    expect(container.textContent).toContain("tanggal historis tidak tersedia");
   });
 
   it("uses one selected model and falls back to raw imagery when checked analyses are removed", () => {

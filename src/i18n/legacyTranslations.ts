@@ -578,6 +578,7 @@ const keys = [
   "lc.sliderHint",
   "lc.startYear",
   "lc.tab.changeMap",
+  "lc.tab.fusion",
   "lc.tab.hotspot",
   "lc.tab.matrix",
   "lc.tab.netChange",

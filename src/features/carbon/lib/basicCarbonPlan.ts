@@ -83,7 +83,12 @@ export async function buildBasicCarbonPlan(
     .filter((model) => model.metadata_json?.method !== "ipcc_root_to_shoot")
     .sort(compareRecommendedModels)[0] ?? null;
   const socDataset = datasets.find((dataset) => dataset.value === "SOILGRIDS_OCS_0_30CM");
-  const socModel = socModels.find((model) => model.name === "soc_stock_integration_0_30cm")
+  // Prefer an annual model for the selected analysis year. Soil stock
+  // integration is a static SoilGrids reference and cannot produce an annual
+  // estimate on its own.
+  const annualSocModels = socModels.filter((model) => model.metadata_json?.method !== "soil_stock_integration");
+  const socModel = [...annualSocModels].sort(compareRecommendedModels)[0]
+    ?? socModels.find((model) => model.name === "soc_stock_integration_0_30cm")
     ?? [...socModels].sort(compareRecommendedModels)[0]
     ?? null;
 
