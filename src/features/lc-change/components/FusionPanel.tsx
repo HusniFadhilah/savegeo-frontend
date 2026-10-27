@@ -31,25 +31,23 @@ type LayerKind = "route" | "quality_optical" | "quality_sar" | "landcover" | "ch
 
 const AOI_STYLE = { color: "#ef4444", weight: 2, fillOpacity: 0.04 };
 const ROUTE_ORDER: LcFusionRoute[] = ["joint_fusion", "optical_dominant", "sar_dominant", "no_data"];
-const ROUTE_LABEL: Record<LcFusionRoute, string> = {
-  joint_fusion: "Joint-fusion",
-  optical_dominant: "Optical-dominant",
-  sar_dominant: "SAR-dominant",
-  no_data: "No-data",
-};
 const ROUTE_COLOR: Record<LcFusionRoute, string> = {
   joint_fusion: "#059669",
   optical_dominant: "#f59e0b",
   sar_dominant: "#2563eb",
   no_data: "#94a3b8",
 };
-const LAYERS: { kind: LayerKind; label: string }[] = [
-  { kind: "route", label: "Jalur fusi" },
-  { kind: "quality_optical", label: "Kualitas optik Q_o" },
-  { kind: "quality_sar", label: "Kualitas SAR Q_s" },
-  { kind: "landcover", label: "Tutupan lahan hasil fusi" },
-  { kind: "change", label: "Skor perubahan D / perubahan valid" },
+const LAYERS: { kind: LayerKind; translationKey: string }[] = [
+  { kind: "route", translationKey: "lc.fusion.layer.route" },
+  { kind: "quality_optical", translationKey: "lc.fusion.layer.qualityOptical" },
+  { kind: "quality_sar", translationKey: "lc.fusion.layer.qualitySar" },
+  { kind: "landcover", translationKey: "lc.fusion.layer.landcover" },
+  { kind: "change", translationKey: "lc.fusion.layer.change" },
 ];
+
+function routeLabel(route: LcFusionRoute, t: (key: string) => string): string {
+  return t(`lc.fusion.route.${route}`);
+}
 
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   const map = useMap();
@@ -61,37 +59,37 @@ function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   return null;
 }
 
-function RouteBar({ period }: { period: LcFusionPeriod }) {
+function RouteBar({ period, t }: { period: LcFusionPeriod; t: (key: string) => string }) {
   return (
-    <div className="d-flex rounded overflow-hidden mb-1" style={{ height: 14 }} aria-label="Komposisi jalur fusi">
+    <div className="d-flex rounded overflow-hidden mb-1" style={{ height: 14 }} aria-label={t("lc.fusion.routesAria")}>
       {ROUTE_ORDER.map((route) => {
         const pct = period.routes.percentage[route] ?? 0;
         return pct > 0 ? (
-          <div key={route} title={`${ROUTE_LABEL[route]} ${pct.toFixed(1)}%`} style={{ width: `${pct}%`, background: ROUTE_COLOR[route] }} />
+          <div key={route} title={`${routeLabel(route, t)} ${pct.toFixed(1)}%`} style={{ width: `${pct}%`, background: ROUTE_COLOR[route] }} />
         ) : null;
       })}
     </div>
   );
 }
 
-function PeriodCard({ title, period, language }: { title: string; period: LcFusionPeriod; language: Language }) {
+function PeriodCard({ title, period, language, t }: { title: string; period: LcFusionPeriod; language: Language; t: (key: string) => string }) {
   return (
     <div className="border rounded p-2 h-100" style={{ fontSize: ".8rem" }}>
       <div className="fw-semibold mb-1">{title}</div>
       <div className="text-muted mb-2">
-        {period.start_date} s.d. {period.end_date} · S2 {period.scene_counts.sentinel2} scene · S1 {period.scene_counts.sentinel1} scene
+        {period.start_date} {t("lc.fusion.until")} {period.end_date} · S2 {period.scene_counts.sentinel2} {t("lc.fusion.scenes")} · S1 {period.scene_counts.sentinel1} {t("lc.fusion.scenes")}
       </div>
       <div className="d-flex gap-3 mb-2">
-        <span>Q_o rerata <strong>{period.mean_q_o.toFixed(2)}</strong></span>
-        <span>Q_s rerata <strong>{period.mean_q_s.toFixed(2)}</strong></span>
-        <span>Probabilitas kelas <strong>{period.mean_confidence.toFixed(2)}</strong></span>
+        <span>{t("lc.fusion.meanQo")} <strong>{period.mean_q_o.toFixed(2)}</strong></span>
+        <span>{t("lc.fusion.meanQs")} <strong>{period.mean_q_s.toFixed(2)}</strong></span>
+        <span>{t("lc.fusion.meanConfidence")} <strong>{period.mean_confidence.toFixed(2)}</strong></span>
       </div>
-      <RouteBar period={period} />
+      <RouteBar period={period} t={t} />
       <div className="d-flex flex-wrap gap-2">
         {ROUTE_ORDER.map((route) => (
           <span key={route}>
             <span className="d-inline-block me-1 rounded-1" style={{ width: 10, height: 10, background: ROUTE_COLOR[route] }} />
-            {ROUTE_LABEL[route]}: {formatNumber(period.routes.area_ha[route] ?? 0, language)} ha ({(period.routes.percentage[route] ?? 0).toFixed(1)}%)
+            {routeLabel(route, t)}: {formatNumber(period.routes.area_ha[route] ?? 0, language)} ha ({(period.routes.percentage[route] ?? 0).toFixed(1)}%)
           </span>
         ))}
       </div>
@@ -110,7 +108,7 @@ function PeriodCard({ title, period, language }: { title: string; period: LcFusi
  * the other tabs - it uses its own Sentinel-1/2 Random Forest classifiers.
  */
 export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB }: Props) {
-  const language = useI18nStore((state) => state.language);
+  const { language, t } = useI18nStore();
   const [mode, setMode] = useState<LcFusionMode>("routing");
   const [qMin, setQMin] = useState(0.5);
   const [tauChange, setTauChange] = useState(0.2);
@@ -154,7 +152,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
       setResult(response);
     } catch (err) {
       if (requested !== generation.current) return;
-      setError(err instanceof Error ? err.message : "Analisis fusi gagal.");
+      setError(err instanceof Error ? err.message : t("lc.fusion.error"));
       setResult(null);
     } finally {
       setRunning(false);
@@ -184,51 +182,49 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
 
   const nativeZoom = nativeZoomForResolution(Number.parseFloat(result?.resolution ?? "20"));
   const changedFlows = useMemo(() => (result?.flows ?? []).filter((flow) => flow.changed).slice(0, 12), [result]);
-  const leftTitle = layer === "change" ? "Skor perubahan D (0-1)" : `Periode dasar t0 (${yearA ?? ""})`;
-  const rightTitle = layer === "change" ? "Perubahan valid (kelas tujuan)" : `Periode pembanding t1 (${yearB ?? ""})`;
+  const leftTitle = layer === "change" ? t("lc.fusion.changeScore") : `${t("lc.fusion.periodBase")} (${yearA ?? ""})`;
+  const rightTitle = layer === "change" ? t("lc.fusion.validChange") : `${t("lc.fusion.periodCompare")} (${yearB ?? ""})`;
 
   return (
     <div>
       <div className="d-flex align-items-end gap-3 flex-wrap mb-3" style={{ fontSize: ".8rem" }}>
         <div>
-          <label className="form-label mb-1" htmlFor="fusion-mode">Mode fusi</label>
+          <label className="form-label mb-1" htmlFor="fusion-mode">{t("lc.fusion.mode")}</label>
           <select id="fusion-mode" className="form-select form-select-sm" value={mode} onChange={(e) => setMode(e.target.value as LcFusionMode)}>
-            <option value="routing">Routing (pilih jalur per piksel)</option>
-            <option value="weighted">Weighted (bobot Q_o/Q_s pada probabilitas)</option>
+            <option value="routing">{t("lc.fusion.routing")}</option>
+            <option value="weighted">{t("lc.fusion.weighted")}</option>
           </select>
         </div>
         <div>
-          <label className="form-label mb-1" htmlFor="fusion-qmin">Ambang kualitas q_min</label>
+          <label className="form-label mb-1" htmlFor="fusion-qmin">{t("lc.fusion.qMin")}</label>
           <input id="fusion-qmin" type="number" className="form-control form-control-sm" style={{ width: 90 }} min={0} max={1} step={0.05}
             value={qMin} onChange={(e) => setQMin(Math.min(1, Math.max(0, Number(e.target.value))))} />
         </div>
         <div>
-          <label className="form-label mb-1" htmlFor="fusion-tau">Ambang perubahan tau</label>
+          <label className="form-label mb-1" htmlFor="fusion-tau">{t("lc.fusion.tau")}</label>
           <input id="fusion-tau" type="number" className="form-control form-control-sm" style={{ width: 90 }} min={0} max={1} step={0.05}
             value={tauChange} onChange={(e) => setTauChange(Math.min(1, Math.max(0, Number(e.target.value))))} />
         </div>
         <div>
-          <label className="form-label mb-1" htmlFor="fusion-scale">Skala statistik</label>
+          <label className="form-label mb-1" htmlFor="fusion-scale">{t("lc.fusion.scale")}</label>
           <select id="fusion-scale" className="form-select form-select-sm" value={scale} onChange={(e) => setScale(Number(e.target.value))}>
-            <option value={10}>10 m · paling detail</option>
-            <option value={20}>20 m · seimbang</option>
-            <option value={30}>30 m · lebih cepat</option>
+            <option value={10}>10 m · {t("lc.fusion.scaleDetailed")}</option>
+            <option value={20}>20 m · {t("lc.fusion.scaleBalanced")}</option>
+            <option value={30}>30 m · {t("lc.fusion.scaleFast")}</option>
           </select>
         </div>
         <button className="btn btn-success btn-sm fw-bold" disabled={!canRun || running} onClick={run}>
-          {running ? <><i className="fas fa-spinner fa-spin" /> Memproses fusi…</> : <><i className="fas fa-layer-group" /> Jalankan Fusi</>}
+          {running ? <><i className="fas fa-spinner fa-spin" /> {t("lc.fusion.running")}</> : <><i className="fas fa-layer-group" /> {t("lc.fusion.run")}</>}
         </button>
       </div>
 
       <p className="text-muted mb-2" style={{ fontSize: ".78rem" }}>
-        Q_o = V_o × (1 − C_o) × A_o (Sentinel-2) · Q_s = V_s × S_s × A_s (Sentinel-1). Routing memakai classifier gabungan jika
-        keduanya ≥ q_min, optik atau SAR jika hanya satu, dan no-data jika keduanya di bawah q_min. Perubahan valid jika
-        D = ½ Σ |P<sub>t0,k</sub> − P<sub>t1,k</sub>| ≥ tau, kelas teratas berbeda, dan kedua periode lolos q_min. Proses pertama melatih classifier (bisa beberapa menit).
+        {t("lc.fusion.description")}
       </p>
 
       {!canRun && (
         <div className="alert alert-warning py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          Pilih AOI dan dua tahun berbeda (t0 lebih awal dari t1) terlebih dahulu.
+          {t("lc.fusion.needAoi")}
         </div>
       )}
       {error && <div role="alert" className="alert alert-danger py-2 mb-2" style={{ fontSize: ".82rem" }}>{error}</div>}
@@ -236,30 +232,30 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
       {result && (
         <>
           <div className="row g-2 mb-3">
-            <div className="col-md-6"><PeriodCard title="Periode dasar t0" period={result.periods.t0} language={language} /></div>
-            <div className="col-md-6"><PeriodCard title="Periode pembanding t1" period={result.periods.t1} language={language} /></div>
+            <div className="col-md-6"><PeriodCard title={t("lc.fusion.periodBase")} period={result.periods.t0} language={language} t={t} /></div>
+            <div className="col-md-6"><PeriodCard title={t("lc.fusion.periodCompare")} period={result.periods.t1} language={language} t={t} /></div>
           </div>
 
           <div className="d-flex flex-wrap gap-2 mb-3" style={{ fontSize: ".8rem" }}>
             {[
-              ["Area valid kedua periode", result.statistics.valid_area_ha],
-              ["No-data", result.statistics.no_data_area_ha],
-              ["Perubahan valid", result.statistics.changed_area_ha],
-              ["Stabil", result.statistics.stable_area_ha],
-              ["Beda kelas di bawah tau", result.statistics.suppressed_change_area_ha],
+              [t("lc.fusion.validArea"), result.statistics.valid_area_ha],
+              [t("lc.fusion.noData"), result.statistics.no_data_area_ha],
+              [t("lc.fusion.validChange"), result.statistics.changed_area_ha],
+              [t("lc.fusion.stable"), result.statistics.stable_area_ha],
+              [t("lc.fusion.belowTau"), result.statistics.suppressed_change_area_ha],
             ].map(([label, value]) => (
               <span key={label as string} className="badge bg-light text-dark border">
                 {label}: {formatNumber(value as number, language)} ha
               </span>
             ))}
-            <span className="badge bg-light text-dark border">Perubahan {result.statistics.changed_percentage.toFixed(2)}% dari area valid</span>
-            <span className="badge bg-light text-dark border">D rerata {result.statistics.mean_change_score.toFixed(3)}</span>
+            <span className="badge bg-light text-dark border">{t("lc.fusion.changePercent", { percent: result.statistics.changed_percentage.toFixed(2) })}</span>
+            <span className="badge bg-light text-dark border">{t("lc.fusion.meanD", { value: result.statistics.mean_change_score.toFixed(3) })}</span>
           </div>
 
           <div className="d-flex align-items-center gap-2 mb-2">
-            <label className="small mb-0" htmlFor="fusion-layer">Layer peta</label>
+            <label className="small mb-0" htmlFor="fusion-layer">{t("lc.fusion.mapLayer")}</label>
             <select id="fusion-layer" className="form-select form-select-sm" style={{ maxWidth: 320 }} value={layer} onChange={(e) => setLayer(e.target.value as LayerKind)}>
-              {LAYERS.map((item) => <option key={item.kind} value={item.kind}>{item.label}</option>)}
+              {LAYERS.map((item) => <option key={item.kind} value={item.kind}>{t(item.translationKey)}</option>)}
             </select>
           </div>
         </>
@@ -270,7 +266,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
           <div className="col-md-6" key={panel.id}>
             <MapView id={panel.id} showGlobeControl={false}>
               <BasemapSwitcher />
-              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
               {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
               {panel.tile && (
                 <TileLayer key={panel.tile} url={panel.tile} maxNativeZoom={nativeZoom} maxZoom={HIGH_DETAIL_MAX_ZOOM}
@@ -290,10 +286,10 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
       {result && (
         <div className="row g-3 mt-1">
           <div className="col-lg-7">
-            <div className="fw-semibold mb-1" style={{ fontSize: ".85rem" }}>Transisi terbesar (perubahan valid)</div>
+            <div className="fw-semibold mb-1" style={{ fontSize: ".85rem" }}>{t("lc.fusion.topTransitions")}</div>
             <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto" }}>
               <table className="table table-sm mb-0" style={{ fontSize: ".78rem" }}>
-                <thead className="table-primary sticky-top"><tr><th>Dari</th><th>Ke</th><th className="text-end">Luas (ha)</th></tr></thead>
+                <thead className="table-primary sticky-top"><tr><th>{t("lc.fusion.from")}</th><th>{t("lc.fusion.to")}</th><th className="text-end">{t("lc.fusion.areaHa")}</th></tr></thead>
                 <tbody>
                   {changedFlows.map((flow) => (
                     <tr key={`${flow.from_class}-${flow.to_class}`}>
@@ -302,17 +298,17 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
                       <td className="text-end">{formatNumber(flow.area, language)}</td>
                     </tr>
                   ))}
-                  {!changedFlows.length && <tr><td colSpan={3} className="text-center text-muted">Tidak ada perubahan valid.</td></tr>}
+                  {!changedFlows.length && <tr><td colSpan={3} className="text-center text-muted">{t("lc.fusion.noTransitions")}</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
           <div className="col-lg-5" style={{ fontSize: ".78rem" }}>
-            <div className="fw-semibold mb-1" style={{ fontSize: ".85rem" }}>Provenance &amp; batasan</div>
+            <div className="fw-semibold mb-1" style={{ fontSize: ".85rem" }}>{t("lc.fusion.provenance")}</div>
             <ul className="mb-2 ps-3">
-              <li>Metode {result.method} · mode {result.fusion_mode} · q_min {result.parameters.q_min} · tau {result.parameters.tau_change}</li>
-              <li>Grid {result.resolution} · luas dihitung pada {result.comparison_crs}</li>
-              {result.training.training_sample_count != null && <li>Sampel latih referensi: {result.training.training_sample_count}</li>}
+              <li>{t("lc.fusion.method", { method: result.method, mode: result.fusion_mode, qMin: result.parameters.q_min, tau: result.parameters.tau_change })}</li>
+              <li>{t("lc.fusion.grid", { resolution: result.resolution, crs: result.comparison_crs })}</li>
+              {result.training.training_sample_count != null && <li>{t("lc.fusion.trainingSamples", { count: result.training.training_sample_count })}</li>}
               {result.limitations.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </div>
