@@ -143,6 +143,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
   const [copernicusLastTileScene, setCopernicusLastTileScene] = useState<ImageryScene | null>(null);
   const [copernicusAoi, setCopernicusAoi] = useState<AoiPayload | null>(null);
   const [tileError, setTileError] = useState(false);
+  const [waybackTilesLoading, setWaybackTilesLoading] = useState(false);
   const [queryDate, setQueryDate] = useState<string | undefined>(() => dateFromQuery());
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -364,7 +365,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
 
   useEffect(() => {
     const shouldShowHistorical = enabled && !isCurrentBasemapSource && (historySource !== "esri-wayback" || (!isCurrent && (visible || Boolean(analysisDate))));
-    if (!shouldShowHistorical || (historySource === "esri-wayback" && isFetching)) { setTileError(false); return; }
+    if (!shouldShowHistorical || (historySource === "esri-wayback" && isFetching)) {
+      setTileError(false);
+      setWaybackTilesLoading(false);
+      return;
+    }
     const paneName = "historical-imagery";
     const pane = map.getPane(paneName) ?? map.createPane(paneName);
     pane.style.zIndex = "250";
@@ -381,7 +386,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       : historySource === "copernicus-sentinel2"
             ? (copernicusSelectedScene ? copernicusTileUrl : "")
           : selectedTileUrl;
-    if (!tileUrl) { setTileError(false); return; }
+    if (!tileUrl) {
+      setTileError(false);
+      setWaybackTilesLoading(false);
+      return;
+    }
     const attribution = historySource === "nasa-gibs"
       ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - MODIS Terra Corrected Reflectance True Color - ${effectiveNasaTileDate}`
       : historySource === "nasa-viirs-night"
@@ -400,8 +409,18 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       maxZoom: map.getMaxZoom(),
       attribution,
     });
+    const isWaybackLayer = historySource === "esri-wayback";
+    const onLoading = () => {
+      if (isWaybackLayer) setWaybackTilesLoading(true);
+    };
+    const onLoad = () => {
+      if (isWaybackLayer) setWaybackTilesLoading(false);
+    };
     const onError = () => setTileError(true);
+    layer.on("loading", onLoading);
+    layer.on("load", onLoad);
     layer.on("tileerror", onError);
+    if (isWaybackLayer) setWaybackTilesLoading(true);
     layer.addTo(map);
     const sourceDate = historySource === "nasa-gibs"
       ? `NASA GIBS ${effectiveNasaTileDate}`
@@ -416,8 +435,11 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
           : selectedReleaseDate;
     setHistoricalImageryDate?.(sourceDate);
     return () => {
+      layer.off("loading", onLoading);
+      layer.off("load", onLoad);
       layer.off("tileerror", onError);
       map.removeLayer(layer);
+      if (isWaybackLayer) setWaybackTilesLoading(false);
       setHistoricalImageryDate?.(null);
     };
   }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, t, visible]);
@@ -472,6 +494,13 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
           : t("map.history.esriSource");
 
   return <>
+    {waybackTilesLoading && historySource === "esri-wayback" && createPortal(
+      <div className="map-wayback-loading-overlay" role="status" aria-live="polite">
+        <span className="spinner-border spinner-border-sm" aria-hidden="true" />
+        {t("map.history.loadingTiles")}
+      </div>,
+      map.getContainer(),
+    )}
     {host && createPortal(<button ref={triggerRef} type="button" className="history-trigger" hidden={!enabled}
       title={t("map.history.title")} aria-label={t("map.history.title")} aria-expanded={visible} aria-controls={panelId}
       onClick={() => setOpen(value => !value)}><i className="bi bi-clock-history" aria-hidden="true" /></button>, host)}

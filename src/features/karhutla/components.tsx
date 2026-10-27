@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import MapView from "@/components/map/MapView";
 import { isFiniteMapBounds } from "@/components/map/mapViewValidation";
 import MapExportControl from "@/components/map/MapExportControl";
+import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { env } from "@/config/env";
@@ -881,6 +882,7 @@ function HotspotMap({
         preferCanvas
       >
         <BasemapSwitcher />
+        <MapCursorPosition />
         <FitBoundaryToMap
           boundary={boundary}
           eventBbox={event.bbox}
