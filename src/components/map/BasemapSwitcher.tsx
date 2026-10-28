@@ -96,7 +96,7 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
         const overlayLayer = L.tileLayer(b.overlayUrl, {
           className: "savegeo-basemap-layer",
           attribution: b.overlayAttribution,
-          maxNativeZoom,
+          maxNativeZoom: safeMapZoom(b.overlayMaxNativeZoom ?? maxNativeZoom, effectiveMaxZoom, effectiveMaxZoom),
           maxZoom: effectiveMaxZoom,
           pane: BASEMAP_REFERENCE_PANE,
         });

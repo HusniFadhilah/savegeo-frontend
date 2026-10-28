@@ -13,6 +13,8 @@ export interface BasemapDefinition {
   labelsAttribution?: string;
   overlayUrl?: string;
   overlayAttribution?: string;
+  /** Highest native zoom supported reliably by a separate reference overlay. */
+  overlayMaxNativeZoom?: number;
   attribution: string;
   tileSize?: number;
   zoomOffset?: number;

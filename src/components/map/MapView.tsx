@@ -164,7 +164,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
               <TileLayer
                 url={defaultBasemap.overlayUrl}
                 attribution={defaultBasemap.overlayAttribution}
-                maxNativeZoom={defaultMaxNativeZoom}
+                maxNativeZoom={safeMapZoom(defaultBasemap.overlayMaxNativeZoom ?? defaultMaxNativeZoom, effectiveMaxZoom, effectiveMaxZoom)}
                 maxZoom={effectiveMaxZoom}
                 className="savegeo-basemap-layer"
                 pane={BASEMAP_REFERENCE_PANE}

@@ -35,6 +35,9 @@ export const FALLBACK_BASEMAPS: BasemapDefinition[] = [
     name: "Satellite + roads",
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     overlayUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+    // Keep Esri's road reference layer on a coarser cached level at close zooms.
+    // The imagery layer remains native at higher zoom; Leaflet scales these road tiles.
+    overlayMaxNativeZoom: 17,
     attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics",
     overlayAttribution: "Road reference &copy; Esri",
     maxZoom: 22,

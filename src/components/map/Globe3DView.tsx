@@ -167,14 +167,14 @@ export default function Globe3DView(props: GlobeViewProps) {
     const installed: C.ImageryLayer[] = [];
     const removers: (() => void)[] = [];
     setImageryError(false);
-    const add = (url: string, credit: string | undefined, index: number, overlay = false) => {
-      const provider = imageryProvider(url, credit, basemap.maxNativeZoom ?? basemap.maxZoom, overlay ? undefined : basemap.wmts, overlay ? 256 : basemap.tileSize);
+    const add = (url: string, credit: string | undefined, index: number, overlay = false, maxNativeZoom?: number) => {
+      const provider = imageryProvider(url, credit, maxNativeZoom ?? basemap.maxNativeZoom ?? basemap.maxZoom, overlay ? undefined : basemap.wmts, overlay ? 256 : basemap.tileSize);
       removers.push(provider.errorEvent.addEventListener(() => setImageryError(true)));
       installed.push(viewer.imageryLayers.addImageryProvider(provider, index));
     };
     try {
       add(basemap.url, basemap.id === "google-satellite" ? undefined : basemap.attribution, 0);
-      if (basemap.overlayUrl && roads) add(basemap.overlayUrl, basemap.overlayAttribution, 1, true);
+      if (basemap.overlayUrl && roads) add(basemap.overlayUrl, basemap.overlayAttribution, 1, true, basemap.overlayMaxNativeZoom);
       if (basemap.labelsUrl && labels) add(basemap.labelsUrl, basemap.labelsAttribution, installed.length, true);
     } catch { setImageryError(true); }
     viewer.scene.requestRender();
