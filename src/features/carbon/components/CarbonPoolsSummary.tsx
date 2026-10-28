@@ -43,7 +43,7 @@ export default function CarbonPoolsSummary({ results }: Props) {
             && String(result.model_info.requested_analysis_year) !== String(result.model_info.analysis_year);
 
           return (
-            <div className="col-12 col-xl-4" key={key}>
+            <div className="col-12" key={key}>
               <article className="carbon-basic-pool-card">
                 <div className="carbon-basic-pool-card__heading">
                   <span className="carbon-basic-pool-card__icon"><i className={`bi ${icon}`} aria-hidden="true" /></span>

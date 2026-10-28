@@ -9,6 +9,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 interface Props {
   params: LandCoverParams;
   year: number;
+  showAdvancedOptions?: boolean;
   onParamsChange: (patch: Partial<LandCoverParams>) => void;
 }
 
@@ -19,7 +20,7 @@ function dateForYear(year: number, month: number, day: number) {
 }
 
 /** Ported from module-carbon.html's #landcoverParams block. */
-export default function LandCoverParamsPanel({ params, year, onParamsChange }: Props) {
+export default function LandCoverParamsPanel({ params, year, showAdvancedOptions = true, onParamsChange }: Props) {
   const { t, language } = useI18nStore();
   const text = (id: string, en: string) => language === "id" ? id : en;
   const [catalog, setCatalog] = useState<LandCoverDatasetCatalog>({});
@@ -137,37 +138,39 @@ export default function LandCoverParamsPanel({ params, year, onParamsChange }: P
         </div>)}
       </div>
 
-      {params.datasets.some((key) => ["AlphaEarth_RF", "Sentinel1_2_RF", "Dynamic_World"].includes(key)) && <div className="mb-3">
+      {showAdvancedOptions && params.datasets.some((key) => ["AlphaEarth_RF", "Sentinel1_2_RF", "Dynamic_World"].includes(key)) && <div className="mb-3">
         <div className="d-flex align-items-center gap-1 mb-1"><label className="form-label mb-0" htmlFor="landcover-confidence">{text("Ambang confidence (opsional)", "Confidence threshold (optional)")}</label><InfoTip label={text("Info confidence", "Confidence information")} content={text("Confidence RF adalah proporsi suara classifier, bukan nilai akurasi yang terkalibrasi.", "RF confidence is the classifier vote proportion, not a calibrated accuracy score.")} /></div>
         <input id="landcover-confidence" className="form-control" type="number" min={0} max={1} step={0.05} placeholder="0–1" value={params.confidenceThreshold ?? ""} onChange={(event) => onParamsChange({ confidenceThreshold: event.target.value === "" ? undefined : Number(event.target.value) })} />
       </div>}
 
-      <div className="mb-3">
-        <label className="form-label">{t("landcover.dwMode")}</label>
-        <select
-          className="form-select"
-          value={params.dwMode}
-          onChange={(e) => onParamsChange({ dwMode: e.target.value as LandCoverParams["dwMode"] })}
-        >
-          <option value="mode">{t("landcover.modeMostFrequent")}</option>
-          <option value="hillshade">{t("landcover.hillshade")}</option>
-          <option value="probability">{t("landcover.probability")}</option>
-        </select>
-      </div>
+      {showAdvancedOptions && <>
+        <div className="mb-3">
+          <label className="form-label">{t("landcover.dwMode")}</label>
+          <select
+            className="form-select"
+            value={params.dwMode}
+            onChange={(e) => onParamsChange({ dwMode: e.target.value as LandCoverParams["dwMode"] })}
+          >
+            <option value="mode">{t("landcover.modeMostFrequent")}</option>
+            <option value="hillshade">{t("landcover.hillshade")}</option>
+            <option value="probability">{t("landcover.probability")}</option>
+          </select>
+        </div>
 
-      <div className="carbon-help-toggle-row form-check mb-3">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="includeImprobableClasses"
-          checked={params.includeImprobableClasses}
-          onChange={(e) => onParamsChange({ includeImprobableClasses: e.target.checked })}
-        />
-        <label className="form-check-label" htmlFor="includeImprobableClasses">
-          {t("landcover.includeRare")}
-        </label>
-        <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.includeRareHint")} />
-      </div>
+        <div className="carbon-help-toggle-row form-check mb-3">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="includeImprobableClasses"
+            checked={params.includeImprobableClasses}
+            onChange={(e) => onParamsChange({ includeImprobableClasses: e.target.checked })}
+          />
+          <label className="form-check-label" htmlFor="includeImprobableClasses">
+            {t("landcover.includeRare")}
+          </label>
+          <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.includeRareHint")} />
+        </div>
+      </>}
 
       <div className="mb-3">
         <div className="carbon-info-label">

@@ -842,7 +842,7 @@ export default function CarbonModule() {
             onChange={changeAnalysisType}
           />
 
-          {analysisType === "carbon" && (
+          {(analysisType === "carbon" || analysisType === "landcover") && (
             <div className="carbon-mode-switch mb-3" role="group" aria-label={t("carbon.params.title")}>
               <button
                 type="button"
@@ -852,7 +852,7 @@ export default function CarbonModule() {
                   setCarbonUiMode("basic");
                   setDeltaEnabled(false);
                   setDirectLoadEnabled(false);
-                  patchCarbon({ referenceOnly: false, loadOnly: false });
+                  if (analysisType === "carbon") patchCarbon({ referenceOnly: false, loadOnly: false });
                 }}
               >
                 <i className="bi bi-stars me-1" aria-hidden="true" />{t("carbon.mode.basic")}
@@ -1092,11 +1092,12 @@ export default function CarbonModule() {
             <LandCoverParamsPanel
               params={lcParams}
               year={year}
+              showAdvancedOptions={analysisType !== "landcover" || carbonUiMode === "advanced"}
               onParamsChange={(patch) => setLcParams((p) => ({ ...p, ...patch }))}
             />
           )}
 
-          {analysisType === "landcover" && (
+          {analysisType === "landcover" && carbonUiMode === "advanced" && (
             <div className="form-check form-switch mb-2">
               <input
                 id="directDatasetLoad"

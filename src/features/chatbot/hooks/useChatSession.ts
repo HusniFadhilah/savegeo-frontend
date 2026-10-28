@@ -643,7 +643,7 @@ export function useChatSession() {
         appendEntry({
           id: makeId("warn"),
           kind: "warnings",
-          warnings: [`Provider ${resp.ai.fallback_from ?? "utama"} tidak tersedia; dijawab oleh ${resp.ai.provider} (${resp.ai.model}).`],
+          warnings: ["Layanan AI utama tidak tersedia; jawaban diberikan melalui layanan cadangan."],
         });
       }
       handleResponse(resp);
