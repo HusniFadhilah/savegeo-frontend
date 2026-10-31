@@ -28,7 +28,7 @@ interface Props {
   endDateB?: string;
 }
 
-type LayerKind = "route" | "quality_optical" | "quality_sar" | "landcover" | "change";
+type LayerKind = "route" | "quality_optical" | "quality_sar" | "landcover" | "change" | "common";
 
 const AOI_STYLE = { color: "#ef4444", weight: 2, fillOpacity: 0.04 };
 const ROUTE_ORDER: LcFusionRoute[] = ["joint_fusion", "optical_dominant", "sar_dominant", "no_data"];
@@ -44,6 +44,7 @@ const LAYERS: { kind: LayerKind; translationKey: string }[] = [
   { kind: "quality_sar", translationKey: "lc.fusion.layer.qualitySar" },
   { kind: "landcover", translationKey: "lc.fusion.layer.landcover" },
   { kind: "change", translationKey: "lc.fusion.layer.change" },
+  { kind: "common", translationKey: "lc.fusion.layer.common" },
 ];
 
 function routeLabel(route: LcFusionRoute, t: (key: string) => string): string {
@@ -104,8 +105,11 @@ function PeriodCard({ title, period, language, t }: { title: string; period: LcF
  * Q_s (Sentinel-1 validity x residual-speckle index x coverage). "routing"
  * picks the joint, optical or SAR classifier per pixel from q_min;
  * "weighted" blends optical and SAR class probabilities by Q_o/Q_s. Change
- * is the total-variation distance D = 1/2 sum_k |P_t0,k - P_t1,k|, valid only above tau_change and where
- * both periods pass the quality gate. Independent of the dataset picked for
+ * is the total-variation distance D = 1/2 sum_k |P_t0,k - P_t1,k| computed on the
+ * *common path*: the same classifier for t0 and t1, chosen from the sources that
+ * pass q_min in both periods, so a model switch between periods is never read as
+ * change. An optional event extent (SAR new-water between two dates) restricts
+ * change and class areas. Independent of the dataset picked for
  * the other tabs - it uses its own Sentinel-1/2 Random Forest classifiers.
  */
 export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB }: Props) {
@@ -119,7 +123,11 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
   const [result, setResult] = useState<LcFusionResponse | null>(null);
   const [layer, setLayer] = useState<LayerKind>("route");
   const [opacity, setOpacity] = useState(0.85);
+  const [eventOn, setEventOn] = useState(false);
+  const [eventPre, setEventPre] = useState("");
+  const [eventPost, setEventPost] = useState("");
   const generation = useRef(0);
+  const eventReady = !eventOn || (!!eventPre && !!eventPost && eventPre < eventPost);
 
   const canRun = !!aoi && yearA != null && yearB != null && yearA < yearB;
 
@@ -127,7 +135,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
     generation.current += 1;
     setResult(null);
     setError(null);
-  }, [aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB, mode, qMin, tauChange, scale]);
+  }, [aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB, mode, qMin, tauChange, scale, eventOn, eventPre, eventPost]);
 
   const run = async () => {
     if (!aoi || yearA == null || yearB == null) return;
@@ -148,6 +156,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
         q_min: qMin,
         tau_change: tauChange,
         scale,
+        ...(eventOn && eventReady ? { event: { type: "flood_sar" as const, pre_date: eventPre, post_date: eventPost } } : {}),
       });
       if (requested !== generation.current) return;
       setResult(response);
@@ -168,13 +177,14 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
       case "quality_optical": return [tiles.q_o_t0, tiles.q_o_t1];
       case "quality_sar": return [tiles.q_s_t0, tiles.q_s_t1];
       case "landcover": return [tiles.landcover_t0, tiles.landcover_t1];
+      case "common": return [tiles.common_path, tiles.event ?? tiles.changed];
       default: return [tiles.change_score, tiles.changed];
     }
   }, [tiles, layer]);
 
   const legend = useMemo((): { entries: MapLegendEntry[]; scale?: { min: number; max: number; unit: string; colors: string[] } } => {
     if (!result) return { entries: [] };
-    if (layer === "route") return { entries: result.legends.route.map((item) => ({ color: item.color, label: item.label })) };
+    if (layer === "route" || layer === "common") return { entries: result.legends.route.map((item) => ({ color: item.color, label: item.label })) };
     if (layer === "quality_optical" || layer === "quality_sar") {
       return { entries: [], scale: { min: 0, max: 1, unit: "", colors: result.legends.quality.palette } };
     }
@@ -183,8 +193,8 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
 
   const nativeZoom = nativeZoomForResolution(Number.parseFloat(result?.resolution ?? "20"));
   const changedFlows = useMemo(() => (result?.flows ?? []).filter((flow) => flow.changed).slice(0, 12), [result]);
-  const leftTitle = layer === "change" ? t("lc.fusion.changeScore") : `${t("lc.fusion.periodBase")} (${yearA ?? ""})`;
-  const rightTitle = layer === "change" ? t("lc.fusion.validChange") : `${t("lc.fusion.periodCompare")} (${yearB ?? ""})`;
+  const leftTitle = layer === "change" ? t("lc.fusion.changeScore") : layer === "common" ? t("lc.fusion.layer.common") : `${t("lc.fusion.periodBase")} (${yearA ?? ""})`;
+  const rightTitle = layer === "change" || (layer === "common" && !tiles?.event) ? t("lc.fusion.validChange") : layer === "common" ? t("lc.fusion.eventExtent") : `${t("lc.fusion.periodCompare")} (${yearB ?? ""})`;
 
   return (
     <div>
@@ -214,7 +224,19 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
             <option value={30}>30 m · {t("lc.fusion.scaleFast")}</option>
           </select>
         </div>
-        <button className="btn btn-success btn-sm fw-bold" disabled={!canRun || running} onClick={run}>
+        <div>
+          <div className="form-check mb-1">
+            <input id="fusion-event" type="checkbox" className="form-check-input" checked={eventOn} onChange={(e) => setEventOn(e.target.checked)} />
+            <label className="form-check-label" htmlFor="fusion-event">{t("lc.fusion.eventFlood")}</label>
+          </div>
+          {eventOn && (
+            <div className="d-flex gap-1">
+              <input type="date" aria-label={t("lc.fusion.eventPre")} title={t("lc.fusion.eventPre")} className="form-control form-control-sm" value={eventPre} onChange={(e) => setEventPre(e.target.value)} />
+              <input type="date" aria-label={t("lc.fusion.eventPost")} title={t("lc.fusion.eventPost")} className="form-control form-control-sm" value={eventPost} onChange={(e) => setEventPost(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <button className="btn btn-success btn-sm fw-bold" disabled={!canRun || running || !eventReady} onClick={run}>
           {running ? <><i className="fas fa-spinner fa-spin" /> {t("lc.fusion.running")}</> : <><i className="fas fa-layer-group" /> {t("lc.fusion.run")}</>}
         </button>
       </div>
@@ -252,6 +274,52 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
             <span className="badge bg-light text-dark border">{t("lc.fusion.changePercent", { percent: result.statistics.changed_percentage.toFixed(2) })}</span>
             <span className="badge bg-light text-dark border">{t("lc.fusion.meanD", { value: result.statistics.mean_change_score.toFixed(3) })}</span>
           </div>
+
+          <div className="border rounded p-2 mb-3" style={{ fontSize: ".8rem" }}>
+            <div className="fw-semibold mb-1">{t("lc.fusion.commonPath")}</div>
+            <div className="d-flex flex-wrap gap-2 mb-1">
+              {ROUTE_ORDER.map((route) => (
+                <span key={route}>
+                  <span className="d-inline-block me-1 rounded-1" style={{ width: 10, height: 10, background: ROUTE_COLOR[route] }} />
+                  {routeLabel(route, t)}: {(result.common_path.percentage[route] ?? 0).toFixed(1)}%
+                </span>
+              ))}
+            </div>
+            <div className="text-muted">
+              {t("lc.fusion.routeSwitch", {
+                switched: formatNumber(result.statistics.route_switch_area_ha, language),
+                perPeriod: formatNumber(result.statistics.per_period_changed_area_ha, language),
+                common: formatNumber(result.statistics.changed_area_ha, language),
+              })}
+            </div>
+          </div>
+
+          {result.event && (
+            <div className="border rounded p-2 mb-3" style={{ fontSize: ".8rem" }}>
+              <div className="fw-semibold mb-1">{t("lc.fusion.eventExtent")} {result.event.pre_date && `(${result.event.pre_date} → ${result.event.post_date})`}</div>
+              <div className="mb-1">
+                {t("lc.fusion.eventStats", {
+                  area: formatNumber(result.event.event_area_ha, language),
+                  valid: formatNumber(result.event.event_valid_area_ha, language),
+                  changed: formatNumber(result.event.changed_in_event_ha, language),
+                })}
+              </div>
+              <div className="row g-2">
+                {(["classes_t0", "classes_t1"] as const).map((key) => (
+                  <div className="col-md-6" key={key}>
+                    <div className="text-muted">{key === "classes_t0" ? t("lc.fusion.periodBase") : t("lc.fusion.periodCompare")}</div>
+                    {result.event![key].slice(0, 6).map((row) => (
+                      <div key={row.class_code}>
+                        <span className="d-inline-block me-1 rounded-1" style={{ width: 10, height: 10, background: row.color }} />
+                        {translateLulcClass(row.class)}: {formatNumber(row.area_ha, language)} ha
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="text-muted mt-1">{result.event.note}</div>
+            </div>
+          )}
 
           <div className="d-flex align-items-center gap-2 mb-2">
             <label className="small mb-0" htmlFor="fusion-layer">{t("lc.fusion.mapLayer")}</label>

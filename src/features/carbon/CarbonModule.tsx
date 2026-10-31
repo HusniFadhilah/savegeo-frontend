@@ -34,7 +34,8 @@ import {
   CARBON_DATASET_YEARS,
   carbonDatasetYearOptions,
 } from "@/features/carbon/referenceDatasets";
-import { boundsToPayload } from "@/features/carbon/lib/geo";
+import { areaKm2, boundsFromGeoJSON, boundsToPayload } from "@/features/carbon/lib/geo";
+import { getAoiRegionSelection, loadAoiRegionSelection, normalizeAoiRegionGeoJson, parseAoiRegionSelection, withAoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
 import { buildBasicCarbonPlan } from "@/features/carbon/lib/basicCarbonPlan";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type {
@@ -112,6 +113,10 @@ export default function CarbonModule() {
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
+  const initialAoiAtMount = useRef(aoi);
+  const [aoiUrlReady, setAoiUrlReady] = useState(() => !initialQuery.aoiRegion && !initialQuery.aoiGeoJson);
+  const aoiUrlRestoreStarted = useRef(false);
+  const aoiUrlRestoreFailed = useRef(false);
   const [analysisType, setAnalysisType] = useState<AnalysisType>(initialType);
   const [carbonUiMode, setCarbonUiMode] = useState<"basic" | "advanced">("basic");
   useEffect(() => {
@@ -119,6 +124,44 @@ export default function CarbonModule() {
       setAnalysisType(availableAnalysisTypes[0]);
     }
   }, [analysisType, availableAnalysisTypes]);
+
+  useEffect(() => {
+    if (aoiUrlReady || aoiUrlRestoreStarted.current) return;
+    aoiUrlRestoreStarted.current = true;
+    let cancelled = false;
+
+    async function restoreAoiFromUrl() {
+      try {
+        const region = parseAoiRegionSelection(initialQuery.aoiRegion);
+        let feature = region ? withAoiRegionSelection(await loadAoiRegionSelection(region), region) : null;
+        if (!feature && initialQuery.aoiGeoJson) {
+          const parsed = JSON.parse(initialQuery.aoiGeoJson) as GeoJSON.GeoJSON;
+          feature = normalizeAoiRegionGeoJson(parsed);
+          if (parsed.type === "Feature" && parsed.properties) {
+            feature.properties = { ...feature.properties, ...parsed.properties };
+          }
+        }
+        if (!feature) throw new Error("URL AOI tidak memiliki geometri yang dapat dipulihkan.");
+        const bounds = boundsFromGeoJSON(feature);
+        if (!bounds) throw new Error("Geometri AOI pada URL tidak valid.");
+        const source = ["drawn", "upload", "admin", "coordinate", "company"].includes(initialQuery.aoiSource ?? "")
+          ? initialQuery.aoiSource as "drawn" | "upload" | "admin" | "coordinate" | "company"
+          : region ? "admin" : "drawn";
+        const name = initialQuery.aoiName?.trim() || "AOI dari tautan";
+        if (!cancelled) {
+          setAoi({ source, name, feature, bounds, areaKm2: areaKm2(feature, bounds) });
+        }
+      } catch (error) {
+        aoiUrlRestoreFailed.current = true;
+        console.error("Gagal memulihkan AOI dari URL:", error);
+      } finally {
+        if (!cancelled) setAoiUrlReady(true);
+      }
+    }
+
+    void restoreAoiFromUrl();
+    return () => { cancelled = true; };
+  }, [aoiUrlReady, initialQuery, setAoi]);
 
   const [carbonPartial, setCarbonPartial] = useState<CarbonPartial>({
     startMonth: initialQuery.monthFrom ?? 1,
@@ -189,9 +232,24 @@ export default function CarbonModule() {
     : VEGETATION_SERIES_BANDS.filter(({ code }) => !["B5", "B6", "B7", "B8A"].includes(code));
 
   useEffect(() => {
+    if (!aoiUrlReady) return;
     const isVegetation = analysisType === "vegetation";
+    if (aoi && aoi !== initialAoiAtMount.current) aoiUrlRestoreFailed.current = false;
+    const aoiForUrl = aoi && !(aoiUrlRestoreFailed.current && aoi === initialAoiAtMount.current) ? aoi : null;
+    const regionSelection = getAoiRegionSelection(aoiForUrl?.feature);
+    const regionSelectionQuery = regionSelection ? JSON.stringify(regionSelection) : undefined;
+    const geoJsonQuery = aoiForUrl
+      ? regionSelection ? undefined : JSON.stringify(aoiForUrl.feature)
+      : aoiUrlRestoreFailed.current
+        ? initialQuery.aoiGeoJson
+        : undefined;
     const q = serializeCarbonQuery({
       mode: analysisType === "combined" ? "carbon" : analysisType,
+      aoiId: initialQuery.aoiId,
+      aoiSource: aoiForUrl?.source ?? (aoiUrlRestoreFailed.current ? initialQuery.aoiSource : undefined),
+      aoiName: aoiForUrl?.name ?? (aoiUrlRestoreFailed.current ? initialQuery.aoiName : undefined),
+      aoiGeoJson: geoJsonQuery,
+      aoiRegion: regionSelectionQuery ?? (aoiUrlRestoreFailed.current ? initialQuery.aoiRegion : undefined),
       year,
       monthFrom: isVegetation ? vegParams.startMonth : carbonPartial.startMonth,
       monthTo: isVegetation ? vegParams.endMonth : carbonPartial.endMonth,
@@ -209,7 +267,7 @@ export default function CarbonModule() {
     if (typeof window !== "undefined" && window.location.pathname === "/carbon-estimation") {
       window.history.replaceState(null, "", `/carbon-estimation?${q.toString()}`);
     }
-  }, [analysisType, year, carbonPartial.startMonth, carbonPartial.endMonth, carbonPartial.cloudThreshold, carbonPartial.clipMode, carbonPartial.showReference, vegParams.startMonth, vegParams.endMonth, vegParams.cloudThreshold, vegTsIndices, vegTsBands, vegTsEnabled, initialQuery.view, initialQuery.orientation, initialQuery.opacity]);
+  }, [aoi, aoiUrlReady, analysisType, year, carbonPartial.startMonth, carbonPartial.endMonth, carbonPartial.cloudThreshold, carbonPartial.clipMode, carbonPartial.showReference, vegParams.startMonth, vegParams.endMonth, vegParams.cloudThreshold, vegTsIndices, vegTsBands, vegTsEnabled, initialQuery.aoiId, initialQuery.aoiName, initialQuery.aoiRegion, initialQuery.aoiSource, initialQuery.aoiGeoJson, initialQuery.view, initialQuery.orientation, initialQuery.opacity]);
 
   const [lcParams, setLcParams] = useState<LandCoverParams>({
     datasets: ["Dynamic_World"],

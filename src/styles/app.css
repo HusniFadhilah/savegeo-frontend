@@ -8932,39 +8932,143 @@ html[data-theme="dark"] .carbon-mode-switch .btn-outline-secondary:hover:not(:di
   background: rgba(255, 255, 255, .72);
 }
 .carbon-basic-pool-tags i { color: #21844a; }
-.carbon-basic-results { margin-top: 1rem; }
+.carbon-basic-results { margin-top: .9rem; }
 .carbon-basic-results__note {
-  margin: -.45rem 0 1rem;
+  margin: -.25rem 0 .75rem;
   color: var(--bs-secondary-color, #64748b);
   font-size: .88rem;
 }
 .carbon-basic-pool-card {
-  height: 100%;
-  padding: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(22rem, .92fr);
+  grid-template-areas: "heading metrics" "details details";
+  align-items: center;
+  gap: .75rem 1.5rem;
+  min-height: 0;
+  padding: .9rem 1rem;
   border: 1px solid var(--bs-border-color, #dce5df);
   border-radius: .85rem;
   background: var(--bs-body-bg, #fff);
   box-shadow: 0 4px 16px rgba(15, 35, 24, .05);
 }
-.carbon-basic-pool-card__heading { display: flex; align-items: center; gap: .65rem; }
-.carbon-basic-pool-card__heading small { display: block; margin-top: .15rem; }
+.carbon-basic-pool-card__heading {
+  grid-area: heading;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+.carbon-basic-pool-card__heading > div { min-width: 0; }
+.carbon-basic-pool-card__heading h6 { font-size: .98rem; line-height: 1.3; }
+.carbon-basic-pool-card__source {
+  display: block;
+  margin-top: .12rem;
+  color: var(--bs-secondary-color, #64748b);
+  font-size: .8rem;
+  line-height: 1.3;
+}
 .carbon-basic-pool-card__icon {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 2.25rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 2.4rem;
   place-items: center;
   border-radius: .65rem;
   color: #18703b;
   background: #e7f6eb;
 }
-.carbon-basic-pool-card__metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: .85rem; }
-.carbon-basic-pool-card__metrics > div { display: grid; gap: .15rem; min-width: 0; }
-.carbon-basic-pool-card__metrics span { color: var(--bs-secondary-color, #64748b); font-size: .75rem; }
-.carbon-basic-pool-card__metrics strong { overflow-wrap: anywhere; font-size: .9rem; }
-.carbon-basic-pool-card__details { margin-top: .8rem; padding-top: .65rem; border-top: 1px solid var(--bs-border-color, #e2e8f0); }
-.carbon-basic-pool-card__details summary { color: #19723d; cursor: pointer; font-size: .82rem; font-weight: 600; }
+.carbon-basic-pool-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  margin-top: .45rem;
+}
+.carbon-basic-pool-card__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .27rem .5rem;
+  border: 1px solid var(--bs-border-color, #dce5df);
+  border-radius: 999px;
+  color: var(--bs-secondary-color, #64748b);
+  background: var(--bs-tertiary-bg, #f8fafc);
+  font-size: .72rem;
+  line-height: 1.2;
+}
+.carbon-basic-pool-card__meta .carbon-basic-pool-card__badge {
+  border-radius: .5rem;
+  font-weight: 600;
+}
+.carbon-basic-pool-card__badge--current {
+  border-color: #c6e8d1 !important;
+  color: #176b3a !important;
+  background: #eaf7ee !important;
+}
+.carbon-basic-pool-card__badge--reference {
+  border-color: #f2dfb5 !important;
+  color: #8a5a0a !important;
+  background: #fff7e6 !important;
+}
+.carbon-basic-pool-card__metrics {
+  grid-area: metrics;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+  width: 100%;
+  max-width: 35rem;
+  justify-self: start;
+}
+.carbon-basic-pool-card__metrics > div {
+  display: grid;
+  gap: .18rem;
+  min-width: 0;
+  padding: .62rem .72rem;
+  border: 1px solid var(--bs-border-color, #e2e8f0);
+  border-radius: .7rem;
+  background: var(--bs-tertiary-bg, #f8fafc);
+}
+.carbon-basic-pool-card__metrics span { color: var(--bs-secondary-color, #64748b); font-size: .72rem; }
+.carbon-basic-pool-card__metrics strong { overflow-wrap: anywhere; font-size: .9rem; line-height: 1.3; }
+.carbon-basic-pool-card__details {
+  grid-area: details;
+  margin-top: 0;
+  padding-top: .62rem;
+  border-top: 1px solid var(--bs-border-color, #e2e8f0);
+}
+.carbon-basic-pool-card__details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #19723d;
+  cursor: pointer;
+  list-style: none;
+  font-size: .82rem;
+  font-weight: 600;
+}
+.carbon-basic-pool-card__details summary::-webkit-details-marker { display: none; }
+.carbon-basic-pool-card__details summary::before {
+  width: .42rem;
+  height: .42rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  transform: rotate(-45deg);
+  transition: transform .16s ease;
+}
+.carbon-basic-pool-card__details[open] summary::before { transform: rotate(45deg); }
 .carbon-basic-pool-card__details[open] summary { margin-bottom: .65rem; }
+@media (max-width: 767.98px) {
+  .carbon-basic-pool-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "heading" "metrics" "details";
+    gap: .7rem;
+  }
+  .carbon-basic-pool-card__metrics { max-width: 35rem; }
+}
+@media (max-width: 399.98px) {
+  .carbon-basic-pool-card__metrics { grid-template-columns: minmax(0, 1fr); }
+}
 .carbon-help-toggle-row {
   align-items: flex-start;
 }
@@ -9024,6 +9128,26 @@ html[data-theme="dark"] .carbon-basic-pool-tags span,
 }
 html[data-theme="dark"] .carbon-basic-pool-card__icon,
 .dark-mode .carbon-basic-pool-card__icon { color: #a8e6b9; background: #1f3c2a; }
+html[data-theme="dark"] .carbon-basic-pool-card__meta > span,
+html[data-theme="dark"] .carbon-basic-pool-card__metrics > div,
+.dark-mode .carbon-basic-pool-card__meta > span,
+.dark-mode .carbon-basic-pool-card__metrics > div {
+  border-color: #33483a;
+  color: #c3d1c7;
+  background: #1c2a21;
+}
+html[data-theme="dark"] .carbon-basic-pool-card__meta .carbon-basic-pool-card__badge--current,
+.dark-mode .carbon-basic-pool-card__meta .carbon-basic-pool-card__badge--current {
+  border-color: #2d6845 !important;
+  color: #a7e7b8 !important;
+  background: #193b27 !important;
+}
+html[data-theme="dark"] .carbon-basic-pool-card__meta .carbon-basic-pool-card__badge--reference,
+.dark-mode .carbon-basic-pool-card__meta .carbon-basic-pool-card__badge--reference {
+  border-color: #775d2c !important;
+  color: #f1cf87 !important;
+  background: #3c311d !important;
+}
 html[data-theme="dark"] .carbon-basic-pool-card__details summary,
 .dark-mode .carbon-basic-pool-card__details summary { color: #9fe0b0; }
 

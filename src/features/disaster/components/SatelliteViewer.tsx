@@ -8,6 +8,7 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import { HistoricalAoiClipController } from "@/components/map/HistoricalImageryControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
+import InfoTip from "@/components/ui/InfoTip";
 import { env } from "@/config/env";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -339,8 +340,11 @@ async function loadDynamicImagery({ source, phase, aoi, range, targetDate, basem
   const archiveStart = phase === "pre" || range.startDate < ESRI_WAYBACK_START_DATE
     ? ESRI_WAYBACK_START_DATE
     : range.startDate;
-  const phaseRange = { startDate: archiveStart, endDate: range.endDate };
-  const scenes = await listEsriWaybackScenes(archiveStart, range.endDate, 2000);
+  // Keep pre-event imagery defaulted to the day before the disaster, while
+  // allowing the pre pane to intentionally show the latest Wayback reference.
+  const archiveEnd = phase === "pre" && targetDate > range.endDate ? targetDate : range.endDate;
+  const phaseRange = { startDate: archiveStart, endDate: archiveEnd };
+  const scenes = await listEsriWaybackScenes(archiveStart, archiveEnd, 2000);
   const scene = selectWaybackSceneForPhase(scenes as WaybackScene[], phaseRange, targetDate);
   if (!scene) throw new Error(`Snapshot Esri Wayback ${phaseLabel} tidak ditemukan.`);
   return {
@@ -620,7 +624,8 @@ export default function SatelliteViewer({
   const postSavedImagery = useMemo(() => uniqueImageryRecords(imagery.post.filter(image => afterImageryForEvent(image, event))), [event, imagery.post]);
   const preImageryOptionLabels = useMemo(() => imageryOptionLabels(preSavedImagery), [preSavedImagery]);
   const postImageryOptionLabels = useMemo(() => imageryOptionLabels(postSavedImagery), [postSavedImagery]);
-  const effectivePreWaybackTarget = preWaybackTarget && preWaybackTarget >= ESRI_WAYBACK_START_DATE && preWaybackTarget <= preRange.endDate
+  const currentDate = todayIso();
+  const effectivePreWaybackTarget = preWaybackTarget && preWaybackTarget >= ESRI_WAYBACK_START_DATE && preWaybackTarget <= currentDate
     ? preWaybackTarget : preRange.endDate;
   const effectivePostWaybackTarget = postWaybackTarget && postWaybackTarget >= postRange.startDate && postWaybackTarget <= postRange.endDate
     ? postWaybackTarget : postRange.startDate;
@@ -970,14 +975,27 @@ export default function SatelliteViewer({
             </select>
             {preSource === "mapbox-satellite" && <div className="form-text">{language === "id" ? "Mosaik referensi terkini; tanggal historis tidak tersedia." : "Current reference mosaic; historical dates are unavailable."}</div>}
             {preSource === "esri_wayback" && <div className="mt-2">
-              <label className="form-label small fw-semibold mb-1" htmlFor="disaster-pre-wayback-date">
-                {language === "id" ? "Tanggal snapshot pra-bencana" : "Pre-event snapshot date"}
-              </label>
+              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                <div className="d-flex align-items-center gap-1">
+                  <label className="form-label small fw-semibold mb-0" htmlFor="disaster-pre-wayback-date">
+                    {language === "id" ? "Tanggal snapshot Esri Wayback" : "Esri Wayback snapshot date"}
+                  </label>
+                  <InfoTip
+                    label={language === "id" ? "Informasi tanggal snapshot pra-bencana" : "Pre-event snapshot date information"}
+                    content={language === "id"
+                      ? "Default memakai snapshot sebelum kejadian. Pilih tanggal lebih baru untuk melihat rilis Wayback terkini; tanggal setelah kejadian menjadi referensi kondisi terbaru."
+                      : "Defaults to a snapshot before the event. Choose a later date to view the latest Wayback release; dates after the event show current conditions as a reference."}
+                  />
+                </div>
+                {effectivePreWaybackTarget < currentDate && <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none"
+                  onClick={() => setPreWaybackTarget(currentDate)}>
+                  {language === "id" ? "Tampilkan rilis terkini" : "Show latest release"}
+                </button>}
+              </div>
               <input id="disaster-pre-wayback-date" className="form-control form-control-sm" type="date"
-                min={ESRI_WAYBACK_START_DATE} max={preRange.endDate} value={effectivePreWaybackTarget}
+                min={ESRI_WAYBACK_START_DATE} max={currentDate} value={effectivePreWaybackTarget}
                 disabled={preRange.endDate < ESRI_WAYBACK_START_DATE}
                 onChange={event => setPreWaybackTarget(event.target.value)} />
-              <div className="form-text">{language === "id" ? "Memakai rilis Wayback terdekat pada periode pra-bencana." : "Uses the closest Wayback release in the pre-event period."}</div>
             </div>}
             {dynamicPreLoading && <div className="small text-muted mt-1" role="status">Memuat citra pra-bencana dan memotong sesuai AOI...</div>}
             {dynamicPreError && <div className="small text-danger mt-1" role="alert">{dynamicPreError}</div>}

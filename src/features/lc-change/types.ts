@@ -254,6 +254,15 @@ export interface LcFusionParams {
   tau_change: number;
   confidence_threshold?: number;
   scale?: number;
+  /** Optional event extent: SAR new-water mask between two dates, or a supplied polygon. */
+  event?: { type: "flood_sar"; pre_date: string; post_date: string } | { type: "geometry"; geojson: GeoJSON.Feature | GeoJSON.Geometry };
+}
+
+export interface LcFusionEventClass {
+  class: string;
+  class_code: number;
+  color: string;
+  area_ha: number;
 }
 
 export interface LcFusionPeriod {
@@ -292,13 +301,30 @@ export interface LcFusionResponse {
     suppressed_change_area_ha: number;
     changed_percentage: number;
     mean_change_score: number;
+    /** What per-period routing alone would call change (models may differ between t0 and t1). */
+    per_period_changed_area_ha: number;
+    route_switch_area_ha: number;
+    route_switch_changed_area_ha: number;
   };
+  /** Common path chosen from both periods; the same classifier produces P_t0 and P_t1. */
+  common_path: { area_ha: Record<LcFusionRoute, number>; percentage: Record<LcFusionRoute, number> };
+  event: {
+    type: "flood_sar" | "geometry";
+    pre_date?: string;
+    post_date?: string;
+    event_area_ha: number;
+    event_valid_area_ha: number;
+    changed_in_event_ha: number;
+    classes_t0: LcFusionEventClass[];
+    classes_t1: LcFusionEventClass[];
+    note: string;
+  } | null;
   flows: LcFusionFlow[];
   net_changes: { class: string; gain: number; loss: number; net: number }[];
   tiles: Record<
-    "route_t0" | "route_t1" | "q_o_t0" | "q_s_t0" | "q_o_t1" | "q_s_t1" | "landcover_t0" | "landcover_t1" | "change_score" | "changed",
+    "route_t0" | "route_t1" | "q_o_t0" | "q_s_t0" | "q_o_t1" | "q_s_t1" | "landcover_t0" | "landcover_t1" | "change_score" | "changed" | "common_path",
     string
-  >;
+  > & { event?: string };
   legends: {
     route: { value: number; label: string; color: string }[];
     landcover: { value: number; label: string; color: string }[];

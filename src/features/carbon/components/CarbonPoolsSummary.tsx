@@ -20,7 +20,7 @@ export default function CarbonPoolsSummary({ results }: Props) {
 
   return (
     <section className="carbon-basic-results" aria-labelledby="carbonBasicResultsTitle">
-      <h5 id="carbonBasicResultsTitle" className="mb-3">
+      <h5 id="carbonBasicResultsTitle" className="mb-2">
         <i className="bi bi-grid-1x3 me-2" aria-hidden="true" />{t("carbon.basic.resultsTitle")}
       </h5>
       <p className="carbon-basic-results__note">{t("carbon.basic.sourceNote")}</p>
@@ -49,23 +49,33 @@ export default function CarbonPoolsSummary({ results }: Props) {
                   <span className="carbon-basic-pool-card__icon"><i className={`bi ${icon}`} aria-hidden="true" /></span>
                   <div>
                     <h6 className="mb-0">{t(labelKey)}</h6>
-                    <small className="text-muted d-block">{reference}</small>
-                    {period && <small className="text-muted d-block">{language === "id" ? "Estimasi" : "Estimate"} {period}</small>}
-                    {referenceYear != null && (
-                      <small className="text-muted d-block">
-                        {language === "id" ? "Referensi" : "Reference"} {referenceYear}
-                      </small>
-                    )}
-                    {currentYearPartial && (
-                      <span className="badge text-bg-info mt-1">
-                        {language === "id" ? "Komposit tahun berjalan (data terbaru)" : "Current-year composite (latest available data)"}
-                      </span>
-                    )}
-                    {staticReferenceOnly && (
-                      <span className="badge text-bg-warning mt-1">
-                        {language === "id" ? `Referensi statis ${result.model_info?.analysis_year}` : `Static reference ${result.model_info?.analysis_year}`}
-                      </span>
-                    )}
+                    <small className="carbon-basic-pool-card__source">{reference}</small>
+                    <div className="carbon-basic-pool-card__meta">
+                      {period && (
+                        <span>
+                          <i className="bi bi-calendar3" aria-hidden="true" />
+                          {language === "id" ? "Estimasi" : "Estimate"} {period}
+                        </span>
+                      )}
+                      {referenceYear != null && (
+                        <span>
+                          <i className="bi bi-database" aria-hidden="true" />
+                          {language === "id" ? "Referensi" : "Reference"} {referenceYear}
+                        </span>
+                      )}
+                      {currentYearPartial && (
+                        <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--current">
+                          <i className="bi bi-clock-history" aria-hidden="true" />
+                          {language === "id" ? "Data terbaru tahun berjalan" : "Latest data this year"}
+                        </span>
+                      )}
+                      {staticReferenceOnly && (
+                        <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">
+                          <i className="bi bi-info-circle" aria-hidden="true" />
+                          {language === "id" ? `Referensi statis ${result.model_info?.analysis_year}` : `Static reference ${result.model_info?.analysis_year}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="carbon-basic-pool-card__metrics">

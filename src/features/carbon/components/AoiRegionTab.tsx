@@ -23,6 +23,7 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import MultiSearchableSelect from "@/components/ui/MultiSearchableSelect";
 import AsyncLocationSelect from "@/components/ui/AsyncLocationSelect";
 import InfoTip from "@/components/ui/InfoTip";
+import { withAoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
@@ -453,7 +454,15 @@ export default function AoiRegionTab({ onApply }: Props) {
                 ? globalAdmin1.find((item) => item.code === globalAdmin1Code)
                 : country;
         const name = [region?.name, selectedLevel !== "ADM0" ? country?.name : undefined].filter(Boolean).join(", ");
-        onApply(toFeature(geometry), name || country?.name || globalCountryCode);
+        onApply(
+          withAoiRegionSelection(toFeature(geometry), {
+            scope: "global",
+            countryCode: globalCountryCode,
+            level: selectedLevel,
+            index: selectedIndex,
+          }),
+          name || country?.name || globalCountryCode,
+        );
         return;
       }
       if (scope === "indonesia") {
@@ -469,7 +478,10 @@ export default function AoiRegionTab({ onApply }: Props) {
         }
         const geometry = await fetchIndonesiaGeometry();
         if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
-        onApply(toFeature(geometry), t("carbon.aoiRegion.wholeIndonesia"));
+        onApply(
+          withAoiRegionSelection(toFeature(geometry), { scope: "indonesia" }),
+          t("carbon.aoiRegion.wholeIndonesia"),
+        );
         return;
       }
       if (scope === "island") {
@@ -480,7 +492,7 @@ export default function AoiRegionTab({ onApply }: Props) {
         const label = islands.find((i) => i.code === islandCode)?.name || islandCode;
         const geometry = await fetchIslandGeometry(islandCode);
         if (!geometry) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
-        onApply(toFeature(geometry), label);
+        onApply(withAoiRegionSelection(toFeature(geometry), { scope: "island", code: islandCode }), label);
         return;
       }
 
@@ -516,7 +528,18 @@ export default function AoiRegionTab({ onApply }: Props) {
       const name = codes
         .map((code) => selectedOptions.find((option) => option.code === code)?.name || code)
         .join(", ");
-      onApply(feature, name);
+      onApply(
+        withAoiRegionSelection(feature, {
+          scope: "admin",
+          level: endpoint,
+          codes,
+          provinceCodes,
+          cityCodes,
+          districtCodes,
+          villageCodes,
+        }),
+        name,
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("carbon.aoiRegion.err.loadRegionFailed"));
     } finally {
