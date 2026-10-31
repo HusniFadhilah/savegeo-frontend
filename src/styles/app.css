@@ -8932,11 +8932,27 @@ html[data-theme="dark"] .carbon-mode-switch .btn-outline-secondary:hover:not(:di
   background: rgba(255, 255, 255, .72);
 }
 .carbon-basic-pool-tags i { color: #21844a; }
-.carbon-basic-results { margin-top: .9rem; }
+.carbon-basic-results {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.carbon-basic-results__header { display: grid; gap: .5rem; }
+.carbon-basic-results__title {
+  margin: 0;
+  line-height: 1.4;
+}
 .carbon-basic-results__note {
-  margin: -.25rem 0 .75rem;
+  margin: 0;
   color: var(--bs-secondary-color, #64748b);
   font-size: .88rem;
+  line-height: 1.65;
+}
+.carbon-basic-results__list { display: grid; gap: 1rem; min-width: 0; }
+.carbon-basic-results__empty {
+  margin: 0;
+  padding: .875rem 1rem;
+  line-height: 1.6;
 }
 .carbon-basic-pool-card {
   display: grid;

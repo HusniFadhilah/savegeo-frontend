@@ -20,11 +20,13 @@ export default function CarbonPoolsSummary({ results }: Props) {
 
   return (
     <section className="carbon-basic-results" aria-labelledby="carbonBasicResultsTitle">
-      <h5 id="carbonBasicResultsTitle" className="mb-2">
-        <i className="bi bi-grid-1x3 me-2" aria-hidden="true" />{t("carbon.basic.resultsTitle")}
-      </h5>
-      <p className="carbon-basic-results__note">{t("carbon.basic.sourceNote")}</p>
-      <div className="row g-3">
+      <div className="carbon-basic-results__header">
+        <h5 id="carbonBasicResultsTitle" className="carbon-basic-results__title">
+          {t("carbon.basic.resultsTitle")}
+        </h5>
+        <p className="carbon-basic-results__note">{t("carbon.basic.sourceNote")}</p>
+      </div>
+      {available.length > 0 ? <div className="carbon-basic-results__list">
         {available.map(({ key, icon, labelKey }) => {
           const result = results[key];
           if (!result) return null;
@@ -96,8 +98,7 @@ export default function CarbonPoolsSummary({ results }: Props) {
             </div>
           );
         })}
-      </div>
-      {!available.length && <div className="alert alert-warning mb-0">{t("carbon.basic.noResults")}</div>}
+      </div> : <div className="alert alert-warning carbon-basic-results__empty" role="status">{t("carbon.basic.noResults")}</div>}
     </section>
   );
 }

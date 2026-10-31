@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
+import { carbonJobAoi } from "./lib/carbonAoiPayload";
 import type { AoiPayload } from "./lib/geo";
 import { availableCarbonReferenceDatasets } from "./referenceDatasets";
 import type {
@@ -189,7 +190,7 @@ export async function analyzeCarbon({
   return runAnalysisJob<CarbonResult>(
     "carbon",
     {
-      aoi,
+      aoi: carbonJobAoi(aoi),
       year: params.year,
       start_month: params.startMonth,
       end_month: params.endMonth,

@@ -4,6 +4,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
 import { HIGH_DETAIL_MAX_ZOOM, nativeZoomForResolution } from "@/config/mapZoom";
+import { installResultTileRetry } from "./resultTileRetry";
 
 interface Props {
   /** Remount (and thus re-add) whenever this changes, e.g. the active result tab key. */
@@ -15,9 +16,6 @@ interface Props {
   /** AOI used to keep result pixels inside the selected analysis geometry. */
   clipGeometry?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
 }
-
-const TRANSPARENT_TILE =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 /**
  * Thin wrapper around a raw Leaflet tileLayer for GEE result tiles (carbon /
@@ -115,10 +113,12 @@ export default function ResultTileLayer({
       maxNativeZoom: nativeZoomForResolution(resolutionM),
       maxZoom: HIGH_DETAIL_MAX_ZOOM,
       opacity,
-      errorTileUrl: TRANSPARENT_TILE,
+      errorTileUrl: L.Util.emptyImageUrl,
     });
+    const stopRetrying = installResultTileRetry(layer, map);
     layer.addTo(map);
     return () => {
+      stopRetrying();
       map.removeLayer(layer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
