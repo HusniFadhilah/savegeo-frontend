@@ -78,6 +78,13 @@ export default function CarbonPoolsSummary({ results }: Props) {
                         </span>
                       )}
                     </div>
+                    {result.model_info?.large_aoi_baseline && (
+                      <small className="d-block text-muted mt-2">
+                        {language === "id"
+                          ? `AOI besar: stok dihitung dari raster referensi ${period}, bukan prediksi tahunan ${result.model_info.requested_analysis_year}. Resolusi ringkasan ${result.model_info.scale} m.`
+                          : `Large AOI: stock calculated from the ${period} reference raster, rather than an annual ${result.model_info.requested_analysis_year} prediction. Summary resolution ${result.model_info.scale} m.`}
+                      </small>
+                    )}
                   </div>
                 </div>
                 <div className="carbon-basic-pool-card__metrics">

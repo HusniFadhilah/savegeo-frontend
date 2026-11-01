@@ -6,6 +6,32 @@ import type {
   CarbonReferenceDatasetOption,
 } from "@/features/carbon/types";
 import { DEFAULT_CARBON_REFERENCE_DATASET } from "@/features/carbon/referenceDatasets";
+import { boundsFromGeoJSON, calculateAreaFromGeoJSON, type AoiPayload } from "./geo";
+
+function carbonFootprint(aoi: AoiPayload) {
+  const bounds = "geojson" in aoi ? boundsFromGeoJSON(aoi.geojson) : null;
+  const west = bounds?.getWest() ?? ("west" in aoi ? aoi.west : 0);
+  const east = bounds?.getEast() ?? ("east" in aoi ? aoi.east : 0);
+  const south = bounds?.getSouth() ?? ("south" in aoi ? aoi.south : 0);
+  const north = bounds?.getNorth() ?? ("north" in aoi ? aoi.north : 0);
+  const width = Math.abs(east - west) * 111.32 * Math.cos((north + south) * Math.PI / 360);
+  const height = Math.abs(north - south) * 111.32;
+  const area = "geojson" in aoi ? (calculateAreaFromGeoJSON(aoi.geojson) ?? 0) : width * height;
+  return { width, height, area };
+}
+
+export function simpleCarbonSummaryScale(aoi: AoiPayload): number {
+  const { width, height } = carbonFootprint(aoi);
+  return Math.max(10, Math.ceil(Math.sqrt(width * height * 1e6 / 250_000)));
+}
+
+export function needsRegionalCarbonBaseline(aoi?: AoiPayload): boolean {
+  if (!aoi) return false;
+  const { width, height, area } = carbonFootprint(aoi);
+  // Annual feature extraction is costly at province scale. The RF models also
+  // fit within a bounding box plus a 20 km buffer, not just the polygon's area.
+  return area > 10_000 || (width + 40) * (height + 40) > 80_000;
+}
 
 export interface BasicCarbonTarget {
   key: CarbonPoolKey;
@@ -43,6 +69,7 @@ function preferredYear(dataset: CarbonReferenceDatasetOption, fallback: number):
 /** Select one compatible method for each carbon pool without exposing model pickers in Basic mode. */
 export async function buildBasicCarbonPlan(
   fallbackYear: number,
+  aoi?: AoiPayload,
 ): Promise<BasicCarbonTarget[]> {
   const [datasets, defaultAgbModels, bgbModels, socModels] = await Promise.all([
     listCarbonDatasets(),
@@ -50,6 +77,14 @@ export async function buildBasicCarbonPlan(
     listCarbonModels("ORNL_BGB"),
     listCarbonModels("SOILGRIDS_OCS_0_30CM"),
   ]);
+
+  if (needsRegionalCarbonBaseline(aoi)) {
+    return ([['agb', 'SPAWN', 2010], ['bgb', 'ORNL_BGB', 2010], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020]] as const).map(([key, datasetKey, datasetYear]) => {
+      const dataset = datasets.find((item) => item.value === datasetKey);
+      if (!dataset) throw new Error(`Sumber referensi ${datasetKey} belum tersedia untuk AOI besar.`);
+      return { key, dataset, datasetYear, model: null, referenceOnly: true };
+    });
+  }
 
   const agbDatasets = datasets.filter((dataset) => dataset.targetPool === "aboveground_biomass_carbon");
   const defaultAgb = agbDatasets.find((dataset) => dataset.value === DEFAULT_CARBON_REFERENCE_DATASET);

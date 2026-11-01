@@ -17,4 +17,9 @@ describe("administrative carbon request", () => {
     const aoi = { west: 110, south: -7, east: 111, north: -6 };
     expect(carbonJobAoi(aoi)).toBe(aoi);
   });
+
+  it.each([{ scope: "indonesia" } as const, { scope: "island", code: "Jawa" } as const])("sends a compact $scope reference", (selection) => {
+    const feature: AoiFeature = { type: "Feature", geometry: { type: "Polygon", coordinates: [[[110, -7], [111, -7], [111, -6], [110, -7]]] }, properties: {} };
+    expect(carbonJobAoi({ geojson: withAoiRegionSelection(feature, selection) })).toEqual({ region: selection });
+  });
 });

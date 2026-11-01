@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
+import { carbonJobAoi } from "@/features/carbon/lib/carbonAoiPayload";
 import type {
   DemTileResponse,
   GetDemTileParams,
@@ -39,7 +40,7 @@ export function getSpectralProfile(payload: { item_url: string; asset_key?: stri
  */
 export function listImageryScenes(params: ListScenesParams) {
   return apiClient.post<ImagerySceneListResponse>("/imagery/scenes", {
-    aoi: params.aoi,
+    aoi: carbonJobAoi(params.aoi),
     satellite: params.satellite,
     start_date: params.startDate,
     end_date: params.endDate,
@@ -55,7 +56,7 @@ export function getImagerySceneTile(params: GetSceneTileParams) {
   return apiClient.post<ImagerySceneTileResponse>("/imagery/scene-tile", {
     satellite: params.satellite,
     scene_id: params.sceneId,
-    aoi: params.aoi,
+    aoi: params.aoi ? carbonJobAoi(params.aoi) : undefined,
     auto_mosaic: params.autoMosaic,
     force_mosaic: params.forceMosaic,
     force_scene: params.forceScene,

@@ -122,6 +122,8 @@ export interface CarbonModelInfo {
 }
 
 export interface CarbonParams {
+  simpleMode?: boolean;
+  scale?: number;
   year: number;
   startMonth: number;
   endMonth: number;
@@ -196,6 +198,7 @@ export interface CarbonAreaInfo {
 }
 
 export interface CarbonModelRunInfo {
+  large_aoi_baseline?: boolean;
   provider?: string;
   calculation_mode?: string;
   display_mode?: string;

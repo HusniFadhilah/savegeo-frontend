@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { parseCarbonQuery, serializeCarbonQuery } from "./carbonQueryState";
 
 describe("carbon query state for vegetation time series", () => {
+  it("restores multiple villages without the redundant proxy-blocked parameter", () => {
+    const region = { scope: "admin", level: "village", codes: ["3374101004", "3374101006", "3374101005"], provinceCodes: ["33"], cityCodes: ["3374"], districtCodes: ["337410"], villageCodes: ["3374101004", "3374101006", "3374101005"] };
+    const query = serializeCarbonQuery({ mode: "carbon", aoiRegion: JSON.stringify(region), year: 2026 });
+    expect(query.has("aoi_village_codes")).toBe(false);
+    expect(JSON.parse(parseCarbonQuery(`?${query}`).aoiRegion!)).toEqual(region);
+  });
   it("round-trips Semarang using flat region fields and accepts legacy links", () => {
     const region = JSON.stringify({ scope: "admin", level: "city", codes: ["3374"], provinceCodes: ["33"], cityCodes: ["3374"], districtCodes: [], villageCodes: [] });
     const query = serializeCarbonQuery({ mode: "carbon", aoiRegion: region, year: 2026 });

@@ -7,7 +7,8 @@ export function readAoiRegionQuery(query: URLSearchParams): string | undefined {
   if (scope === "admin") return JSON.stringify({
     scope, level: query.get("aoi_level"), codes: codes("aoi_codes"),
     provinceCodes: codes("aoi_province_codes"), cityCodes: codes("aoi_city_codes"),
-    districtCodes: codes("aoi_district_codes"), villageCodes: codes("aoi_village_codes"),
+    districtCodes: codes("aoi_district_codes"),
+    villageCodes: query.get("aoi_level") === "village" ? codes("aoi_codes") : codes("aoi_village_codes"),
   });
   if (scope === "indonesia") return JSON.stringify({ scope });
   if (scope === "island") return JSON.stringify({ scope, code: query.get("aoi_island") });
@@ -31,7 +32,8 @@ export function writeAoiRegionQuery(query: URLSearchParams, value?: string) {
       put("aoi_province_codes", region.provinceCodes);
       put("aoi_city_codes", region.cityCodes);
       put("aoi_district_codes", region.districtCodes);
-      put("aoi_village_codes", region.villageCodes);
+      // Village IDs are already in aoi_codes at this level. The public proxy
+      // rejects links containing the redundant aoi_village_codes parameter.
     } else if (region.scope === "island") put("aoi_island", region.code);
     else if (region.scope === "global") {
       put("aoi_country", region.countryCode);

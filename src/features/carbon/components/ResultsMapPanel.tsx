@@ -33,7 +33,7 @@ function carbonQuantityLabel(layer?: CarbonLayerResult): string {
   return "Densitas Karbon";
 }
 
-function CompareAoiView({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
+function FitResultAoi({ aoi, zoom }: { aoi: AoiState; zoom: number }) {
   const map = useMap();
   useEffect(() => {
     if (isFiniteMapBounds(aoi.bounds)) map.fitBounds(aoi.bounds, { maxZoom: zoom, animate: false });
@@ -451,7 +451,7 @@ export default function ResultsMapPanel({
               <BasemapSwitcher />
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
               {aoi?.feature && <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
-              {aoi && <CompareAoiView aoi={aoi} zoom={zoom} />}
+              {aoi && <FitResultAoi aoi={aoi} zoom={zoom} />}
             </SwipeCompareMap>
             <div className="row g-2 mt-1">
               {(legend.entries.length > 0 || legend.scale) && (
@@ -478,6 +478,7 @@ export default function ResultsMapPanel({
               onMapReady={(map) => registerMap("results", map)}
             >
               <BasemapSwitcher />
+              {aoi && <FitResultAoi aoi={aoi} zoom={zoom} />}
               {aoi?.feature && <GeoJSON data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
               {activeTab?.tileUrl && (
                 <>

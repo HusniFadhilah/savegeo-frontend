@@ -191,6 +191,8 @@ export async function analyzeCarbon({
     "carbon",
     {
       aoi: carbonJobAoi(aoi),
+      simple_mode: params.simpleMode,
+      scale: params.scale,
       year: params.year,
       start_month: params.startMonth,
       end_month: params.endMonth,

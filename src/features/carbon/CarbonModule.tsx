@@ -36,7 +36,7 @@ import {
 } from "@/features/carbon/referenceDatasets";
 import { areaKm2, boundsFromGeoJSON, boundsToPayload } from "@/features/carbon/lib/geo";
 import { getAoiRegionSelection, loadAoiRegionSelection, normalizeAoiRegionGeoJson, parseAoiRegionSelection, withAoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
-import { buildBasicCarbonPlan } from "@/features/carbon/lib/basicCarbonPlan";
+import { buildBasicCarbonPlan, simpleCarbonSummaryScale } from "@/features/carbon/lib/basicCarbonPlan";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type {
   AnalysisType,
@@ -466,7 +466,7 @@ export default function CarbonModule() {
     const errors: string[] = [];
     const startedAt = Date.now();
     try {
-      const plan = await buildBasicCarbonPlan(carbonParams.datasetYear);
+      const plan = await buildBasicCarbonPlan(carbonParams.datasetYear, aoiPayload);
       let completedPools = 0;
       const outcomes = await Promise.all(plan.map(async (target, index) => {
         const poolLabel = t(`carbon.basic.${target.key}`);
@@ -478,6 +478,8 @@ export default function CarbonModule() {
           modelName: target.model?.name ?? null,
           referenceOnly: target.referenceOnly,
           loadOnly: false,
+          simpleMode: true,
+          scale: target.referenceOnly ? undefined : simpleCarbonSummaryScale(aoiPayload),
           clipMode: "clipped",
         };
         try {
