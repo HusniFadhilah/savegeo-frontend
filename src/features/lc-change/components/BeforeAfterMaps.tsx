@@ -246,6 +246,9 @@ export default function BeforeAfterMaps({
           <i className="fas fa-check-circle" /> {t("lc.changedSummary")}:{" "}
           <strong>{formatNumber(Number(changeMapData.changed_area_ha || 0), language)} ha</strong> (
           {Number(changeMapData.changed_percentage || 0).toFixed(2)}%)
+          <small className="d-block mt-1">
+            {t("lc.comparisonGridHint", { resolution: changeMapData.resolution })}
+          </small>
         </div>
       )}
 
