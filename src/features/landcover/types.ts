@@ -16,6 +16,7 @@ export interface LandCoverDatasetResult {
   training_sample_count?: number;
   missing_training_classes?: number[];
   resolution?: string | number;
+  native_scale?: number;
   dataset_name?: string;
   year?: number | string;
   classes: Record<string, LandCoverClassInfo>;

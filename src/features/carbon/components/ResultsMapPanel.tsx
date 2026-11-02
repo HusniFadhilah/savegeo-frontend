@@ -76,7 +76,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
   if (results.landcover) {
     for (const [key, val] of Object.entries(results.landcover)) {
       if (!isLandCoverDatasetEntry(key, val)) continue;
-      tabs.push({ key, label: key.replace(/_/g, " "), icon: "bi-map", tileUrl: val.tile_url, resolutionM: Number.parseFloat(String(val.resolution)) || undefined });
+      tabs.push({ key, label: key.replace(/_/g, " "), icon: "bi-map", tileUrl: val.tile_url, resolutionM: val.native_scale ?? (Number.parseFloat(String(val.resolution)) || undefined) });
     }
   }
 
