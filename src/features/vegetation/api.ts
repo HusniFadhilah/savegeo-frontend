@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
+import { carbonJobAoi } from "@/features/carbon/lib/carbonAoiPayload";
 import type {
   CloudMaskTechniqueCatalogResponse,
   SatelliteProvider,
@@ -16,7 +17,7 @@ const VEGETATION_JOB_TIMEOUT_MS = 30 * 60_000;
 /** POST /analyze/vegetation returns the VegetationResult dict directly - no {success,data} envelope (errors are non-2xx, caught as ApiError). */
 export function analyzeVegetation(aoi: AoiPayload, year: number, params: VegetationParams) {
   return runAnalysisJob<VegetationResult>("vegetation", {
-    aoi,
+    aoi: carbonJobAoi(aoi),
     year,
     start_month: params.startMonth,
     end_month: params.endMonth,

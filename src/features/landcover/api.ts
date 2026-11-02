@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
+import { carbonJobAoi } from "@/features/carbon/lib/carbonAoiPayload";
 import type { LandCoverDatasetCatalog, LandCoverParams, LandCoverResult } from "./types";
 import { canonicalLandCoverKeys } from "./catalog";
 
@@ -20,7 +21,7 @@ export function analyzeLandCover(aoi: AoiPayload, year: number, params: LandCove
   const dateMode = params.dateMode ?? "year";
   const selectedMonth = params.selectedMonth ?? params.startMonth;
   const payload: Record<string, unknown> = {
-    aoi,
+    aoi: carbonJobAoi(aoi),
     year,
     datasets: canonicalLandCoverKeys(params.datasets),
     dw_mode: params.dwMode,
