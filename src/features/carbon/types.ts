@@ -219,6 +219,10 @@ export interface CarbonModelRunInfo {
   requested_analysis_year?: number | string;
   analysis_year_partial?: boolean;
   analysis_year_mode?: "annual_covariate_inference" | "static_reference";
+  annual_summary_source?: "database" | "computed";
+  annual_summary_persisted?: boolean;
+  annual_summary_key?: string;
+  observed_through?: string;
   reference_year?: number | string;
   depth_cm?: number[];
   source_period?: string;

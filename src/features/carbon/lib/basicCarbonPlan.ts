@@ -25,11 +25,11 @@ export function simpleCarbonSummaryScale(aoi: AoiPayload): number {
   return Math.max(10, Math.ceil(Math.sqrt(width * height * 1e6 / 250_000)));
 }
 
-export function needsRegionalCarbonBaseline(aoi?: AoiPayload): boolean {
+export function needsNationalCarbonModel(aoi?: AoiPayload): boolean {
   if (!aoi) return false;
   const { width, height, area } = carbonFootprint(aoi);
-  // Annual feature extraction is costly at province scale. The RF models also
-  // fit within a bounding box plus a 20 km buffer, not just the polygon's area.
+  // Large regions need a frozen national model rather than fitting a local RF
+  // within the AOI's bounding box plus a 20 km calibration buffer.
   return area > 10_000 || (width + 40) * (height + 40) > 80_000;
 }
 
@@ -78,11 +78,17 @@ export async function buildBasicCarbonPlan(
     listCarbonModels("SOILGRIDS_OCS_0_30CM"),
   ]);
 
-  if (needsRegionalCarbonBaseline(aoi)) {
-    return ([['agb', 'SPAWN', 2010], ['bgb', 'ORNL_BGB', 2010], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020]] as const).map(([key, datasetKey, datasetYear]) => {
+  if (needsNationalCarbonModel(aoi)) {
+    const nationalAgbModels = await listCarbonModels("SPAWN");
+    return ([['agb', 'SPAWN', 2010, nationalAgbModels], ['bgb', 'ORNL_BGB', 2010, bgbModels], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020, socModels]] as const).map(([key, datasetKey, datasetYear, models]) => {
       const dataset = datasets.find((item) => item.value === datasetKey);
       if (!dataset) throw new Error(`Sumber referensi ${datasetKey} belum tersedia untuk AOI besar.`);
-      return { key, dataset, datasetYear, model: null, referenceOnly: true };
+      if (fallbackYear === datasetYear) return { key, dataset, datasetYear, model: null, referenceOnly: true };
+      const model = [...models].filter((item) => item.metadata_json?.method === "saved_reference_ensemble"
+        && item.metadata_json?.training_domain === "indonesia"
+        && item.metadata_json?.gee_deployable).sort(compareRecommendedModels)[0];
+      if (!model) throw new Error(`Model estimasi tahunan nasional ${key.toUpperCase()} belum tersedia. Tahun ${fallbackYear} tidak dapat diganti dengan referensi ${datasetYear}.`);
+      return { key, dataset, datasetYear, model, referenceOnly: false };
     });
   }
 
@@ -134,6 +140,12 @@ export async function buildBasicCarbonPlan(
   }
   if (socDataset) {
     plan.push({ key: "soc", dataset: socDataset, datasetYear: 2020, model: socModel, referenceOnly: !socModel });
+  }
+  for (const target of plan) {
+    if (fallbackYear === target.datasetYear) {
+      target.model = null;
+      target.referenceOnly = true;
+    }
   }
   if (plan.length !== 3) {
     throw new Error("Katalog karbon belum menyediakan sumber AGB, BGB, dan SOC yang diperlukan untuk mode Simpel.");

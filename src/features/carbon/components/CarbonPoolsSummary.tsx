@@ -71,6 +71,14 @@ export default function CarbonPoolsSummary({ results }: Props) {
                           {language === "id" ? "Data terbaru tahun berjalan" : "Latest data this year"}
                         </span>
                       )}
+                      {result.model_info?.annual_summary_persisted && (
+                        <span>
+                          <i className="bi bi-database-check" aria-hidden="true" />
+                          {result.model_info.annual_summary_source === "database"
+                            ? (language === "id" ? "Dimuat dari database" : "Loaded from database")
+                            : (language === "id" ? "Disimpan ke database" : "Saved to database")}
+                        </span>
+                      )}
                       {staticReferenceOnly && (
                         <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">
                           <i className="bi bi-info-circle" aria-hidden="true" />
@@ -83,6 +91,13 @@ export default function CarbonPoolsSummary({ results }: Props) {
                         {language === "id"
                           ? `AOI besar: stok dihitung dari raster referensi ${period}, bukan prediksi tahunan ${result.model_info.requested_analysis_year}. Resolusi ringkasan ${result.model_info.scale} m.`
                           : `Large AOI: stock calculated from the ${period} reference raster, rather than an annual ${result.model_info.requested_analysis_year} prediction. Summary resolution ${result.model_info.scale} m.`}
+                      </small>
+                    )}
+                    {result.model_info?.analysis_year_mode === "annual_covariate_inference" && (
+                      <small className="d-block text-muted mt-2">
+                        {language === "id"
+                          ? `Estimasi model memakai citra ${period}, dengan referensi kalibrasi ${referenceYear}. Akurasi perubahan tahunan belum divalidasi dengan pengukuran lapangan.`
+                          : `Model estimate using ${period} imagery and a ${referenceYear} calibration reference. Annual change accuracy has not been validated against field measurements.`}
                       </small>
                     )}
                   </div>

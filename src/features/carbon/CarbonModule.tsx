@@ -466,7 +466,7 @@ export default function CarbonModule() {
     const errors: string[] = [];
     const startedAt = Date.now();
     try {
-      const plan = await buildBasicCarbonPlan(carbonParams.datasetYear, aoiPayload);
+      const plan = await buildBasicCarbonPlan(carbonParams.year, aoiPayload);
       let completedPools = 0;
       const outcomes = await Promise.all(plan.map(async (target, index) => {
         const poolLabel = t(`carbon.basic.${target.key}`);
