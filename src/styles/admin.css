@@ -1197,6 +1197,11 @@ html[data-theme="dark"] .admin-panel .analysis-review .legend {
   font-size: 13px;
 }
 
+.admin-panel .tbl td.admin-user-identity {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .admin-panel .tbl tr:last-child td {
   border-bottom: none;
 }

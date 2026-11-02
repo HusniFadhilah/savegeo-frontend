@@ -301,7 +301,7 @@ export default function AdminUsers() {
                 rows.map((u) => (
                   <tr key={u.id}>
                     <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
-                    <td>
+                    <td className="admin-user-identity">
                       <strong>{u.full_name || u.username}</strong>
                       {u.full_name && <div style={{ fontSize: 12 }}>@{u.username}</div>}
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
