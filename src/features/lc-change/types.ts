@@ -194,6 +194,7 @@ export interface LcHotspotResponse {
 }
 
 export interface TransitionData {
+  resolution?: string;
   method?: "pixel_transition";
   totalAreaHa?: number;
   changedAreaHa?: number;
@@ -206,6 +207,7 @@ export interface TransitionData {
 }
 
 export interface LcTransitionResponse {
+  resolution?: string;
   method: "pixel_transition";
   comparison_crs: string;
   collection_version?: string;

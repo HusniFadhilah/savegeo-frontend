@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
+import { carbonJobAoi } from "@/features/carbon/lib/carbonAoiPayload";
 import type {
   LcAnalyzeParams,
   LcAnalyzeResponse,
@@ -15,7 +16,7 @@ import type {
 } from "./types";
 
 export async function analyzeLandCoverTransition(params: LcChangeMapParams): Promise<TransitionData> {
-  const response = await runAnalysisJob<LcTransitionResponse>("landcover_transition", params, { timeoutMs: 900_000 });
+  const response = await runAnalysisJob<LcTransitionResponse>("landcover_transition", { ...params, aoi: carbonJobAoi(params.aoi) }, { timeoutMs: 900_000 });
   const pair = response.pairs.find((item) => item.from_year === params.from_year && item.to_year === params.to_year);
   if (response.method !== "pixel_transition" || !pair) throw new Error("Matriks transisi piksel tidak tersedia.");
   const matrix: TransitionData["matrix"] = {};
@@ -33,7 +34,7 @@ export async function analyzeLandCoverTransition(params: LcChangeMapParams): Pro
   }
   return { matrix, gains, losses, allClasses: [...classes].sort(), method: response.method,
     totalAreaHa: pair.total_area_ha, changedAreaHa: pair.changed_area_ha,
-    stableAreaHa: pair.stable_area_ha, sourceVersion: response.model_version ?? response.collection_version };
+    stableAreaHa: pair.stable_area_ha, sourceVersion: response.model_version ?? response.collection_version, resolution: response.resolution };
 }
 
 /**
@@ -47,12 +48,12 @@ export async function analyzeLandCoverTransition(params: LcChangeMapParams): Pro
 
 /** POST /analyze/landcover - one request per year, single dataset in the array. */
 export function analyzeLandCoverYear(params: LcAnalyzeParams) {
-  return runAnalysisJob<LcAnalyzeResponse>("landcover_change", params, { timeoutMs: 650_000 });
+  return runAnalysisJob<LcAnalyzeResponse>("landcover_change", { ...params, aoi: carbonJobAoi(params.aoi) }, { timeoutMs: 650_000 });
 }
 
 /** POST /analyze/landcover-change-map - pixel-level diff + tile URLs for a year pair. */
 export function analyzeLandCoverChangeMap(params: LcChangeMapParams) {
-  return runAnalysisJob<LcChangeMapResponse>("landcover_change_map", params, { timeoutMs: 900_000 });
+  return runAnalysisJob<LcChangeMapResponse>("landcover_change_map", { ...params, aoi: carbonJobAoi(params.aoi) }, { timeoutMs: 900_000 });
 }
 
 export function identifyLandCoverPoint(params: {
@@ -67,15 +68,15 @@ export function identifyLandCoverPoint(params: {
   end_date?: string;
   dw_probability_threshold?: number;
 }) {
-  return apiClient.post<LcIdentifyResponse>("/analyze/landcover-identify", params, { auth: "app" });
+  return apiClient.post<LcIdentifyResponse>("/analyze/landcover-identify", { ...params, aoi: carbonJobAoi(params.aoi) }, { auth: "app" });
 }
 
 /** POST /analyze/landcover-hotspots - ranked, vectorized change polygons (P0 hotspot detection). */
 export function analyzeLandCoverHotspots(params: LcHotspotParams) {
-  return runAnalysisJob<LcHotspotResponse>("landcover_hotspots", params, { timeoutMs: 900_000 });
+  return runAnalysisJob<LcHotspotResponse>("landcover_hotspots", { ...params, aoi: carbonJobAoi(params.aoi) }, { timeoutMs: 900_000 });
 }
 
 /** POST /analyze/landcover-fusion - quality-gated optical/SAR fusion classification and change. */
 export function analyzeLandCoverFusion(params: LcFusionParams) {
-  return runAnalysisJob<LcFusionResponse>("landcover_fusion", params, { timeoutMs: 1_200_000 });
+  return runAnalysisJob<LcFusionResponse>("landcover_fusion", { ...params, aoi: carbonJobAoi(params.aoi) }, { timeoutMs: 1_200_000 });
 }

@@ -32,7 +32,7 @@ export function withAoiRegionSelection(feature: AoiFeature, selection: AoiRegion
   };
 }
 
-export function getAoiRegionSelection(feature: AoiFeature | null | undefined): AoiRegionSelection | null {
+export function getAoiRegionSelection(feature: Pick<GeoJSON.Feature, "properties"> | null | undefined): AoiRegionSelection | null {
   const value = feature?.properties?.[REGION_SELECTION_PROPERTY];
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;

@@ -41,6 +41,7 @@ export default function TransitionMatrixTable({ trans, yearA, yearB }: Props) {
       {trans.method === "pixel_transition" && <div className="alert alert-info py-2 small">
         Transisi piksel · Area valid bersama: {trans.totalAreaHa?.toLocaleString("id-ID")} ha ·
         Berubah: {trans.changedAreaHa?.toLocaleString("id-ID")} ha · Versi: {trans.sourceVersion}
+        {trans.resolution && <> · Grid perhitungan: {trans.resolution}</>}
       </div>}
       <p className="text-muted mb-2" style={{ fontSize: ".8rem" }}>
         <i className="fas fa-info-circle" /> Baris = kelas asal ({yearA}) · Kolom = kelas tujuan ({yearB}) ·
