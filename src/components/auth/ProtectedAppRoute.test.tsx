@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import ProtectedAppRoute from "./ProtectedAppRoute";
 import AnalysisTypeSelector from "@/features/carbon/components/AnalysisTypeSelector";
@@ -30,6 +30,7 @@ vi.mock("@/hooks/useI18nStore", () => ({
 }));
 
 describe("Viewer route and mode gates", () => {
+  afterEach(cleanup);
   beforeEach(() => {
     session.admin.user.role = "viewer";
     session.admin.isAuthenticated = true;
@@ -37,6 +38,7 @@ describe("Viewer route and mode gates", () => {
     session.featureState.features = ["app.feature.carbon_stock"];
     session.featureState.isLoading = false;
     session.featureState.error = null;
+    session.featureState.load.mockReset();
   });
 
   it("rejects a direct deep link to a disabled Carbon workspace mode", () => {
@@ -65,5 +67,35 @@ describe("Viewer route and mode gates", () => {
     const select = screen.getByRole("combobox");
     expect(select.querySelectorAll("option")).toHaveLength(1);
     expect(select.querySelector("option")?.value).toBe("carbon");
+  });
+
+  it("preserves the workspace when focus triggers a background permission check", () => {
+    const workspace = () => (
+      <MemoryRouter initialEntries={["/carbon-estimation?mode=carbon"]}>
+        <ProtectedAppRoute feature="app.feature.carbon_stock">
+          <input aria-label="Analysis note" defaultValue="" />
+        </ProtectedAppRoute>
+      </MemoryRouter>
+    );
+    const view = render(workspace());
+    const input = screen.getByRole("textbox", { name: "Analysis note" });
+    fireEvent.change(input, { target: { value: "Keep the current analysis" } });
+    fireEvent(window, new Event("focus"));
+    expect(session.featureState.load).toHaveBeenCalledWith(true);
+
+    session.featureState.isLoading = true;
+    view.rerender(workspace());
+    expect(screen.getByRole("textbox", { name: "Analysis note" })).toBe(input);
+    expect(input).toHaveValue("Keep the current analysis");
+
+    session.featureState.isLoading = false;
+    view.rerender(workspace());
+    expect(screen.getByRole("textbox", { name: "Analysis note" })).toBe(input);
+
+    // A completed permission change still removes access immediately.
+    session.featureState.features = [];
+    view.rerender(workspace());
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("access.denied")).toBeInTheDocument();
   });
 });

@@ -22,7 +22,6 @@ export default function ProtectedAppRoute({
   const isAdminLoading = useAuthStore((state) => state.isLoading);
   const adminRole = useAuthStore((state) => state.user?.role);
   const features = useViewerFeatures((state) => state.features);
-  const featureLoading = useViewerFeatures((state) => state.isLoading);
   const featureError = useViewerFeatures((state) => state.error);
   const loadFeatures = useViewerFeatures((state) => state.load);
   const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
@@ -53,7 +52,9 @@ export default function ProtectedAppRoute({
     );
   }
 
-  if (isViewerPrincipal && (features === null || featureLoading)) {
+  // A focus-triggered refresh must not unmount an already-authorized workspace
+  // and discard its analysis/map state. Gate only the initial permission load.
+  if (isViewerPrincipal && features === null) {
     return <div className="d-flex min-vh-100 align-items-center justify-content-center" role="status">{t("access.loadingFeatures")}</div>;
   }
   if (isViewerPrincipal && featureError) {
