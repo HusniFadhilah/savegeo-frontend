@@ -84,7 +84,7 @@ export default function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AppLoginPage />} />
       <Route path="/register" element={<RegisterUserPage />} />
-      <Route path="/profile" element={<ProtectedAppRoute><ProfilePage /></ProtectedAppRoute>} />
+      <Route path="/profile" element={<ProtectedAppRoute checkFeatureAccess={false}><ProfilePage /></ProtectedAppRoute>} />
       <Route
         path="/dashboard"
         element={<DashboardEntryRoute />}

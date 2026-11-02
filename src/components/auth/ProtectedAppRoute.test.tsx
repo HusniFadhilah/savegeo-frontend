@@ -9,7 +9,7 @@ const session = vi.hoisted(() => ({
   admin: { user: { role: "viewer" }, isAuthenticated: true, isLoading: false },
   user: { isAuthenticated: false, isLoading: false },
   featureState: {
-    features: ["app.feature.carbon_stock"],
+    features: ["app.feature.carbon_stock"] as string[] | null,
     isLoading: false,
     error: null,
     load: vi.fn(),
@@ -59,6 +59,26 @@ describe("Viewer route and mode gates", () => {
 
     expect(screen.getByRole("heading", { name: "access.title" })).toBeInTheDocument();
     expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+  });
+
+  it("opens a signed-in profile without depending on analysis permissions", () => {
+    session.featureState.features = null;
+    render(<MemoryRouter initialEntries={["/profile"]}>
+      <ProtectedAppRoute checkFeatureAccess={false}><input aria-label="Full name" /></ProtectedAppRoute>
+    </MemoryRouter>);
+    expect(screen.getByRole("textbox", { name: "Full name" })).toBeInTheDocument();
+    fireEvent(window, new Event("focus"));
+    expect(session.featureState.load).not.toHaveBeenCalled();
+  });
+
+  it("still requires a session when opening a profile without feature checks", () => {
+    session.admin.isAuthenticated = false;
+    render(<MemoryRouter initialEntries={["/profile"]}><Routes>
+      <Route path="/profile" element={<ProtectedAppRoute checkFeatureAccess={false}><input aria-label="Full name" /></ProtectedAppRoute>} />
+      <Route path="/login" element={<div>Sign in first</div>} />
+    </Routes></MemoryRouter>);
+    expect(screen.getByText("Sign in first")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("renders only allowed Carbon modes in the shared workspace selector", () => {

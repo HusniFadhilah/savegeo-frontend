@@ -10,10 +10,12 @@ export default function ProtectedAppRoute({
   children,
   feature,
   anyFeature,
+  checkFeatureAccess = true,
 }: {
   children: ReactNode;
   feature?: ViewerFeatureCode;
   anyFeature?: ViewerFeatureCode[];
+  checkFeatureAccess?: boolean;
 }) {
   const location = useLocation();
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
@@ -28,15 +30,15 @@ export default function ProtectedAppRoute({
   const t = useI18nStore((state) => state.t);
 
   useEffect(() => {
-    if (isViewerPrincipal && features === null) void loadFeatures();
-  }, [isViewerPrincipal, features, loadFeatures]);
+    if (checkFeatureAccess && isViewerPrincipal && features === null) void loadFeatures();
+  }, [checkFeatureAccess, isViewerPrincipal, features, loadFeatures]);
 
   useEffect(() => {
-    if (!isViewerPrincipal) return;
+    if (!checkFeatureAccess || !isViewerPrincipal) return;
     const refresh = () => void loadFeatures(true);
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, [isViewerPrincipal, loadFeatures]);
+  }, [checkFeatureAccess, isViewerPrincipal, loadFeatures]);
 
   if (isUserLoading || isAdminLoading) {
     return <div className="d-flex min-vh-100 align-items-center justify-content-center">{t("auth.verifyingSession")}</div>;
@@ -54,10 +56,10 @@ export default function ProtectedAppRoute({
 
   // A focus-triggered refresh must not unmount an already-authorized workspace
   // and discard its analysis/map state. Gate only the initial permission load.
-  if (isViewerPrincipal && features === null) {
+  if (checkFeatureAccess && isViewerPrincipal && features === null) {
     return <div className="d-flex min-vh-100 align-items-center justify-content-center" role="status">{t("access.loadingFeatures")}</div>;
   }
-  if (isViewerPrincipal && featureError) {
+  if (checkFeatureAccess && isViewerPrincipal && featureError) {
     return (
       <main className="container py-5" role="alert">
         <h1>{t("access.title")}</h1>
@@ -76,7 +78,7 @@ export default function ProtectedAppRoute({
     ? new URLSearchParams(location.search).get("mode")
     : null;
   const requestedModeFeature = requestedMode ? modeFeature[requestedMode] : undefined;
-  const hasRequestedFeature = !isViewerPrincipal || (
+  const hasRequestedFeature = !checkFeatureAccess || !isViewerPrincipal || (
     (!feature || features?.includes(feature)) &&
     (!anyFeature || anyFeature.some((code) => features?.includes(code))) &&
     (!requestedModeFeature || features?.includes(requestedModeFeature))
