@@ -11,6 +11,7 @@ export default function AdminProfile() {
   const t = useI18nStore((state) => state.t);
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [fullName, setFullName] = useState(user?.full_name ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passwordFormOpen, setPasswordFormOpen] = useState(false);
@@ -18,7 +19,8 @@ export default function AdminProfile() {
   useEffect(() => {
     setUsername(user?.username ?? "");
     setEmail(user?.email ?? "");
-  }, [user?.username, user?.email]);
+    setFullName(user?.full_name ?? "");
+  }, [user?.username, user?.email, user?.full_name]);
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,7 +34,7 @@ export default function AdminProfile() {
     setSaving(true);
     setError(null);
     try {
-      const response = await updateAdminProfile({ username: cleanUsername, email: cleanEmail || null });
+      const response = await updateAdminProfile({ username: cleanUsername, email: cleanEmail || null, full_name: fullName.trim() || null });
       useAuthStore.setState({ user: response.user });
       notify(t("admin.profile.saved"), "s");
     } catch (cause) {
@@ -53,6 +55,10 @@ export default function AdminProfile() {
         <div className="card-body-custom">
           <form onSubmit={(event) => void saveProfile(event)}>
             <div className="two-col">
+              <div className="form-field">
+                <label className="form-label" htmlFor="admin-profile-full-name">{t("account.fullName")}</label>
+                <input id="admin-profile-full-name" className="form-input" autoComplete="name" maxLength={160} value={fullName} onChange={(event) => setFullName(event.target.value)} />
+              </div>
               <div className="form-field">
                 <label className="form-label" htmlFor="admin-profile-username">{t("admin.profile.username")}</label>
                 <input

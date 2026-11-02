@@ -10,6 +10,7 @@ const LEGACY_TOKEN_KEY = "savegeo_user_token";
 const LEGACY_USER_KEY = "savegeo_user_user";
 
 export interface AppUser {
+  full_name?: string | null;
   id: number;
   username: string;
   email: string;
@@ -66,11 +67,14 @@ export const userAuthService = {
   async login(username: string, password: string): Promise<UserLoginResponse> {
     return apiClient.post<UserLoginResponse>("/auth/login", { username, password });
   },
-  async register(username: string, email: string, password: string): Promise<UserLoginResponse> {
-    return apiClient.post<UserLoginResponse>("/auth/register", { username, email, password });
+  async register(username: string, email: string, password: string, fullName?: string): Promise<UserLoginResponse> {
+    return apiClient.post<UserLoginResponse>("/auth/register", { username, email, password, full_name: fullName?.trim() || null });
   },
   me(): Promise<AppUser> {
     return apiClient.get<AppUser>("/auth/me", { auth: "user" });
+  },
+  updateProfile(fullName: string): Promise<{ message: string; user: AppUser }> {
+    return apiClient.put("/auth/profile", { full_name: fullName.trim() || null }, { auth: "user" });
   },
   forgotPassword(identifier: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>("/auth/forgot-password", { identifier });

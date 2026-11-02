@@ -23,7 +23,7 @@ interface UserAuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string, fullName?: string) => Promise<boolean>;
   logout: () => Promise<boolean>;
   initialize: () => Promise<void>;
 }
@@ -53,11 +53,11 @@ export const useUserAuthStore = create<UserAuthState>((set) => ({
       return false;
     }
   },
-  register: async (username, email, password) => {
+  register: async (username, email, password, fullName) => {
     useViewerFeatures.getState().reset();
     set({ isLoading: true, error: null });
     try {
-      await userAuthService.register(username, email, password);
+      await userAuthService.register(username, email, password, fullName);
       const user = await userAuthService.me();
       set({ user, isAuthenticated: true, isLoading: false });
       return true;

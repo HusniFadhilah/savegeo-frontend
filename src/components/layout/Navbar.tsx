@@ -106,14 +106,20 @@ export default function Navbar() {
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 <i className="bi bi-person-circle" />
-                <span>{activeUser?.username}</span>
+                <span>{activeUser?.full_name || activeUser?.username}</span>
               </button>
               {menuOpen && (
                 <ul className="dropdown-menu dropdown-menu-end shadow show" onMouseLeave={() => setMenuOpen(false)}>
                   <li>
                     <h6 className="dropdown-header d-flex align-items-center gap-2 mb-0">
-                      <i className="bi bi-person-circle" /> {activeUser?.username}
+                      <i className="bi bi-person-circle" /> {activeUser?.full_name || activeUser?.username}
                     </h6>
+                    {activeUser?.full_name && <small className="dropdown-header pt-0">@{activeUser.username}</small>}
+                  </li>
+                  <li>
+                    <Link className="dropdown-item" to={activeIsAdmin && !isViewer ? "/admin/profile" : "/profile"} onClick={() => setMenuOpen(false)}>
+                      <i className="bi bi-person-vcard me-2" /> {t("account.profile")}
+                    </Link>
                   </li>
                   {showRegularDashboard && (
                     <li>

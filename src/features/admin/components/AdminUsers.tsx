@@ -7,9 +7,11 @@ import { createAdminUser, deleteAdminUser, getCurrentAdminUser, listRoles, updat
 import type { AdminRole, AdminUserRow } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { hasAdminPermission } from "@/auth/access";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import BulkTableToolbar from "./BulkTableToolbar";
 
 interface FormState {
+  fullName: string;
   id: number | null;
   username: string;
   email: string;
@@ -18,7 +20,7 @@ interface FormState {
   isActive: boolean;
 }
 
-const EMPTY_FORM: FormState = { id: null, username: "", email: "", password: "", roleId: "", isActive: true };
+const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "", password: "", roleId: "", isActive: true };
 
 function roleLabel(name: string): string {
   return name === "geospatial_expert" ? "Ahli Geospasial" : name;
@@ -92,6 +94,7 @@ export default function AdminUsers() {
     setForm({
       id: u.id,
       username: u.username,
+      fullName: u.full_name || "",
       email: u.email || "",
       password: "",
       roleId: role ? String(role.id) : "",
@@ -116,6 +119,7 @@ export default function AdminUsers() {
           return;
         }
         await createAdminUser({
+          full_name: form.fullName.trim() || null,
           username: form.username.trim(),
           password: form.password,
           email: form.email.trim() || null,
@@ -128,12 +132,17 @@ export default function AdminUsers() {
           setFormError(t("admin.users.passwordMin"));
           return;
         }
-        await updateAdminUser(form.id, {
+        const response = await updateAdminUser(form.id, {
+          full_name: form.fullName.trim() || null,
           email: form.email.trim() || null,
           is_active: form.isActive,
           role_id: roleId,
           ...(form.password ? { new_password: form.password } : {}),
         });
+        if (form.id === me?.id) {
+          useAuthStore.setState({ user: response.user });
+          setMe(response.user);
+        }
         notify(t("admin.users.updated"), "s");
       }
       setFormOpen(false);
@@ -182,6 +191,10 @@ export default function AdminUsers() {
         {formOpen && (
           <div className="collapse-form open" style={{ marginBottom: "0.875rem" }}>
             <div className="two-col" style={{ marginBottom: "0.75rem" }}>
+              <div className="form-field">
+                <label className="form-label" htmlFor="admin-user-full-name">{t("account.fullName")}</label>
+                <input id="admin-user-full-name" className="form-input" autoComplete="name" maxLength={160} value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+              </div>
               <div className="form-field">
                 <label className="form-label">{t("admin.users.username")} {form.id === null && "*"}</label>
                 <input
@@ -289,7 +302,8 @@ export default function AdminUsers() {
                   <tr key={u.id}>
                     <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
                     <td>
-                      <strong>{u.username}</strong>
+                      <strong>{u.full_name || u.username}</strong>
+                      {u.full_name && <div style={{ fontSize: 12 }}>@{u.username}</div>}
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
                     </td>
                     <td>{u.role ? roleLabel(u.role) : t("admin.users.fullAccess")}</td>

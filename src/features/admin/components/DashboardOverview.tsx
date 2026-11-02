@@ -65,7 +65,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
     <div className="adm-hero">
       <div>
     <div className="adm-hero-greeting">{greeting}</div>
-        <div className="adm-hero-title">{user?.username ?? t("admin.defaultUser")} 👋</div>
+        <div className="adm-hero-title">{user?.full_name || user?.username || t("admin.defaultUser")} 👋</div>
           <div className="adm-hero-sub">
           <i className="bi bi-calendar3 me-1" /> {today}
         </div>

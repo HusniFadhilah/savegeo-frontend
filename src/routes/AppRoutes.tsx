@@ -19,6 +19,7 @@ import DatasetViewerPage from "@/pages/DatasetViewerPage";
 import { KarhutlaDetailPage, KarhutlaIndexPage } from "@/features/karhutla/components";
 import DashboardShell from "@/components/layout/DashboardShell";
 import NoFeatureAccessPage from "@/pages/NoFeatureAccessPage";
+import ProfilePage from "@/pages/ProfilePage";
 import { VIEWER_FEATURE_CODES } from "@/auth/viewerFeatures";
 
 function CarbonEstimationRoute() {
@@ -83,6 +84,7 @@ export default function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AppLoginPage />} />
       <Route path="/register" element={<RegisterUserPage />} />
+      <Route path="/profile" element={<ProtectedAppRoute><ProfilePage /></ProtectedAppRoute>} />
       <Route
         path="/dashboard"
         element={<DashboardEntryRoute />}

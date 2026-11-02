@@ -13,6 +13,9 @@ export type Language = "id" | "en";
  */
 export const approvedTranslations: Record<Language, Record<string, string>> = {
   id: {
+    "account.fullName": "Nama lengkap",
+    "account.profile": "Profil saya",
+    "account.nameHint": "Nama lengkap ditampilkan pada akun. Username digunakan untuk login.",
     "carbon.pool.builtinModel": "Model karbon siap digunakan",
     "carbon.pool.frozenModelHint": "Model tersimpan untuk wilayah kalibrasi Jawa (108–112° BT, 8,3–6° LS), referensi {year}. Validasi mengukur kesesuaian dengan raster referensi; belum divalidasi terhadap plot lapangan independen.",
     "carbon.pool.depth": "Kedalaman tanah",
@@ -1620,6 +1623,9 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.referenceCarbon": "Peta Referensi Asli",
   },
   en: {
+    "account.fullName": "Full name",
+    "account.profile": "My profile",
+    "account.nameHint": "Your full name is shown on your account. Use your username to sign in.",
     "carbon.pool.builtinModel": "Ready-to-use carbon model",
     "carbon.pool.frozenModelHint": "Saved model for the Java calibration region (108–112° E, 8.3–6° S), reference {year}. Validation measures agreement with the reference raster; independent field-plot validation is pending.",
     "carbon.pool.depth": "Soil depth",

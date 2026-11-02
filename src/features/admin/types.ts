@@ -116,6 +116,7 @@ export interface CompanyBoundaryFull {
 }
 
 export interface AdminUserRow {
+  full_name?: string | null;
   id: number;
   username: string;
   email?: string | null;

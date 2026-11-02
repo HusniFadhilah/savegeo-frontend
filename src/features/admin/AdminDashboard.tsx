@@ -162,7 +162,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
   };
 
   const [titleKey, subtitleKey] = TITLES[section];
-  const initials = (user?.username ?? "AD").slice(0, 2).toUpperCase();
+  const initials = (user?.full_name || user?.username || "AD").slice(0, 2).toUpperCase();
   const canReinitializeEe = hasAdminPermission(user, "credential.write");
   const eeStatusLabel = eeInitialized === null ? t("admin.checking") : eeInitialized ? t("admin.eeActive") : t("admin.eeOffline");
   const eeStatusIcon = eeInitialized === null ? "bi-cloud-arrow-down-fill" : eeInitialized ? "bi-cloud-check-fill" : "bi-cloud-slash-fill";
@@ -249,7 +249,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
             </div>
             <div className="sb-foot">
               <div className="sb-avatar">{initials}</div>
-              <span className="sb-foot-name">{user?.username ?? t("admin.defaultUser")}</span>
+              <span className="sb-foot-name">{user?.full_name || user?.username || t("admin.defaultUser")}</span>
               {authError && <span role="alert">{authError}</span>}
               <span className="sb-foot-logout" onClick={() => { void logout(); }} title={t("auth.logout")}>
                 <i className="bi bi-box-arrow-right" />

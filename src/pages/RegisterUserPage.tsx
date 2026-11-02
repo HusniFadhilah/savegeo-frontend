@@ -2,12 +2,15 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import LoginIllustration from "@/components/auth/LoginIllustration";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 /**
  * Registration page for the public SaveGeo users table. This page has its own
  * URL so the login and registration flows remain shareable and bookmarkable.
  */
 export default function RegisterUserPage() {
+  const t = useI18nStore((state) => state.t);
+  const [fullName, setFullName] = useState("");
   const { register, isLoading, error } = useUserAuthStore();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -23,7 +26,7 @@ export default function RegisterUserPage() {
       setLocalError("Password minimal 8 karakter.");
       return;
     }
-    if (await register(username, email, password)) navigate("/carbon-estimation", { replace: true });
+    if (await register(username, email, password, fullName)) navigate("/carbon-estimation", { replace: true });
   };
 
   return (
@@ -53,6 +56,10 @@ export default function RegisterUserPage() {
             <small className="text-muted">Buat akun untuk mengakses seluruh fitur analitik SaveGeo</small>
           </div>
           <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="form-label small" htmlFor="register-full-name">{t("account.fullName")}</label>
+              <input id="register-full-name" className="form-control" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" maxLength={160} />
+            </div>
             <div className="mb-3">
               <label className="form-label small">Username</label>
               <input

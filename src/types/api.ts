@@ -18,6 +18,7 @@ export interface RegionOption {
 }
 
 export interface AdminUser {
+  full_name?: string | null;
   id?: number;
   username: string;
   email?: string | null;

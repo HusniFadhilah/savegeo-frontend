@@ -195,8 +195,11 @@ export const importCarbonCalibrationSources = (revised: File, previous?: File | 
 // ── Admin users ──────────────────────────────────────────────────
 export const getCurrentAdminUser = () => apiClient.get<AdminUserRow>("/admin/auth/me", { auth: true });
 
-export const updateAdminProfile = (payload: { username: string; email: string | null }) =>
+export const updateAdminProfile = (payload: { username: string; email: string | null; full_name?: string | null }) =>
   apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/profile", payload, { auth: true });
+
+export const updateAdminName = (fullName: string) =>
+  apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/name", { full_name: fullName.trim() || null }, { auth: "admin" });
 
 export const changePassword = (oldPassword: string, newPassword: string) =>
   apiClient.put<{ message: string }>(
@@ -216,6 +219,7 @@ export const saveViewerFeatureSettings = (enabledFeatures: string[]) =>
   }, { auth: true });
 
 export const createAdminUser = (payload: {
+  full_name?: string | null;
   username: string;
   password: string;
   email?: string | null;
@@ -225,7 +229,7 @@ export const createAdminUser = (payload: {
 
 export const updateAdminUser = (
   id: number,
-  payload: { email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
+  payload: { full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
 ) => apiClient.put<{ message: string; user: AdminUserRow }>(`/admin/users/${id}`, payload, { auth: true });
 
 export const deleteAdminUser = (id: number) =>
