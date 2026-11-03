@@ -117,6 +117,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
   const [mode, setMode] = useState<LcFusionMode>("routing");
   const [qMin, setQMin] = useState(0.5);
   const [tauChange, setTauChange] = useState(0.2);
+  const [cMin, setCMin] = useState("");
   const [scale, setScale] = useState(20);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +136,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
     generation.current += 1;
     setResult(null);
     setError(null);
-  }, [aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB, mode, qMin, tauChange, scale, eventOn, eventPre, eventPost]);
+  }, [aoi, yearA, yearB, startMonth, endMonth, startDateA, endDateA, startDateB, endDateB, mode, qMin, tauChange, cMin, scale, eventOn, eventPre, eventPost]);
 
   const run = async () => {
     if (!aoi || yearA == null || yearB == null) return;
@@ -155,6 +156,7 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
         fusion_mode: mode,
         q_min: qMin,
         tau_change: tauChange,
+        ...(cMin !== "" && Number.isFinite(Number(cMin)) ? { confidence_threshold: Math.min(1, Math.max(0, Number(cMin))) } : {}),
         scale,
         ...(eventOn && eventReady ? { event: { type: "flood_sar" as const, pre_date: eventPre, post_date: eventPost } } : {}),
       });
@@ -215,6 +217,11 @@ export default function FusionPanel({ aoi, yearA, yearB, startMonth, endMonth, s
           <label className="form-label mb-1" htmlFor="fusion-tau">{t("lc.fusion.tau")}</label>
           <input id="fusion-tau" type="number" className="form-control form-control-sm" style={{ width: 90 }} min={0} max={1} step={0.05}
             value={tauChange} onChange={(e) => setTauChange(Math.min(1, Math.max(0, Number(e.target.value))))} />
+        </div>
+        <div>
+          <label className="form-label mb-1" htmlFor="fusion-cmin">{t("lc.fusion.cMin")}</label>
+          <input id="fusion-cmin" type="number" className="form-control form-control-sm" style={{ width: 110 }} min={0} max={1} step={0.05} placeholder="—"
+            value={cMin} onChange={(e) => setCMin(e.target.value)} />
         </div>
         <div>
           <label className="form-label mb-1" htmlFor="fusion-scale">{t("lc.fusion.scale")}</label>
