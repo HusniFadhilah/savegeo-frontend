@@ -89,6 +89,7 @@ export interface CropMonitoringPeriodInput {
 }
 
 export type SubAnalysisKey =
+  | "landcover"
   | "health"
   | "timeseries"
   | "anomaly"
@@ -100,9 +101,11 @@ export type SubAnalysisKey =
   | "historical_comparison"
   | "risk_score";
 
-/** Server-side default when `sub_analyses` is omitted. "flood" and
- * "historical_comparison" are NEVER auto-included. */
-export const DEFAULT_SUB_ANALYSES: SubAnalysisKey[] = [
+/** Fast UI preset. The full preset also includes the slower optional analyses. */
+export const DEFAULT_SUB_ANALYSES: SubAnalysisKey[] = ["landcover", "health", "growth_stage"];
+
+export const FULL_SUB_ANALYSES: SubAnalysisKey[] = [
+  "landcover",
   "health",
   "timeseries",
   "anomaly",
@@ -173,6 +176,8 @@ export type HealthLabel = "Poor" | "Moderate" | "Good";
 export type HealthResult =
   | {
       available: true;
+      tile_url?: string | null;
+      native_scale?: number;
       health_label: HealthLabel;
       ndvi_mean: number;
       ndvi_stats: NdviStats;
@@ -357,7 +362,12 @@ export type RiskScoreResult =
   | { available: true; score: number; level: RiskLevel; weights: RiskWeights; breakdown: RiskBreakdownItem[] }
   | { available: false };
 
+export type LandcoverResult =
+  | { available: true; tile_url: string | null; classes: Record<string, HealthClassInfo>; total_area_ha: number; year: number; resolution: string; native_scale: number; cropland_area_ha: number; cropland_percentage: number }
+  | { available: false; reason?: string };
+
 export interface CropMonitoringSubAnalyses {
+  landcover?: LandcoverResult;
   health?: HealthResult;
   timeseries?: TimeseriesResult;
   anomaly?: AnomalyResult;
@@ -393,6 +403,8 @@ export interface CropMonitoringResult {
   period: CropMonitoringResolvedPeriod;
   cloud_threshold: number;
   scale: number;
+  requested_scale?: number;
+  performance?: { cache_hits: string[]; section_seconds: Record<string, number>; cache_ttl_seconds: number };
   satellite: string;
   weather_source: string;
   sub_analyses: CropMonitoringSubAnalyses;
