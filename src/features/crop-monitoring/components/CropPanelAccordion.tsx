@@ -2,6 +2,7 @@ import { useState, type ReactNode, type SyntheticEvent } from "react";
 import "./crop-panel-accordion.css";
 
 interface Props {
+  className?: string;
   title: string;
   icon: string;
   children: ReactNode;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function CropPanelAccordion({
+  className = "",
   title,
   icon,
   children,
@@ -20,7 +22,7 @@ export default function CropPanelAccordion({
 
   return (
     <details
-      className="card mb-3 cm-panel-accordion"
+      className={`card mb-3 cm-panel-accordion ${className}`}
       open={open}
       onToggle={(event: SyntheticEvent<HTMLDetailsElement>) => setOpen(event.currentTarget.open)}
     >

@@ -1,3 +1,4 @@
+import CropPanelAccordion from "./CropPanelAccordion";
 import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, useMap } from "react-leaflet";
 import MapView from "@/components/map/MapView";
@@ -115,55 +116,55 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
   const center: [number, number] = bounds ? [bounds.getCenter().lat, bounds.getCenter().lng] : [-2.5, 118];
 
   return (
-    <div className="card mb-3 cm-panel-card cm-result-map-card">
-      <div className="card-header">
-        <i className="bi bi-globe-americas me-1" /> Peta Hasil
-        {activeTab && <span className="cm-header-chip">{activeTab.label}</span>}
-      </div>
-      <div className="card-body">
-        {tabs.length > 0 && (
-          <ul className="nav nav-pills cm-map-tabs mb-3">
-            {tabs.map((tab) => (
-              <li className="nav-item" key={tab.key}>
-                <button
-                  type="button"
-                  className={`nav-link ${activeKey === tab.key ? "active" : ""}`}
-                  onClick={() => setActiveKey(tab.key)}
-                >
-                  <i className={`bi ${tab.icon} me-1`} />
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+    <CropPanelAccordion
+      title="Peta Hasil"
+      icon="bi-globe-americas"
+      className="cm-panel-card cm-result-map-card"
+      defaultOpen
+      headerTrailing={activeTab && <span className="cm-header-chip">{activeTab.label}</span>}
+    >
+      {tabs.length > 0 && (
+        <ul className="nav nav-pills cm-map-tabs mb-3">
+          {tabs.map((tab) => (
+            <li className="nav-item" key={tab.key}>
+              <button
+                type="button"
+                className={`nav-link ${activeKey === tab.key ? "active" : ""}`}
+                onClick={() => setActiveKey(tab.key)}
+              >
+                <i className={`bi ${tab.icon} me-1`} />
+                {tab.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
-        <div className="cm-map-shell">
-          <MapView id="cropMonitoringResultMap" center={center} zoom={fieldFeature ? 13 : 5} historicalDate={analysisDate}>
-            <BasemapSwitcher />
-            <FitField feature={fieldFeature} />
-            {fieldFeature && <GeoJSON key={JSON.stringify(fieldFeature.geometry)} data={fieldFeature} style={{ color: "#ef4444", weight: 2, fillOpacity: 0.04 }} />}
-            {activeTab && (
-              <>
-                <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} clipGeometry={fieldFeature} />
-                <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
-              </>
-            )}
-          </MapView>
-          {activeTab && activeTab.legend.length > 0 && (
-            <div className="cm-map-legend">
-              <MapLegend title={activeTab.label} entries={activeTab.legend} />
-            </div>
+      <div className="cm-map-shell">
+        <MapView id="cropMonitoringResultMap" center={center} zoom={fieldFeature ? 13 : 5} historicalDate={analysisDate}>
+          <BasemapSwitcher />
+          <FitField feature={fieldFeature} />
+          {fieldFeature && <GeoJSON key={JSON.stringify(fieldFeature.geometry)} data={fieldFeature} style={{ color: "#ef4444", weight: 2, fillOpacity: 0.04 }} />}
+          {activeTab && (
+            <>
+              <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} clipGeometry={fieldFeature} />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+            </>
           )}
-        </div>
-
-        {tabs.length === 0 && (
-          <div className="alert alert-info mt-2 mb-0 py-2 small">
-            <i className="bi bi-info-circle me-1" /> Belum ada layer peta hasil
-            yang tersedia untuk hasil ini - batas lahan tetap ditampilkan di atas.
+        </MapView>
+        {activeTab && activeTab.legend.length > 0 && (
+          <div className="cm-map-legend">
+            <MapLegend title={activeTab.label} entries={activeTab.legend} />
           </div>
         )}
       </div>
-    </div>
+
+      {tabs.length === 0 && (
+        <div className="alert alert-info mt-2 mb-0 py-2 small">
+          <i className="bi bi-info-circle me-1" /> Belum ada layer peta hasil
+          yang tersedia untuk hasil ini - batas lahan tetap ditampilkan di atas.
+        </div>
+      )}
+    </CropPanelAccordion>
   );
 }

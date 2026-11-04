@@ -1,3 +1,4 @@
+import CropPanelAccordion from "./CropPanelAccordion";
 import { fmtNum } from "../utils";
 import type { WeatherResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -10,64 +11,59 @@ interface Props {
 export default function WeatherPanel({ weather }: Props) {
   const t = useI18nStore((state) => state.t);
   return (
-    <div className="card mb-3">
-      <div className="card-header">
-        <i className="bi bi-cloud-rain-fill me-1" /> {t("crop.card.weatherTitle")}
-      </div>
-      <div className="card-body">
-        {!weather.available ? (
-          <div className="alert alert-secondary py-2 mb-0 small">
-            {t("crop.unavailable")}{weather.reason ? `: ${weather.reason}` : "."}
-          </div>
-        ) : (
-          <>
-            <div className="row g-2 text-center mb-2">
-              <div className="col-6 col-md-3">
-                <div className="fw-bold">{fmtNum(weather.rainfall_mm_period, 1)} mm</div>
-                <div className="small text-muted">{t("crop.rainfallPeriod")}</div>
-              </div>
-              <div className="col-6 col-md-3">
-                <div className="fw-bold">{fmtNum(weather.rainfall_mm_historical_normal, 1)} mm</div>
-                <div className="small text-muted">{t("crop.historicalNormal")}</div>
-              </div>
-              <div className="col-6 col-md-3">
-                <div className="fw-bold">{weather.rainfall_deficit_pct != null ? `${fmtNum(weather.rainfall_deficit_pct, 1)}%` : "-"}</div>
-                <div className="small text-muted">{t("crop.rainfallDeficit")}</div>
-              </div>
-              <div className="col-6 col-md-3">
-                <div className="fw-bold">{weather.dry_days}</div>
-                <div className="small text-muted">{t("crop.dryDays")}</div>
-              </div>
-              <div className="col-6 col-md-4">
-                <div className="fw-bold">{fmtNum(weather.tmax, 1)}°C</div>
-                <div className="small text-muted">{t("crop.maxTemperature")}</div>
-              </div>
-              <div className="col-6 col-md-4">
-                <div className="fw-bold">{fmtNum(weather.tmin, 1)}°C</div>
-                <div className="small text-muted">{t("crop.minTemperature")}</div>
-              </div>
-              <div className="col-6 col-md-4">
-                <div className="fw-bold">{weather.humidity != null ? `${fmtNum(weather.humidity, 0)}%` : "-"}</div>
-                <div className="small text-muted">{t("crop.humidity")}</div>
-              </div>
+    <CropPanelAccordion title={t("crop.card.weatherTitle")} icon="bi-cloud-rain-fill">
+      {!weather.available ? (
+        <div className="alert alert-secondary py-2 mb-0 small">
+          {t("crop.unavailable")}{weather.reason ? `: ${weather.reason}` : "."}
+        </div>
+      ) : (
+        <>
+          <div className="row g-2 text-center mb-2">
+            <div className="col-6 col-md-3">
+              <div className="fw-bold">{fmtNum(weather.rainfall_mm_period, 1)} mm</div>
+              <div className="small text-muted">{t("crop.rainfallPeriod")}</div>
             </div>
-            <small className="text-muted d-block">
-              Sumber: {weather.source === "gee" ? "Google Earth Engine" : "Open-Meteo"} · {weather.period.start} – {weather.period.end}
-              {weather.data_quality.images_used != null && ` · ${weather.data_quality.images_used} citra`}
-            </small>
-            {weather.data_quality.note && <small className="text-muted d-block">{weather.data_quality.note}</small>}
-            {weather.warnings.length > 0 && (
-              <div className="mt-2">
-                {weather.warnings.map((w, i) => (
-                  <div key={i} className={`alert alert-${w.level === "warning" ? "warning" : "info"} py-2 mb-1 small`}>
-                    <i className="bi bi-exclamation-triangle me-1" /> {w.message}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+            <div className="col-6 col-md-3">
+              <div className="fw-bold">{fmtNum(weather.rainfall_mm_historical_normal, 1)} mm</div>
+              <div className="small text-muted">{t("crop.historicalNormal")}</div>
+            </div>
+            <div className="col-6 col-md-3">
+              <div className="fw-bold">{weather.rainfall_deficit_pct != null ? `${fmtNum(weather.rainfall_deficit_pct, 1)}%` : "-"}</div>
+              <div className="small text-muted">{t("crop.rainfallDeficit")}</div>
+            </div>
+            <div className="col-6 col-md-3">
+              <div className="fw-bold">{weather.dry_days}</div>
+              <div className="small text-muted">{t("crop.dryDays")}</div>
+            </div>
+            <div className="col-6 col-md-4">
+              <div className="fw-bold">{fmtNum(weather.tmax, 1)}°C</div>
+              <div className="small text-muted">{t("crop.maxTemperature")}</div>
+            </div>
+            <div className="col-6 col-md-4">
+              <div className="fw-bold">{fmtNum(weather.tmin, 1)}°C</div>
+              <div className="small text-muted">{t("crop.minTemperature")}</div>
+            </div>
+            <div className="col-6 col-md-4">
+              <div className="fw-bold">{weather.humidity != null ? `${fmtNum(weather.humidity, 0)}%` : "-"}</div>
+              <div className="small text-muted">{t("crop.humidity")}</div>
+            </div>
+          </div>
+          <small className="text-muted d-block">
+            Sumber: {weather.source === "gee" ? "Google Earth Engine" : "Open-Meteo"} · {weather.period.start} – {weather.period.end}
+            {weather.data_quality.images_used != null && ` · ${weather.data_quality.images_used} citra`}
+          </small>
+          {weather.data_quality.note && <small className="text-muted d-block">{weather.data_quality.note}</small>}
+          {weather.warnings.length > 0 && (
+            <div className="mt-2">
+              {weather.warnings.map((w, i) => (
+                <div key={i} className={`alert alert-${w.level === "warning" ? "warning" : "info"} py-2 mb-1 small`}>
+                  <i className="bi bi-exclamation-triangle me-1" /> {w.message}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </CropPanelAccordion>
   );
 }

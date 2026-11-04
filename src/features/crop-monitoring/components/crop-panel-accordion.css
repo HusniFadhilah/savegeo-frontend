@@ -34,6 +34,7 @@
 }
 
 .cm-page .cm-panel-accordion-title {
+  flex: 1;
   min-width: 0;
   font-weight: 700;
 }
@@ -41,6 +42,21 @@
 .cm-page .cm-panel-accordion-trailing {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.cm-page .cm-panel-accordion-trailing + .cm-panel-accordion-chevron {
+  margin-left: 0;
+}
+
+.cm-page .cm-export-button {
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.18);
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.25);
+  color: #fff !important;
+}
+
+.cm-page .cm-export-button .bi {
+  color: inherit !important;
 }
 
 .cm-page .cm-panel-accordion-chevron {

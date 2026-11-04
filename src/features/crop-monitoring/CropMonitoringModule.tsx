@@ -10,6 +10,7 @@ import { parseQuery, updateUrlFromState } from "./lib/cropMonitoringQueryState";
 import { progressiveRun } from "./lib/progressiveRun";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 
+import CropPanelAccordion from "./components/CropPanelAccordion";
 import FieldPanel from "./components/FieldPanel";
 import CropInfoPanel from "./components/CropInfoPanel";
 import MonitoringPeriodPanel from "./components/MonitoringPeriodPanel";
@@ -394,83 +395,99 @@ export default function CropMonitoringModule() {
 
         {result && sub && (
           <>
-            <div className="card mb-3 cm-summary-card">
-              <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span><i className="bi bi-speedometer2 me-1" /> {t("crop.summary")}</span>
-                <div className="btn-group btn-group-sm" role="group" aria-label="Ekspor hasil crop monitoring">
-                  <button type="button" className="btn btn-outline-secondary" onClick={() => exportCropResults("json")}>
-                    <i className="bi bi-filetype-json me-1" /> JSON
+            <CropPanelAccordion
+              title={t("crop.summary")}
+              icon="bi-speedometer2"
+              className="cm-summary-card"
+              defaultOpen
+              headerTrailing={
+                <span className="btn-group btn-group-sm" role="group" aria-label="Ekspor hasil crop monitoring">
+                  <button type="button" className="btn btn-outline-light cm-export-button" onClick={(event) => {
+                    event.preventDefault();
+                    exportCropResults("json");
+                  }}>
+                    <i className="bi bi-filetype-json me-1" aria-hidden="true" /> JSON
                   </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={() => exportCropResults("csv")}>
-                    <i className="bi bi-filetype-csv me-1" /> CSV
+                  <button type="button" className="btn btn-outline-light cm-export-button" onClick={(event) => {
+                    event.preventDefault();
+                    exportCropResults("csv");
+                  }}>
+                    <i className="bi bi-filetype-csv me-1" aria-hidden="true" /> CSV
                   </button>
-                </div>
-              </div>
-              <div className="card-body">
-                <div className="cm-summary-grid">
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-heart-pulse" />
-                    <div>
-                      <span>{t("crop.health")}</span>
-                      <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
-                        {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-activity" />
-                    <div>
-                      <span>NDVI</span>
-                      <strong>{sub.health?.available ? fmtNum(sub.health.ndvi_mean, 3) : "-"}</strong>
-                    </div>
-                  </div>
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-graph-up-arrow" />
-                    <div>
-                        <span>{t("crop.change")}</span>
-                      <strong>
-                        {sub.health?.available && sub.health.change_vs_previous_month_pct != null
-                          ? `${sub.health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(sub.health.change_vs_previous_month_pct)}`
-                          : "-"}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-droplet-half" />
-                    <div>
-                      <span>{t("crop.moisture")}</span>
-                      <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
-                        {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-flower2" />
-                    <div>
-                      <span>{t("crop.growthStage")}</span>
-                      <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
-                    </div>
-                  </div>
-                  <div className="cm-summary-tile">
-                    <i className="bi bi-shield-exclamation" />
-                    <div>
-                      <span>{t("crop.risk")}</span>
-                      <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
-                        {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
-                      </strong>
-                    </div>
+                </span>
+              }
+            >
+              <div className="cm-summary-grid">
+                <div className="cm-summary-tile">
+                  <i className="bi bi-heart-pulse" />
+                  <div>
+                    <span>{t("crop.health")}</span>
+                    <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
+                      {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
+                    </strong>
                   </div>
                 </div>
-                {result.skipped.length > 0 && (
-                  <small className="text-muted d-block mt-2">
-                    {t("crop.skipped")}: {result.skipped.map((s) => `${s.sub_analysis} (${s.reason})`).join("; ")}
-                  </small>
-                )}
+                <div className="cm-summary-tile">
+                  <i className="bi bi-activity" />
+                  <div>
+                    <span>NDVI</span>
+                    <strong>{sub.health?.available ? fmtNum(sub.health.ndvi_mean, 3) : "-"}</strong>
+                  </div>
+                </div>
+                <div className="cm-summary-tile">
+                  <i className="bi bi-graph-up-arrow" />
+                  <div>
+                      <span>{t("crop.change")}</span>
+                    <strong>
+                      {sub.health?.available && sub.health.change_vs_previous_month_pct != null
+                        ? `${sub.health.change_vs_previous_month_pct > 0 ? "+" : ""}${fmtPct(sub.health.change_vs_previous_month_pct)}`
+                        : "-"}
+                    </strong>
+                  </div>
+                </div>
+                <div className="cm-summary-tile">
+                  <i className="bi bi-droplet-half" />
+                  <div>
+                    <span>{t("crop.moisture")}</span>
+                    <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
+                      {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
+                    </strong>
+                  </div>
+                </div>
+                <div className="cm-summary-tile">
+                  <i className="bi bi-flower2" />
+                  <div>
+                    <span>{t("crop.growthStage")}</span>
+                    <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
+                  </div>
+                </div>
+                <div className="cm-summary-tile">
+                  <i className="bi bi-shield-exclamation" />
+                  <div>
+                    <span>{t("crop.risk")}</span>
+                    <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
+                      {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
+                    </strong>
+                  </div>
+                </div>
               </div>
-            </div>
+              {result.skipped.length > 0 && (
+                <small className="text-muted d-block mt-2">
+                  {t("crop.skipped")}: {result.skipped.map((s) => `${s.sub_analysis} (${s.reason})`).join("; ")}
+                </small>
+              )}
+            </CropPanelAccordion>
 
             <p className="small text-muted">Grid statistik: {result.scale} m. Citra diringkas per bulan dalam rentang tahun {result.period.resolved_year_month_range.year}, bulan {result.period.resolved_year_month_range.start_month}–{result.period.resolved_year_month_range.end_month}. Kesehatan memakai indeks citra, bukan pelatihan model baru.</p>
-            {sub.landcover && <div className="card mb-3"><div className="card-header">Land cover · Dynamic World</div><div className="card-body">{sub.landcover.available ? <>Tahun {sub.landcover.year} · Lahan pertanian terklasifikasi: <strong>{fmtNum(sub.landcover.cropland_area_ha, 2)} ha ({fmtPct(sub.landcover.cropland_percentage)})</strong>. Kesehatan vegetasi dihitung untuk seluruh AOI; wilayah ini dapat mencakup kelas selain pertanian.</> : sub.landcover.reason ?? "Tutupan lahan belum tersedia."}</div></div>}
+            {sub.landcover && (
+              <CropPanelAccordion title="Land cover · Dynamic World" icon="bi-layers">
+                {sub.landcover.available ? (
+                  <>
+                    Tahun {sub.landcover.year} · Lahan pertanian terklasifikasi: <strong>{fmtNum(sub.landcover.cropland_area_ha, 2)} ha ({fmtPct(sub.landcover.cropland_percentage)})</strong>. Kesehatan vegetasi dihitung untuk seluruh AOI; wilayah ini dapat mencakup kelas selain pertanian.
+                  </>
+                ) : sub.landcover.reason ?? "Tutupan lahan belum tersedia."}
+              </CropPanelAccordion>
+            )}
             <CropMonitoringResultsMapPanel
               fieldFeature={fieldFeature}
               subAnalyses={sub}
