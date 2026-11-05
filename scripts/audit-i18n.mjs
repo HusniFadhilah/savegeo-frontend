@@ -168,7 +168,11 @@ function routeRegistry() {
 
 const files = SOURCE_ROOTS.flatMap((root) => fs.existsSync(root) ? walk(root) : []);
 for (const file of files) findTextIssues(file, fs.readFileSync(file, "utf8"));
-const catalogFiles = [path.join(ROOT, "src/i18n/translations.ts"), path.join(ROOT, "src/i18n/approvedTranslations.ts")].filter(fs.existsSync);
+const catalogFiles = [
+  path.join(ROOT, "src/i18n/translations.ts"),
+  path.join(ROOT, "src/i18n/approvedTranslations.ts"),
+  path.join(ROOT, "src/features/dmrv/i18n.ts"),
+].filter(fs.existsSync);
 const catalogKeys = collectCatalogKeys(catalogFiles.concat(path.join(ROOT, "src/i18n/legacyTranslations.ts")));
 auditRenderedKeys(files, catalogKeys);
 const routes = [...new Set(routeRegistry())].sort();

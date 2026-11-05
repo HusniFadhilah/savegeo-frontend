@@ -21,6 +21,8 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import NoFeatureAccessPage from "@/pages/NoFeatureAccessPage";
 import ProfilePage from "@/pages/ProfilePage";
 import { VIEWER_FEATURE_CODES } from "@/auth/viewerFeatures";
+import DmrvProjectsPage from "@/features/dmrv/DmrvProjectsPage";
+import DmrvProjectPage from "@/features/dmrv/DmrvProjectPage";
 
 function CarbonEstimationRoute() {
   const location = useLocation();
@@ -108,6 +110,9 @@ export default function AppRoutes() {
       {adminRoutes.map((route) => (
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
       ))}
+      {/* dMRV: login required; project membership and roles are enforced by the backend. */}
+      <Route path="/dmrv/projects" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectsPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects/:projectId" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectPage /></ProtectedAppRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/no-features" element={<ProtectedAppRoute><NoFeatureAccessPage /></ProtectedAppRoute>} />
       <Route path="/workflow" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />
