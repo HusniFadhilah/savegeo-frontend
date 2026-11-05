@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useCallback, useEffect, useState } from "react";
 import TablePagination from "@/components/ui/TablePagination";
 import { deleteDisasterEvent, listDisasterEvents, updateDisasterEvent } from "../../api";
@@ -312,18 +313,20 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "3.5rem" }} />
-              <col style={{ width: "24%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "17%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "11%" }} />
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(24% - 1.56rem)" }} />
+              <col style={{ width: "calc(14% - 0.91rem)" }} />
+              <col style={{ width: "calc(11% - 0.715rem)" }} />
+              <col style={{ width: "calc(17% - 1.105rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(13% - 0.845rem)" }} />
+              <col style={{ width: "calc(11% - 0.715rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua kejadian di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua kejadian di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>Nama</th>
                 <th>Jenis</th>
                 <th>Tanggal</th>
@@ -336,30 +339,31 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada kejadian bencana. Buat kejadian baru untuk memulai.
                   </td>
                 </tr>
               )}
               {!loading &&
                 !error &&
-                pageRows.map((ev) => (
+                pageRows.map((ev, index) => (
                   <tr key={ev.id}>
-                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${ev.name}`} checked={selectedIds.includes(ev.id)} onChange={() => toggleSelected(ev.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${ev.name}`} checked={selectedIds.includes(ev.id)} onChange={() => toggleSelected(ev.id)} /></td>
+                    <AdminTableNumberCell index={index} page={page} pageSize={PAGE_SIZE} />
                     <td title={ev.name}>{ev.name}</td>
                     <td>
                       <span className="badge-label">{DISASTER_TYPE_LABEL[ev.disaster_type] || ev.disaster_type}</span>

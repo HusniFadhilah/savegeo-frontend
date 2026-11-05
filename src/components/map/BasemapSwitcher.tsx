@@ -8,6 +8,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { BASEMAP_REFERENCE_PANE } from "@/config/mapPanes";
 import { SATELLITE_BASEMAP_GROUPS, SATELLITE_BASEMAP_IDS, satelliteBasemapGroupId } from "@/config/satelliteBasemapGroups";
 import { safeMapZoom, safeTileSize, safeZoomOffset } from "./mapViewValidation";
+import { createBasemapMapKitLayer, isMapKitBasemap } from "@/services/appleMapKit";
 
 interface ExtraBasemapOption {
   id: string;
@@ -42,7 +43,9 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
   const [expandedSatelliteGroup, setExpandedSatelliteGroup] = useState<string | null>("esri");
   const rootRef = useRef<HTMLDivElement>(null);
   const t = useI18nStore((s) => s.t);
+  const language = useI18nStore((s) => s.language);
   const googleBasemapAvailable = basemaps.some((basemap) => basemap.id === "google-satellite");
+  const appleBasemapAvailable = basemaps.some(isMapKitBasemap);
   const googleUnavailableKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim()
     ? "map.basemap.google-unavailable"
     : "map.basemap.google-key-required";
@@ -51,7 +54,7 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
   const satelliteGroups = SATELLITE_BASEMAP_GROUPS.map((group) => ({
     ...group,
     items: satelliteBasemaps.filter((basemap) => group.basemapIds.some((id) => id === basemap.id)),
-  })).filter((group) => group.items.length > 0 || group.id === "google");
+  })).filter((group) => group.items.length > 0 || group.id === "google" || group.id === "apple");
   const basemapLabel = (id: string) => t(`map.basemap.${id === "satellite_roads" ? "satelliteRoads" : id === "topo" ? "topographic" : id === "terrain" ? "terrainRelief" : id}`);
   useEffect(() => {
     const container = map.getContainer();
@@ -80,6 +83,10 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
 
     const layers: Record<string, L.Layer> = {};
     basemaps.forEach((b) => {
+      if (isMapKitBasemap(b)) {
+        layers[b.id] = createBasemapMapKitLayer(b, "savegeo-basemap-layer savegeo-satellite-imagery-layer", language);
+        return;
+      }
       const maxZoom = safeMapZoom(b.maxZoom, 22, 22);
       const mapMaxZoom = safeMapZoom(map.getMaxZoom(), 22, 22);
       const effectiveMaxZoom = Math.max(maxZoom, mapMaxZoom);
@@ -124,7 +131,7 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
         if (map.hasLayer(l)) map.removeLayer(l);
       });
     };
-  }, [basemaps, map, setActiveId]);
+  }, [basemaps, map, setActiveId, language]);
 
   const requestedBasemap = query.get("basemap");
   useEffect(() => {
@@ -192,6 +199,14 @@ export default function BasemapSwitcher({ extraOptions = [], enhanceSatelliteIma
                   disabled
                   title={t(googleUnavailableKey)}
                 >{t(googleUnavailableKey)}</button>}
+              {group.id === "apple" && !appleBasemapAvailable && <button
+                  type="button"
+                  className="basemap-option"
+                  role="option"
+                  aria-disabled="true"
+                  disabled
+                  title={t("map.basemap.apple-unavailable")}
+                >{t("map.basemap.apple-unavailable")}</button>}
             </details>)}
             <div className="basemap-panel-divider" role="presentation" />
             <div className="basemap-panel-heading" role="presentation">{t("map.basemap.otherBasemaps")}</div>

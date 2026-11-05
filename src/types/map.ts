@@ -24,6 +24,9 @@ export interface BasemapDefinition {
   order: number;
   enabled?: boolean;
   wmts?: BasemapWmtsOptions;
+  /** "mapkit" basemaps are drawn by Apple MapKit JS instead of a tile URL. */
+  renderer?: "tiles" | "mapkit";
+  mapkitType?: "satellite" | "hybrid";
 }
 
 export type AoiGeometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;

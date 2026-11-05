@@ -26,6 +26,11 @@ export default function AdminProfile() {
     event.preventDefault();
     const cleanUsername = username.trim();
     const cleanEmail = email.trim();
+    const cleanFullName = fullName.trim();
+    if (!cleanFullName) {
+      setError(t("admin.users.nameRequired"));
+      return;
+    }
     if (!cleanUsername) {
       setError(t("admin.profile.usernameRequired"));
       return;
@@ -34,7 +39,7 @@ export default function AdminProfile() {
     setSaving(true);
     setError(null);
     try {
-      const response = await updateAdminProfile({ username: cleanUsername, email: cleanEmail || null, full_name: fullName.trim() || null });
+      const response = await updateAdminProfile({ username: cleanUsername, email: cleanEmail || null, full_name: cleanFullName });
       useAuthStore.setState({ user: response.user });
       notify(t("admin.profile.saved"), "s");
     } catch (cause) {
@@ -56,8 +61,8 @@ export default function AdminProfile() {
           <form onSubmit={(event) => void saveProfile(event)}>
             <div className="two-col">
               <div className="form-field">
-                <label className="form-label" htmlFor="admin-profile-full-name">{t("account.fullName")}</label>
-                <input id="admin-profile-full-name" className="form-input" autoComplete="name" maxLength={160} value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                <label className="form-label" htmlFor="admin-profile-full-name">{t("admin.users.fullNameLabel")} *</label>
+                <input id="admin-profile-full-name" className="form-input" autoComplete="name" maxLength={160} required value={fullName} onChange={(event) => setFullName(event.target.value)} />
               </div>
               <div className="form-field">
                 <label className="form-label" htmlFor="admin-profile-username">{t("admin.profile.username")}</label>

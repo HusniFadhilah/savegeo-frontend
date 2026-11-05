@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useEffect, useState } from "react";
 import { getDisasterAudit } from "../../api";
 import type { DisasterAuditLogEntry } from "../../types";
@@ -49,13 +50,15 @@ export default function DisasterAuditTrail({ eventId }: Props) {
           <div style={{ overflowX: "auto" }}>
             <table className="tbl tbl-wide">
               <colgroup>
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "50%" }} />
+                <col className="admin-table-number-col" />
+                <col style={{ width: "calc(18% - 0.585rem)" }} />
+                <col style={{ width: "calc(18% - 0.585rem)" }} />
+                <col style={{ width: "calc(14% - 0.455rem)" }} />
+                <col style={{ width: "calc(50% - 1.625rem)" }} />
               </colgroup>
               <thead>
                 <tr>
+                  <AdminTableNumberHeader />
                   <th>Waktu</th>
                   <th>Aksi</th>
                   <th>Admin</th>
@@ -63,8 +66,9 @@ export default function DisasterAuditTrail({ eventId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log) => (
+                {logs.map((log, index) => (
                   <tr key={log.id}>
+                    <AdminTableNumberCell index={index} />
                     <td>{log.created_at ? new Date(log.created_at).toLocaleString("id-ID") : "—"}</td>
                     <td>
                       <span className="badge-label">{log.action}</span>

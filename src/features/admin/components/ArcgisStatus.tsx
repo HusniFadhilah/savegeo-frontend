@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useEffect, useState, type FormEvent } from "react";
 import { hasAdminPermission } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -10,6 +11,7 @@ type AuthMode = "none" | "api_key";
 
 export default function ArcgisStatus() {
   const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
   const { user } = useAuthStore();
   const { notify } = useAdmin();
   const [status, setStatus] = useState<ArcgisStatusInfo | null>(null);
@@ -151,26 +153,33 @@ export default function ArcgisStatus() {
         )}
         {!loading && !error && status && (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table className="admin-status-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <colgroup><col className="admin-table-number-col" /><col style={{ width: 160 }} /><col /></colgroup>
+              <thead><tr><AdminTableNumberHeader /><th scope="col">{language === "id" ? "Keterangan" : "Item"}</th><th scope="col">{language === "id" ? "Nilai" : "Value"}</th></tr></thead>
               <tbody>
                 <tr>
+                  <AdminTableNumberCell index={0} />
                   <td style={{ padding: "6px 0", color: "var(--text-muted)", width: 160 }}>{t("admin.status")}</td>
                   <td><span className={`stat-badge ${status.enabled ? "badge-green" : "badge-gray"}`}>{status.enabled ? t("admin.enabled") : t("admin.disabled")}</span></td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={1} />
                   <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.credential")}</td>
                   <td><span className={`stat-badge ${status.configured ? "badge-green" : "badge-amber"}`}>{status.configured ? t("admin.configured") : t("admin.notConfigured")}</span></td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={2} />
                   <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.authMode")}</td>
                   <td><code>{status.auth_mode || "—"}</code></td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={3} />
                   <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalUrl")}</td>
                   <td><code>{status.portal_url || "—"}</code></td>
                 </tr>
                 {status.can_reach_portal !== undefined && status.can_reach_portal !== null && (
                   <tr>
+                    <AdminTableNumberCell index={4} />
                     <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalConnection")}</td>
                     <td>
                       <span className={`stat-badge ${status.can_reach_portal ? "badge-green" : "badge-red"}`}>
@@ -181,12 +190,13 @@ export default function ArcgisStatus() {
                   </tr>
                 )}
                 {status.portal_name && (
-                  <tr><td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalName")}</td><td>{status.portal_name}</td></tr>
+                  <tr><AdminTableNumberCell index={4 + Number(status.can_reach_portal != null)} /><td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.portalName")}</td><td>{status.portal_name}</td></tr>
                 )}
                 {status.message && (
-                  <tr><td colSpan={2} style={{ padding: "8px 0", color: "var(--text-muted)", fontSize: 12 }}>{status.message}</td></tr>
+                  <tr><AdminTableNumberCell index={4 + Number(status.can_reach_portal != null) + Number(Boolean(status.portal_name))} /><td colSpan={2} style={{ padding: "8px 0", color: "var(--text-muted)", fontSize: 12 }}>{status.message}</td></tr>
                 )}
                 <tr>
+                  <AdminTableNumberCell index={4 + Number(status.can_reach_portal != null) + Number(Boolean(status.portal_name)) + Number(Boolean(status.message))} />
                   <td style={{ padding: "6px 0", color: "var(--text-muted)" }}>{t("admin.checkedAt")}</td>
                   <td style={{ fontSize: 11 }}>{status.checked_at || "—"}</td>
                 </tr>

@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useEffect, useMemo, useState } from "react";
 import {
   listImageryProvidersAdmin,
@@ -180,18 +181,19 @@ export default function ImageryProviders() {
           <table className="tbl tbl-wide">
             <thead>
               <tr>
-                <th>Provider</th><th>Jenis</th><th>Katalog / koneksi</th><th>Aktif</th><th>Aksi</th>
+                <AdminTableNumberHeader /><th>Provider</th><th>Jenis</th><th>Katalog / koneksi</th><th>Aktif</th><th>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={5} className="text-center p-4">Memuat katalog...</td></tr>}
-              {!loading && pageRows.length === 0 && <tr><td colSpan={5} className="text-center p-4">Provider tidak ditemukan.</td></tr>}
-              {!loading && pageRows.map((row) => {
+              {loading && <tr><td colSpan={6} className="text-center p-4">Memuat katalog...</td></tr>}
+              {!loading && pageRows.length === 0 && <tr><td colSpan={6} className="text-center p-4">Provider tidak ditemukan.</td></tr>}
+              {!loading && pageRows.map((row, index) => {
                 const editing = editingKey === row.key;
                 const editingConnection = connectionKey === row.key;
                 const connection = row.connection;
                 return (
                   <tr key={row.key}>
+                    <AdminTableNumberCell index={index} page={page} pageSize={PAGE_SIZE} />
                     <td colSpan={5} style={{ padding: 0 }}>
                       <div className="d-grid" style={{ gridTemplateColumns: "minmax(180px, 1.3fr) minmax(110px, .7fr) minmax(180px, 1.2fr) 70px minmax(150px, .8fr)", alignItems: "center", gap: ".75rem", padding: ".75rem" }}>
                         <div>

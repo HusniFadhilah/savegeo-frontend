@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useState } from "react";
 import { createDisasterImagery, setPrimaryImagery, uploadDisasterImageryGeoTiff } from "../../api";
 import type { ImageryPhase, SatelliteImagery } from "../../types";
@@ -213,17 +214,19 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "12%" }} />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(20% - 0.65rem)" }} />
+              <col style={{ width: "calc(14% - 0.455rem)" }} />
+              <col style={{ width: "calc(14% - 0.455rem)" }} />
+              <col style={{ width: "calc(12% - 0.39rem)" }} />
+              <col style={{ width: "calc(12% - 0.39rem)" }} />
+              <col style={{ width: "calc(16% - 0.52rem)" }} />
+              <col style={{ width: "calc(12% - 0.39rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th>Satelit</th>
+                <AdminTableNumberHeader />
+                  <th>Satelit</th>
                 <th>Tanggal</th>
                 <th>Sensor</th>
                 <th>Resolusi</th>
@@ -235,13 +238,14 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada citra {phase === "pre" ? "pra-bencana" : "pasca-bencana"}.
                   </td>
                 </tr>
               )}
-              {rows.map((img) => (
+              {rows.map((img, index) => (
                 <tr key={img.id}>
+                  <AdminTableNumberCell index={index} />
                   <td>
                     {img.satellite}
                     {img.is_primary && <span className="stat-badge badge-blue" style={{ marginLeft: 6 }}>Utama</span>}

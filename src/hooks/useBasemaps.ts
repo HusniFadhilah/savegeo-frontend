@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchBasemaps } from "@/services/mapLayerService";
 import { withOptionalGoogleSatelliteBasemap } from "@/services/googleMapsTiles";
+import { withOptionalAppleBasemaps } from "@/services/appleMapKit";
 import { FALLBACK_BASEMAPS, withEoxCloudlessBasemap, withNasaGibsBasemap, withOptionalMapboxBasemap, withUsgsImageryBasemap } from "@/config/basemaps";
 import type { BasemapDefinition } from "@/types/map";
 
@@ -21,7 +22,7 @@ async function load(): Promise<BasemapDefinition[]> {
       } catch {
         configured = FALLBACK_BASEMAPS;
       }
-      cache = await withOptionalGoogleSatelliteBasemap(withOptionalMapboxBasemap(withEoxCloudlessBasemap(withUsgsImageryBasemap(withNasaGibsBasemap(configured)))));
+      cache = await withOptionalAppleBasemaps(await withOptionalGoogleSatelliteBasemap(withOptionalMapboxBasemap(withEoxCloudlessBasemap(withUsgsImageryBasemap(withNasaGibsBasemap(configured))))));
       return cache;
     })();
   }

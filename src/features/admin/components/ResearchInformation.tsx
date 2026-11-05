@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 const RESEARCHERS = [
   { name: "Dr. Eng. Adi Wibowo, S.Si., M.Kom.", role: "Ketua Peneliti", affiliation: "Universitas Diponegoro" },
   { name: "Satriawan Rasyid Purnama, S.Kom., M.Cs.", role: "Anggota Peneliti", affiliation: "Universitas Diponegoro" },
@@ -69,21 +70,26 @@ export default function ResearchInformation() {
             <span>Identitas riset</span>
           </div>
           <div className="card-body-custom">
-            <table className="tbl tbl-wide">
+            <table className="tbl">
+              <thead><tr><AdminTableNumberHeader /><th>Keterangan</th><th>Nilai</th></tr></thead>
               <tbody>
                 <tr>
+                  <AdminTableNumberCell index={0} />
                   <td>Nomor paten</td>
                   <td className="tbl-mono">S00202515583</td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={1} />
                   <td>Jenis</td>
                   <td>Paten Sederhana</td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={2} />
                   <td>Inovasi</td>
                   <td>Sistem Estimasi Stok Karbon Berbasis AI</td>
                 </tr>
                 <tr>
+                  <AdminTableNumberCell index={3} />
                   <td>Platform</td>
                   <td>savegeo.len.co.id</td>
                 </tr>
@@ -116,11 +122,11 @@ export default function ResearchInformation() {
         <div className="card-body-custom">
           <table className="tbl tbl-wide">
             <thead>
-              <tr><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
+              <tr><AdminTableNumberHeader /><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
             </thead>
             <tbody>
-              {RESEARCHERS.map((person) => (
-                <tr key={person.name}><td>{person.name}</td><td>{person.role}</td><td>{person.affiliation}</td></tr>
+              {RESEARCHERS.map((person, index) => (
+                <tr key={person.name}><AdminTableNumberCell index={index} /><td>{person.name}</td><td>{person.role}</td><td>{person.affiliation}</td></tr>
               ))}
             </tbody>
           </table>
@@ -134,11 +140,11 @@ export default function ResearchInformation() {
         <div className="card-body-custom">
           <table className="tbl tbl-wide">
             <thead>
-              <tr><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
+              <tr><AdminTableNumberHeader /><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
             </thead>
             <tbody>
-              {PARTNERS.map((partner) => (
-                <tr key={partner.name}><td>{partner.name}</td><td>{partner.role}</td><td>PT LEN Industri (Persero)</td></tr>
+              {PARTNERS.map((partner, index) => (
+                <tr key={partner.name}><AdminTableNumberCell index={index} /><td>{partner.name}</td><td>{partner.role}</td><td>PT LEN Industri (Persero)</td></tr>
               ))}
             </tbody>
           </table>

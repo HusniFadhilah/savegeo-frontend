@@ -21,6 +21,8 @@ import {
 import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import { SATELLITE_BASEMAP_IDS } from "@/config/satelliteBasemapGroups";
 import { safeMapCenter, safeMapZoom, safeTileSize, safeZoomOffset } from "./mapViewValidation";
+import { createBasemapMapKitLayer, isMapKitBasemap } from "@/services/appleMapKit";
+import type { BasemapDefinition } from "@/types/map";
 
 import GlobeView, { type GlobeLayer } from "./GlobeView";
 import { GlobeLayerBridge, LeafletUserLocation } from "./GlobeLayerBridge";
@@ -50,6 +52,17 @@ interface Props {
   historicalAoi?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
   /** Use Leaflet's canvas renderer for dense point layers such as hotspots. */
   preferCanvas?: boolean;
+}
+
+/** Default basemap drawn by Apple MapKit JS (no tile URL). */
+function MapKitBasemap({ basemap }: { basemap: BasemapDefinition }) {
+  const map = useMap();
+  const language = useI18nStore((s) => s.language);
+  useEffect(() => {
+    const layer = createBasemapMapKitLayer(basemap, "savegeo-basemap-layer savegeo-satellite-imagery-layer", language).addTo(map);
+    return () => { if (map.hasLayer(layer)) map.removeLayer(layer); };
+  }, [basemap, language, map]);
+  return null;
 }
 
 function InvalidateOnResize() {
@@ -149,7 +162,8 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         className={className ?? "savegeo-map"}
       >
         <Pane name={BASEMAP_REFERENCE_PANE} style={{ zIndex: BASEMAP_REFERENCE_PANE_Z_INDEX, pointerEvents: "none" }} />
-        {defaultBasemap && (
+        {defaultBasemap && isMapKitBasemap(defaultBasemap) && <MapKitBasemap basemap={defaultBasemap} />}
+        {defaultBasemap && !isMapKitBasemap(defaultBasemap) && (
           <>
             <TileLayer
               url={defaultBasemap.url}

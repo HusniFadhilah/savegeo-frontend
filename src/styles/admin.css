@@ -1161,6 +1161,39 @@ html[data-theme="dark"] .admin-panel .analysis-review .legend {
   table-layout: fixed;
 }
 
+/* Keep selection and row numbers compact even when the table fills the page. */
+.admin-panel col.admin-table-selection-col {
+  width: 3rem;
+}
+
+.admin-panel col.admin-table-number-col {
+  width: 3.5rem;
+}
+
+.admin-panel table th.admin-table-selection,
+.admin-panel table td.admin-table-selection {
+  width: 3rem;
+  padding-inline: 0.35rem;
+  text-align: center;
+}
+
+.admin-panel table th.admin-table-number,
+.admin-panel table td.admin-table-number {
+  width: 3.5rem;
+  padding-inline: 0.35rem;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-panel .admin-status-table {
+  table-layout: fixed;
+}
+
+.admin-panel .admin-status-table th:not(.admin-table-number) {
+  text-align: left;
+}
+
 /* `.tbl` also covers small 2-column key/value tables (no <thead>, no need to
    ever scroll) alongside real multi-column datatables, so there's no one
    right min-width for the shared class. `table-layout: fixed` + `width:

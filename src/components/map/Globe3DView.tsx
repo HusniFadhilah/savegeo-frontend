@@ -9,6 +9,7 @@ import { useUserGeolocation, useLocationStore } from "@/hooks/useUserGeolocation
 import UserLocationControl from "./UserLocationControl";
 import { imageryProvider } from "./globe3d/imagery";
 import { escapeAttributionHtml, fetchGoogleViewportCopyright } from "@/services/googleMapsTiles";
+import { isMapKitBasemap } from "@/services/appleMapKit";
 import { cameraNumber, useGlobeQuery, writeGlobeQuery } from "./globe3d/query";
 import { SATELLITE_BASEMAP_GROUPS, SATELLITE_BASEMAP_IDS } from "@/config/satelliteBasemapGroups";
 import "./globe3d/globe.css";
@@ -58,7 +59,9 @@ export default function Globe3DView(props: GlobeViewProps) {
   const restoreInitialCamera = useRef(new URLSearchParams(window.location.search).has("globe_height"));
   const location = useUserGeolocation();
   const locationRevision = useRef(location.revision);
-  const { basemaps } = useBasemaps();
+  const { basemaps: allBasemaps } = useBasemaps();
+  // MapKit JS (Apple) renders its own map and cannot feed Cesium imagery.
+  const basemaps = useMemo(() => allBasemaps.filter(b => !isMapKitBasemap(b)), [allBasemaps]);
   const sharedAoi = useAoiStore(s => s.aoi);
   const aoi = props.aoi === undefined ? sharedAoi?.feature : props.aoi;
   const aoiBounds = useMemo(() => geometryBounds(aoi?.geometry), [aoi]);

@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useRef, useState } from "react";
 import { deleteModel, setDefaultModel, toggleModelActive, uploadModel } from "../api";
 import type { MlModel } from "../types";
@@ -326,18 +327,20 @@ export default function ModelRegistry() {
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "3.5rem" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "28%" }} />
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(20% - 1.3rem)" }} />
+              <col style={{ width: "calc(9% - 0.585rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(16% - 1.04rem)" }} />
+              <col style={{ width: "calc(8% - 0.52rem)" }} />
+              <col style={{ width: "calc(9% - 0.585rem)" }} />
+              <col style={{ width: "calc(28% - 1.82rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua model di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua model di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>Model</th>
                 <th>Tipe</th>
                 <th>Algoritma</th>
@@ -350,34 +353,35 @@ export default function ModelRegistry() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada model. Unggah model ML terlebih dahulu.
                   </td>
                 </tr>
               )}
               {!loading &&
                 !error &&
-                rows.map((m) => {
+                rows.map((m, index) => {
                   const featureCount = m.metrics?.n_features ?? (m.metadata_json?.n_features as number) ?? m.feature_names?.length ?? 0;
                   const sampleCount = m.metrics?.n_samples ?? (m.metadata_json?.n_samples as number) ?? "—";
                   const updatedAt = m.updated_at ? new Date(m.updated_at).toLocaleDateString("id-ID") : "—";
                   return (
                     <tr key={m.id}>
-                      <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${m.name}`} checked={selectedIds.includes(m.id)} onChange={() => toggleSelected(m.id)} /></td>
+                      <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${m.name}`} checked={selectedIds.includes(m.id)} onChange={() => toggleSelected(m.id)} /></td>
+                      <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                       <td>
                         <div style={{ fontWeight: 600 }}>{m.name || "—"}</div>
                         <div style={{ fontSize: 10, color: "var(--text-muted)" }}>

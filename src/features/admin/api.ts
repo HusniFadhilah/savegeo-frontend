@@ -195,11 +195,11 @@ export const importCarbonCalibrationSources = (revised: File, previous?: File | 
 // ── Admin users ──────────────────────────────────────────────────
 export const getCurrentAdminUser = () => apiClient.get<AdminUserRow>("/admin/auth/me", { auth: true });
 
-export const updateAdminProfile = (payload: { username: string; email: string | null; full_name?: string | null }) =>
+export const updateAdminProfile = (payload: { username: string; email: string | null; full_name: string }) =>
   apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/profile", payload, { auth: true });
 
 export const updateAdminName = (fullName: string) =>
-  apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/name", { full_name: fullName.trim() || null }, { auth: "admin" });
+  apiClient.put<{ message: string; user: AdminUserRow }>("/admin/auth/name", { full_name: fullName.trim() }, { auth: "admin" });
 
 export const changePassword = (oldPassword: string, newPassword: string) =>
   apiClient.put<{ message: string }>(

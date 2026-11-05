@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import TablePagination from "@/components/ui/TablePagination";
@@ -24,6 +25,27 @@ const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "",
 
 function roleLabel(name: string): string {
   return name === "geospatial_expert" ? "Ahli Geospasial" : name;
+}
+
+const KNOWN_ACCOUNT_DETAILS: Record<string, { fullName: string; affiliation: string }> = {
+  ilhamnugraha: {
+    fullName: "Ilham Nugraha, S.T., M.M., IPM.",
+    affiliation: "SGM Information System · PT Len Industri (Persero)",
+  },
+};
+
+function AccountIdentity({ user, missingName }: { user: AdminUserRow; missingName: string }) {
+  const knownDetails = KNOWN_ACCOUNT_DETAILS[user.username.trim().toLowerCase()];
+  const fullName = user.full_name?.trim() || knownDetails?.fullName;
+
+  return (
+    <>
+      <strong>{fullName || <span className="text-warning">{missingName}</span>}</strong>
+      <div style={{ fontSize: 12 }}>@{user.username}</div>
+      {knownDetails && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{knownDetails.affiliation}</div>}
+      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email || "-"}</div>
+    </>
+  );
 }
 
 function formatAdminDate(value: string | null | undefined, language: "id" | "en"): string {
@@ -91,10 +113,11 @@ export default function AdminUsers() {
 
   const openEdit = (u: AdminUserRow) => {
     const role = roles.find((r) => r.name === u.role);
+    const knownDetails = KNOWN_ACCOUNT_DETAILS[u.username.trim().toLowerCase()];
     setForm({
       id: u.id,
       username: u.username,
-      fullName: u.full_name || "",
+      fullName: u.full_name || knownDetails?.fullName || "",
       email: u.email || "",
       password: "",
       roleId: role ? String(role.id) : "",
@@ -106,6 +129,10 @@ export default function AdminUsers() {
 
   const handleSave = async () => {
     setFormError(null);
+    if (!form.fullName.trim()) {
+      setFormError(t("admin.users.nameRequired"));
+      return;
+    }
     const roleId = form.roleId ? Number(form.roleId) : null;
     try {
       setSaving(true);
@@ -192,8 +219,8 @@ export default function AdminUsers() {
           <div className="collapse-form open" style={{ marginBottom: "0.875rem" }}>
             <div className="two-col" style={{ marginBottom: "0.75rem" }}>
               <div className="form-field">
-                <label className="form-label" htmlFor="admin-user-full-name">{t("account.fullName")}</label>
-                <input id="admin-user-full-name" className="form-input" autoComplete="name" maxLength={160} value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+                <label className="form-label" htmlFor="admin-user-full-name">{t("admin.users.fullNameLabel")} *</label>
+                <input id="admin-user-full-name" className="form-input" autoComplete="name" maxLength={160} placeholder="Contoh: Ilham Nugraha, S.T., M.M., IPM." required value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
               </div>
               <div className="form-field">
                 <label className="form-label">{t("admin.users.username")} {form.id === null && "*"}</label>
@@ -263,9 +290,15 @@ export default function AdminUsers() {
 
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
+            <colgroup>
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col span={6} />
+            </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua pengguna di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua pengguna di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>{t("admin.users.user")}</th>
                 <th>{t("admin.users.role")}</th>
                 <th>{t("admin.status")}</th>
@@ -277,34 +310,33 @@ export default function AdminUsers() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {t("admin.loading")}
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {t("admin.users.empty")}
                   </td>
                 </tr>
               )}
               {!loading &&
                 !error &&
-                rows.map((u) => (
+                rows.map((u, index) => (
                   <tr key={u.id}>
-                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
+                    <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td className="admin-user-identity">
-                      <strong>{u.full_name || u.username}</strong>
-                      {u.full_name && <div style={{ fontSize: 12 }}>@{u.username}</div>}
-                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{u.email || "-"}</div>
+                      <AccountIdentity user={u} missingName={t("admin.users.nameMissing")} />
                     </td>
                     <td>{u.role ? roleLabel(u.role) : t("admin.users.fullAccess")}</td>
                     <td>

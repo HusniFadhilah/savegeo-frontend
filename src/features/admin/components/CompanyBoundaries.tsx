@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useRef, useState } from "react";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
@@ -476,19 +477,21 @@ export default function CompanyBoundaries() {
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "3.5rem" }} />
-              <col style={{ width: "22%" }} />
-              <col style={{ width: "18%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(22% - 1.43rem)" }} />
+              <col style={{ width: "calc(18% - 1.17rem)" }} />
+              <col style={{ width: "calc(11% - 0.715rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(13% - 0.845rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(8% - 0.52rem)" }} />
+              <col style={{ width: "calc(8% - 0.52rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua batas perusahaan di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua batas perusahaan di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>Nama Konsesi</th>
                 <th>Perusahaan</th>
                 <th>Tipe</th>
@@ -502,30 +505,31 @@ export default function CompanyBoundaries() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada data. Tambahkan secara manual atau impor dari sumber data terbuka.
                   </td>
                 </tr>
               )}
               {!loading &&
                 !error &&
-                rows.map((c) => (
+                rows.map((c, index) => (
                   <tr key={c.id}>
-                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${c.name}`} checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${c.name}`} checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} /></td>
+                    <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td title={c.name}>{c.name.length > 30 ? `${c.name.slice(0, 28)}…` : c.name}</td>
                     <td>{c.company_name || "—"}</td>
                     <td>

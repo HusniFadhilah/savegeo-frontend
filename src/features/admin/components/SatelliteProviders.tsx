@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useEffect, useMemo, useState } from "react";
 import { listSatelliteProvidersAdmin, resetSatelliteProvider, saveSatelliteProvider } from "../api";
 import type { SatelliteProviderRow } from "../types";
@@ -175,19 +176,21 @@ function VegetationProvidersTable() {
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "3.5rem" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "22%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "10%" }} />
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(16% - 1.04rem)" }} />
+              <col style={{ width: "calc(12% - 0.78rem)" }} />
+              <col style={{ width: "calc(12% - 0.78rem)" }} />
+              <col style={{ width: "calc(22% - 1.43rem)" }} />
+              <col style={{ width: "calc(8% - 0.52rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua provider dengan override di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua provider dengan override di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>Key</th>
                 <th>Nama</th>
                 <th>Provider</th>
@@ -201,24 +204,25 @@ function VegetationProvidersTable() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     {search ? "Tidak ada provider yang cocok." : "Belum ada provider satelit."}
                   </td>
                 </tr>
               )}
               {!loading &&
-                pageRows.map((row) => {
+                pageRows.map((row, index) => {
                   const isEditing = editingKey === row.key;
                   return (
                     <tr key={row.key}>
-                      <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih provider ${row.key}`} checked={selectedKeys.includes(row.key)} disabled={!row.has_override} onChange={() => toggleSelected(row.key)} /></td>
+                      <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih provider ${row.key}`} checked={selectedKeys.includes(row.key)} disabled={!row.has_override} onChange={() => toggleSelected(row.key)} /></td>
+                      <AdminTableNumberCell index={index} page={page} pageSize={PAGE_SIZE} />
                       <td>
                         <code>{row.key}</code>
                       </td>

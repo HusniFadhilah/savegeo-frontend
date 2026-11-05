@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import { useRef, useState } from "react";
 import { activateGeeCredential, deleteGeeCredential, uploadGeeCredential } from "../api";
 import type { GeeCredential } from "../types";
@@ -207,17 +208,19 @@ export default function GeeCredentials() {
         <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-wide">
             <colgroup>
-              <col style={{ width: "3.5rem" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "25%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "24%" }} />
+              <col className="admin-table-selection-col" />
+              <col className="admin-table-number-col" />
+              <col style={{ width: "calc(15% - 0.975rem)" }} />
+              <col style={{ width: "calc(14% - 0.91rem)" }} />
+              <col style={{ width: "calc(25% - 1.625rem)" }} />
+              <col style={{ width: "calc(10% - 0.65rem)" }} />
+              <col style={{ width: "calc(12% - 0.78rem)" }} />
+              <col style={{ width: "calc(24% - 1.56rem)" }} />
             </colgroup>
             <thead>
               <tr>
-                <th><input className="admin-table-check" type="checkbox" aria-label="Pilih semua credential nonaktif di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua credential nonaktif di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <AdminTableNumberHeader />
                 <th>Label</th>
                 <th>Project ID</th>
                 <th>Email</th>
@@ -229,30 +232,31 @@ export default function GeeCredentials() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
                     Belum ada kredensial. Unggah file JSON akun layanan.
                   </td>
                 </tr>
               )}
               {!loading &&
                 !error &&
-                rows.map((c) => (
+                rows.map((c, index) => (
                   <tr key={c.id}>
-                    <td><input className="admin-table-check" type="checkbox" aria-label={`Pilih credential ${c.label}`} checked={selectedIds.includes(c.id)} disabled={c.is_active} onChange={() => toggleSelected(c.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih credential ${c.label}`} checked={selectedIds.includes(c.id)} disabled={c.is_active} onChange={() => toggleSelected(c.id)} /></td>
+                    <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td title={c.label}>{c.label}</td>
                     <td className="tbl-mono" title={c.project_id}>
                       {c.project_id}

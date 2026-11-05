@@ -5,6 +5,7 @@ export const SATELLITE_BASEMAP_GROUPS = [
   { id: "usgs", label: "USGS", basemapIds: ["usgs-imagery"] },
   { id: "mapbox", label: "Mapbox", basemapIds: ["mapbox-satellite", "mapbox-satellite-roads"] },
   { id: "google", label: "Google", basemapIds: ["google-satellite"] },
+  { id: "apple", label: "Apple", basemapIds: ["apple-satellite", "apple-hybrid"] },
 ] as const;
 
 export const SATELLITE_BASEMAP_IDS = new Set<string>(SATELLITE_BASEMAP_GROUPS.flatMap((group) => group.basemapIds));

@@ -1,3 +1,4 @@
+import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
 import type { ReactNode } from "react";
 import SatelliteViewer from "@/features/disaster/components/SatelliteViewer";
 import { useEffect, useMemo, useState } from "react";
@@ -81,9 +82,11 @@ function DataTable({ title, values, emptyLabel }: { title: string; values: Recor
       {entries.length > 0 ? (
         <div className="analysis-review__table-wrap">
           <table className="tbl analysis-review__table">
+            <thead><tr><AdminTableNumberHeader /><th scope="col">Keterangan</th><th scope="col">Nilai</th></tr></thead>
             <tbody>
-              {entries.map(([key, value]) => (
+              {entries.map(([key, value], index) => (
                 <tr key={key}>
+                  <AdminTableNumberCell index={index} />
                   <th scope="row">{humanizeKey(key)}</th>
                   <td>{renderValue(value)}</td>
                 </tr>
@@ -293,10 +296,11 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
               </div>
               <div className="analysis-review__table-wrap">
                 <table className="tbl tbl-wide analysis-review__table">
-                  <thead><tr><th>Model</th><th>Status</th><th>Statistik</th><th>Legenda</th><th>Kepercayaan</th></tr></thead>
+                  <thead><tr><AdminTableNumberHeader /><th>Model</th><th>Status</th><th>Statistik</th><th>Legenda</th><th>Kepercayaan</th></tr></thead>
                   <tbody>
                     {qc.analyses.map((analysis, index) => (
                       <tr key={`${analysis.model_id}-${index}`}>
+                        <AdminTableNumberCell index={index} />
                         <td>{analysis.model_id}</td>
                         <td>{RUN_STATUS_LABEL[analysis.status] || analysis.status}</td>
                         <td>{analysis.has_statistics ? "✓" : "—"}</td>
@@ -304,7 +308,7 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
                         <td>{analysis.has_confidence ? "✓" : "—"}</td>
                       </tr>
                     ))}
-                    {qc.analyses.length === 0 && <tr><td colSpan={5} className="analysis-review__table-empty">Belum ada analisis.</td></tr>}
+                    {qc.analyses.length === 0 && <tr><td colSpan={6} className="analysis-review__table-empty">Belum ada analisis.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -313,10 +317,11 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
                   <h3 className="analysis-review__data-title">Kesiapan publikasi</h3>
                   <div className="analysis-review__table-wrap">
                     <table className="tbl tbl-wide analysis-review__table">
-                      <thead><tr><th>Komponen</th><th>Status</th><th>Alasan</th></tr></thead>
+                      <thead><tr><AdminTableNumberHeader /><th>Komponen</th><th>Status</th><th>Alasan</th></tr></thead>
                       <tbody>
-                        {Object.entries(qc.readiness).map(([key, item]) => (
+                        {Object.entries(qc.readiness).map(([key, item], index) => (
                           <tr key={key}>
+                            <AdminTableNumberCell index={index} />
                             <td>{humanizeKey(key)}</td>
                             <td><span className={`stat-badge ${["ready", "passed", "allowed"].includes(item.status) ? "badge-green" : "badge-amber"}`}>{item.status}</span></td>
                             <td>{item.reasons.length ? item.reasons.join("; ") : "—"}</td>
