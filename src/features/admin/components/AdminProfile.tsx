@@ -61,8 +61,9 @@ export default function AdminProfile() {
           <form onSubmit={(event) => void saveProfile(event)}>
             <div className="two-col">
               <div className="form-field">
-                <label className="form-label" htmlFor="admin-profile-full-name">{t("admin.users.fullNameLabel")} *</label>
+                <label className="form-label" htmlFor="admin-profile-full-name">{t("account.fullName")}</label>
                 <input id="admin-profile-full-name" className="form-input" autoComplete="name" maxLength={160} required value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                <small className="text-muted">{t("admin.users.fullNameHint")}</small>
               </div>
               <div className="form-field">
                 <label className="form-label" htmlFor="admin-profile-username">{t("admin.profile.username")}</label>
