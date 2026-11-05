@@ -60,7 +60,7 @@ export default function DmrvProjectsPage() {
 
   return (
     <DashboardShell>
-      <section className="mx-auto" style={{ maxWidth: 960 }}>
+      <section className="mx-auto px-3 pt-3" style={{ maxWidth: 960 }}>
         <h1 className="h4 mb-3">{t("dmrv.projects.heading")}</h1>
         {loadError && <div role="alert" className="alert alert-danger">{loadError}</div>}
         {projects === null && <p role="status">{t("dmrv.loading")}</p>}

@@ -38,7 +38,7 @@ export default function DmrvProjectPage() {
 
   return (
     <DashboardShell>
-      <section className="mx-auto" style={{ maxWidth: 960 }}>
+      <section className="mx-auto px-3 pt-3" style={{ maxWidth: 960 }}>
         <p><Link to="/dmrv/projects">{t("dmrv.project.back")}</Link></p>
         {error && <div role="alert" className="alert alert-danger">{error}</div>}
         {!project && !error && <p role="status">{t("dmrv.loading")}</p>}

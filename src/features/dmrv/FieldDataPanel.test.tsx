@@ -107,7 +107,9 @@ describe("FieldDataPanel", () => {
     expect(form.get("plot_area_m2")).toBe("400");
     expect(form.get("area_basis")).toBe("assumed");
     expect((form.get("file") as File).name).toBe("trees.csv");
-    expect(await screen.findByRole("status")).toHaveTextContent("Hasil impor: rejected; 0 baris diimpor, 1 ditolak.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Hasil impor: ditolak; 0 baris diimpor, 1 ditolak.");
+    // a finished import must be previewed again before another import can be sent
+    expect(screen.getByRole("button", { name: "Impor" })).toBeDisabled();
     await waitFor(() => expect(api.listPlots).toHaveBeenCalledTimes(2));
   });
 

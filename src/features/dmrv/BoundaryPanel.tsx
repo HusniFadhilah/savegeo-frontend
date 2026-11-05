@@ -74,7 +74,7 @@ export default function BoundaryPanel({ projectId, canWrite }: { projectId: stri
   const overlap = saved?.overlap;
 
   return (
-    <section aria-labelledby="dmrv-boundary-heading">
+    <section aria-labelledby="dmrv-boundary-heading" className="px-1">
       <h2 id="dmrv-boundary-heading" className="h5">{t("dmrv.boundary.heading")}</h2>
       {versions === null && <p role="status">{t("dmrv.loading")}</p>}
       {versions !== null && versions.length === 0 && <p>{t("dmrv.boundary.empty")}</p>}

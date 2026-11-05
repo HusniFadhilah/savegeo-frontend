@@ -108,6 +108,7 @@ export default function FieldDataPanel({ projectId, canWrite }: { projectId: str
     void run("import", async () => {
       setResult(await commitFieldImport(projectId, form, key));
       attempt.current = null;
+      setPreview(null); // preview again (against the new state) before another import
       await loadPlots();
     });
   };
@@ -125,7 +126,7 @@ export default function FieldDataPanel({ projectId, canWrite }: { projectId: str
   const canImport = Boolean(preview && preview.report.rows_total > 0) && busy === "";
 
   return (
-    <section aria-labelledby="dmrv-field-heading">
+    <section aria-labelledby="dmrv-field-heading" className="px-1">
       <h2 id="dmrv-field-heading" className="h5">{t("dmrv.field.heading")}</h2>
 
       {!canWrite && <p className="text-muted">{t("dmrv.field.readOnly")}</p>}
@@ -181,7 +182,7 @@ export default function FieldDataPanel({ projectId, canWrite }: { projectId: str
           )}
           {result && (
             <div role="status" className={`alert ${result.status === "rejected" ? "alert-warning" : "alert-success"}`}>
-              {t("dmrv.field.result", { status: result.status, imported: result.rows_imported, rejected: result.rows_rejected })}
+              {t("dmrv.field.result", { status: t(`dmrv.field.status.${result.status}`), imported: result.rows_imported, rejected: result.rows_rejected })}
             </div>
           )}
           {!preview && file && <p className="text-muted small">{t("dmrv.field.noPreview")}</p>}
