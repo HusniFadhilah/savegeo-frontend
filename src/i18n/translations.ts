@@ -2,6 +2,7 @@ export type Language = "id" | "en";
 
 import { legacyTranslations } from "./legacyTranslations";
 import { approvedTranslations } from "./approvedTranslations";
+import { dmrvTranslations } from "@/features/dmrv/i18n";
 
 /**
  * Chrome-level (nav/sidebar/status/login) strings, plus the Carbon module
@@ -1475,6 +1476,11 @@ export const translations: Record<Language, Record<string, string>> = {
     "wildfire.cams.present": "present",
   },
 };
+
+// dMRV copy lives with its feature; keys are namespaced `dmrv.*`.
+for (const language of ["id", "en"] as const) {
+  Object.assign(translations[language], dmrvTranslations[language]);
+}
 
 // The reviewed table predates the accidental translation-table reduction.
 // It is authoritative for keys it contains; newer keys absent from that
