@@ -245,6 +245,9 @@ export default function FieldDataPanel({ projectId, canWrite }: { projectId: str
                     ? row.density.blockers.map((code) => <span key={code} className="text-danger">{t(`dmrv.field.blocker.${code}`)}</span>)
                     : <span>{`${formatNumber(row.density.carbon_mg_c_per_ha, language, TWO_DECIMALS)} ${t("dmrv.field.densityUnit")}`}</span>}
                 </div>
+                {row.density.trees_excluded > 0 && (
+                  <small className="text-muted d-block">{t("dmrv.field.excluded", { count: row.density.trees_excluded })}</small>
+                )}
                 {row.density.area_basis && (
                   <small className="text-muted d-block">
                     <span>{t("dmrv.field.basisLabel", { basis: t(`dmrv.field.basis.${row.density.area_basis}`) })}</span>

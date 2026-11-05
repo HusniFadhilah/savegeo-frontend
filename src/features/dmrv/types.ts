@@ -90,6 +90,8 @@ export interface PlotDensity {
   area_basis: "measured" | "assumed" | null;
   carbon_fraction: number;
   trees_without_biomass: number;
+  /** Dead or missing trees: left out of living biomass. */
+  trees_excluded: number;
   blockers: string[];
 }
 

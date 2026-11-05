@@ -94,6 +94,8 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.field.source": "Sumber: pengukuran lapangan",
     "dmrv.field.blocker.plot_area_unknown": "Luas plot belum diketahui; kerapatan tidak dihitung.",
     "dmrv.field.blocker.no_biomass_values": "Tidak ada nilai biomassa; kerapatan tidak dihitung.",
+    "dmrv.field.blocker.biomass_incomplete": "Ada pohon hidup tanpa nilai biomassa; kerapatan tidak dihitung.",
+    "dmrv.field.excluded": "{count} pohon mati/hilang tidak dihitung",
     "dmrv.field.readOnly": "Peran Anda hanya dapat melihat data lapangan.",
   },
   en: {
@@ -188,6 +190,8 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.field.source": "Source: field measurement",
     "dmrv.field.blocker.plot_area_unknown": "Plot area is unknown; density was not computed.",
     "dmrv.field.blocker.no_biomass_values": "No biomass values; density was not computed.",
+    "dmrv.field.blocker.biomass_incomplete": "Some living trees have no biomass value; density was not computed.",
+    "dmrv.field.excluded": "{count} dead/missing tree(s) not counted",
     "dmrv.field.readOnly": "Your role can only view field data.",
   },
 };

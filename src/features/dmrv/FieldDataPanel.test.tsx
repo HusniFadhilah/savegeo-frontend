@@ -36,7 +36,7 @@ const visit = (over: Partial<Visit["density"]> = {}): Visit => ({
   visit_date: "2024-01-01", date_precision: "year", tree_count: 21,
   density: {
     source_type: "field_measurement", biomass_dry_mg_per_ha: 8.58, carbon_mg_c_per_ha: 4.0326, area_m2: 400,
-    area_basis: "assumed", carbon_fraction: 0.47, trees_without_biomass: 0, blockers: [], ...over,
+    area_basis: "assumed", carbon_fraction: 0.47, trees_without_biomass: 0, trees_excluded: 0, blockers: [], ...over,
   },
 });
 
@@ -134,5 +134,16 @@ describe("FieldDataPanel", () => {
     expect(await screen.findByText("Peran Anda hanya dapat melihat data lapangan.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Berkas CSV atau XLSX")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lihat kunjungan" })).toBeInTheDocument();
+  });
+
+  it("explains incomplete biomass and the dead or missing trees that were left out", async () => {
+    vi.mocked(api.listPlots).mockResolvedValue([plot()]);
+    vi.mocked(api.listVisits).mockResolvedValue([
+      visit({ carbon_mg_c_per_ha: null, biomass_dry_mg_per_ha: null, blockers: ["biomass_incomplete"], trees_without_biomass: 2, trees_excluded: 3 }),
+    ]);
+    render(<FieldDataPanel projectId="p-1" canWrite />);
+    fireEvent.click(await screen.findByRole("button", { name: "Lihat kunjungan" }));
+    expect(await screen.findByText("Ada pohon hidup tanpa nilai biomassa; kerapatan tidak dihitung.")).toBeInTheDocument();
+    expect(screen.getByText("3 pohon mati/hilang tidak dihitung")).toBeInTheDocument();
   });
 });
