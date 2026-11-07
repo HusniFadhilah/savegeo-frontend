@@ -101,3 +101,139 @@ export interface Visit {
   tree_count: number;
   density: PlotDensity;
 }
+
+export interface ArrIllustrativeInput {
+  key: string;
+  value: string | null;
+}
+
+export interface ArrIllustrativeLine {
+  key: string;
+  value: string | null;
+  unit: string;
+  status: "computed" | "requires_data";
+  equation: string;
+}
+
+export interface ArrIllustrativePreview {
+  example_id: "arr_fixed_area_illustrative_v1";
+  title: string;
+  source_type: "accounting_result";
+  qualification: "illustrative_only";
+  formula_id: string;
+  methodology_profile: null;
+  verification_status: "not_verified";
+  issuance_status: "not_issued";
+  rounding_policy: string;
+  area_ha: string;
+  normalized_inputs: ArrIllustrativeInput[];
+  lines: ArrIllustrativeLine[];
+  blockers: string[];
+}
+
+export type DmrvJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export interface DmrvJob {
+  id: string;
+  project_id: string;
+  kind: string;
+  status: DmrvJobStatus;
+  progress: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  error: Record<string, unknown> | null;
+  attempts: number;
+  cancel_requested: boolean;
+  created_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface DmrvSnapshot {
+  id: string;
+  project_id: string;
+  job_id: string | null;
+  kind: string;
+  inputs: Record<string, unknown>;
+  outputs: Record<string, unknown>;
+  snapshot_hash: string;
+  created_by: string;
+  created_at: string | null;
+}
+
+export interface EvidencePackage {
+  id: string;
+  project_id: string;
+  snapshot_id: string;
+  manifest: {
+    snapshot: { id: string; kind: string; sha256: string };
+    components: { name: string; status: "provided" | "missing" }[];
+    entries: { path: string; size_bytes: number; sha256: string }[];
+    verification_status: "not_verified";
+    issuance_status: "not_issued";
+  };
+  manifest_hash: string;
+  package_sha256: string;
+  missing_components: string[];
+  readiness: "incomplete" | "ready";
+  created_by: string;
+  created_at: string | null;
+}
+
+export interface EvidencePackageVerification {
+  package_id: string;
+  valid: boolean;
+  code: string | null;
+  checked_entries: number;
+}
+
+export type SubmissionStatus = "draft" | "submitted" | "under_review" | "changes_requested" | "approved" | "rejected" | "superseded";
+
+export interface DmrvSubmission {
+  id: string;
+  project_id: string;
+  version: number;
+  evidence_package_id: string;
+  locked_snapshot_hash: string;
+  locked_manifest_hash: string;
+  status: SubmissionStatus;
+  created_by: string;
+  reviewer_key: string | null;
+  supersedes_id: string | null;
+  revision: number;
+  decision_reason: string | null;
+  created_at: string | null;
+  submitted_at: string | null;
+  decided_at: string | null;
+}
+
+export interface DmrvReviewFinding {
+  id: string;
+  submission_id: string;
+  code: string;
+  message: string;
+  status: "open" | "responded" | "resolved";
+  due_date: string | null;
+  response: string | null;
+  evidence_references: string[];
+  created_by: string;
+  responded_by: string | null;
+  resolved_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type MonitoringPeriodStatus = "planned" | "in_progress" | "completed";
+
+export interface MonitoringPeriod {
+  id: string;
+  project_id: string;
+  boundary_version: number;
+  boundary_checksum: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: MonitoringPeriodStatus;
+  revision: number;
+  created_at: string | null;
+  updated_at: string | null;
+}

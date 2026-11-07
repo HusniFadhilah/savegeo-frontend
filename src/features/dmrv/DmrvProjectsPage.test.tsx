@@ -33,6 +33,7 @@ describe("DmrvProjectsPage", () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "Pilot ARR" });
     expect(link).toHaveAttribute("href", "/dmrv/projects/p-1");
+    expect(screen.getByRole("link", { name: "Contoh accounting ARR area tetap (ilustrasi)" })).toHaveAttribute("href", "/dmrv/examples/arr-accounting");
     expect(screen.getByText("Pemilik proyek")).toBeInTheDocument();
   });
 

@@ -5,15 +5,22 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import BoundaryPanel from "./BoundaryPanel";
 import FieldDataPanel from "./FieldDataPanel";
+import MonitoringPeriodPanel from "./MonitoringPeriodPanel";
+import EvidencePackagePanel from "./EvidencePackagePanel";
+import SubmissionReviewPanel from "./SubmissionReviewPanel";
 import { getProject } from "./api";
 import { describeDmrvError } from "./errors";
 import type { Project, ProjectRole } from "./types";
 
-type Tab = "overview" | "boundary" | "field";
-const TABS: Tab[] = ["overview", "boundary", "field"];
+type Tab = "overview" | "boundary" | "monitoring" | "field" | "evidence";
+const TABS: Tab[] = ["overview", "boundary", "monitoring", "field", "evidence"];
 // Mirrors backend ROLE_ACTIONS (boundary.write / field.write). The backend remains the authority.
 const BOUNDARY_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
 const FIELD_WRITERS: ProjectRole[] = ["project_owner", "field_operator"];
+const FIELD_SUMMARY_RUNNERS: ProjectRole[] = ["project_owner", "analyst"];
+const MONITORING_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
+const EVIDENCE_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
+const REVIEWERS: ProjectRole[] = ["reviewer", "verifier"];
 
 export default function DmrvProjectPage() {
   const { projectId = "" } = useParams();
@@ -21,6 +28,7 @@ export default function DmrvProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
+  const [evidenceRevision, setEvidenceRevision] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -78,7 +86,14 @@ export default function DmrvProjectPage() {
                 </dl>
               )}
               {tab === "boundary" && <BoundaryPanel projectId={project.id} canWrite={role !== null && BOUNDARY_WRITERS.includes(role)} />}
-              {tab === "field" && <FieldDataPanel projectId={project.id} canWrite={role !== null && FIELD_WRITERS.includes(role)} />}
+              {tab === "monitoring" && <MonitoringPeriodPanel projectId={project.id} canWrite={role !== null && MONITORING_WRITERS.includes(role)} />}
+              {tab === "field" && <FieldDataPanel projectId={project.id} canWrite={role !== null && FIELD_WRITERS.includes(role)} canRunSummary={role !== null && FIELD_SUMMARY_RUNNERS.includes(role)} />}
+              {tab === "evidence" && (
+                <>
+                  <EvidencePackagePanel projectId={project.id} canWrite={role !== null && EVIDENCE_WRITERS.includes(role)} onChanged={() => setEvidenceRevision((value) => value + 1)} />
+                  <SubmissionReviewPanel projectId={project.id} canSubmit={role !== null && EVIDENCE_WRITERS.includes(role)} canReview={role !== null && REVIEWERS.includes(role)} refreshToken={evidenceRevision} />
+                </>
+              )}
             </div>
           </>
         )}

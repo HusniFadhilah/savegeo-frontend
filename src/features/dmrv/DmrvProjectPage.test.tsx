@@ -14,6 +14,8 @@ vi.mock("./api", async (importOriginal) => {
 });
 vi.mock("./BoundaryPanel", () => ({ default: ({ canWrite }: { canWrite: boolean }) => <div>boundary-panel write={String(canWrite)}</div> }));
 vi.mock("./FieldDataPanel", () => ({ default: ({ canWrite }: { canWrite: boolean }) => <div>field-panel write={String(canWrite)}</div> }));
+vi.mock("./EvidencePackagePanel", () => ({ default: ({ canWrite }: { canWrite: boolean }) => <div>evidence-panel write={String(canWrite)}</div> }));
+vi.mock("./SubmissionReviewPanel", () => ({ default: ({ canSubmit, canReview }: { canSubmit: boolean; canReview: boolean }) => <div>review-panel submit={String(canSubmit)} review={String(canReview)}</div> }));
 vi.mock("@/components/layout/DashboardShell", () => ({ default: ({ children }: { children: React.ReactNode }) => children }));
 
 const project = (role: ProjectRole | null = "project_owner"): Project => ({
@@ -61,6 +63,9 @@ describe("DmrvProjectPage", () => {
     expect(screen.getByText("boundary-panel write=true")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Data lapangan" }));
     expect(screen.getByText("field-panel write=true")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Paket bukti" }));
+    expect(screen.getByText("evidence-panel write=true")).toBeInTheDocument();
+    expect(screen.getByText("review-panel submit=true review=false")).toBeInTheDocument();
     expect(screen.queryByText(/boundary-panel/)).not.toBeInTheDocument();
   });
 
@@ -78,5 +83,8 @@ describe("DmrvProjectPage", () => {
     expect(screen.getByText(`boundary-panel write=${boundaryWrite}`)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Data lapangan" }));
     expect(screen.getByText(`field-panel write=${fieldWrite}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Paket bukti" }));
+    expect(screen.getByText(`evidence-panel write=${role === "project_owner" || role === "analyst"}`)).toBeInTheDocument();
+    expect(screen.getByText(`review-panel submit=${role === "project_owner" || role === "analyst"} review=${role === "reviewer" || role === "verifier"}`)).toBeInTheDocument();
   });
 });

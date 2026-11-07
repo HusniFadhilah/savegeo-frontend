@@ -62,6 +62,7 @@ export default function DmrvProjectsPage() {
     <DashboardShell>
       <section className="mx-auto px-3 pt-3" style={{ maxWidth: 960 }}>
         <h1 className="h4 mb-3">{t("dmrv.projects.heading")}</h1>
+        <p><Link className="btn btn-outline-secondary btn-sm" to="/dmrv/examples/arr-accounting">{t("dmrv.example.heading")}</Link></p>
         {loadError && <div role="alert" className="alert alert-danger">{loadError}</div>}
         {projects === null && <p role="status">{t("dmrv.loading")}</p>}
         {projects !== null && projects.length === 0 && !loadError && <p>{t("dmrv.projects.empty")}</p>}

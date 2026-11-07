@@ -19,7 +19,6 @@ const MOJIBAKE_PATTERNS = [
   /Ã¯Â¿Â½/u,
   /ï¿½/u,
   /�/u,
-  /(?:&#x[0-9a-f]+;|&#\d+;|&nbsp;)/iu,
 ];
 const PLACEHOLDER_RE = /\{\{?\s*([\w.-]+)\s*\}?\}|%[sd]/g;
 const RAW_KEY_RE = /\bt\(\s*["']([^"']+)["']/g;

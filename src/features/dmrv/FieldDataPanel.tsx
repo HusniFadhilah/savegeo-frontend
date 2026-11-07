@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEv
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 import { commitFieldImport, listPlots, listVisits, newIdempotencyKey, previewFieldImport } from "./api";
 import { describeDmrvError } from "./errors";
+import FieldSummaryJobPanel from "./FieldSummaryJobPanel";
 import type { ImportPreview, ImportResult, Plot, RowIssue, Visit } from "./types";
 
 const TWO_DECIMALS = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
@@ -33,7 +34,7 @@ function IssueTable({ issues, label }: { issues: RowIssue[]; label: string }) {
   );
 }
 
-export default function FieldDataPanel({ projectId, canWrite }: { projectId: string; canWrite: boolean }) {
+export default function FieldDataPanel({ projectId, canWrite, canRunSummary = false }: { projectId: string; canWrite: boolean; canRunSummary?: boolean }) {
   const t = useI18nStore((s) => s.t);
   const language = useI18nStore((s) => s.language);
   const [plots, setPlots] = useState<Plot[] | null>(null);
@@ -128,6 +129,8 @@ export default function FieldDataPanel({ projectId, canWrite }: { projectId: str
   return (
     <section aria-labelledby="dmrv-field-heading" className="px-1">
       <h2 id="dmrv-field-heading" className="h5">{t("dmrv.field.heading")}</h2>
+
+      <FieldSummaryJobPanel projectId={projectId} canRun={canRunSummary} />
 
       {!canWrite && <p className="text-muted">{t("dmrv.field.readOnly")}</p>}
       {canWrite && (
