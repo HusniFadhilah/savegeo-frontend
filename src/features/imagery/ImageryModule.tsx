@@ -297,6 +297,30 @@ const LEGACY_LANDSAT_DEFAULT_RANGES: Record<string, [string, string]> = {
   alos_palsar_yearly: ["2015-01-01", "2024-01-01"],
 };
 type ViewMode = "single" | "compare";
+type SceneDisplayMode = "mosaic" | "scene";
+type ImagerySceneGroup = {
+  key: string;
+  date: string;
+  scenes: ImageryScene[];
+  anchorScene: ImageryScene;
+};
+
+function sceneGroupCloudCover(group: ImagerySceneGroup): string {
+  const values = group.scenes
+    .map((scene) => scene.cloud_cover_pct)
+    .filter((value): value is number => value != null);
+  if (values.length === 0) return "-";
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  return minimum === maximum ? `${minimum}%` : `${minimum}–${maximum}%`;
+}
+
+function sceneGroupCloudCoverMax(group: ImagerySceneGroup): number | null {
+  const values = group.scenes
+    .map((scene) => scene.cloud_cover_pct)
+    .filter((value): value is number => value != null);
+  return values.length > 0 ? Math.max(...values) : null;
+}
 type DemLayerMode = "none" | "dem" | "3d";
 
 type SceneFootprintProperties = {
@@ -512,6 +536,27 @@ function formatSceneDate(iso: string, isEsriWayback: boolean): string {
   })}`;
 }
 
+function sameDayMosaicRange(scene: ImageryScene): { startDate: string; endDate: string } | null {
+  const startDate = scene.acquired_at.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
+  const end = new Date(`${startDate}T00:00:00.000Z`);
+  if (Number.isNaN(end.getTime())) return null;
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { startDate, endDate: end.toISOString().slice(0, 10) };
+}
+
+function formatSceneGroupDate(scene: ImageryScene, isEsriWayback: boolean): string {
+  const date = scene.acquired_at.slice(0, 10);
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return formatSceneDate(scene.acquired_at, isEsriWayback);
+  return parsed.toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
 function cloudBadgeClass(pct: number | null): string {
   if (pct == null) return "bg-secondary";
   if (pct <= 20) return "bg-success";
@@ -609,6 +654,7 @@ export default function ImageryModule() {
   const aoi: AoiFeature | null = aoiState?.feature ?? null;
   const [mapViewportAoi, setMapViewportAoi] = useState<AoiFeature | null>(null);
   const [sceneSearchRegion, setSceneSearchRegion] = useState<AoiFeature | null>(null);
+  const imagerySearchAoi = aoi ?? sceneSearchRegion ?? mapViewportAoi;
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
 
@@ -687,6 +733,7 @@ export default function ImageryModule() {
   const [sceneSearch, setSceneSearch] = useState("");
   const [scenePage, setScenePage] = useState(1);
   const [scenePageSize, setScenePageSize] = useState(25);
+  const [sceneDisplayMode, setSceneDisplayMode] = useState<SceneDisplayMode>("mosaic");
   const [sceneTilesById, setSceneTilesById] = useState<Record<string, string>>({});
   const [truncated, setTruncated] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -701,7 +748,6 @@ export default function ImageryModule() {
   const [tileUrl, setTileUrl] = useState<string | null>(null);
   const [tileRenderMode, setTileRenderMode] = useState<"scene" | "mosaic">("scene");
   const [tileSceneCount, setTileSceneCount] = useState(1);
-  const [mosaicRequested, setMosaicRequested] = useState(false);
   const [tileOpacity, setTileOpacity] = useState(query.opacity ?? 1);
   const [gpuTileStatus, setGpuTileStatus] = useState<"processing" | "active" | "fallback_original" | "error">("processing");
 
@@ -751,7 +797,6 @@ export default function ImageryModule() {
   const sceneRequestedRef = useRef(false);
   const setMosaicRequestedMode = (value: boolean) => {
     mosaicRequestedRef.current = value;
-    setMosaicRequested(value);
   };
   const setSceneRequestedMode = (value: boolean) => {
     sceneRequestedRef.current = value;
@@ -768,9 +813,14 @@ export default function ImageryModule() {
   const [viewMode, setViewMode] = useState<ViewMode>("single");
   const [compareSceneAId, setCompareSceneAId] = useState<string | null>(null);
   const [compareSceneBId, setCompareSceneBId] = useState<string | null>(null);
+  const [compareDisplayMode, setCompareDisplayMode] = useState<SceneDisplayMode>("mosaic");
   const [compareOrientation, setCompareOrientation] = useState<SwipeOrientation>("vertical");
   const [compareTileA, setCompareTileA] = useState<string | null>(null);
   const [compareTileB, setCompareTileB] = useState<string | null>(null);
+  const [compareRenderInfo, setCompareRenderInfo] = useState<{
+    a: { renderMode: "scene" | "mosaic"; sceneCount: number; aoiLargerThanScene: boolean };
+    b: { renderMode: "scene" | "mosaic"; sceneCount: number; aoiLargerThanScene: boolean };
+  } | null>(null);
   const compareRequestRef = useRef(0);
   const invalidateCompare = useCallback(() => { ++compareRequestRef.current; }, []);
   const [compareLoading, setCompareLoading] = useState(false);
@@ -815,6 +865,7 @@ export default function ImageryModule() {
   const isHimawari = satellite === HIMAWARI_PROVIDER_KEY;
   const providerUi = getImageryUiCapabilities(satelliteMeta);
   const isMosaicProvider = providerUi.mosaic;
+  const compareUsesMosaic = isMosaicProvider && compareDisplayMode === "mosaic";
   const isCogProvider = providerUi.cog;
   const supportsSceneMetadata = providerUi.sceneMetadata;
   const supportsCompare = providerUi.compare;
@@ -851,10 +902,11 @@ export default function ImageryModule() {
     invalidateCompare();
     setCompareTileA(null);
     setCompareTileB(null);
+    setCompareRenderInfo(null);
     setCompareLoading(false);
     setCompareError(null);
     return invalidateCompare;
-  }, [aoi, satellite, renderOptionsKey, compareSceneAId, compareSceneBId, invalidateCompare]);
+  }, [aoi, satellite, renderOptionsKey, compareSceneAId, compareSceneBId, compareDisplayMode, invalidateCompare]);
   useEffect(() => {
     ++tileRequestRef.current;
     setPlanetProduct("all");
@@ -879,6 +931,7 @@ export default function ImageryModule() {
     setCompareSceneBId(null);
     setCompareTileA(null);
     setCompareTileB(null);
+    setCompareRenderInfo(null);
     setCompareError(null);
     setSceneSearchRegion(null);
     setCogAssetKey("visual");
@@ -978,6 +1031,7 @@ export default function ImageryModule() {
       assetKeyOverride?: string,
       forceMosaicOverride?: boolean,
       aoiOverride?: AoiFeature | null,
+      mosaicRangeOverride?: { startDate: string; endDate: string } | null,
     ) => {
       const requestId = ++tileRequestRef.current;
       renderOptionsKeyRef.current = renderOptionsKey;
@@ -1011,15 +1065,18 @@ export default function ImageryModule() {
         const tileAoi = aoi ?? aoiOverride ?? null;
         const mosaicEndDate = new Date(`${mosaicQuery.endDate}T00:00:00Z`);
         mosaicEndDate.setUTCDate(mosaicEndDate.getUTCDate() + 1);
+        const mosaicRange = mosaicRangeOverride === undefined
+          ? { startDate: mosaicQuery.startDate, endDate: mosaicEndDate.toISOString().slice(0, 10) }
+          : mosaicRangeOverride;
         const res = await getImagerySceneTile({
           satellite,
           sceneId: scene.id,
           aoi: tileAoi ? { geojson: tileAoi } : undefined,
-          autoMosaic: isMosaicProvider && Boolean(tileAoi),
+          autoMosaic: isMosaicProvider && Boolean(tileAoi) && !sceneRequestedRef.current,
           forceMosaic: isMosaicProvider && Boolean(tileAoi) && (forceMosaicOverride ?? mosaicRequestedRef.current),
           forceScene: isMosaicProvider && Boolean(tileAoi) && sceneRequestedRef.current && !mosaicRequestedRef.current,
-          startDate: isMosaicProvider && tileAoi ? mosaicQuery.startDate : undefined,
-          endDate: isMosaicProvider && tileAoi ? mosaicEndDate.toISOString().slice(0, 10) : undefined,
+          startDate: isMosaicProvider && tileAoi ? mosaicRange?.startDate : undefined,
+          endDate: isMosaicProvider && tileAoi ? mosaicRange?.endDate : undefined,
           maxCloudCover: isMosaicProvider && tileAoi && supportsCloudFilter && cloudFilterEnabled ? mosaicQuery.maxCloudCover : undefined,
           sarMode,
           cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
@@ -1139,19 +1196,17 @@ export default function ImageryModule() {
       if (scenesByNewest[0] && supportsPreview) {
         const defaultAssetKey = scenesByNewest[0].default_asset_key || "visual";
         setCogAssetKey(defaultAssetKey);
-        // Prefer the AOI mosaic for supported providers whenever the search
-        // returned multiple matching granules. A single returned granule
-        // still goes through the backend's AOI-footprint check via autoMosaic.
-        const initialMosaicAvailable = isMosaicProvider && Boolean(searchRegion) && scenesByNewest.length > 1;
-        if (initialMosaicAvailable) {
-          setMosaicRequestedMode(true);
-          setSceneRequestedMode(false);
-        }
+        // In mosaic mode, start with the newest acquisition-day group so the
+        // default preview and the list selection use the same mosaic scope.
+        const initialMosaicAvailable = isMosaicProvider && sceneDisplayMode === "mosaic" && Boolean(searchRegion);
+        setMosaicRequestedMode(initialMosaicAvailable);
+        setSceneRequestedMode(!initialMosaicAvailable);
         await loadSceneTile(
           scenesByNewest[0],
           defaultAssetKey,
-          initialMosaicAvailable ? true : undefined,
+          initialMosaicAvailable,
           initialMosaicAvailable ? searchRegion : undefined,
+          initialMosaicAvailable ? sameDayMosaicRange(scenesByNewest[0]) : null,
         );
       } else if (scenesByNewest[0]) {
         setSelectedSceneId(scenesByNewest[0].id);
@@ -1171,6 +1226,7 @@ export default function ImageryModule() {
   const selectScene = (scene: ImageryScene) => {
     const nextAssetKey = scene.default_asset_key || cogAssetKey || "visual";
     if (isCogProvider) setCogAssetKey(nextAssetKey);
+    setSceneDisplayMode("scene");
     setMosaicRequestedMode(false);
     setSceneRequestedMode(true);
     if (!supportsPreview) {
@@ -1179,18 +1235,40 @@ export default function ImageryModule() {
       setTileError(satelliteMeta?.configuration_message ?? "Provider ini belum menyediakan preview scene.");
       return;
     }
-    void loadSceneTile(scene, nextAssetKey);
+    void loadSceneTile(scene, nextAssetKey, false, imagerySearchAoi, null);
   };
 
-  const loadMosaicTile = () => {
-    const mosaicRegion = aoi ?? sceneSearchRegion ?? mapViewportAoi;
-    if (!isMosaicProvider || !mosaicRegion || scenes.length === 0) return;
-    const anchorScene = [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1))[0];
-    if (!anchorScene) return;
+  const selectSceneGroup = (group: ImagerySceneGroup) => {
+    const mosaicRegion = imagerySearchAoi;
+    const mosaicRange = sameDayMosaicRange(group.anchorScene);
+    if (!isMosaicProvider || !mosaicRegion || !mosaicRange) return;
     setMosaicRequestedMode(true);
     setSceneRequestedMode(false);
-    setViewMode("single");
-    void loadSceneTile(anchorScene, anchorScene.default_asset_key || "visual", true, mosaicRegion);
+    void loadSceneTile(
+      group.anchorScene,
+      group.anchorScene.default_asset_key || "visual",
+      true,
+      mosaicRegion,
+      mosaicRange,
+    );
+  };
+
+  const changeSceneDisplayMode = (mode: SceneDisplayMode) => {
+    setSceneDisplayMode(mode);
+    setScenePage(1);
+    const currentScene = scenes.find((scene) => scene.id === selectedSceneId);
+    if (!currentScene || !supportsPreview) return;
+    if (mode === "mosaic" && isMosaicProvider) {
+      const mosaicRange = sameDayMosaicRange(currentScene);
+      if (!imagerySearchAoi || !mosaicRange) return;
+      setMosaicRequestedMode(true);
+      setSceneRequestedMode(false);
+      void loadSceneTile(currentScene, currentScene.default_asset_key || "visual", true, imagerySearchAoi, mosaicRange);
+      return;
+    }
+    setMosaicRequestedMode(false);
+    setSceneRequestedMode(true);
+    void loadSceneTile(currentScene, currentScene.default_asset_key || "visual", false, imagerySearchAoi, null);
   };
 
   const loadCompare = async () => {
@@ -1207,7 +1285,14 @@ export default function ImageryModule() {
     setCompareError(null);
     setCompareTileA(null);
     setCompareTileB(null);
+    setCompareRenderInfo(null);
     try {
+      const sceneA = scenes.find((scene) => scene.id === compareSceneAId);
+      const sceneB = scenes.find((scene) => scene.id === compareSceneBId);
+      if (!sceneA || !sceneB) {
+        throw new Error("Scene yang dipilih tidak lagi tersedia. Cari ulang scene untuk AOI dan periode ini.");
+      }
+      const compareAoi = imagerySearchAoi;
       if (isEsriWayback || isHimawari) {
         const tileA = sceneTilesById[compareSceneAId];
         const tileB = sceneTilesById[compareSceneBId];
@@ -1218,35 +1303,51 @@ export default function ImageryModule() {
         }
         setCompareTileA(frameTileA);
         setCompareTileB(frameTileB);
+        setCompareRenderInfo({
+          a: { renderMode: "scene", sceneCount: 1, aoiLargerThanScene: false },
+          b: { renderMode: "scene", sceneCount: 1, aoiLargerThanScene: false },
+        });
         return;
       }
+      const getCompareTile = (scene: ImageryScene) => {
+        const mosaicRange = compareUsesMosaic ? sameDayMosaicRange(scene) : null;
+        return getImagerySceneTile({
+          satellite,
+          sceneId: scene.id,
+          aoi: compareAoi ? { geojson: compareAoi } : undefined,
+          autoMosaic: compareUsesMosaic && Boolean(compareAoi),
+          forceMosaic: compareUsesMosaic && Boolean(compareAoi),
+          forceScene: isMosaicProvider && Boolean(compareAoi) && !compareUsesMosaic,
+          startDate: compareUsesMosaic && compareAoi ? mosaicRange?.startDate : undefined,
+          endDate: compareUsesMosaic && compareAoi ? mosaicRange?.endDate : undefined,
+          maxCloudCover: compareUsesMosaic && compareAoi && supportsCloudFilter && cloudFilterEnabled ? maxCloudCover : undefined,
+          sarMode,
+          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
+          superResolution: tileSuperResolution,
+          cogAssetKey: isCogProvider ? cogAssetKey || undefined : undefined,
+          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
+          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
+        });
+      };
       const [resA, resB] = await Promise.all([
-        getImagerySceneTile({
-          satellite,
-          sceneId: compareSceneAId,
-          aoi: aoi ? { geojson: aoi } : undefined,
-          sarMode,
-          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
-          superResolution: tileSuperResolution,
-          cogAssetKey: isCogProvider ? cogAssetKey || undefined : undefined,
-          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
-          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
-        }),
-        getImagerySceneTile({
-          satellite,
-          sceneId: compareSceneBId,
-          aoi: aoi ? { geojson: aoi } : undefined,
-          sarMode,
-          cloudMaskTechnique: cloudFilterEnabled ? cloudMaskTechnique : undefined,
-          superResolution: tileSuperResolution,
-          cogAssetKey: isCogProvider ? cogAssetKey || undefined : undefined,
-          cogBands: isCogProvider ? cogBands.trim() || undefined : undefined,
-          cogRescale: isCogProvider ? cogRescale.trim() || undefined : undefined,
-        }),
+        getCompareTile(sceneA),
+        getCompareTile(sceneB),
       ]);
       if (requestId !== compareRequestRef.current) return;
       setCompareTileA(resA.tile_url);
       setCompareTileB(resB.tile_url);
+      setCompareRenderInfo({
+        a: {
+          renderMode: resA.render_mode ?? "scene",
+          sceneCount: resA.scene_count ?? 1,
+          aoiLargerThanScene: Boolean(resA.aoi_larger_than_scene),
+        },
+        b: {
+          renderMode: resB.render_mode ?? "scene",
+          sceneCount: resB.scene_count ?? 1,
+          aoiLargerThanScene: Boolean(resB.aoi_larger_than_scene),
+        },
+      });
     } catch (err) {
       if (requestId === compareRequestRef.current) setCompareError(err instanceof Error ? err.message : "Gagal memuat salah satu citra scene.");
     } finally {
@@ -1281,13 +1382,79 @@ export default function ImageryModule() {
     () => [...scenes].sort((a, b) => (a.acquired_at < b.acquired_at ? 1 : -1)),
     [scenes],
   );
+  const sceneGroups = useMemo(() => {
+    const groupsByDate = new Map<string, ImageryScene[]>();
+    sortedScenes.forEach((scene) => {
+      const acquiredDate = scene.acquired_at.slice(0, 10);
+      const key = /^\d{4}-\d{2}-\d{2}$/.test(acquiredDate) ? acquiredDate : `scene:${scene.id}`;
+      const groupScenes = groupsByDate.get(key) ?? [];
+      groupScenes.push(scene);
+      groupsByDate.set(key, groupScenes);
+    });
+    return [...groupsByDate.entries()].map(([key, groupScenes]) => ({
+      key,
+      date: key.startsWith("scene:") ? groupScenes[0].acquired_at : key,
+      scenes: groupScenes,
+      anchorScene: groupScenes[0],
+    }));
+  }, [sortedScenes]);
   const filteredScenes = useMemo(() => {
     const needle = sceneSearch.trim().toLowerCase();
     if (!needle) return sortedScenes;
     return sortedScenes.filter((scene) => [scene.id, scene.title, scene.collection, scene.acquired_at, scene.platform, scene.producer, scene.default_asset_key].some((value) => String(value ?? "").toLowerCase().includes(needle)));
   }, [sceneSearch, sortedScenes]);
-  const scenePageCount = Math.max(1, Math.ceil(filteredScenes.length / scenePageSize));
+  const filteredSceneGroups = useMemo(() => {
+    const needle = sceneSearch.trim().toLowerCase();
+    if (!needle) return sceneGroups;
+    return sceneGroups.filter((group) =>
+      formatSceneGroupDate(group.anchorScene, isEsriWayback).toLowerCase().includes(needle)
+      || group.scenes.some((scene) => [scene.id, scene.title, scene.collection, scene.acquired_at, scene.platform, scene.producer, scene.default_asset_key].some((value) => String(value ?? "").toLowerCase().includes(needle))),
+    );
+  }, [isEsriWayback, sceneGroups, sceneSearch]);
+  const useMosaicSceneList = isMosaicProvider && sceneDisplayMode === "mosaic";
+  const sceneListCount = useMosaicSceneList ? filteredSceneGroups.length : filteredScenes.length;
+  const scenePageCount = Math.max(1, Math.ceil(sceneListCount / scenePageSize));
   const visibleScenes = useMemo(() => filteredScenes.slice((scenePage - 1) * scenePageSize, scenePage * scenePageSize), [filteredScenes, scenePage, scenePageSize]);
+  const visibleSceneGroups = useMemo(() => filteredSceneGroups.slice((scenePage - 1) * scenePageSize, scenePage * scenePageSize), [filteredSceneGroups, scenePage, scenePageSize]);
+  const visibleSceneItems = useMemo(
+    () => useMosaicSceneList
+      ? visibleSceneGroups.map((group) => ({ key: group.key, scene: group.anchorScene, group }))
+      : visibleScenes.map((scene) => ({ key: scene.id, scene, group: null as ImagerySceneGroup | null })),
+    [useMosaicSceneList, visibleSceneGroups, visibleScenes],
+  );
+  const compareSceneOptions = useMemo(() => {
+    if (isMosaicProvider && compareDisplayMode === "mosaic") {
+      return sceneGroups.map((group) => ({
+        value: group.anchorScene.id,
+        label: `${formatSceneGroupDate(group.anchorScene, isEsriWayback)} · Mosaik AOI · ${group.scenes.length} scene`,
+      }));
+    }
+    return sortedScenes.map((scene) => ({
+      value: scene.id,
+      label: `${formatSceneDate(scene.acquired_at, isEsriWayback)}${scene.cloud_cover_pct != null ? ` · awan ${scene.cloud_cover_pct}%` : ""}`,
+    }));
+  }, [compareDisplayMode, isEsriWayback, isMosaicProvider, sceneGroups, sortedScenes]);
+  const compareSceneLabel = (sceneId: string | null) => {
+    const scene = scenes.find((item) => item.id === sceneId);
+    if (!scene) return "";
+    return compareUsesMosaic
+      ? `${formatSceneGroupDate(scene, isEsriWayback)} · Mosaik`
+      : formatSceneDate(scene.acquired_at, isEsriWayback);
+  };
+  const changeCompareDisplayMode = (mode: SceneDisplayMode) => {
+    setCompareDisplayMode(mode);
+    if (mode === "mosaic" && isMosaicProvider) {
+      const groupAnchorId = (sceneId: string | null) => {
+        if (!sceneId) return null;
+        const selected = scenes.find((scene) => scene.id === sceneId);
+        if (!selected) return sceneId;
+        const date = selected.acquired_at.slice(0, 10);
+        return sceneGroups.find((group) => group.date === date)?.anchorScene.id ?? sceneId;
+      };
+      setCompareSceneAId(groupAnchorId(compareSceneAId));
+      setCompareSceneBId(groupAnchorId(compareSceneBId));
+    }
+  };
   useEffect(() => registerUiCommands("scenes", {
     read: () => ({
       provider: satellite,
@@ -1980,7 +2147,7 @@ export default function ImageryModule() {
                 <span className="imagery-accordion-copy">
                   <span className="imagery-accordion-title">
                     <i className="bi bi-list-ul" aria-hidden="true" /> <span>{t("imagery.search.found")}</span>
-                    <span className="badge bg-secondary">{scenes.length}</span>
+                    <span className="badge bg-secondary">{sceneListCount} {useMosaicSceneList ? "grup mosaik" : "scene"}</span>
                     {truncated && (
                       <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
                         batas provider
@@ -2012,11 +2179,20 @@ export default function ImageryModule() {
             <div id="imagerySceneResultsBody" hidden={!sceneResultsOpen}>
             <div className="p-2 border-top border-bottom bg-body-tertiary">
               <div className="row g-2 align-items-center">
-                <div className="col-md-8">
+                <div className={isMosaicProvider ? "col-lg-6" : "col-md-8"}>
                   <label className="visually-hidden" htmlFor="scene-list-search">Cari scene</label>
                   <div className="input-group input-group-sm"><span className="input-group-text"><i className="fas fa-search" /></span><input id="scene-list-search" className="form-control" value={sceneSearch} onChange={(event) => setSceneSearch(event.target.value)} placeholder="Cari ID, judul, tanggal, platform, produser..." /><button type="button" className="btn btn-outline-secondary" disabled={!sceneSearch} onClick={() => setSceneSearch("")}>Bersihkan</button></div>
                 </div>
-                <div className="col-md-4 d-flex align-items-center gap-2 justify-content-md-end"><label className="small text-muted mb-0" htmlFor="scene-page-size">Per halaman</label><select id="scene-page-size" className="form-select form-select-sm" style={{ maxWidth: 90 }} value={scenePageSize} onChange={(event) => { setScenePageSize(Number(event.target.value)); setScenePage(1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></div>
+                {isMosaicProvider && (
+                  <div className="col-lg-3 col-md-6">
+                    <label className="form-label small mb-1" htmlFor="scene-display-mode">Tampilkan sebagai</label>
+                    <select id="scene-display-mode" className="form-select form-select-sm" value={sceneDisplayMode} onChange={(event) => changeSceneDisplayMode(event.target.value as SceneDisplayMode)}>
+                      <option value="mosaic">Mosaik AOI · per tanggal</option>
+                      <option value="scene">Per scene</option>
+                    </select>
+                  </div>
+                )}
+                <div className={`${isMosaicProvider ? "col-lg-3 col-md-6" : "col-md-4"} d-flex align-items-center gap-2 justify-content-md-end`}><label className="small text-muted mb-0" htmlFor="scene-page-size">Per halaman</label><select id="scene-page-size" className="form-select form-select-sm" style={{ maxWidth: 90 }} value={scenePageSize} onChange={(event) => { setScenePageSize(Number(event.target.value)); setScenePage(1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></div>
               </div>
             </div>
             <div className="card-body p-0">
@@ -2045,53 +2221,37 @@ export default function ImageryModule() {
                       </tr>
                     </thead>
                     <tbody>
-                      {isMosaicProvider && (
-                        <tr className={tileRenderMode === "mosaic" || mosaicRequested ? "table-success" : "table-light"}>
-                          <td colSpan={3}>
-                            <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                              <div>
-                                <strong><i className="bi bi-grid-3x3-gap me-1" /> Grup Mosaik AOI</strong>
-                                <small className="text-muted d-block">
-                                  Gabungkan scene {satelliteMeta?.name ?? "provider ini"} yang ditemukan untuk mengisi AOI.
-                                  {tileRenderMode === "mosaic" ? ` Aktif: ${tileSceneCount} scene.` : ""}
-                                </small>
-                              </div>
-                              <button
-                                type="button"
-                                className={`btn btn-sm ${tileRenderMode === "mosaic" || mosaicRequested ? "btn-success" : "btn-outline-success"}`}
-                                onClick={loadMosaicTile}
-                                disabled={!(aoi || sceneSearchRegion || mapViewportAoi) || tileLoading}
-                              >
-                                {tileLoading && mosaicRequested ? <i className="fas fa-spinner fa-spin me-1" /> : <i className="bi bi-layers me-1" />}
-                                Tampilkan Mosaik AOI
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      {visibleScenes.map((scene) => (
+                      {visibleSceneItems.length === 0 ? (
+                        <tr><td className="text-center text-muted py-4" colSpan={3 + ((supportsSceneMetadata || isHimawari) ? 3 : 0)}>Tidak ada hasil yang cocok dengan kata kunci.</td></tr>
+                      ) : visibleSceneItems.map(({ key, scene, group }) => {
+                        const selectedInRow = group ? group.scenes.some((item) => item.id === selectedSceneId) : selectedSceneId === scene.id;
+                        const groupPlatforms = group ? [...new Set(group.scenes.map((item) => item.platform).filter((value): value is string => Boolean(value)))] : [];
+                        const groupProducers = group ? [...new Set(group.scenes.map((item) => item.producer).filter((value): value is string => Boolean(value)))] : [];
+                        return (
                         <tr
-                          key={scene.id}
-                          className={selectedSceneId === scene.id ? "table-warning" : hoverSceneId === scene.id ? "table-info" : ""}
+                          key={key}
+                          className={selectedInRow ? "table-warning" : hoverSceneId === scene.id ? "table-info" : ""}
                           style={{ cursor: "pointer" }}
                           onMouseEnter={() => setHoverSceneId(scene.id)}
                           onMouseLeave={() => setHoverSceneId(null)}
-                          onClick={() => selectScene(scene)}
+                          onClick={() => group ? selectSceneGroup(group) : selectScene(scene)}
                         >
                           <td>
-                            {formatSceneDate(scene.acquired_at, isEsriWayback)}
-                            {scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
+                            {group ? formatSceneGroupDate(scene, isEsriWayback) : formatSceneDate(scene.acquired_at, isEsriWayback)}
+                            {group
+                              ? <small className="text-muted d-block"><i className="bi bi-grid-3x3-gap me-1" />Mosaik AOI · {group.scenes.length} scene{tileRenderMode === "mosaic" && selectedInRow ? ` · aktif ${tileSceneCount}` : ""}</small>
+                              : scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
                           {(supportsSceneMetadata || isHimawari) && (
                             <>
                               <td>{formatResolution(scene.resolution_m)}</td>
-                              <td>{scene.platform ?? "-"}</td>
-                              <td>{scene.producer ?? "-"}</td>
+                              <td>{group ? (groupPlatforms.length === 1 ? groupPlatforms[0] : groupPlatforms.length > 1 ? `${groupPlatforms.length} platform` : "-") : scene.platform ?? "-"}</td>
+                              <td>{group ? (groupProducers.length === 1 ? groupProducers[0] : groupProducers.length > 1 ? `${groupProducers.length} produser` : "-") : scene.producer ?? "-"}</td>
                             </>
                           )}
                           <td>
-                            <span className={`badge ${cloudBadgeClass(scene.cloud_cover_pct)}`}>
-                              {scene.cloud_cover_pct != null ? `${scene.cloud_cover_pct}%` : "-"}
+                            <span className={`badge ${cloudBadgeClass(group ? sceneGroupCloudCoverMax(group) : scene.cloud_cover_pct)}`}>
+                              {group ? sceneGroupCloudCover(group) : scene.cloud_cover_pct != null ? `${scene.cloud_cover_pct}%` : "-"}
                             </span>
                           </td>
                           <td className="text-end">
@@ -2108,7 +2268,7 @@ export default function ImageryModule() {
                               >
                                 <i className="bi bi-zoom-in" />
                               </button>
-                              {supportsDownload && scene.download_url && (
+                              {!group && supportsDownload && scene.download_url && (
                                 <a
                                   className="btn btn-outline-secondary"
                                   href={scene.download_url}
@@ -2121,21 +2281,21 @@ export default function ImageryModule() {
                                 </a>
                               )}
                               <span className="btn btn-outline-secondary disabled" aria-hidden="true">
-                                {selectedSceneId === scene.id ? (
+                                {selectedInRow ? (
                                   <i className="bi bi-eye-fill text-warning" />
                                 ) : (
-                                  <i className="bi bi-eye text-muted" />
+                                  <i className={group ? "bi bi-layers text-muted" : "bi bi-eye text-muted"} />
                                 )}
                               </span>
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ); })}
                     </tbody>
                   </table>
                 </div>
                 <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 border-top">
-                  <small className="text-muted">{filteredScenes.length === 0 ? "Tidak ada hasil" : `Menampilkan ${(scenePage - 1) * scenePageSize + 1}-${Math.min(scenePage * scenePageSize, filteredScenes.length)} dari ${filteredScenes.length} scene`}</small>
+                  <small className="text-muted">{sceneListCount === 0 ? "Tidak ada hasil" : `Menampilkan ${(scenePage - 1) * scenePageSize + 1}-${Math.min(scenePage * scenePageSize, sceneListCount)} dari ${sceneListCount} ${useMosaicSceneList ? "grup mosaik" : "scene"}`}</small>
                   <nav aria-label="Paginasi scene"><div className="btn-group btn-group-sm"><button type="button" className="btn btn-outline-secondary" disabled={scenePage <= 1} onClick={() => setScenePage((page) => Math.max(1, page - 1))}>Sebelumnya</button><button type="button" className="btn btn-outline-secondary" disabled>{scenePage} / {scenePageCount}</button><button type="button" className="btn btn-outline-secondary" disabled={scenePage >= scenePageCount} onClick={() => setScenePage((page) => Math.min(scenePageCount, page + 1))}>Berikutnya</button></div></nav>
                 </div>
                 </>
@@ -2409,27 +2569,37 @@ export default function ImageryModule() {
                 <i className="bi bi-arrows-alt-h" /> Pilih 2 Waktu untuk Dibandingkan
               </div>
               <div className="card-body">
+                {isMosaicProvider && (
+                  <div className="row g-2 mb-2 align-items-end">
+                    <div className="col-sm-6 col-lg-4">
+                      <label className="form-label small fw-semibold mb-1" htmlFor="compare-display-mode">Tampilan perbandingan</label>
+                      <select id="compare-display-mode" className="form-select form-select-sm" value={compareDisplayMode} onChange={(event) => changeCompareDisplayMode(event.target.value as SceneDisplayMode)}>
+                        <option value="mosaic">Mosaik AOI · per tanggal</option>
+                        <option value="scene">Per scene</option>
+                      </select>
+                    </div>
+                    <div className="col-sm-6 col-lg-8 small text-muted">
+                      {compareUsesMosaic
+                        ? "Setiap pilihan tanggal menggabungkan scene pada hari yang sama untuk mengisi AOI."
+                        : "Setiap pilihan menampilkan satu scene sesuai footprint aslinya."}
+                    </div>
+                  </div>
+                )}
                 <div className="row g-2 mb-2">
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">Scene A</label>
+                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? "Waktu A" : "Scene A"}</label>
                     <SearchableSelect
                       value={compareSceneAId ?? ""}
                       onChange={(v) => setCompareSceneAId(v || null)}
-                      options={sortedScenes.map((s) => ({
-                        value: s.id,
-                        label: `${formatSceneDate(s.acquired_at, isEsriWayback)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
-                      }))}
+                      options={compareSceneOptions}
                     />
                   </div>
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">Scene B</label>
+                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? "Waktu B" : "Scene B"}</label>
                     <SearchableSelect
                       value={compareSceneBId ?? ""}
                       onChange={(v) => setCompareSceneBId(v || null)}
-                      options={sortedScenes.map((s) => ({
-                        value: s.id,
-                        label: `${formatSceneDate(s.acquired_at, isEsriWayback)}${s.cloud_cover_pct != null ? ` · awan ${s.cloud_cover_pct}%` : ""}`,
-                      }))}
+                      options={compareSceneOptions}
                     />
                   </div>
                 </div>
@@ -2450,13 +2620,43 @@ export default function ImageryModule() {
 
             {compareTileA && compareTileB ? (
               <div className="card">
+                {compareRenderInfo && (
+                  <div className="px-3 pt-2">
+                    <div className="alert alert-info py-2 mb-2 small" role="status">
+                      <strong>Scene A:</strong>{" "}
+                      {compareRenderInfo.a.renderMode === "mosaic"
+                        ? `mosaik AOI · ${compareRenderInfo.a.sceneCount} scene`
+                        : "scene tunggal"}
+                      {" · "}
+                      <strong>Scene B:</strong>{" "}
+                      {compareRenderInfo.b.renderMode === "mosaic"
+                        ? `mosaik AOI · ${compareRenderInfo.b.sceneCount} scene`
+                        : "scene tunggal"}
+                      {isMosaicProvider && imagerySearchAoi && (
+                        <span className="d-block mt-1">
+                          {compareUsesMosaic
+                            ? "Mosaik memakai scene yang beririsan pada tanggal masing-masing pilihan; cakupan mengikuti ketersediaan citra."
+                            : "Mode per scene menampilkan satu granula; bagian AOI di luar footprint dapat kosong."}
+                        </span>
+                      )}
+                    </div>
+                    {(compareRenderInfo.a.aoiLargerThanScene && compareRenderInfo.a.sceneCount <= 1)
+                      || (compareRenderInfo.b.aoiLargerThanScene && compareRenderInfo.b.sceneCount <= 1) ? (
+                      <div className="alert alert-warning py-2 mb-2 small" role="status">
+                        {compareUsesMosaic
+                          ? "Scene tambahan pada tanggal tersebut tidak ditemukan. Sebagian AOI mungkin berada di luar cakupan citra."
+                          : "Scene tunggal tidak mencakup seluruh AOI. Pilih mode mosaik bila tersedia untuk menggabungkan scene pada tanggal yang sama."}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
                 <div className="card-body p-0">
                   <SwipeCompareMap
                     id="imageryCompareMap"
                     beforeUrl={compareTileA}
                     afterUrl={compareTileB}
-                    beforeLabel={formatSceneDate(scenes.find((s) => s.id === compareSceneAId)?.acquired_at ?? "", isEsriWayback)}
-                    afterLabel={formatSceneDate(scenes.find((s) => s.id === compareSceneBId)?.acquired_at ?? "", isEsriWayback)}
+                    beforeLabel={compareSceneLabel(compareSceneAId)}
+                    afterLabel={compareSceneLabel(compareSceneBId)}
                     orientation={compareOrientation}
                     onOrientationChange={setCompareOrientation}
                     maxNativeZoom={sceneTileMaxNativeZoom}
@@ -2466,13 +2666,13 @@ export default function ImageryModule() {
                     afterMaxNativeZoom={nativeZoomForResolution(sceneResolution(scenes.find(s => s.id === compareSceneBId), cogAssetKey, satelliteMeta?.resolution_m))}
                     maxZoom={SCENE_TILE_MAX_ZOOM}
                     fallbackToParentTiles={isEsriWayback}
-                    bounds={sceneSearchRegion ? L.geoJSON(sceneSearchRegion as GeoJSON.Feature).getBounds() : undefined}
-                    clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
+                    bounds={imagerySearchAoi ? L.geoJSON(imagerySearchAoi as GeoJSON.Feature).getBounds() : undefined}
+                    clipGeometry={imagerySearchAoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
                   >
                     <MapCursorPosition />
-                    {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
+                    {imagerySearchAoi && <GeoJSON key={JSON.stringify(imagerySearchAoi.geometry)} data={imagerySearchAoi as GeoJSON.Feature} style={AOI_STYLE} />}
                     <FitToSceneOrAoi
-                      aoi={aoi ?? sceneSearchRegion}
+                      aoi={imagerySearchAoi}
                       focusKey={compareSceneAId ?? "compare-aoi"}
                       scene={scenes.find((s) => s.id === compareSceneAId) ?? null}
                       maxZoom={sceneFocusMaxZoom}
