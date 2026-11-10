@@ -126,23 +126,6 @@ export default function Sidebar() {
               </a>
             </li>
           ))}
-          <li>
-            <a
-              className={isDmrvRoute ? "sidebar-menu-item active" : "sidebar-menu-item"}
-              href="/dmrv/projects"
-              aria-current={isDmrvRoute ? "page" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                navigate("/dmrv/projects");
-                closeMobileSidebar();
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              data-tooltip={t("sidebar.dmrv")}
-            >
-              <i className="bi bi-shield-check" />
-              <span className="sidebar-menu-text">{t("sidebar.dmrv")}</span>
-            </a>
-          </li>
         </ul>
         <div className="sidebar-footer">
           <div className="sidebar-language-label">
