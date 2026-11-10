@@ -185,7 +185,9 @@ jobs:
           print(f"{url.hostname}:{port}:{os.environ['DEPLOY_HOST']}")
           PY
           )"
-            curl --fail --silent --show-error --resolve "$health_resolve" "$FRONTEND_HEALTH_URL" >/dev/null
+            # The private origin presents a self-signed cert; the request is
+            # pinned to DEPLOY_HOST and travels through the authenticated VPN.
+            curl --fail --silent --show-error --insecure --resolve "$health_resolve" "$FRONTEND_HEALTH_URL" >/dev/null
           fi
 
       - name: Record production deployment
