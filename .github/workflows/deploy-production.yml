@@ -176,7 +176,16 @@ jobs:
           if [ -n "${FRONTEND_CURL_RESOLVE:-}" ]; then
             curl --fail --silent --show-error --resolve "$FRONTEND_CURL_RESOLVE" "$FRONTEND_HEALTH_URL" >/dev/null
           else
-            curl --fail --silent --show-error "$FRONTEND_HEALTH_URL" >/dev/null
+            health_resolve="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          url = urlparse(os.environ["FRONTEND_HEALTH_URL"])
+          port = url.port or (443 if url.scheme == "https" else 80)
+          print(f"{url.hostname}:{port}:{os.environ['DEPLOY_HOST']}")
+          PY
+          )"
+            curl --fail --silent --show-error --resolve "$health_resolve" "$FRONTEND_HEALTH_URL" >/dev/null
           fi
 
       - name: Record production deployment
