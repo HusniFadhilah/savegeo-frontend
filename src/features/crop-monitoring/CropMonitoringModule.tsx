@@ -26,6 +26,8 @@ import ProductivityZonesPanel from "./components/ProductivityZonesPanel";
 import HistoricalComparisonPanel from "./components/HistoricalComparisonPanel";
 import CropRiskScoreCard from "./components/CropRiskScoreCard";
 import CropMonitoringResultsMapPanel from "./components/CropMonitoringResultsMapPanel";
+import ModisProductivityPanel from "./components/ModisProductivityPanel";
+import type { CarbonResult } from "@/features/carbon/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -112,6 +114,8 @@ export default function CropMonitoringModule() {
   const [sentinel2Enabled, setSentinel2Enabled] = useState(true);
   const [weatherSource, setWeatherSource] = useState("gee");
   const [subAnalyses, setSubAnalyses] = useState<SubAnalysisKey[]>(DEFAULT_SUB_ANALYSES);
+  const [modisProductivityEnabled, setModisProductivityEnabled] = useState(false);
+  const [modisProductivityResults, setModisProductivityResults] = useState<Record<string, CarbonResult>>({});
 
   // Timeseries index (sub-analysis B), kept here so its value survives a
   // scoped re-run from VegetationTimeSeriesChart's own index selector.
@@ -135,6 +139,7 @@ export default function CropMonitoringModule() {
     setRunning(false);
     setProgress("");
     setRunError(null);
+    setModisProductivityResults({});
     const field = useFieldStore.getState().selectedField;
     if (field && JSON.stringify(field.geojson) !== geometrySignature) useFieldStore.getState().clearSelection();
   }, [geometrySignature, selectedField?.id]);
@@ -364,6 +369,8 @@ export default function CropMonitoringModule() {
             onWeatherSourceChange={setWeatherSource}
             subAnalyses={subAnalyses}
             onSubAnalysesChange={setSubAnalyses}
+            modisProductivityEnabled={modisProductivityEnabled}
+            onModisProductivityChange={setModisProductivityEnabled}
           />
 
           <button className="btn btn-primary w-100 mt-1" onClick={handleRun} disabled={running || !selectedField}>
@@ -391,6 +398,14 @@ export default function CropMonitoringModule() {
             independent of whether the main "Run" has completed yet. */}
         {selectedField && subAnalyses.includes("flood") && (
           <FloodImpactPanel fieldId={selectedField.id} flood={sub?.flood} onResult={handleFloodResult} />
+        )}
+        {selectedField && modisProductivityEnabled && (
+          <ModisProductivityPanel
+            aoi={aoi?.feature ? { geojson: aoi.feature } : null}
+            fieldName={selectedField.name}
+            results={modisProductivityResults}
+            onResult={(key, value) => setModisProductivityResults((current) => ({ ...current, [key]: value }))}
+          />
         )}
 
         {result && sub && (
@@ -492,6 +507,7 @@ export default function CropMonitoringModule() {
               fieldFeature={fieldFeature}
               subAnalyses={sub}
               analysisDate={result.period.end || customEnd || customStart || undefined}
+              productivityResults={modisProductivityResults}
             />
             {sub.health && <CropHealthCard health={sub.health} />}
             {(sub.timeseries || subAnalyses.includes("timeseries")) && <VegetationTimeSeriesChart
@@ -511,6 +527,14 @@ export default function CropMonitoringModule() {
 
 
           </>
+        )}
+
+        {!result && Object.keys(modisProductivityResults).length > 0 && (
+          <CropMonitoringResultsMapPanel
+            fieldFeature={fieldFeature}
+            subAnalyses={{}}
+            productivityResults={modisProductivityResults}
+          />
         )}
 
         {!result && (

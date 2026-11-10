@@ -18,8 +18,8 @@ import StatsCards from "./components/StatsCards";
 import CarbonStatsPanel from "./components/CarbonStatsPanel";
 import CarbonPoolsSummary from "./components/CarbonPoolsSummary";
 import ExportPanel from "./components/ExportPanel";
-import CarbonExtensionsPanel from "./components/CarbonExtensionsPanel";
 import GreenRankingsPanel from "./components/GreenRankingsPanel";
+import BlueCarbonCatalogPanel from "./components/BlueCarbonCatalogPanel";
 import VegetationParamsPanel from "@/features/vegetation/components/VegetationParamsPanel";
 import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
@@ -535,7 +535,7 @@ export default function CarbonModule() {
   }
 
   async function handleRunAnalysis(): Promise<UiCommandOutcome> {
-    if (["bluecarbon", "green_rankings", "productivity"].includes(analysisType)) {
+    if (["green_rankings", "productivity"].includes(analysisType)) {
       if (!extraAnalysisRun.current) return { hasResult: false, error: "Parameter analisis belum siap." };
       setRunning(true);
       try { const hasResult = await extraAnalysisRun.current(); return { hasResult, error: hasResult ? null : "Analisis belum menghasilkan estimasi. Periksa parameter dan pesan pada modul." }; }
@@ -1207,7 +1207,7 @@ export default function CarbonModule() {
             </div>
           )}
 
-          <button
+          {!(["bluecarbon", "productivity"].includes(analysisType)) && <button
             id="runAnalysis"
             className="btn btn-primary w-100 mt-3"
             onClick={handleRunAnalysis}
@@ -1223,8 +1223,8 @@ export default function CarbonModule() {
                 {analysisType === "carbon" && carbonUiMode === "basic" ? t("carbon.basic.run") : t("carbon.sidebar.runAnalysis")}
               </>
             )}
-          </button>
-          {!aoi && !directLoadEnabled && analysisType !== "green_rankings" && (
+          </button>}
+          {!aoi && !directLoadEnabled && analysisType !== "green_rankings" && analysisType !== "bluecarbon" && analysisType !== "productivity" && (
             <small className="text-muted d-block mt-2">{t("carbon.sidebar.selectAoiHint")}</small>
           )}
         </div>
@@ -1232,7 +1232,7 @@ export default function CarbonModule() {
         )}
 
       <div className={settingsCollapsed ? "col" : "col-lg-9"}>
-        {analysisType !== "green_rankings" && <AoiPanel aoi={aoi} onAoiChange={setAoi} />}
+        {analysisType !== "green_rankings" && analysisType !== "bluecarbon" && analysisType !== "productivity" && <AoiPanel aoi={aoi} onAoiChange={setAoi} />}
 
         {runError && (
           <div className="alert alert-warning py-2">
@@ -1254,9 +1254,8 @@ export default function CarbonModule() {
 
         {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}
 
-        {(analysisType === "bluecarbon" || analysisType === "productivity") && <CarbonExtensionsPanel key={analysisType} analysisMode={analysisType} onRunReady={registerExtraRun} aoi={aoiPayloadForExport} year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth}
-          results={results.carbonExtensions} onResult={(key, result) => setResults((current) => ({ ...current, carbonExtensions: { ...current.carbonExtensions, [key]: result } }))}
-          onRanking={(greenRanking) => setResults((current) => ({ ...current, greenRanking }))} />}
+        {analysisType === "bluecarbon" && <BlueCarbonCatalogPanel />}
+        {analysisType === "productivity" && <div className="alert alert-info"><i className="bi bi-arrow-right-circle me-2" />Produktivitas NPP/GPP sekarang tersedia sebagai sumber analisis di <a href="/crop-monitoring">Crop Monitoring</a>.</div>}
         {analysisType === "green_rankings" && <GreenRankingsPanel year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth} onRunReady={registerExtraRun} onResult={(greenRanking) => setResults({ greenRanking })} />}
 
         {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (

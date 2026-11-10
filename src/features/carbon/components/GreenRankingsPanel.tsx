@@ -6,6 +6,8 @@ import { env } from "@/config/env";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import type { RegionOption } from "@/types/api";
 import type { GreenRankingResult } from "../extendedTypes";
+import CropPanelAccordion from "@/features/crop-monitoring/components/CropPanelAccordion";
+import "./green-rankings-panel.css";
 
 const LEVELS = [
   ["province", "Provinsi"],
@@ -180,58 +182,45 @@ export default function GreenRankingsPanel({
     </div>
   );
   return (
-    <div>
-      <p className="small text-muted">
+    <section className="green-rankings" aria-label="Peringkat wilayah hijau">
+      <div className="green-rankings__intro">
+        <span className="green-rankings__eyebrow"><i className="bi bi-globe-asia-australia" /> Analisis wilayah</span>
+        <p className="small text-muted mb-0">
         Persentase tutupan hijau dari Dynamic World pada periode terpilih. Semua tingkat dapat
         dihitung nasional atau dibatasi induk wilayah. Filter ini berdiri sendiri dari AOI peta
         utama. Pemrosesan bertahap dapat dilanjutkan setelah berhenti.
-      </p>
-      <label className="form-label" htmlFor="green-level">
-        Tingkat peringkat
-      </label>
-      <select
-        id="green-level"
-        className="form-select mb-3"
-        value={level}
-        disabled={busy}
-        onChange={(event) => {
-          setLevel(event.target.value);
-          setProvince("");
-          setCity("");
-          setDistrict("");
-        }}
-      >
-        {LEVELS.map(([key, name]) => (
-          <option key={key} value={key}>
-            {name}
-          </option>
-        ))}
-      </select>
-      <div className="row g-2 mb-3">
-        {depth > 0 &&
-          select("Provinsi", province, provinces, (value) => {
+        </p>
+      </div>
+      <CropPanelAccordion title="Wilayah dan tingkat peringkat" icon="bi-sliders" className="green-rankings__accordion" defaultOpen>
+        <div className="row g-3">
+          <div className="col-md-4">
+            <label className="form-label" htmlFor="green-level">Tingkat peringkat</label>
+            <select id="green-level" className="form-select" value={level} disabled={busy} onChange={(event) => {
+              setLevel(event.target.value);
+              setProvince("");
+              setCity("");
+              setDistrict("");
+            }}>
+              {LEVELS.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+            </select>
+          </div>
+          {depth > 0 && select("Provinsi", province, provinces, (value) => {
             setProvince(value);
             setCity("");
             setDistrict("");
           })}
-        {depth > 1 &&
-          select(
-            "Kabupaten/kota",
-            city,
-            cities,
-            (value) => {
-              setCity(value);
-              setDistrict("");
-            },
-            !province,
-          )}
-        {depth > 2 && select("Kecamatan", district, districts, setDistrict, !city)}
-      </div>
-      <div className="d-flex gap-2 flex-wrap">
+          {depth > 1 && select("Kabupaten/kota", city, cities, (value) => {
+            setCity(value);
+            setDistrict("");
+          }, !province)}
+          {depth > 2 && select("Kecamatan", district, districts, setDistrict, !city)}
+        </div>
+      </CropPanelAccordion>
+      <div className="green-rankings__actions">
         {!onRunReady && (
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-success"
             disabled={busy}
             onClick={() => void run(false)}
           >
@@ -270,15 +259,18 @@ export default function GreenRankingsPanel({
         </div>
       )}
       {result && (
-        <div className="mt-3">
-          <div className={`alert ${result.done ? "alert-success" : "alert-info"}`} role="status">
+        <div className="green-rankings__results">
+          <div className={`green-rankings__status ${result.done ? "is-complete" : "is-partial"}`} role="status">
+            <i className={`bi ${result.done ? "bi-check-circle-fill" : "bi-info-circle-fill"}`} aria-hidden="true" />
+            <span>
             {result.done
               ? "Penelusuran wilayah selesai"
               : "Hasil parsial; belum merupakan peringkat lengkap"}{" "}
             · {result.statistics.processed} wilayah diproses · {result.statistics.eligible || 0}{" "}
             layak peringkat (cakupan ≥80%).
+            </span>
           </div>
-          <div className="row g-2 mb-3">
+          <div className="green-rankings__stats">
             {Object.entries({
               "Hijau tertimbang (%)": result.statistics.area_weighted_green_percent,
               "Rata-rata wilayah (%)": result.statistics.mean_percent,
@@ -290,19 +282,16 @@ export default function GreenRankingsPanel({
               "Luas data valid (ha)": result.statistics.valid_area_ha,
               "Luas hijau teramati (ha)": result.statistics.green_area_ha,
             }).map(([label, value]) => (
-              <div key={label} className="col-sm-6 col-lg-4">
-                <div className="border rounded p-2">
-                  <small>{label}</small>
-                  <strong className="d-block">{fmt(value)}</strong>
-                </div>
+              <div key={label} className="green-rankings__stat">
+                <small>{label}</small>
+                <strong>{fmt(value)}</strong>
               </div>
             ))}
           </div>
-          <p className="small">
+          <p className="green-rankings__method small">
             {result.method} Resolusi statistik {result.config.scale} m. {result.boundary_source}
           </p>
-          <details className="border rounded p-2 mb-3">
-            <summary>Distribusi dan komposisi hijau seluruh hasil</summary>
+          <CropPanelAccordion title="Distribusi dan komposisi tutupan hijau" icon="bi-bar-chart-line" className="green-rankings__accordion">
             <p>
               Geometri gagal: {result.statistics.failed_geometry || 0}. Pohon{" "}
               {fmt(result.statistics.trees_ha)} ha; rumput {fmt(result.statistics.grass_ha)} ha;
@@ -323,15 +312,15 @@ export default function GreenRankingsPanel({
                 <span>{bin.count} wilayah</span>
               </div>
             ))}
-          </details>
+          </CropPanelAccordion>
           <a
-            className="btn btn-outline-primary mb-2"
+            className="btn btn-outline-success green-rankings__export"
             href={`${env.apiBaseUrl}/carbon/green-rankings/${result.run_id}/export`}
           >
             Unduh seluruh statistik CSV ({result.status})
           </a>
-          <div className="table-responsive">
-            <table className="table table-sm">
+          <div className="table-responsive green-rankings__table-wrap">
+            <table className="table table-sm align-middle green-rankings__table">
               <thead>
                 <tr>
                   {[
@@ -400,6 +389,6 @@ export default function GreenRankingsPanel({
           </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }

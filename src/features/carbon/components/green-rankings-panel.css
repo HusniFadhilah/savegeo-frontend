@@ -1,0 +1,102 @@
+.green-rankings {
+  --green-rank-border: #dbe5e1;
+  --green-rank-muted: #64748b;
+  --green-rank-surface: #f8fbf9;
+  color: var(--text-primary, #1e293b);
+}
+
+.green-rankings__intro {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(0, 1fr);
+  align-items: start;
+  gap: .75rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.green-rankings__eyebrow {
+  color: #16804d;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.green-rankings__eyebrow .bi { margin-right: .35rem; }
+.green-rankings__intro p { line-height: 1.55; }
+
+.analysis-page-carbon .green-rankings__accordion {
+  overflow: hidden;
+  margin-bottom: .85rem !important;
+  border: 1px solid var(--green-rank-border);
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(15, 61, 42, .04);
+}
+
+.analysis-page-carbon .green-rankings__accordion > .cm-panel-accordion-summary {
+  min-height: 46px;
+  padding: .7rem .9rem;
+  color: #1f513b;
+  background: var(--green-rank-surface);
+}
+
+.analysis-page-carbon .green-rankings__accordion > .cm-panel-accordion-summary:hover {
+  color: #fff;
+}
+
+.analysis-page-carbon .green-rankings__accordion > .card-body { padding: 1rem; }
+.green-rankings__actions { display: flex; flex-wrap: wrap; gap: .55rem; margin: .9rem 0; }
+.green-rankings__actions .btn { border-radius: 9px; }
+.green-rankings__status { display: flex; align-items: flex-start; gap: .6rem; padding: .75rem .9rem; margin: 0 0 .9rem; border: 1px solid; border-radius: 10px; font-size: .9rem; }
+.green-rankings__status > .bi { margin-top: .1rem; }
+.green-rankings__status.is-complete { color: #17613d; background: #eef9f1; border-color: #ccebd4; }
+.green-rankings__status.is-partial { color: #165f73; background: #eef9fc; border-color: #c7eaf0; }
+
+.green-rankings__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+  margin-bottom: .85rem;
+}
+
+.green-rankings__stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 68px;
+  padding: .7rem .8rem;
+  border: 1px solid var(--green-rank-border);
+  border-radius: 10px;
+  background: var(--green-rank-surface);
+}
+
+.green-rankings__stat small { color: var(--green-rank-muted); font-size: .77rem; }
+.green-rankings__stat strong { margin-top: .12rem; font-size: 1rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.green-rankings__method { padding: .65rem .8rem; color: var(--green-rank-muted); border-left: 3px solid #6bbf86; background: var(--green-rank-surface); }
+.green-rankings__export { margin: .15rem 0 .75rem; border-radius: 9px; }
+.green-rankings__table-wrap { max-height: 62vh; border: 1px solid var(--green-rank-border); border-radius: 10px; }
+.green-rankings__table { min-width: 1040px; margin-bottom: 0; }
+.green-rankings__table thead th { position: sticky; top: 0; z-index: 1; color: #355246; background: #eff6f1; white-space: nowrap; font-size: .78rem; }
+.green-rankings__table tbody tr:nth-child(even) { background: rgba(36, 123, 77, .035); }
+.green-rankings__table td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+html[data-theme="dark"] .green-rankings {
+  --green-rank-border: #334155;
+  --green-rank-muted: #a7b4c5;
+  --green-rank-surface: #111c2c;
+}
+
+html[data-theme="dark"] .green-rankings__eyebrow,
+html[data-theme="dark"] .analysis-page-carbon .green-rankings__accordion > .cm-panel-accordion-summary { color: #a6e7bd; }
+html[data-theme="dark"] .green-rankings__status.is-complete { color: #b8ebc8; background: #102d22; border-color: #285c40; }
+html[data-theme="dark"] .green-rankings__status.is-partial { color: #b9e8f2; background: #102a35; border-color: #245161; }
+html[data-theme="dark"] .green-rankings__table thead th { color: #c9dfd0; background: #172a25; }
+html[data-theme="dark"] .green-rankings__table { --bs-table-color: #e2e8f0; --bs-table-border-color: #334155; }
+
+@media (max-width: 700px) {
+  .green-rankings__intro { grid-template-columns: 1fr; gap: .35rem; }
+  .green-rankings__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .green-rankings__stat { min-height: 64px; padding: .6rem; }
+}
+
+@media (max-width: 420px) { .green-rankings__stats { grid-template-columns: 1fr 1fr; } }

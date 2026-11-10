@@ -8,6 +8,7 @@ export const ADMIN_SECTION_PATHS: Record<AdminSection, string> = {
   ag: "/admin/arcgis",
   ml: "/admin/ml-models",
   cc: "/admin/carbon-calibration",
+  bc: "/admin/blue-carbon",
   cf: "/admin/system-config",
   us: "/admin/users",
   vf: "/admin/viewer-features",
@@ -39,6 +40,10 @@ export const ADMIN_SECTION_SEO: Record<AdminSection, { title: string; descriptio
   cc: {
     title: "Carbon Calibration Admin | SaveGeo",
     description: "Ingesti, audit, dan kalibrasi plot lapangan PT Dahana Subang untuk model karbon SaveGeo.",
+  },
+  bc: {
+    title: "Blue Carbon Admin | SaveGeo",
+    description: "Kelola katalog data dan pengukuran karbon biru yang dipublikasikan SaveGeo.",
   },
   cf: {
     title: "System Config Admin | SaveGeo",

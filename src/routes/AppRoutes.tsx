@@ -69,6 +69,7 @@ export default function AppRoutes() {
     { path: "/admin/arcgis", section: "ag" },
     { path: "/admin/ml-models", section: "ml" },
     { path: "/admin/carbon-calibration", section: "cc" },
+    { path: "/admin/blue-carbon", section: "bc" },
     { path: "/admin/system-config", section: "cf" },
     { path: "/admin/users", section: "us" },
     { path: "/admin/viewer-features", section: "vf" },

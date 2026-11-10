@@ -12,6 +12,8 @@ interface Props {
   onWeatherSourceChange: (v: string) => void;
   subAnalyses: SubAnalysisKey[];
   onSubAnalysesChange: (keys: SubAnalysisKey[]) => void;
+  modisProductivityEnabled: boolean;
+  onModisProductivityChange: (enabled: boolean) => void;
 }
 
 const SUB_ANALYSIS_OPTIONS: { key: SubAnalysisKey; labelKey: string; extra?: boolean }[] = [
@@ -44,6 +46,8 @@ export default function DataSourceTogglesPanel({
   onWeatherSourceChange,
   subAnalyses,
   onSubAnalysesChange,
+  modisProductivityEnabled,
+  onModisProductivityChange,
 }: Props) {
   const t = useI18nStore((state) => state.t);
   function toggleSub(key: SubAnalysisKey, checked: boolean) {
@@ -113,6 +117,13 @@ export default function DataSourceTogglesPanel({
             </label>
           </div>
         ))}
+        <div className="cm-modis-source-option">
+          <div className="form-check">
+            <input id="cmModisProductivity" className="form-check-input" type="checkbox" checked={modisProductivityEnabled} onChange={(event) => onModisProductivityChange(event.target.checked)} />
+            <label className="form-check-label small" htmlFor="cmModisProductivity">MODIS NPP / GPP · produktivitas tahunan</label>
+          </div>
+          <small>Analisis tambahan MOD17A3HGF · resolusi 500 m.</small>
+        </div>
     </CropPanelAccordion>
   );
 }

@@ -9,6 +9,7 @@ import MapLegend from "@/components/map/MapLegend";
 import { boundsFromGeoJSON } from "@/features/carbon/lib/geo";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { CropMonitoringSubAnalyses } from "../types";
+import type { CarbonResult } from "@/features/carbon/types";
 
 interface Tab {
   key: string;
@@ -40,7 +41,7 @@ const FLOOD_LEGEND_LABEL: Record<string, string> = {
   "Receded Water": "Air Surut",
 };
 
-function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
+function buildTabs(sub: CropMonitoringSubAnalyses, productivityResults: Record<string, CarbonResult>): Tab[] {
   const tabs: Tab[] = [];
   if (sub.landcover?.available && sub.landcover.tile_url) tabs.push({
     key: "landcover", label: "Land cover", icon: "bi-layers", tileUrl: sub.landcover.tile_url,
@@ -77,6 +78,25 @@ function buildTabs(sub: CropMonitoringSubAnalyses): Tab[] {
       legend: PRODUCTIVITY_LEGEND,
     });
   }
+  for (const [key, result] of Object.entries(productivityResults)) {
+    const tileUrl = result.carbon_estimated?.tile_url;
+    if (!tileUrl) continue;
+    const vis = result.carbon_estimated.vis_params;
+    const palette = vis?.palette ?? ["#440154", "#21918c", "#fde725"];
+    const min = vis?.min ?? result.carbon_estimated.statistics?.min ?? 0;
+    const max = vis?.max ?? result.carbon_estimated.statistics?.max ?? 1;
+    tabs.push({
+      key: `modis_${key}`,
+      label: `MODIS ${key.toUpperCase()}`,
+      icon: "bi-graph-up-arrow",
+      tileUrl,
+      legend: [
+        { color: palette[0], label: `${Number(min).toLocaleString("id-ID")} ${result.carbon_estimated.unit ?? ""}`.trim() },
+        { color: palette[Math.floor(palette.length / 2)], label: key.toUpperCase() },
+        { color: palette[palette.length - 1], label: `${Number(max).toLocaleString("id-ID")} ${result.carbon_estimated.unit ?? ""}`.trim() },
+      ],
+    });
+  }
   return tabs;
 }
 
@@ -93,6 +113,7 @@ interface Props {
   fieldFeature: AoiFeature | null;
   subAnalyses: CropMonitoringSubAnalyses;
   analysisDate?: string;
+  productivityResults?: Record<string, CarbonResult>;
 }
 
 /**
@@ -100,8 +121,8 @@ interface Props {
  * that carries a `tile_url`, including land cover and NDVI health. Always shows the
  * field boundary as a default context layer, even with zero tile tabs.
  */
-export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyses, analysisDate }: Props) {
-  const tabs = useMemo(() => buildTabs(subAnalyses), [subAnalyses]);
+export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyses, analysisDate, productivityResults = {} }: Props) {
+  const tabs = useMemo(() => buildTabs(subAnalyses, productivityResults), [subAnalyses, productivityResults]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
 

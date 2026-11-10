@@ -1,0 +1,21 @@
+.cm-modis-source-option { margin-top: .75rem; padding: .65rem .7rem; border: 1px solid #cfe5d8; border-radius: 9px; background: #f3faf5; }
+.cm-modis-source-option small { display: block; margin: .2rem 0 0 1.55rem; color: #64748b; font-size: .73rem; }
+.cm-modis-productivity-card { overflow: hidden; }
+.cm-modis-productivity-card .card-body { display: grid; gap: .7rem; }
+.cm-modis-productivity__intro { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; color: #287452; font-size: .8rem; font-weight: 600; }
+.cm-modis-productivity__intro span { display: inline-flex; align-items: center; gap: .35rem; }
+.cm-modis-productivity__controls { display: flex; align-items: end; flex-wrap: wrap; gap: .8rem 1.2rem; }
+.cm-modis-productivity__controls > label { min-width: 145px; }
+.cm-modis-productivity__controls fieldset { margin: 0; padding: 0; border: 0; }
+.cm-modis-productivity__controls legend { margin-bottom: .25rem; font-size: .8rem; font-weight: 600; }
+.cm-modis-productivity__result { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.cm-modis-productivity__result > div { display: grid; gap: .12rem; padding: .65rem .75rem; border: 1px solid #dbe7e0; border-radius: 9px; background: #f7faf8; }
+.cm-modis-productivity__result span { color: #64748b; font-size: .76rem; }
+.cm-modis-productivity__result strong { font-size: .96rem; font-variant-numeric: tabular-nums; }
+html[data-theme="dark"] .cm-modis-source-option { border-color: #285c40; background: #102d22; }
+html[data-theme="dark"] .cm-modis-source-option small,
+html[data-theme="dark"] .cm-modis-productivity-card .text-muted { color: #a7b4c5 !important; }
+html[data-theme="dark"] .cm-modis-productivity__intro { color: #a6e7bd; }
+html[data-theme="dark"] .cm-modis-productivity__result > div { border-color: #334155; background: #111c2c; }
+html[data-theme="dark"] .cm-modis-productivity__result span { color: #a7b4c5; }
+@media (max-width: 500px) { .cm-modis-productivity__result { grid-template-columns: 1fr; }.cm-modis-productivity__controls { align-items: stretch; flex-direction: column; }.cm-modis-productivity__controls > label { width: 100%; } }

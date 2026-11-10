@@ -15,6 +15,7 @@ import ArcgisStatus from "./components/ArcgisStatus";
 import ModelRegistry from "./components/ModelRegistry";
 import LandCoverModels from "./components/LandCoverModels";
 import CarbonCalibration from "./components/CarbonCalibration";
+import BlueCarbonCatalogAdmin from "./components/BlueCarbonCatalogAdmin";
 import ConfigEditor from "./components/ConfigEditor";
 import AdminUsers from "./components/AdminUsers";
 import ViewerFeatureSettings from "./components/ViewerFeatureSettings";
@@ -39,6 +40,7 @@ const NAV_SECTIONS: { sectionKey: string; items: AdminNavItem[] }[] = [
     items: [
       { id: "ml", icon: "bi-cpu-fill", labelKey: "admin.menu.models", permission: "model.read" },
       { id: "cc", icon: "bi-tree-fill", labelKey: "admin.menu.calibration", permission: "calibration.read" },
+      { id: "bc", icon: "bi-water", labelKey: "admin.menu.bluecarbon", permission: "config.read" },
       {
         id: "cf",
         icon: "bi-sliders",
@@ -77,6 +79,7 @@ const TITLES: Record<AdminSection, [string, string]> = {
   ag: ["admin.title.arcgis", "admin.subtitle.arcgis"],
   ml: ["admin.title.models", "admin.subtitle.models"],
   cc: ["admin.title.calibration", "admin.subtitle.calibration"],
+  bc: ["admin.title.bluecarbon", "admin.subtitle.bluecarbon"],
   cf: ["admin.title.config", "admin.subtitle.config"],
   us: ["admin.title.users", "admin.subtitle.users"],
   vf: ["admin.title.viewerFeatures", "admin.subtitle.viewerFeatures"],
@@ -304,6 +307,7 @@ export default function AdminDashboard({ section: routeSection = DEFAULT_ADMIN_S
               {section === "ag" && <ArcgisStatus />}
               {section === "ml" && <><ModelRegistry /><LandCoverModels /></>}
               {section === "cc" && <CarbonCalibration />}
+              {section === "bc" && <BlueCarbonCatalogAdmin />}
               {section === "cf" && <ConfigEditor />}
               {section === "us" && <AdminUsers />}
               {section === "vf" && <ViewerFeatureSettings />}

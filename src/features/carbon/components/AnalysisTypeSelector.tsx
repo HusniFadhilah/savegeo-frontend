@@ -16,7 +16,6 @@ export default function AnalysisTypeSelector({ value, onChange, availableTypes }
     { value: "carbon", label: t("carbon.analysisType.carbon") },
     { value: "bluecarbon", label: "Blue carbon" },
     { value: "green_rankings", label: t("carbon.analysisType.green_rankings") },
-    { value: "productivity", label: t("carbon.analysisType.productivity") },
     { value: "combined", label: t("carbon.analysisType.combined") },
   ];
   const options = availableTypes ? allOptions.filter((option) => availableTypes.includes(option.value)) : allOptions;

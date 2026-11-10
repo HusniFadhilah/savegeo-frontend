@@ -23,6 +23,7 @@ export const ADMIN_SECTION_PERMISSIONS: Record<string, string> = {
   ag: "credential.read",
   ml: "model.read",
   cc: "calibration.read",
+  bc: "config.read",
   cf: "config.read",
   us: "users.read",
   vf: "viewer_features.manage",
@@ -45,7 +46,7 @@ export function canAccessAdminSection(
 export function firstAccessibleAdminSection(
   user: { role?: string | null; permissions?: string[] | null } | null | undefined,
 ): string | null {
-  const preferred = ["co", "ds", "gd", "ml", "ov", "ge", "ag", "cf", "us", "vf", "sp", "ri"];
+  const preferred = ["co", "ds", "gd", "ml", "ov", "ge", "ag", "bc", "cf", "us", "vf", "sp", "ri"];
   return [...preferred, "profile"].find((section) => canAccessAdminSection(user, section)) ?? null;
 }
 
