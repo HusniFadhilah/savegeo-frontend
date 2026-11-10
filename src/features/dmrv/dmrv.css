@@ -4,6 +4,11 @@
   padding: 12px clamp(14px, 2vw, 28px) 36px;
 }
 
+/* Keep dMRV content comfortably inset even when shared analysis-page styles load later. */
+.analysis-page.dmrv-page {
+  padding-inline: clamp(22px, 2.1vw, 34px);
+}
+
 .dmrv-breadcrumb {
   --bs-breadcrumb-divider: "›";
   margin: 0 0 12px;
@@ -410,7 +415,7 @@
 }
 
 @media (max-width: 640px) {
-  .dmrv-page {
+  .analysis-page.dmrv-page {
     padding: 10px 12px 26px;
   }
 
