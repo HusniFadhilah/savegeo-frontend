@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
@@ -31,6 +31,8 @@ export default function Sidebar() {
     !isViewerPrincipal || !item.features || item.features.some((feature) => features?.includes(feature)),
   );
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDmrvRoute = location.pathname.startsWith("/dmrv");
   const [langOpen, setLangOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ bottom: number; left: number; width: number } | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -114,7 +116,7 @@ export default function Sidebar() {
           {visibleMenu.map((item) => (
             <li key={item.id}>
               <a
-                className={`sidebar-menu-item ${activeModule === item.id ? "active" : ""}`}
+                className={`sidebar-menu-item ${!isDmrvRoute && activeModule === item.id ? "active" : ""}`}
                 href={getDashboardModulePath(item.id)}
                 onClick={(event) => selectModule(item.id, event)}
                 data-tooltip={t(item.labelKey)}
@@ -124,6 +126,23 @@ export default function Sidebar() {
               </a>
             </li>
           ))}
+          <li>
+            <a
+              className={isDmrvRoute ? "sidebar-menu-item active" : "sidebar-menu-item"}
+              href="/dmrv/projects"
+              aria-current={isDmrvRoute ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/dmrv/projects");
+                closeMobileSidebar();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              data-tooltip={t("sidebar.dmrv")}
+            >
+              <i className="bi bi-shield-check" />
+              <span className="sidebar-menu-text">{t("sidebar.dmrv")}</span>
+            </a>
+          </li>
         </ul>
         <div className="sidebar-footer">
           <div className="sidebar-language-label">

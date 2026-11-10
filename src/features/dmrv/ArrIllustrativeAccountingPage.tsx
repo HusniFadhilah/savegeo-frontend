@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { getArrIllustrativeExample } from "./api";
+import DmrvPageHeader from "./DmrvPageHeader";
 import { describeDmrvError } from "./errors";
 import type { ArrIllustrativePreview } from "./types";
 
 export default function ArrIllustrativeAccountingPage() {
-  const t = useI18nStore((s) => s.t);
+  const t = useI18nStore((state) => state.t);
   const [preview, setPreview] = useState<ArrIllustrativePreview | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -24,16 +24,31 @@ export default function ArrIllustrativeAccountingPage() {
 
   return (
     <DashboardShell>
-      <section className="mx-auto px-3 pt-3" style={{ maxWidth: 960 }}>
-        <p><Link to="/dmrv/projects">{t("dmrv.example.back")}</Link></p>
-        <h1 className="h4 mb-3">{t("dmrv.example.heading")}</h1>
+      <main className="analysis-page dmrv-page">
+        <DmrvPageHeader
+          breadcrumbs={[
+            { label: t("dmrv.breadcrumb.home"), to: "/" },
+            { label: t("dmrv.breadcrumb.projects"), to: "/dmrv/projects" },
+            { label: t("dmrv.breadcrumb.example") },
+          ]}
+          eyebrow={t("dmrv.example.real.kicker")}
+          title={t("dmrv.example.heading")}
+          description={t("dmrv.example.pageDescription")}
+          metrics={[
+            { icon: "bi-flask", label: t("dmrv.example.qualification"), value: t("dmrv.example.illustrativeOnly") },
+            { icon: "bi-shield-x", label: t("dmrv.example.verification"), value: t("dmrv.example.notVerified") },
+            { icon: "bi-award", label: t("dmrv.example.issuance"), value: t("dmrv.example.notIssued") },
+          ]}
+        />
+
         <div className="alert alert-warning" role="note">{t("dmrv.example.caveat")}</div>
         {error !== null ? <div role="alert" className="alert alert-danger">{describeDmrvError(error, t)}</div> : null}
         {!preview && error === null ? <p role="status">{t("dmrv.loading")}</p> : null}
+
         {preview ? (
           <>
-            <div className="card card-body mb-3">
-              <h2 className="h6">{t("dmrv.example.resultStatus")}</h2>
+            <div className="dmrv-panel mb-3">
+              <h2 className="dmrv-panel-title">{t("dmrv.example.resultStatus")}</h2>
               <dl className="row mb-0">
                 <dt className="col-sm-4">{t("dmrv.example.qualification")}</dt>
                 <dd className="col-sm-8">{t("dmrv.example.illustrativeOnly")}</dd>
@@ -44,8 +59,8 @@ export default function ArrIllustrativeAccountingPage() {
               </dl>
             </div>
 
-            <div className="card card-body mb-3">
-              <h2 className="h6">{t("dmrv.example.inputsHeading")}</h2>
+            <div className="dmrv-panel mb-3">
+              <h2 className="dmrv-panel-title">{t("dmrv.example.inputsHeading")}</h2>
               <dl className="row mb-0">
                 {preview.normalized_inputs.map((input) => (
                   <div className="row" key={input.key}>
@@ -56,8 +71,8 @@ export default function ArrIllustrativeAccountingPage() {
               </dl>
             </div>
 
-            <div className="card card-body">
-              <h2 className="h6">{t("dmrv.example.ledgerHeading")}</h2>
+            <div className="dmrv-panel">
+              <h2 className="dmrv-panel-title">{t("dmrv.example.ledgerHeading")}</h2>
               <div className="table-responsive">
                 <table className="table table-sm align-middle mb-0">
                   <thead>
@@ -94,7 +109,7 @@ export default function ArrIllustrativeAccountingPage() {
             </div>
           </>
         ) : null}
-      </section>
+      </main>
     </DashboardShell>
   );
 }
