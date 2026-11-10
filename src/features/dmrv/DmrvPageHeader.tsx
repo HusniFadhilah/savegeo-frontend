@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import "./dmrv.css";
 
 export interface DmrvBreadcrumbItem {
   label: string;

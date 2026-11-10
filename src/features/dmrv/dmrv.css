@@ -11,6 +11,16 @@
   font-weight: 650;
 }
 
+.dmrv-breadcrumb a {
+  color: #277a45;
+  text-decoration: none;
+}
+
+.dmrv-breadcrumb a:hover {
+  color: #14532d;
+  text-decoration: underline;
+}
+
 .dmrv-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
   color: #829286;
 }
@@ -31,7 +41,7 @@
     rgba(239, 249, 242, 0.87) 62%,
     rgba(232, 245, 236, 0.58) 100%
   );
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 470px);
+  grid-template-columns: minmax(0, 1fr) minmax(390px, 500px);
   min-height: 156px;
   padding: clamp(20px, 2.1vw, 30px);
   border-color: #d8e8dc;
@@ -50,6 +60,21 @@
 
 .analysis-hero-dmrv .analysis-hero-status {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analysis-hero-dmrv .analysis-status-card {
+  min-height: 66px;
+  gap: 9px;
+  padding: 10px;
+}
+
+.analysis-hero-dmrv .analysis-status-card strong {
+  overflow: visible;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .dmrv-page-header {
@@ -174,17 +199,23 @@
   align-items: flex-start;
   gap: 8px;
   margin: 15px 0 0;
-  color: #65796c;
-  font-size: 0.75rem;
-  line-height: 1.5;
+  color: #53675a;
+  font-size: 0.79rem;
+  line-height: 1.55;
 }
 
 .dmrv-section-heading {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin: 22px 0 12px;
+  padding-right: 76px;
+}
+
+.dmrv-example-action {
+  padding: 8px 11px;
+  white-space: nowrap;
 }
 
 .dmrv-section-heading h2 {
@@ -353,7 +384,19 @@
 }
 
 .dmrv-project-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
   margin: 0 0 16px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.dmrv-project-error > i {
+  flex: none;
+  margin-top: 1px;
 }
 
 @media (max-width: 960px) {
@@ -377,6 +420,12 @@
 
   .dmrv-reference-head {
     display: grid;
+  }
+
+  .dmrv-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-right: 0;
   }
 
   .dmrv-reference-grid {
@@ -430,6 +479,10 @@ html[data-theme="dark"] .dmrv-panel-title,
 html[data-theme="dark"] .dmrv-reference-fact strong,
 html[data-theme="dark"] .dmrv-overview-item strong {
   color: #e4f0e7;
+}
+
+html[data-theme="dark"] .dmrv-breadcrumb a {
+  color: #a9d8b5;
 }
 
 html[data-theme="dark"] .dmrv-reference-link {

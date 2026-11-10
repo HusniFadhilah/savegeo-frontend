@@ -86,7 +86,12 @@ export default function DmrvProjectsPage() {
           ]}
         />
 
-        {loadError && <div role="alert" className="alert alert-danger">{loadError}</div>}
+        {loadError && (
+          <div role="alert" className="alert alert-danger dmrv-project-error">
+            <i className="bi bi-exclamation-circle" aria-hidden="true" />
+            <span>{loadError}</span>
+          </div>
+        )}
 
         <section className="dmrv-reference-card" aria-labelledby="dmrv-public-project-title">
           <div className="dmrv-reference-head">
@@ -137,9 +142,13 @@ export default function DmrvProjectsPage() {
             <span className="dmrv-section-kicker">{t("dmrv.header.eyebrow")}</span>
             <h2>{t("dmrv.projects.workspaceHeading")}</h2>
           </div>
-          <Link className="dmrv-reference-link" to="/dmrv/examples/arr-accounting">
+          <Link
+            aria-label={t("dmrv.example.heading")}
+            className="dmrv-reference-link dmrv-example-action"
+            to="/dmrv/examples/arr-accounting"
+          >
             <i className="bi bi-calculator" aria-hidden="true" />
-            {t("dmrv.example.heading")}
+            {t("dmrv.projects.exampleAction")}
           </Link>
         </div>
 
