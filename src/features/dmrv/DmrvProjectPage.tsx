@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -66,7 +67,14 @@ export default function DmrvProjectPage() {
           ] : []}
         />
 
-        {error ? <div role="alert" className="alert alert-danger dmrv-project-error">{error}</div> : null}
+        {error ? (
+          <div role="alert" className="alert alert-danger dmrv-project-error">
+            <span>{error}</span>
+            <Link className="btn btn-sm btn-outline-primary ms-2" to="/dmrv/projects">
+              {t("dmrv.project.back")}
+            </Link>
+          </div>
+        ) : null}
         {!project && !error ? <p role="status">{t("dmrv.loading")}</p> : null}
 
         {project ? (

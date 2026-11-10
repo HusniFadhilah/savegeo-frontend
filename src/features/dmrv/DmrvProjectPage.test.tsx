@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,7 +42,7 @@ describe("DmrvProjectPage", () => {
     expect(await screen.findByRole("heading", { name: "Pilot ARR" })).toBeInTheDocument();
     expect(screen.getByText("Pemilik proyek")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Ringkasan" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("VM0047 1.1")).toBeInTheDocument();
+    expect(within(screen.getByRole("tabpanel")).getByText("VM0047 1.1")).toBeInTheDocument();
     expect(api.getProject).toHaveBeenCalledWith("p-1");
   });
 

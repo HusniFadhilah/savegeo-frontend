@@ -63,6 +63,6 @@ describe("ArrIllustrativeAccountingPage", () => {
     const netRow = screen.getByRole("row", { name: /Mitigasi neto/ });
     expect(within(netRow).getByText("Belum tersedia")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Mitigasi neto belum dihitung");
-    expect(screen.getByText("Belum diverifikasi")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Ringkasan proyek dMRV")).getByText("Belum diverifikasi")).toBeInTheDocument();
   });
 });
