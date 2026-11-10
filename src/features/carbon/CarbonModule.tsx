@@ -18,6 +18,8 @@ import StatsCards from "./components/StatsCards";
 import CarbonStatsPanel from "./components/CarbonStatsPanel";
 import CarbonPoolsSummary from "./components/CarbonPoolsSummary";
 import ExportPanel from "./components/ExportPanel";
+import CarbonExtensionsPanel from "./components/CarbonExtensionsPanel";
+import GreenRankingsPanel from "./components/GreenRankingsPanel";
 import VegetationParamsPanel from "@/features/vegetation/components/VegetationParamsPanel";
 import VegStatsTable from "@/features/vegetation/components/VegStatsTable";
 import LandCoverParamsPanel from "@/features/landcover/components/LandCoverParamsPanel";
@@ -89,7 +91,10 @@ export default function CarbonModule() {
   const viewerFeatures = useViewerFeatures((state) => state.features);
   const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
   const availableAnalysisTypes: AnalysisType[] = useMemo(
-    () => getAllowedCarbonModes(isViewerPrincipal ? viewerFeatures : null),
+    () => {
+      const allowed = getAllowedCarbonModes(isViewerPrincipal ? viewerFeatures : null);
+      return allowed.includes("carbon") ? [...allowed, "bluecarbon", "green_rankings", "productivity"] as AnalysisType[] : allowed;
+    },
     [isViewerPrincipal, viewerFeatures],
   );
 
@@ -282,6 +287,8 @@ export default function CarbonModule() {
   });
 
   const [running, setRunning] = useState(false);
+  const extraAnalysisRun = useRef<(() => Promise<boolean>) | null>(null);
+  const registerExtraRun = useCallback((run: (() => Promise<boolean>) | null) => { extraAnalysisRun.current = run; }, []);
   const [runError, setRunError] = useState<string | null>(null);
   const [results, setResults] = useState<AnalysisResultsBundle>({});
   const [processingTimes, setProcessingTimes] = useState<AnalysisProcessingTimes>({});
@@ -289,7 +296,8 @@ export default function CarbonModule() {
   const [directLoadEnabled, setDirectLoadEnabled] = useState(false);
 
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
-  const staticPoolModel = selectedModel?.metadata_json?.time_series_supported === false;
+  const staticPoolModel = selectedModel?.metadata_json?.time_series_supported === false
+    && selectedModel?.metadata_json?.method !== "saved_reference_ensemble";
 
   useEffect(() => {
     if (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel) setDeltaEnabled(false);
@@ -315,7 +323,7 @@ export default function CarbonModule() {
     setDeltaResult(null);
     setVegTsResult(null);
     setRunError(null);
-    if (nextType === "vegetation") {
+    if (nextType === "vegetation" || nextType === "bluecarbon" || nextType === "green_rankings" || nextType === "productivity") {
       setDirectLoadEnabled(false);
       setCarbonPartial((previous) => ({ ...previous, referenceOnly: false, loadOnly: false }));
     }
@@ -527,6 +535,12 @@ export default function CarbonModule() {
   }
 
   async function handleRunAnalysis(): Promise<UiCommandOutcome> {
+    if (["bluecarbon", "green_rankings", "productivity"].includes(analysisType)) {
+      if (!extraAnalysisRun.current) return { hasResult: false, error: "Parameter analisis belum siap." };
+      setRunning(true);
+      try { const hasResult = await extraAnalysisRun.current(); return { hasResult, error: hasResult ? null : "Analisis belum menghasilkan estimasi. Periksa parameter dan pesan pada modul." }; }
+      finally { setRunning(false); }
+    }
     if (analysisType === "carbon" && carbonUiMode === "basic") {
       return handleRunBasicCarbon();
     }
@@ -636,7 +650,7 @@ export default function CarbonModule() {
       setLoadingProgress(75, t("carbon.loading.carbonProgress"));
       const t0 = Date.now();
       try {
-        newResults.carbon = await analyzeCarbon({
+        const primary = analyzeCarbon({
           aoi: aoiPayload,
           params: carbonParams,
           selectedModel,
@@ -644,6 +658,16 @@ export default function CarbonModule() {
           visMax,
           visPalette,
         });
+        const detritus = Promise.all((["litter", "deadwood"] as const).map(async (pool) => {
+          try {
+            const result = await analyzeCarbon({ aoi: aoiPayload, params: { ...carbonParams, referenceDataset: `TROPICAL_${pool.toUpperCase()}_REFERENCE`, datasetYear: 2010, modelName: null, referenceOnly: false, loadOnly: false, simpleMode: true, scale: simpleCarbonSummaryScale(aoiPayload) }, selectedModel: null, visMin, visMax, visPalette });
+            return { pool, result };
+          } catch (err) { errors.push(`${pool}: ${err instanceof Error ? err.message : "Estimasi gagal"}`); return null; }
+        }));
+        const [primaryResult, additional] = await Promise.allSettled([primary, detritus]);
+        if (primaryResult.status === "fulfilled") newResults.carbon = primaryResult.value;
+        else errors.push(primaryResult.reason instanceof Error ? primaryResult.reason.message : "Estimasi pool utama gagal.");
+        if (additional.status === "fulfilled") newResults.carbonPools = Object.fromEntries(additional.value.filter((item) => item != null).map((item) => [item.pool, item.result]));
       } catch (err) {
         errors.push(`${t("carbon.err.carbonFailed")}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
       }
@@ -707,7 +731,7 @@ export default function CarbonModule() {
         return;
       }
       if (action === "run_analysis" && target === "carbon.analysis") {
-        if (!aoi && !directLoadEnabled) throw new Error("AOI diperlukan sebelum menjalankan analisis.");
+        if (!aoi && !directLoadEnabled && analysisType !== "green_rankings") throw new Error("AOI diperlukan sebelum menjalankan analisis.");
         if (running || deltaRunning || vegTsRunning) throw new Error("Analisis masih berjalan.");
         return handleRunAnalysisRef.current();
       }
@@ -1187,7 +1211,7 @@ export default function CarbonModule() {
             id="runAnalysis"
             className="btn btn-primary w-100 mt-3"
             onClick={handleRunAnalysis}
-            disabled={running || deltaRunning || vegTsRunning || (!aoi && !directLoadEnabled)}
+            disabled={running || deltaRunning || vegTsRunning || (!aoi && !directLoadEnabled && analysisType !== "green_rankings")}
           >
             {running || deltaRunning || vegTsRunning ? (
               <>
@@ -1200,7 +1224,7 @@ export default function CarbonModule() {
               </>
             )}
           </button>
-          {!aoi && !directLoadEnabled && (
+          {!aoi && !directLoadEnabled && analysisType !== "green_rankings" && (
             <small className="text-muted d-block mt-2">{t("carbon.sidebar.selectAoiHint")}</small>
           )}
         </div>
@@ -1208,7 +1232,7 @@ export default function CarbonModule() {
         )}
 
       <div className={settingsCollapsed ? "col" : "col-lg-9"}>
-        <AoiPanel aoi={aoi} onAoiChange={setAoi} />
+        {analysisType !== "green_rankings" && <AoiPanel aoi={aoi} onAoiChange={setAoi} />}
 
         {runError && (
           <div className="alert alert-warning py-2">
@@ -1229,6 +1253,11 @@ export default function CarbonModule() {
         )}
 
         {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}
+
+        {(analysisType === "bluecarbon" || analysisType === "productivity") && <CarbonExtensionsPanel key={analysisType} analysisMode={analysisType} onRunReady={registerExtraRun} aoi={aoiPayloadForExport} year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth}
+          results={results.carbonExtensions} onResult={(key, result) => setResults((current) => ({ ...current, carbonExtensions: { ...current.carbonExtensions, [key]: result } }))}
+          onRanking={(greenRanking) => setResults((current) => ({ ...current, greenRanking }))} />}
+        {analysisType === "green_rankings" && <GreenRankingsPanel year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth} onRunReady={registerExtraRun} onResult={(greenRanking) => setResults({ greenRanking })} />}
 
         {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (
           <>

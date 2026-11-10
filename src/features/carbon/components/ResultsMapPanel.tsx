@@ -110,8 +110,8 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     }
   }
 
-  const poolLabels: Record<CarbonPoolKey, string> = { agb: "AGB", bgb: "BGB", soc: "SOC" };
-  for (const pool of ["agb", "bgb", "soc"] as const) {
+  const poolLabels: Record<CarbonPoolKey, string> = { agb: "AGB", bgb: "BGB", soc: "SOC", litter: "Litter / serasah", deadwood: "Deadwood / kayu mati" };
+  for (const pool of ["agb", "bgb", "soc", "litter", "deadwood"] as const) {
     const result = results.carbonPools?.[pool];
     const tileUrl = result?.carbon_estimated?.tile_url ?? result?.carbon_reference?.tile_url;
     if (!result || !tileUrl) continue;
@@ -135,6 +135,9 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
     });
   }
 
+  for (const [key, result] of Object.entries(results.carbonExtensions || {})) {
+    tabs.push({ key: `carbon_extension:${key}`, label: result.carbon_reference?.name || key.toUpperCase(), icon: "bi-tree", tileUrl: result.carbon_estimated.tile_url, resolutionM: result.carbon_reference?.resolution });
+  }
   return tabs;
 }
 
@@ -176,9 +179,10 @@ function buildLegend(
     return { title: `${activeKey === "carbon_uncertainty" ? "Standard error BGB referensi" : carbonQuantityLabel(layer)} (${unit})`, entries };
   }
 
-  if (activeKey.startsWith("carbon_pool:")) {
-    const pool = activeKey.slice("carbon_pool:".length) as CarbonPoolKey;
-    const result = results.carbonPools?.[pool];
+  if (activeKey.startsWith("carbon_pool:") || activeKey.startsWith("carbon_extension:")) {
+    const extension = activeKey.startsWith("carbon_extension:");
+    const pool = activeKey.slice(extension ? "carbon_extension:".length : "carbon_pool:".length);
+    const result = extension ? results.carbonExtensions?.[pool] : results.carbonPools?.[pool as CarbonPoolKey];
     const layer = result?.carbon_estimated?.tile_url ? result.carbon_estimated : result?.carbon_reference;
     if (!layer) return { title: "", entries: [] };
     const palette = layer.vis_params?.palette?.length ? layer.vis_params.palette : visPalette;

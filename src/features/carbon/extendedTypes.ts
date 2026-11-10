@@ -1,0 +1,49 @@
+export interface GreenRankingRow {
+  code: string;
+  name: string;
+  rank: number | null;
+  eligible: boolean;
+  province?: string;
+  city?: string;
+  district?: string;
+  area_ha?: number;
+  valid_area_ha?: number;
+  green_area_ha?: number;
+  green_percent?: number;
+  coverage_percent?: number;
+  error?: string;
+  classes_ha?: Record<string, number | null>;
+}
+export interface GreenRankingResult {
+  run_id: string;
+  done: boolean;
+  cursor: string;
+  status: "complete" | "partial";
+  config: { level: string; year: number; start_month: number; end_month: number; scale: number };
+  page: number;
+  page_size: number;
+  rows: GreenRankingRow[];
+  statistics: {
+    processed: number;
+    eligible: number;
+    area_ha: number;
+    valid_area_ha: number;
+    green_area_ha: number;
+    mean_percent: number | null;
+    min_percent: number | null;
+    max_percent: number | null;
+    median_percent?: number | null;
+    std_dev_percent?: number | null;
+    area_weighted_green_percent: number | null;
+    failed_geometry?: number;
+    trees_ha?: number;
+    grass_ha?: number;
+    crops_ha?: number;
+    shrubs_ha?: number;
+    flooded_ha?: number;
+    histogram?: { from_percent: number; to_percent: number; count: number }[];
+  };
+  method: string;
+  boundary_source: string;
+  source_url: string;
+}

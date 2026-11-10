@@ -10,6 +10,8 @@ const POOLS: { key: CarbonPoolKey; icon: string; labelKey: string }[] = [
   { key: "agb", icon: "bi-tree", labelKey: "carbon.basic.agb" },
   { key: "bgb", icon: "bi-bezier2", labelKey: "carbon.basic.bgb" },
   { key: "soc", icon: "bi-layers", labelKey: "carbon.basic.soc" },
+  { key: "litter", icon: "bi-flower2", labelKey: "carbon.basic.litter" },
+  { key: "deadwood", icon: "bi-tree", labelKey: "carbon.basic.deadwood" },
 ];
 
 export default function CarbonPoolsSummary({ results }: Props) {
@@ -85,6 +87,7 @@ export default function CarbonPoolsSummary({ results }: Props) {
                           {language === "id" ? `Referensi statis ${result.model_info?.analysis_year}` : `Static reference ${result.model_info?.analysis_year}`}
                         </span>
                       )}
+                      {result.model_info?.source_data_kind === "proxy_not_field_measurement" && <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">{language === "id" ? "Referensi turunan · validasi lapangan diperlukan" : "Derived reference · field validation needed"}</span>}
                     </div>
                     {result.model_info?.large_aoi_baseline && (
                       <small className="d-block text-muted mt-2">

@@ -349,13 +349,26 @@ export interface ExportGeoTiffArgs {
   endMonth: number;
   cloudThreshold: number;
   modelName?: string | null;
+  referenceDataset?: string;
+  datasetYear?: number;
+  referenceOnly?: boolean;
+  autoScale?: boolean;
+  exportMode?: "direct" | "batch_gcs";
+  extension?: string;
+  extensionSettings?: Record<string, unknown>;
   filename: string;
 }
 
 /** GeoTIFF export result returned by the async export job. */
 export interface ExportGeoTiffResult {
+  scale_adjusted?: boolean;
+  requested_scale?: number;
   status: string;
-  download_url: string;
+  download_url?: string;
+  task_id?: string;
+  task_token?: string;
+  destination?: string;
+  note?: string;
   filename: string;
   layer_type: string;
   scale: number;
@@ -376,6 +389,13 @@ export function exportGeoTiff(args: ExportGeoTiffArgs) {
       end_month: args.endMonth,
       cloud_threshold: args.cloudThreshold,
       model_name: args.modelName ?? null,
+      reference_dataset: args.referenceDataset,
+      dataset_year: args.datasetYear,
+      reference_only: args.referenceOnly,
+      auto_scale: args.autoScale,
+      export_mode: args.exportMode,
+      extension: args.extension,
+      extension_settings: args.extensionSettings,
       filename: args.filename,
     },
     { timeoutMs: CARBON_TIMEOUT_MS },

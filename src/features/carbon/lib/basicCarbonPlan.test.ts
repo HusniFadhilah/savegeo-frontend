@@ -7,6 +7,8 @@ vi.mock("@/features/carbon/api", () => ({
     { value: "SPAWN", targetPool: "aboveground_biomass_carbon" },
     { value: "ORNL_BGB", targetPool: "belowground_biomass_carbon" },
     { value: "SOILGRIDS_OCS_0_30CM", targetPool: "soil_organic_carbon" },
+    { value: "TROPICAL_LITTER_REFERENCE", targetPool: "litter_carbon" },
+    { value: "TROPICAL_DEADWOOD_REFERENCE", targetPool: "deadwood_carbon" },
   ]),
   listCarbonModels: vi.fn(async (dataset: string) => [{
     name: `reference_${dataset}_indonesia`,
@@ -23,16 +25,18 @@ describe("simple carbon geographic coverage", () => {
       { west: 94, south: -11, east: 142, north: 6 },
     ]) {
       const plan = await buildBasicCarbonPlan(year, aoi);
-      expect(plan.map((target) => target.referenceOnly)).toEqual([false, false, false]);
-      expect(plan.map((target) => target.datasetYear)).toEqual([2010, 2010, 2020]);
-      expect(plan.every((target) => target.model?.metadata_json?.training_domain === "indonesia")).toBe(true);
+      expect(plan.map((target) => target.key)).toEqual(["agb", "bgb", "soc", "litter", "deadwood"]);
+      expect(plan.map((target) => target.referenceOnly)).toEqual([false, false, false, false, false]);
+      expect(plan.map((target) => target.datasetYear)).toEqual([2010, 2010, 2020, 2010, 2010]);
+      expect(plan.slice(0, 3).every((target) => target.model?.metadata_json?.training_domain === "indonesia")).toBe(true);
+      expect(plan.slice(3).every((target) => !target.referenceOnly)).toBe(true);
     }
   });
 
   it("uses the reference directly only for its available year", async () => {
     const aoi = { west: 94, south: -11, east: 142, north: 6 };
-    expect((await buildBasicCarbonPlan(2010, aoi)).map((target) => target.referenceOnly)).toEqual([true, true, false]);
-    expect((await buildBasicCarbonPlan(2020, aoi)).map((target) => target.referenceOnly)).toEqual([false, false, true]);
+    expect((await buildBasicCarbonPlan(2010, aoi)).map((target) => target.referenceOnly)).toEqual([true, true, false, false, false]);
+    expect((await buildBasicCarbonPlan(2020, aoi)).map((target) => target.referenceOnly)).toEqual([false, false, true, false, false]);
   });
 
   it("does not silently substitute a static raster when the annual model is missing", async () => {

@@ -15,6 +15,8 @@ import {
   validateCarbonCalibrationDataset,
 } from "../api";
 import type { CarbonCalibrationDataset, CarbonCalibrationFile } from "../types";
+import NewCalibrationDatasetForm from "./NewCalibrationDatasetForm";
+import FieldCalibrationPanel from "./FieldCalibrationPanel";
 
 const DEFAULT_DATASET = {
   dataset_id: "dahana_subang_2026",
@@ -242,14 +244,16 @@ export default function CarbonCalibration() {
       <div className="calibration-notice">
         <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Alur sumber terlindungi</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">SUMBER HANYA BACA</span>
       </div>
-      <div className="admin-card calibration-import-wizard calibration-surface-card">
+      <NewCalibrationDatasetForm onCreated={(dataset) => { setDatasets((current) => [dataset, ...current]); void selectDataset(dataset); }} />
+      <details className="admin-card calibration-import-wizard calibration-surface-card">
+        <summary className="p-3 fw-semibold">Impor sumber survei pohon · buku kerja dan UAV</summary>
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
         <div className="calibration-import-fields">
           <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? "Wajib · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
           <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? "Opsional · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
           <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? "Opsional · .tif / .tiff"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
         </div>
-      </div>
+      </details>
       <div className="calibration-grid">
         <div className="admin-card calibration-dataset-list calibration-surface-card">
           <div className="admin-card-head"><h3>{t("admin.calibration.datasets")}</h3><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void reload()}><i className="bi bi-arrow-clockwise" /></button></div>
@@ -259,8 +263,9 @@ export default function CarbonCalibration() {
         <div className="admin-card calibration-detail calibration-surface-card">
           {!selected ? <div className="empty-state"><i className="bi bi-database-gear" /><p>{t("admin.calibration.selectHint")}</p></div> : <>
             <div className="admin-card-head"><div><h3>{selected.name}</h3><span className="stat-badge badge-amber">{selected.access}</span></div><span className="calibration-status">{selected.status}</span></div>
-            <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{t("admin.calibration.allometric")}</strong></div></div>
+            <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{selected.manifest.field_reference_type === "pool_specific_field_observations" ? "Sesuai metode tiap pengukuran" : t("admin.calibration.allometric")}</strong></div></div>
             <div className="calibration-actions"><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("validate")}><i className="bi bi-check2-circle" /> {t("admin.calibration.validate")}</button><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("extract")}><i className="bi bi-gear" /> {t("admin.calibration.extract")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("spatial")}><i className="bi bi-bounding-box" /> {t("admin.calibration.validateSpatial")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("features")}><i className="bi bi-bezier2" /> {t("admin.calibration.extractFeatures")}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}><i className="bi bi-upload" /> {t("admin.calibration.addFiles")}</button><input ref={fileInput} type="file" multiple hidden accept=".tif,.tiff,.zip,.obj,.csv,.xlsx,.docx,.pdf,.geojson,.json,.shp" onChange={(event) => void uploadFiles(event)} /></div>
+            <FieldCalibrationPanel key={selected.dataset_id} datasetId={selected.dataset_id} />
             <h4>{t("admin.calibration.files")}</h4>
             <div className="table-responsive"><table className="table table-sm align-middle"><thead><tr><AdminTableNumberHeader /><th>{t("admin.calibration.source")}</th><th>{t("admin.calibration.kind")}</th><th>{t("admin.calibration.size")}</th><th>SHA-256</th></tr></thead><tbody>{files.map((file, index) => <tr key={file.id}><AdminTableNumberCell index={index} /><td>{file.source_name}</td><td>{file.file_kind}</td><td>{formatBytes(file.size_bytes)}</td><td><code title={file.sha256}>{file.sha256.slice(0, 16)}…</code></td></tr>)}</tbody></table></div>
             <div className="calibration-method-note"><i className="bi bi-info-circle" /><span>{t("admin.calibration.methodNote")}</span></div>

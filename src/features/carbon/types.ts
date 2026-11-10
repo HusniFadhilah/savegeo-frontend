@@ -3,7 +3,7 @@
  * `from "@/features/carbon/types"` imports keep working. */
 export type { AoiState, AoiSource } from "@/hooks/useAoiStore";
 
-export type AnalysisType = "landcover" | "vegetation" | "carbon" | "combined";
+export type AnalysisType = "landcover" | "vegetation" | "carbon" | "combined" | "bluecarbon" | "green_rankings" | "productivity";
 
 export type ClipMode = "clipped" | "full";
 
@@ -151,6 +151,7 @@ export interface CarbonStats {
     counts: number[];
     pixel_count?: number;
     sampled?: boolean;
+    scale_m?: number;
   };
   percentiles?: {
     p25?: number | null;
@@ -198,6 +199,9 @@ export interface CarbonAreaInfo {
 }
 
 export interface CarbonModelRunInfo {
+  source_data_kind?: string;
+  source_url?: string;
+  extension_payload?: { extension: string; extension_settings: Record<string, unknown> };
   large_aoi_baseline?: boolean;
   provider?: string;
   calculation_mode?: string;
@@ -250,7 +254,7 @@ export interface CarbonResult {
   processing_time?: string;
 }
 
-export type CarbonPoolKey = "agb" | "bgb" | "soc";
+export type CarbonPoolKey = "agb" | "bgb" | "soc" | "litter" | "deadwood";
 
 export type CarbonPoolResults = Partial<Record<CarbonPoolKey, CarbonResult>>;
 

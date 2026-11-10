@@ -77,10 +77,15 @@ export async function buildBasicCarbonPlan(
     listCarbonModels("ORNL_BGB"),
     listCarbonModels("SOILGRIDS_OCS_0_30CM"),
   ]);
+  const detritusTargets: BasicCarbonTarget[] = ([['litter', 'TROPICAL_LITTER_REFERENCE'], ['deadwood', 'TROPICAL_DEADWOOD_REFERENCE']] as const).map(([key, datasetKey]) => {
+    const dataset = datasets.find((item) => item.value === datasetKey);
+    if (!dataset) throw new Error(`Referensi pelatihan ${key} belum tersedia pada backend.`);
+    return { key, dataset, datasetYear: 2010, model: null, referenceOnly: false };
+  });
 
   if (needsNationalCarbonModel(aoi)) {
     const nationalAgbModels = await listCarbonModels("SPAWN");
-    return ([['agb', 'SPAWN', 2010, nationalAgbModels], ['bgb', 'ORNL_BGB', 2010, bgbModels], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020, socModels]] as const).map(([key, datasetKey, datasetYear, models]) => {
+    const primaryTargets = ([['agb', 'SPAWN', 2010, nationalAgbModels], ['bgb', 'ORNL_BGB', 2010, bgbModels], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020, socModels]] as const).map(([key, datasetKey, datasetYear, models]) => {
       const dataset = datasets.find((item) => item.value === datasetKey);
       if (!dataset) throw new Error(`Sumber referensi ${datasetKey} belum tersedia untuk AOI besar.`);
       if (fallbackYear === datasetYear) return { key, dataset, datasetYear, model: null, referenceOnly: true };
@@ -90,6 +95,7 @@ export async function buildBasicCarbonPlan(
       if (!model) throw new Error(`Model estimasi tahunan nasional ${key.toUpperCase()} belum tersedia. Tahun ${fallbackYear} tidak dapat diganti dengan referensi ${datasetYear}.`);
       return { key, dataset, datasetYear, model, referenceOnly: false };
     });
+    return [...primaryTargets, ...detritusTargets];
   }
 
   const agbDatasets = datasets.filter((dataset) => dataset.targetPool === "aboveground_biomass_carbon");
@@ -150,5 +156,5 @@ export async function buildBasicCarbonPlan(
   if (plan.length !== 3) {
     throw new Error("Katalog karbon belum menyediakan sumber AGB, BGB, dan SOC yang diperlukan untuk mode Simpel.");
   }
-  return plan;
+  return [...plan, ...detritusTargets];
 }

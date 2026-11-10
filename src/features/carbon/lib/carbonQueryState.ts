@@ -1,6 +1,6 @@
 import { readAoiRegionQuery, writeAoiRegionQuery } from "./aoiRegionQuery";
 
-export type CarbonMode = "carbon" | "vegetation" | "landcover" | "landcover_change";
+export type CarbonMode = "carbon" | "vegetation" | "landcover" | "landcover_change" | "bluecarbon" | "green_rankings" | "productivity";
 export interface CarbonQueryState {
   mode: CarbonMode;
   aoiId?: number; aoiSource?: string; aoiName?: string; aoiGeoJson?: string; aoiRegion?: string;
@@ -12,7 +12,7 @@ export interface CarbonQueryState {
   view?: "single" | "split" | "swipe"; orientation?: "vertical" | "horizontal";
   opacity?: number; basemap?: string; showReference?: boolean; changeMode?: string;
 }
-const modes = new Set<CarbonMode>(["carbon", "vegetation", "landcover", "landcover_change"]);
+const modes = new Set<CarbonMode>(["carbon", "vegetation", "landcover", "landcover_change", "bluecarbon", "green_rankings", "productivity"]);
 const num = (v: string | null, min?: number, max?: number) => { if (v == null || v === "") return undefined; const n = Number(v); return Number.isFinite(n) && (min == null || n >= min) && (max == null || n <= max) ? n : undefined; };
 const bool = (v: string | null) => v == null ? undefined : v === "true" || v === "1";
 export function parseCarbonQuery(search: string): CarbonQueryState {

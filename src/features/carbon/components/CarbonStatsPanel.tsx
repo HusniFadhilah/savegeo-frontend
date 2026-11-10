@@ -183,16 +183,17 @@ export default function CarbonStatsPanel({ result }: Props) {
                 : "The histogram shows the distribution of pixel predictions. Dashed lines mark the mean and median; the shaded band shows ±1 standard deviation. The cumulative chart shows the share of pixels at or below each value. When sampled data is used, quartiles are calculated from that sample."} />
             </div>
             <div className="cs-card-body">
-              {hasHistogram ? (
-                <>
                   <div className="cs-chart-summary">
                     <span>{language === "id" ? "Rata-rata" : "Mean"}: <strong>{stats.mean == null ? "—" : `${fmt(stats.mean)} ${unit}`}</strong></span>
                     <span>{language === "id" ? "±1 simpangan baku" : "±1 SD"}: <strong>{stats.std_dev == null ? "—" : `${fmt(stats.std_dev)} ${unit}`}</strong></span>
                     <span>Median: <strong>{stats.percentiles?.median == null ? "—" : `${fmt(stats.percentiles.median)} ${unit}`}</strong></span>
                     <span>Q1–Q3: <strong>{stats.percentiles?.p25 == null || stats.percentiles.p75 == null ? "—" : `${fmt(stats.percentiles.p25)}–${fmt(stats.percentiles.p75)} ${unit}`}</strong></span>
                     <span>{language === "id" ? "Rentang" : "Range"}: <strong>{stats.min == null || stats.max == null ? "—" : `${fmt(stats.min)}–${fmt(stats.max)} ${unit}`}</strong></span>
-                    <span>{histogram?.sampled ? (language === "id" ? "Sampel" : "Sample") : (language === "id" ? "Piksel" : "Pixels")}: <strong>{fmtInt(histogram?.pixel_count ?? histogramTotal)}</strong></span>
+                    {hasHistogram && <span>{histogram?.sampled ? (language === "id" ? "Sampel" : "Sample") : (language === "id" ? "Piksel" : "Pixels")}: <strong>{fmtInt(histogram?.pixel_count ?? histogramTotal)}</strong></span>}
+                    {histogram?.scale_m != null && <span>{language === "id" ? "Resolusi distribusi" : "Distribution resolution"}: <strong>{fmtInt(histogram.scale_m)} m</strong></span>}
                   </div>
+              {hasHistogram ? (
+                <>
                   <div className="cs-chart-grid">
                   <div className="cs-chart-block">
                     <h6>{language === "id" ? "Distribusi densitas" : "Density distribution"}</h6>
@@ -259,7 +260,7 @@ export default function CarbonStatsPanel({ result }: Props) {
                 </>
               ) : (
                 <div className="cs-chart-empty">
-                  {language === "id" ? "Grafik distribusi tidak tersedia untuk hasil ini." : "Distribution charts are unavailable for this result."}
+                  {language === "id" ? "Histogram piksel belum tersedia pada hasil ini. Statistik numerik yang tersedia tetap ditampilkan di atas; jalankan ulang analisis untuk memperbarui hasil tersimpan." : "The pixel histogram is not available in this result. Available numeric statistics remain visible above; rerun the analysis to refresh stored results."}
                 </div>
               )}
             </div>
