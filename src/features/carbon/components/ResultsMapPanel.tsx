@@ -54,7 +54,16 @@ interface Props {
   analysisDate?: string;
 }
 
-function buildTabs(results: AnalysisResultsBundle, showReference: boolean): ResultTab[] {
+function isCarbonPoolTab(key: string) {
+  return key === "carbon_estimated" || key.startsWith("carbon_pool:");
+}
+
+function addRefreshToken(url: string, token: number) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}_refresh=${token}`;
+}
+
+function buildTabs(results: AnalysisResultsBundle, showReference: boolean, refreshToken: number): ResultTab[] {
   const tabs: ResultTab[] = [];
 
   if (results.vegetation) {
@@ -92,7 +101,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
         label: carbonQuantityLabel(results.carbon.carbon_estimated),
         icon: "bi-tree",
         tileUrl: results.carbon.carbon_estimated.tile_url,
-        resolutionM: results.carbon.model_info?.scale,
+        resolutionM: results.carbon.model_info?.map_resolution_m ?? results.carbon.model_info?.scale,
       });
     }
     if ((referenceOnly || showReference) && results.carbon.carbon_reference?.tile_url) {
@@ -120,7 +129,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
       label: poolLabels[pool],
       icon: pool === "soc" ? "bi-layers" : "bi-tree",
       tileUrl,
-      resolutionM: result.model_info?.scale,
+      resolutionM: result.model_info?.map_resolution_m ?? result.model_info?.scale,
     });
   }
 
@@ -138,7 +147,11 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
   for (const [key, result] of Object.entries(results.carbonExtensions || {})) {
     tabs.push({ key: `carbon_extension:${key}`, label: result.carbon_reference?.name || key.toUpperCase(), icon: "bi-tree", tileUrl: result.carbon_estimated.tile_url, resolutionM: result.carbon_reference?.resolution });
   }
-  return tabs;
+  return refreshToken > 0
+    ? tabs.map((tab) => tab.tileUrl && isCarbonPoolTab(tab.key)
+      ? { ...tab, tileUrl: addRefreshToken(tab.tileUrl, refreshToken) }
+      : tab)
+    : tabs;
 }
 
 function buildLegend(
@@ -318,7 +331,8 @@ export default function ResultsMapPanel({
   mapKey,
   analysisDate,
 }: Props) {
-  const tabs = useMemo(() => buildTabs(results, showReference), [results, showReference]);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const tabs = useMemo(() => buildTabs(results, showReference, refreshToken), [results, showReference, refreshToken]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
 
@@ -334,6 +348,7 @@ export default function ResultsMapPanel({
     setOpacity(1);
     setCompareOn(false);
     setCompareKey(null);
+    setRefreshToken(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
 
@@ -408,6 +423,17 @@ export default function ResultsMapPanel({
                 title="Bandingkan dua layer dengan slider geser"
               >
                 <i className="fas fa-arrows-alt-h me-1" /> Bandingkan
+              </button>
+            )}
+            {activeTab && isCarbonPoolTab(activeTab.key) && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary flex-shrink-0"
+                onClick={() => setRefreshToken((value) => value + 1)}
+                title={`Muat ulang tile layer ${activeTab.label}`}
+                aria-label={`Muat ulang tile layer ${activeTab.label}`}
+              >
+                <i className="bi bi-arrow-clockwise me-1" /> Refresh
               </button>
             )}
           </div>

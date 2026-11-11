@@ -207,6 +207,12 @@ export interface CarbonModelRunInfo {
   calculation_mode?: string;
   display_mode?: string;
   scale?: number;
+  /** Pixel spacing of the rendered model layer; may differ from summary scale. */
+  map_resolution_m?: number;
+  /** Spatial support of the reference labels used to train this map. */
+  reference_support_m?: number | null;
+  predictor_gap_fill?: string | null;
+  display_mask?: string | null;
   reference_dataset?: string;
   reference_dataset_year?: number | string;
   model_name?: string;
