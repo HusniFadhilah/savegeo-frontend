@@ -13,12 +13,24 @@ type BlueCarbonProfile = {
   resolution_m: number | null;
   source_name: string;
   source_url: string;
+  viewer_url?: string;
   citation: string;
+  license?: string;
+  coverage_note?: string;
   notes: string;
+  is_curated?: boolean;
   values: Record<string, number | null | undefined>;
 };
 
 const POOLS: Record<string, string> = { agb: "AGB", bgb: "BGB", soc: "SOC sedimen", litter: "Serasah", deadwood: "Kayu mati" };
+const SOURCE_KIND: Record<string, string> = {
+  field_observation: "Pengukuran lapangan",
+  literature: "Literatur",
+  modelled_raster: "Raster model",
+  open_raster: "Raster terbuka",
+  open_dataset: "Dataset terbuka",
+  dataset: "Dataset",
+};
 const fmt = (value?: number | null) => value == null ? "—" : value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
 export default function BlueCarbonCatalogPanel() {
@@ -42,7 +54,7 @@ export default function BlueCarbonCatalogPanel() {
         <div>
           <span className="blue-carbon-catalog__eyebrow">DATA PESISIR</span>
           <h2>Blue carbon</h2>
-          <p>Dataset dan pengukuran ekosistem pesisir yang telah dipublikasikan admin. Angka ditampilkan mengikuti unit dan cakupan sumber aslinya.</p>
+          <p>Sumber data terbuka dan pengukuran ekosistem pesisir. Raster, prediksi, dan titik lapangan ditandai sesuai cakupan serta metode sumber aslinya.</p>
         </div>
       </div>
       {error && <div className="alert alert-warning" role="alert">{error}</div>}
@@ -54,7 +66,7 @@ export default function BlueCarbonCatalogPanel() {
             <article className="blue-carbon-catalog__card" key={profile.id}>
               <div className="blue-carbon-catalog__card-head">
                 <span className="blue-carbon-catalog__habitat"><i className="bi bi-tree" /> {profile.habitat}</span>
-                <span className="blue-carbon-catalog__kind">{profile.data_kind === "field_observation" ? "Lapangan" : profile.data_kind === "literature" ? "Literatur" : "Dataset"}</span>
+                <span className="blue-carbon-catalog__kind">{profile.is_curated ? "Sumber terbuka" : SOURCE_KIND[profile.data_kind] ?? "Dataset"}</span>
               </div>
               <h3>{profile.name}</h3>
               <div className="blue-carbon-catalog__meta">
@@ -66,19 +78,30 @@ export default function BlueCarbonCatalogPanel() {
                 {Object.entries(POOLS).map(([key, label]) => profile.values?.[key] != null && (
                   <div key={key}><small>{label}</small><strong>{fmt(profile.values[key])} <span>Mg C/ha</span></strong></div>
                 ))}
-                {!Object.values(profile.values ?? {}).some((value) => value != null) && <span className="text-muted small">Metadata dataset; nilai stok tidak dicantumkan sumber.</span>}
+                {!Object.values(profile.values ?? {}).some((value) => value != null) && (
+                  <span className="text-muted small">
+                    {profile.data_kind === "field_observation"
+                      ? "Nilai tersimpan per lokasi/plot pada file sumber."
+                      : "Data raster/titik; tidak diringkas menjadi satu nilai nasional."}
+                  </span>
+                )}
               </div>
+              {profile.coverage_note && <p className="blue-carbon-catalog__coverage"><i className="bi bi-geo-alt" aria-hidden="true" /> {profile.coverage_note}</p>}
               {profile.notes && <p className="blue-carbon-catalog__notes">{profile.notes}</p>}
               <CropPanelAccordion title="Sumber dan metode" icon="bi-journal-text" className="blue-carbon-catalog__source">
                 <strong>{profile.source_name}</strong>
                 {profile.citation && <p className="small mb-2">{profile.citation}</p>}
-                {profile.source_url && <a href={profile.source_url} target="_blank" rel="noreferrer">Buka sumber <i className="bi bi-box-arrow-up-right" /></a>}
+                {profile.license && <small><strong>Lisensi:</strong> {profile.license}</small>}
+                <div className="blue-carbon-catalog__links">
+                  {profile.source_url && <a href={profile.source_url} target="_blank" rel="noreferrer">Dataset / arsip <i className="bi bi-box-arrow-up-right" /></a>}
+                  {profile.viewer_url && <a href={profile.viewer_url} target="_blank" rel="noreferrer">Peta interaktif <i className="bi bi-box-arrow-up-right" /></a>}
+                </div>
               </CropPanelAccordion>
             </article>
           ))}
         </div>
       )}
-      <p className="blue-carbon-catalog__disclaimer"><i className="bi bi-info-circle" /> Nilai dari sumber yang berbeda dapat memakai definisi, kedalaman sedimen, dan metode yang berbeda; bandingkan setelah memeriksa metadata sumber.</p>
+      <p className="blue-carbon-catalog__disclaimer"><i className="bi bi-info-circle" /> Katalog ini memuat data raster dan sampel nyata dari sumber terbuka. Peta extent tidak sama dengan peta karbon; prediksi global bukan pengukuran lapangan. Untuk Indonesia, periksa catatan cakupan dan mask applicability sebelum membandingkan nilai.</p>
     </section>
   );
 }

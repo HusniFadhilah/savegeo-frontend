@@ -4,6 +4,7 @@ import { runAnalysisJob } from "@/services/analysisJobs";
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import InfoTip from "@/components/ui/InfoTip";
 import type { RegionOption } from "@/types/api";
 import type { GreenRankingResult } from "../extendedTypes";
 import CropPanelAccordion from "@/features/crop-monitoring/components/CropPanelAccordion";
@@ -39,6 +40,10 @@ export default function GreenRankingsPanel({
   const [cities, setCities] = useState<RegionOption[]>([]);
   const [districts, setDistricts] = useState<RegionOption[]>([]);
   const [result, setResult] = useState<GreenRankingResult | null>(null);
+  const [tableSearch, setTableSearch] = useState("");
+  const [tableSort, setTableSort] = useState("rank");
+  const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("asc");
+  const [tablePageSize, setTablePageSize] = useState(50);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const keepRunning = useRef(false);
@@ -92,17 +97,47 @@ export default function GreenRankingsPanel({
     let active = true;
     setResult(null);
     const saved = localStorage.getItem(storageKey);
-    if (saved)
+    const params = new URLSearchParams({
+      year: String(year),
+      start_month: String(startMonth),
+      end_month: String(endMonth),
+      level,
+    });
+    if (province) params.set("province", province);
+    if (city) params.set("city", city);
+    if (district) params.set("district", district);
+    const acceptResult = (data: GreenRankingResult) => {
+      if (!active) return;
+      setResult(data);
+      onResult(data);
+      setTableSearch(data.search || "");
+      setTableSort(data.sort_by || "rank");
+      setTableSortDir(data.sort_dir || "asc");
+      setTablePageSize(data.page_size || 50);
+      localStorage.setItem(storageKey, data.run_id);
+    };
+    const loadLatest = () =>
+      apiClient.get<GreenRankingResult>(`/carbon/green-rankings/latest?${params}`, { auth: "app" });
+    if (saved) {
       void apiClient
-        .get<GreenRankingResult>(`/carbon/green-rankings/${encodeURIComponent(saved)}`, {
-          auth: "app",
+        .get<GreenRankingResult>(`/carbon/green-rankings/${encodeURIComponent(saved)}`, { auth: "app" })
+        .then(async (data) => {
+          if (!data.done || data.run_id.startsWith("snapshot:")) {
+            acceptResult(data);
+            return;
+          }
+          try {
+            acceptResult(await loadLatest());
+          } catch {
+            acceptResult(data);
+          }
         })
-        .then((data) => {
-          if (active) setResult(data);
-        })
-        .catch(() => {
+        .catch(() => loadLatest().then(acceptResult).catch(() => {
           if (active) localStorage.removeItem(storageKey);
-        });
+        }));
+    } else {
+      void loadLatest().then(acceptResult).catch(() => undefined);
+    }
     return () => {
       active = false;
     };
@@ -122,7 +157,12 @@ export default function GreenRankingsPanel({
             start_month: startMonth,
             end_month: endMonth,
             aoi: { west: 94, south: -12, east: 142, north: 8 },
-            extension_settings: { ...filters, run_id: next?.run_id, cursor: next?.cursor },
+            extension_settings: {
+              ...filters,
+              run_id: next?.run_id,
+              cursor: next?.cursor,
+              force_refresh: fresh,
+            },
           },
           { timeoutMs: 1800000 },
         );
@@ -145,11 +185,27 @@ export default function GreenRankingsPanel({
     onRunReady?.(() => runner.current(false));
     return () => onRunReady?.(null);
   }, [onRunReady]);
-  async function page(value: number) {
+  async function page(
+    value: number,
+    overrides: {
+      search?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      pageSize?: number;
+    } = {},
+  ) {
     if (!result) return;
     try {
+      const params = new URLSearchParams({
+        page: String(value),
+        page_size: String(overrides.pageSize ?? tablePageSize),
+        sort_by: overrides.sortBy ?? tableSort,
+        sort_dir: overrides.sortDir ?? tableSortDir,
+      });
+      const search = (overrides.search ?? tableSearch).trim();
+      if (search) params.set("search", search);
       const data = await apiClient.get<GreenRankingResult>(
-        `/carbon/green-rankings/${result.run_id}?page=${value}`,
+        `/carbon/green-rankings/${result.run_id}?${params.toString()}`,
         { auth: "app" },
       );
       setResult(data);
@@ -157,6 +213,19 @@ export default function GreenRankingsPanel({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Halaman gagal dimuat.");
     }
+  }
+  useEffect(() => {
+    if (!result?.run_id || result.search === undefined || result.search === tableSearch.trim()) return;
+    const timer = window.setTimeout(() => void page(1, { search: tableSearch }), 300);
+    return () => window.clearTimeout(timer);
+    // Table search is intentionally debounced like a data table search field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableSearch, result?.run_id]);
+  function sortTable(column: string) {
+    const direction = tableSort === column && tableSortDir === "asc" ? "desc" : "asc";
+    setTableSort(column);
+    setTableSortDir(direction);
+    void page(1, { sortBy: column, sortDir: direction });
   }
   const select = (
     label: string,
@@ -181,15 +250,58 @@ export default function GreenRankingsPanel({
       />
     </div>
   );
+  const recordsTotal = result?.records_total ?? result?.statistics.processed ?? 0;
+  const recordsFiltered = result?.records_filtered ?? recordsTotal;
+  const pageCount = result ? Math.max(1, Math.ceil(recordsFiltered / result.page_size)) : 1;
+  const firstRow = recordsFiltered === 0 ? 0 : ((result?.page ?? 1) - 1) * (result?.page_size ?? 50) + 1;
+  const lastRow = Math.min(recordsFiltered, (result?.page ?? 1) * (result?.page_size ?? 50));
+  const sortHeading = (key: string, label: string) => (
+    <th
+      scope="col"
+      aria-sort={tableSort === key ? (tableSortDir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button type="button" className="green-rankings__sort" onClick={() => sortTable(key)}>
+        {label}
+        <span aria-hidden="true">{tableSort === key ? (tableSortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
+  );
   return (
     <section className="green-rankings" aria-label="Peringkat wilayah hijau">
       <div className="green-rankings__intro">
-        <span className="green-rankings__eyebrow"><i className="bi bi-globe-asia-australia" /> Analisis wilayah</span>
-        <p className="small text-muted mb-0">
-        Persentase tutupan hijau dari Dynamic World pada periode terpilih. Semua tingkat dapat
-        dihitung nasional atau dibatasi induk wilayah. Filter ini berdiri sendiri dari AOI peta
-        utama. Pemrosesan bertahap dapat dilanjutkan setelah berhenti.
-        </p>
+        <span className="green-rankings__eyebrow">
+          <i className="bi bi-globe-asia-australia" aria-hidden="true" /> Analisis wilayah
+          <InfoTip
+            label="Metode dan cakupan peringkat hijau"
+            content={
+              <div className="green-rankings__method-tip">
+                <p>
+                  Persentase tutupan hijau dihitung dari Dynamic World pada periode analisis yang
+                  dipilih. Kelas hijau mencakup pohon, rumput, vegetasi tergenang, tanaman, dan
+                  semak.
+                </p>
+                <p>
+                  Nilai dibandingkan terhadap luas penuh batas administrasi. Wilayah dengan
+                  cakupan data di bawah 80% tidak diberi peringkat. Peringkat parsial dapat berubah
+                  sampai seluruh wilayah selesai diproses; proses yang dihentikan dapat dilanjutkan.
+                </p>
+                <p>
+                  Hasil dapat dihitung secara nasional atau dibatasi induk wilayah. Filter ini
+                  berdiri sendiri dari AOI peta utama. Resolusi statistik mengikuti tingkat yang
+                  dipilih: provinsi 100 m, kabupaten/kota 30 m, kecamatan 20 m, dan desa/kelurahan
+                  10 m.
+                </p>
+                <p>
+                  Hasil disimpan terpisah untuk setiap tahun, periode, tingkat, dan filter wilayah.
+                  Gunakan tombol hitung ulang untuk mengambil kondisi Dynamic World terbaru dan
+                  memperbarui snapshot tahun/periode tersebut.
+                </p>
+                <small>Sumber: Google Earth Engine · Dynamic World V1</small>
+              </div>
+            }
+          />
+        </span>
+        <p className="small text-muted mb-0">Peringkat tutupan hijau untuk periode analisis yang dipilih.</p>
       </div>
       <CropPanelAccordion title="Wilayah dan tingkat peringkat" icon="bi-sliders" className="green-rankings__accordion" defaultOpen>
         <div className="row g-3">
@@ -249,7 +361,7 @@ export default function GreenRankingsPanel({
             disabled={busy}
             onClick={() => void run(true)}
           >
-            Hitung ulang dari awal
+            {result.snapshot_refresh_due ? "Perbarui data dari Dynamic World" : "Hitung ulang dari awal"}
           </button>
         )}
       </div>
@@ -270,27 +382,38 @@ export default function GreenRankingsPanel({
             layak peringkat (cakupan ≥80%).
             </span>
           </div>
+          {result.snapshot_saved_at && (
+            <div className="green-rankings__snapshot-note">
+              <i className="bi bi-database-check" aria-hidden="true" />
+              <span>
+                Snapshot database · {new Date(result.snapshot_saved_at).toLocaleString("id-ID")}
+                {result.snapshot_refresh_due && <strong> · Perlu diperbarui</strong>}
+              </span>
+            </div>
+          )}
           <div className="green-rankings__stats">
-            {Object.entries({
-              "Hijau tertimbang (%)": result.statistics.area_weighted_green_percent,
-              "Rata-rata wilayah (%)": result.statistics.mean_percent,
-              "Median (%)": result.statistics.median_percent,
-              "Simpangan baku (%)": result.statistics.std_dev_percent,
-              "Minimum (%)": result.statistics.min_percent,
-              "Maksimum (%)": result.statistics.max_percent,
-              "Luas batas (ha)": result.statistics.area_ha,
-              "Luas data valid (ha)": result.statistics.valid_area_ha,
-              "Luas hijau teramati (ha)": result.statistics.green_area_ha,
-            }).map(([label, value]) => (
+            {[
+              { label: "Hijau tertimbang (%)", value: result.statistics.area_weighted_green_percent, icon: "bi-leaf-fill", tone: "green" },
+              { label: "Rata-rata wilayah (%)", value: result.statistics.mean_percent, icon: "bi-bar-chart-line-fill", tone: "blue" },
+              { label: "Median (%)", value: result.statistics.median_percent, icon: "bi-distribute-vertical", tone: "teal" },
+              { label: "Simpangan baku (%)", value: result.statistics.std_dev_percent, icon: "bi-activity", tone: "violet" },
+              { label: "Minimum (%)", value: result.statistics.min_percent, icon: "bi-arrow-down-short", tone: "amber" },
+              { label: "Maksimum (%)", value: result.statistics.max_percent, icon: "bi-arrow-up-short", tone: "green" },
+              { label: "Luas batas (ha)", value: result.statistics.area_ha, icon: "bi-bounding-box", tone: "blue" },
+              { label: "Luas data valid (ha)", value: result.statistics.valid_area_ha, icon: "bi-patch-check-fill", tone: "teal" },
+              { label: "Luas hijau teramati (ha)", value: result.statistics.green_area_ha, icon: "bi-tree-fill", tone: "green" },
+            ].map(({ label, value, icon, tone }) => (
               <div key={label} className="green-rankings__stat">
-                <small>{label}</small>
-                <strong>{fmt(value)}</strong>
+                <span className={`green-rankings__stat-icon is-${tone}`} aria-hidden="true">
+                  <i className={`bi ${icon}`} />
+                </span>
+                <span className="green-rankings__stat-copy">
+                  <small>{label}</small>
+                  <strong>{fmt(value)}</strong>
+                </span>
               </div>
             ))}
           </div>
-          <p className="green-rankings__method small">
-            {result.method} Resolusi statistik {result.config.scale} m. {result.boundary_source}
-          </p>
           <CropPanelAccordion title="Distribusi dan komposisi tutupan hijau" icon="bi-bar-chart-line" className="green-rankings__accordion">
             <p>
               Geometri gagal: {result.statistics.failed_geometry || 0}. Pohon{" "}
@@ -319,74 +442,110 @@ export default function GreenRankingsPanel({
           >
             Unduh seluruh statistik CSV ({result.status})
           </a>
+          <div className="green-rankings__datatable-toolbar">
+            <label className="green-rankings__search">
+              <i className="bi bi-search" aria-hidden="true" />
+              <input
+                type="search"
+                className="form-control"
+                aria-label="Cari wilayah berdasarkan nama atau kode"
+                placeholder="Cari wilayah atau kode"
+                value={tableSearch}
+                onChange={(event) => setTableSearch(event.target.value)}
+              />
+            </label>
+            <label className="green-rankings__page-size">
+              <span>Baris</span>
+              <select
+                className="form-select"
+                aria-label="Jumlah baris per halaman"
+                value={tablePageSize}
+                onChange={(event) => {
+                  const nextSize = Number(event.target.value);
+                  setTablePageSize(nextSize);
+                  void page(1, { pageSize: nextSize });
+                }}
+              >
+                {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+              <span>per halaman</span>
+            </label>
+          </div>
           <div className="table-responsive green-rankings__table-wrap">
             <table className="table table-sm align-middle green-rankings__table">
               <thead>
                 <tr>
-                  {[
-                    "No",
-                    "Peringkat",
-                    "Kode",
-                    "Wilayah",
-                    "Hijau %",
-                    "Cakupan %",
-                    "Luas ha",
-                    "Hijau ha",
-                    "Pohon ha",
-                    "Rumput ha",
-                    "Tanaman ha",
-                    "Semak ha",
-                    "Vegetasi tergenang ha",
-                  ].map((title) => (
-                    <th key={title}>{title}</th>
-                  ))}
+                  <th scope="col">No</th>
+                  {sortHeading("rank", "Peringkat")}
+                  {sortHeading("code", "Kode")}
+                  {sortHeading("name", "Wilayah")}
+                  {sortHeading("green_percent", "Hijau %")}
+                  {sortHeading("coverage_percent", "Cakupan %")}
+                  {sortHeading("area_ha", "Luas ha")}
+                  {sortHeading("green_area_ha", "Hijau ha")}
+                  {sortHeading("trees_ha", "Pohon ha")}
+                  {sortHeading("grass_ha", "Rumput ha")}
+                  {sortHeading("crops_ha", "Tanaman ha")}
+                  {sortHeading("shrubs_ha", "Semak ha")}
+                  {sortHeading("flooded_ha", "Vegetasi tergenang ha")}
                 </tr>
               </thead>
               <tbody>
-                {result.rows.map((row, i) => (
-                  <tr key={row.code}>
-                    <td>{(result.page - 1) * result.page_size + i + 1}</td>
-                    <td>{row.rank ?? "—"}</td>
-                    <td>{row.code}</td>
-                    <td>
-                      {row.name}
-                      {row.error && <small className="d-block text-danger">{row.error}</small>}
-                    </td>
-                    {[
-                      row.green_percent,
-                      row.coverage_percent,
-                      row.area_ha,
-                      row.green_area_ha,
-                      row.classes_ha?.trees,
-                      row.classes_ha?.grass,
-                      row.classes_ha?.crops,
-                      row.classes_ha?.shrubs,
-                      row.classes_ha?.flooded,
-                    ].map((value, index) => (
-                      <td key={index}>{fmt(value)}</td>
-                    ))}
-                  </tr>
-                ))}
+                {result.rows.length ? result.rows.map((row, i) => (
+                    <tr key={row.code}>
+                      <td>{(result.page - 1) * result.page_size + i + 1}</td>
+                      <td>{row.rank ?? "—"}</td>
+                      <td>{row.code}</td>
+                      <td>
+                        {row.name}
+                        {row.error && <small className="d-block text-danger">{row.error}</small>}
+                      </td>
+                      {[
+                        row.green_percent,
+                        row.coverage_percent,
+                        row.area_ha,
+                        row.green_area_ha,
+                        row.classes_ha?.trees,
+                        row.classes_ha?.grass,
+                        row.classes_ha?.crops,
+                        row.classes_ha?.shrubs,
+                        row.classes_ha?.flooded,
+                      ].map((value, index) => (
+                        <td key={index}>{fmt(value)}</td>
+                      ))}
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={13} className="green-rankings__empty">
+                        {tableSearch.trim() ? "Tidak ada wilayah yang cocok dengan pencarian." : "Belum ada wilayah pada halaman ini."}
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary me-2"
-            disabled={busy || result.page <= 1}
-            onClick={() => void page(result.page - 1)}
-          >
-            Sebelumnya
-          </button>
-          <span>Halaman {result.page}</span>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary ms-2"
-            disabled={busy || result.page * result.page_size >= result.statistics.processed}
-            onClick={() => void page(result.page + 1)}
-          >
-            Berikutnya
-          </button>
+          <div className="green-rankings__datatable-footer">
+            <span>Menampilkan {firstRow}–{lastRow} dari {recordsFiltered} wilayah{recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal})` : ""}</span>
+            <div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                disabled={busy || result.page <= 1}
+                onClick={() => void page(result.page - 1)}
+              >
+                Sebelumnya
+              </button>
+              <span>Halaman {result.page} dari {pageCount}</span>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                disabled={busy || result.page >= pageCount}
+                onClick={() => void page(result.page + 1)}
+              >
+                Berikutnya
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

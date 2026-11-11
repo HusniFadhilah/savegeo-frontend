@@ -22,6 +22,13 @@ export interface GreenRankingResult {
   config: { level: string; year: number; start_month: number; end_month: number; scale: number };
   page: number;
   page_size: number;
+  records_total?: number;
+  records_filtered?: number;
+  search?: string;
+  sort_by?: string;
+  sort_dir?: "asc" | "desc";
+  snapshot_saved_at?: string;
+  snapshot_refresh_due?: boolean;
   rows: GreenRankingRow[];
   statistics: {
     processed: number;

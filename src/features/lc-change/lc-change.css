@@ -1,0 +1,110 @@
+.lc-results-tabs-card > .lc-results-tabs-header {
+  padding: 0.35rem 0.75rem !important;
+}
+
+.lc-results-tabs-nav {
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+}
+
+.lc-results-tabs-nav .nav-link {
+  line-height: 1.25;
+  padding: 0.7rem 1rem;
+}
+
+.lc-results-tabs-nav .nav-link:not(.active) {
+  color: #fff;
+}
+
+.lc-results-tabs-content {
+  padding: 1rem !important;
+}
+
+.lc-fusion-panel .lc-fusion-method-summary {
+  cursor: pointer;
+  padding: 0.9rem 1.1rem !important;
+  color: #1f2937 !important;
+  background: #f1f5f9 !important;
+  border-bottom: 1px solid #dbe2ea;
+}
+
+.lc-fusion-panel .lc-fusion-formula-card {
+  color: #1f2937;
+  background: #fff;
+}
+
+.lc-fusion-panel .lc-fusion-formula-card .font-monospace {
+  color: #111827;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="dark"] .lc-results-tabs-card > .lc-results-tabs-header {
+  background: #0b1220 !important;
+  border-bottom: 1px solid #334155;
+}
+
+html[data-theme="dark"] .lc-results-tabs-nav {
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .lc-results-tabs-nav .nav-link {
+  color: #cbd5e1;
+  background: #111827;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .lc-results-tabs-nav .nav-link.active {
+  color: #f8fafc;
+  background: #173823;
+  border-color: #43a85f #43a85f #173823;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .lc-fusion-method-summary {
+  color: #e5e7eb !important;
+  background: #111827 !important;
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .lc-fusion-formula-card {
+  color: #e5e7eb !important;
+  background: #0f1b2d !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .lc-fusion-formula-card .font-monospace {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .bg-body-secondary {
+  color: #cbd5e1 !important;
+  background: #1e293b !important;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .bg-body-tertiary {
+  color: #e5e7eb !important;
+  background: #162033 !important;
+}
+
+html[data-theme="dark"] .lc-fusion-panel .alert-info {
+  color: #b7e4c5 !important;
+  background: #102d22 !important;
+  border-color: #285c40 !important;
+}
+
+@media (max-width: 767.98px) {
+  .lc-results-tabs-card > .lc-results-tabs-header {
+    overflow-x: auto;
+  }
+
+  .lc-results-tabs-nav {
+    flex-wrap: nowrap;
+    width: max-content;
+  }
+
+  .lc-results-tabs-nav .nav-link {
+    white-space: nowrap;
+    padding: 0.65rem 0.8rem;
+  }
+}

@@ -17,10 +17,13 @@
 .blue-carbon-catalog__pools small { display: block; color: #677789; font-size: .74rem; }
 .blue-carbon-catalog__pools strong { display: block; margin-top: .15rem; font-size: .95rem; font-variant-numeric: tabular-nums; }
 .blue-carbon-catalog__pools strong span { color: #718096; font-size: .68rem; font-weight: 500; }
+.blue-carbon-catalog__coverage { display: flex; align-items: flex-start; gap: .4rem; padding: .55rem .65rem; margin: 0 0 .65rem; border: 1px solid #d7e9de; border-radius: 9px; color: #365d49; background: #f3faf5; font-size: .77rem; }
+.blue-carbon-catalog__coverage > i { flex: none; margin-top: .1rem; color: #248061; }
 .blue-carbon-catalog__notes { margin: 0 0 .8rem; color: #60717f; font-size: .83rem; }
 .blue-carbon-catalog__source { overflow: hidden; margin: 0 !important; border: 1px solid #e0e8e5; border-radius: 10px; }
 .blue-carbon-catalog__source > .cm-panel-accordion-summary { min-height: 40px; padding: .55rem .7rem; color: #276548 !important; background: #f5faf6 !important; font-size: .83rem; }
 .blue-carbon-catalog__source > .card-body { display: grid; gap: .3rem; padding: .8rem; font-size: .83rem; }
+.blue-carbon-catalog__links { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .2rem; }
 .blue-carbon-catalog__empty { display: grid; justify-items: center; gap: .4rem; padding: 2.2rem 1rem; border: 1px dashed #bfd8ca; border-radius: 12px; color: #60717f; text-align: center; }
 .blue-carbon-catalog__empty > i { color: #419569; font-size: 1.5rem; }
 .blue-carbon-catalog__empty strong { color: var(--text-primary, #1e293b); }
@@ -32,10 +35,13 @@ html[data-theme="dark"] .blue-carbon-catalog__intro { border-color: #285344; bac
 html[data-theme="dark"] .blue-carbon-catalog__intro p,
 html[data-theme="dark"] .blue-carbon-catalog__meta,
 html[data-theme="dark"] .blue-carbon-catalog__notes,
+html[data-theme="dark"] .blue-carbon-catalog__coverage,
 html[data-theme="dark"] .blue-carbon-catalog__disclaimer { color: #a7b4c5; }
 html[data-theme="dark"] .blue-carbon-catalog__icon { color: #a4e5bf; background: #1a4634; }
 html[data-theme="dark"] .blue-carbon-catalog__card { border-color: #334155; }
 html[data-theme="dark"] .blue-carbon-catalog__kind { color: #bfccdb; background: #26374a; }
+html[data-theme="dark"] .blue-carbon-catalog__coverage { border-color: #285344; background: #142820; }
+html[data-theme="dark"] .blue-carbon-catalog__coverage > i { color: #9be2b0; }
 html[data-theme="dark"] .blue-carbon-catalog__pools > div { border-color: #334155; background: #172536; }
 html[data-theme="dark"] .blue-carbon-catalog__pools small,
 html[data-theme="dark"] .blue-carbon-catalog__pools strong span { color: #a7b4c5; }

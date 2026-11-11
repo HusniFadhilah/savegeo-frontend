@@ -337,7 +337,7 @@ export default function FusionPanel({
         : `${t("lc.fusion.periodCompare")} (${yearB ?? ""})`;
 
   return (
-    <div>
+    <div className="lc-fusion-panel">
       <section className="card border shadow-sm mb-3" aria-labelledby="lc-fusion-settings-title">
         <div className="card-body p-3 p-lg-4">
           <div className="mb-3">
@@ -485,8 +485,11 @@ export default function FusionPanel({
         </div>
       </section>
 
-      <details className="card border shadow-sm mb-3" aria-labelledby="lc-fusion-method-title">
-        <summary id="lc-fusion-method-title" className="card-header bg-body fw-semibold py-3">
+      <details
+        className="card border shadow-sm mb-3 lc-fusion-method"
+        aria-labelledby="lc-fusion-method-title"
+      >
+        <summary id="lc-fusion-method-title" className="card-header lc-fusion-method-summary">
           {t("lc.fusion.methodTitle")}{" "}
           <span className="text-muted fw-normal small ms-1">· Sentinel-2 + Sentinel-1</span>
         </summary>
@@ -494,7 +497,7 @@ export default function FusionPanel({
           <p className="text-muted small mb-3">{t("lc.fusion.methodIntro")}</p>
           <div className="row g-3">
             <div className="col-12 col-md-4">
-              <div className="h-100 p-3 bg-body border rounded-3">
+              <div className="h-100 p-3 border rounded-3 lc-fusion-formula-card">
                 <div className="small text-muted mb-2">{t("lc.fusion.qualityOpticalTitle")}</div>
                 <div
                   className="font-monospace fw-semibold mb-2"
@@ -506,7 +509,7 @@ export default function FusionPanel({
               </div>
             </div>
             <div className="col-12 col-md-4">
-              <div className="h-100 p-3 bg-body border rounded-3">
+              <div className="h-100 p-3 border rounded-3 lc-fusion-formula-card">
                 <div className="small text-muted mb-2">{t("lc.fusion.qualitySarTitle")}</div>
                 <div
                   className="font-monospace fw-semibold mb-2"
@@ -518,7 +521,7 @@ export default function FusionPanel({
               </div>
             </div>
             <div className="col-12 col-md-4">
-              <div className="h-100 p-3 bg-body border rounded-3">
+              <div className="h-100 p-3 border rounded-3 lc-fusion-formula-card">
                 <div className="small text-muted mb-2">{t("lc.fusion.changeRuleTitle")}</div>
                 <div
                   className="font-monospace fw-semibold mb-2"

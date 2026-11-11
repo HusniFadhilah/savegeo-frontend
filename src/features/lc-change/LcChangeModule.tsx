@@ -10,9 +10,20 @@ import InfoTip from "@/components/ui/InfoTip";
 import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { analyzeLandCoverChangeMap, analyzeLandCoverYear, analyzeLandCoverTransition } from "./api";
 import { fetchLandCoverDatasets } from "@/features/landcover/api";
-import { canonicalLandCoverKey, isPrimaryLandCover, landCoverChoices, PRIMARY_LULC_DATASETS } from "@/features/landcover/catalog";
+import {
+  canonicalLandCoverKey,
+  isPrimaryLandCover,
+  landCoverChoices,
+  PRIMARY_LULC_DATASETS,
+} from "@/features/landcover/catalog";
 import { DATASET_NOTES } from "./utils";
-import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcYearResult, TransitionData } from "./types";
+import type {
+  ChangeMapMode,
+  LcChangeMapResponse,
+  LcDataset,
+  LcYearResult,
+  TransitionData,
+} from "./types";
 import type { LandCoverDatasetCatalog } from "@/features/landcover/types";
 import YearSelector from "./components/YearSelector";
 import TransitionMatrixTable from "./components/TransitionMatrixTable";
@@ -25,6 +36,7 @@ import FusionPanel from "./components/FusionPanel";
 import { parseQuery, updateUrlFromState } from "./lib/lcChangeQueryState";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import { useChatContextStore } from "@/features/chatbot/chatContextStore";
+import "./lc-change.css";
 
 type Tab = "matrix" | "netchange" | "timeseries" | "maps" | "hotspot" | "fusion";
 
@@ -57,7 +69,11 @@ function localDateIso(date = new Date()): string {
 }
 
 /** Clip a selected absolute date range to one calendar year. */
-function dateRangeForYear(year: number, start: string, end: string): { start: string; end: string } | null {
+function dateRangeForYear(
+  year: number,
+  start: string,
+  end: string,
+): { start: string; end: string } | null {
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
   const clippedStart = start > yearStart ? start : yearStart;
@@ -93,7 +109,10 @@ function dateRangeForYear(year: number, start: string, end: string): { start: st
 export default function LcChangeModule() {
   const t = useI18nStore((state) => state.t);
   const language = useI18nStore((state) => state.language);
-  const query = useMemo(() => parseQuery(typeof window !== "undefined" ? window.location.search : ""), []);
+  const query = useMemo(
+    () => parseQuery(typeof window !== "undefined" ? window.location.search : ""),
+    [],
+  );
   const { showLoading, setLoadingProgress, hideLoading } = useUiStore();
 
   const maxYear = new Date().getFullYear();
@@ -126,7 +145,9 @@ export default function LcChangeModule() {
     },
     [setAoiState],
   );
-  const [dataset, setDataset] = useState<LcDataset>(canonicalLandCoverKey(query.dataset || "Dynamic_World"));
+  const [dataset, setDataset] = useState<LcDataset>(
+    canonicalLandCoverKey(query.dataset || "Dynamic_World"),
+  );
   const [years, setYears] = useState<number[]>([initialYearFrom, initialYearTo]);
   // Default to Dynamic World's complete available date coverage, clipped to
   // each selected year (full historical years plus the current YTD window).
@@ -141,7 +162,9 @@ export default function LcChangeModule() {
   // diagnostic default; this only controls whether low-confidence pixels get
   // masked out of the classification itself).
   const [dwThresholdEnabled, setDwThresholdEnabled] = useState(false);
-  const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(query.dwProbabilityThreshold ?? 0.5);
+  const [dwProbabilityThreshold, setDwProbabilityThreshold] = useState(
+    query.dwProbabilityThreshold ?? 0.5,
+  );
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
 
   const [running, setRunning] = useState(false);
@@ -163,23 +186,42 @@ export default function LcChangeModule() {
   const runGeneration = useRef(0);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !["/land-cover-change", "/lc-change"].includes(window.location.pathname)) return;
-    updateUrlFromState({ ...query, dataset, yearFrom: years[0], yearTo: years[1], monthFrom: startMonth, monthTo: endMonth, dwProbabilityThreshold, changeMode: mode });
+    if (
+      typeof window === "undefined" ||
+      !["/land-cover-change", "/lc-change"].includes(window.location.pathname)
+    )
+      return;
+    updateUrlFromState({
+      ...query,
+      dataset,
+      yearFrom: years[0],
+      yearTo: years[1],
+      monthFrom: startMonth,
+      monthTo: endMonth,
+      dwProbabilityThreshold,
+      changeMode: mode,
+    });
   }, [query, dataset, years, startMonth, endMonth, dwProbabilityThreshold, mode]);
 
   // Share the canonical curated catalog and primary fallback with land cover.
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [datasetDocs, setDatasetDocs] = useState<LandCoverDatasetCatalog>({});
   const advancedSources = useMemo(
-    () => landCoverChoices(Object.values(datasetDocs), true, true).filter((source) => !isPrimaryLandCover(source)),
+    () =>
+      landCoverChoices(Object.values(datasetDocs), true, true).filter(
+        (source) => !isPrimaryLandCover(source),
+      ),
     [datasetDocs],
   );
   const hasAdvancedSelection = advancedSources.some((source) => source.key === dataset);
   const showAdvancedToggle = advancedSources.length > 0;
   const datasetOptions = useMemo(() => {
     const entries = Object.values(datasetDocs);
-    return landCoverChoices(entries.length ? entries : PRIMARY_LULC_DATASETS, showAdvanced || hasAdvancedSelection, true)
-      .map((source) => ({ value: source.key, label: `${source.name} (${source.resolution})` }));
+    return landCoverChoices(
+      entries.length ? entries : PRIMARY_LULC_DATASETS,
+      showAdvanced || hasAdvancedSelection,
+      true,
+    ).map((source) => ({ value: source.key, label: `${source.name} (${source.resolution})` }));
   }, [datasetDocs, showAdvanced, hasAdvancedSelection]);
   useEffect(() => {
     let cancelled = false;
@@ -204,10 +246,14 @@ export default function LcChangeModule() {
         selectedDatasetDoc.year_min || selectedDatasetDoc.year_max
           ? `${selectedDatasetDoc.year_min ?? "-"}–${selectedDatasetDoc.year_max ?? "-"}`
           : "",
-        selectedDatasetDoc.class_count ? `${selectedDatasetDoc.class_count} ${language === "id" ? "kelas" : "classes"}` : "",
+        selectedDatasetDoc.class_count
+          ? `${selectedDatasetDoc.class_count} ${language === "id" ? "kelas" : "classes"}`
+          : "",
         selectedDatasetDoc.collection_version,
         selectedDatasetDoc.resolution,
-      ].filter(Boolean).join(" · ")
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : "";
   const datasetInfoContent = selectedDatasetDoc ? (
     <div className="d-grid gap-1">
@@ -215,14 +261,26 @@ export default function LcChangeModule() {
       {datasetSummary && <span>{datasetSummary}</span>}
       {selectedDatasetDoc.description && <span>{selectedDatasetDoc.description}</span>}
       {selectedDatasetDoc.accuracy && (
-        <span><strong>{language === "id" ? "Akurasi:" : "Accuracy:"}</strong> {selectedDatasetDoc.accuracy}</span>
+        <span>
+          <strong>{language === "id" ? "Akurasi:" : "Accuracy:"}</strong>{" "}
+          {selectedDatasetDoc.accuracy}
+        </span>
       )}
       {!!selectedDatasetDoc.limitations?.length && (
-        <span><strong>{language === "id" ? "Catatan:" : "Notes:"}</strong> {selectedDatasetDoc.limitations.join(" ")}</span>
+        <span>
+          <strong>{language === "id" ? "Catatan:" : "Notes:"}</strong>{" "}
+          {selectedDatasetDoc.limitations.join(" ")}
+        </span>
       )}
     </div>
-  ) : DATASET_NOTES[dataset] || (language === "id" ? "Informasi dataset tidak tersedia." : "Dataset information is unavailable.");
-  const isDynamicWorldCompatible = DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(dataset) || datasetDocs[dataset]?.monthly === true;
+  ) : (
+    DATASET_NOTES[dataset] ||
+    (language === "id"
+      ? "Informasi dataset tidak tersedia."
+      : "Dataset information is unavailable.")
+  );
+  const isDynamicWorldCompatible =
+    DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(dataset) || datasetDocs[dataset]?.monthly === true;
   const hasConfidence = isDynamicWorldCompatible || dataset === "AlphaEarth_RF";
   const supportedYears = datasetDocs[dataset]?.supported_years;
   useEffect(() => {
@@ -233,11 +291,12 @@ export default function LcChangeModule() {
       return valid.length >= 2 ? valid : supportedYears.slice(-2);
     });
   }, [supportedYears]);
-  const dateModeHelp = dateMode === "year"
-    ? t("lc.fullYearHint")
-    : isDynamicWorldCompatible
-      ? t("lc.partialDateHint")
-      : t("lc.datasetFullYearHint");
+  const dateModeHelp =
+    dateMode === "year"
+      ? t("lc.fullYearHint")
+      : isDynamicWorldCompatible
+        ? t("lc.partialDateHint")
+        : t("lc.datasetFullYearHint");
 
   const periodYears = useMemo(() => {
     if (activeYears.length < 2) return { yearA: null, yearB: null };
@@ -246,10 +305,14 @@ export default function LcChangeModule() {
     const lastYear = activeYears[activeYears.length - 1];
     let fromYear =
       periodFromYear != null && activeYears.includes(periodFromYear) ? periodFromYear : firstYear;
-    let toYear = periodToYear != null && activeYears.includes(periodToYear) ? periodToYear : lastYear;
+    let toYear =
+      periodToYear != null && activeYears.includes(periodToYear) ? periodToYear : lastYear;
 
     if (fromYear === toYear) {
-      toYear = activeYears.find((year) => year > fromYear) ?? activeYears.find((year) => year < fromYear) ?? toYear;
+      toYear =
+        activeYears.find((year) => year > fromYear) ??
+        activeYears.find((year) => year < fromYear) ??
+        toYear;
     }
     if (fromYear > toYear) [fromYear, toYear] = [toYear, fromYear];
 
@@ -284,32 +347,87 @@ export default function LcChangeModule() {
       ? `${dataset}:${yearA}:${yearB}:${dateMode}:${startMonth}:${endMonth}:${tanggalStart}:${tanggalEnd}`
       : null;
   const changeMapData = changeMapCacheKey ? (changeMapCache[changeMapCacheKey] ?? null) : null;
-  const dateRangeA = dateMode === "date" && isDynamicWorldCompatible && yearA != null
-    ? dateRangeForYear(yearA, tanggalStart, tanggalEnd)
-    : null;
-  const dateRangeB = dateMode === "date" && isDynamicWorldCompatible && yearB != null
-    ? dateRangeForYear(yearB, tanggalStart, tanggalEnd)
-    : null;
-  const analysisSignature = JSON.stringify({ aoi, dataset, dateMode, startMonth, endMonth, tanggalStart, tanggalEnd, dwThresholdEnabled, dwProbabilityThreshold });
+  const dateRangeA =
+    dateMode === "date" && isDynamicWorldCompatible && yearA != null
+      ? dateRangeForYear(yearA, tanggalStart, tanggalEnd)
+      : null;
+  const dateRangeB =
+    dateMode === "date" && isDynamicWorldCompatible && yearB != null
+      ? dateRangeForYear(yearB, tanggalStart, tanggalEnd)
+      : null;
+  const analysisSignature = JSON.stringify({
+    aoi,
+    dataset,
+    dateMode,
+    startMonth,
+    endMonth,
+    tanggalStart,
+    tanggalEnd,
+    dwThresholdEnabled,
+    dwProbabilityThreshold,
+  });
 
-  const transitionRequestKey = JSON.stringify({ aoi, dataset, yearA, yearB, dateMode, startMonth, endMonth,
-    dateRangeA, dateRangeB, threshold: hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined });
+  const transitionRequestKey = JSON.stringify({
+    aoi,
+    dataset,
+    yearA,
+    yearB,
+    dateMode,
+    startMonth,
+    endMonth,
+    dateRangeA,
+    dateRangeB,
+    threshold: hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined,
+  });
   useEffect(() => {
     let cancelled = false;
     setTrans(null);
     setTransitionError(null);
     setTransitionLoading(false);
-    if (completedAnalysisSignature !== analysisSignature || !aoi || yearA == null || yearB == null || !yearData[yearA] || !yearData[yearB]) return;
+    if (
+      completedAnalysisSignature !== analysisSignature ||
+      !aoi ||
+      yearA == null ||
+      yearB == null ||
+      !yearData[yearA] ||
+      !yearData[yearB]
+    )
+      return;
     setTransitionLoading(true);
-    analyzeLandCoverTransition({ aoi: { geojson: aoi }, dataset, from_year: yearA, to_year: yearB,
-      start_month: dateMode === "year" ? 1 : startMonth, end_month: dateMode === "year" ? 12 : endMonth,
-      ...(dateRangeA && dateRangeB ? { from_start_date: dateRangeA.start, from_end_date: dateRangeA.end,
-        to_start_date: dateRangeB.start, to_end_date: dateRangeB.end } : {}),
-      ...(hasConfidence && dwThresholdEnabled ? { dw_probability_threshold: dwProbabilityThreshold } : {}),
-    }).then((result) => { if (!cancelled) setTrans(result); })
-      .catch((error: unknown) => { if (!cancelled) setTransitionError(error instanceof Error ? error.message : "Gagal menghitung transisi piksel."); })
-      .finally(() => { if (!cancelled) setTransitionLoading(false); });
-    return () => { cancelled = true; };
+    analyzeLandCoverTransition({
+      aoi: { geojson: aoi },
+      dataset,
+      from_year: yearA,
+      to_year: yearB,
+      start_month: dateMode === "year" ? 1 : startMonth,
+      end_month: dateMode === "year" ? 12 : endMonth,
+      ...(dateRangeA && dateRangeB
+        ? {
+            from_start_date: dateRangeA.start,
+            from_end_date: dateRangeA.end,
+            to_start_date: dateRangeB.start,
+            to_end_date: dateRangeB.end,
+          }
+        : {}),
+      ...(hasConfidence && dwThresholdEnabled
+        ? { dw_probability_threshold: dwProbabilityThreshold }
+        : {}),
+    })
+      .then((result) => {
+        if (!cancelled) setTrans(result);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled)
+          setTransitionError(
+            error instanceof Error ? error.message : "Gagal menghitung transisi piksel.",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setTransitionLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // The serialized request covers AOI, periods, source, and threshold.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transitionRequestKey, yearData, completedAnalysisSignature, analysisSignature]);
@@ -319,7 +437,8 @@ export default function LcChangeModule() {
   // the maps tab is active or already cached, mirroring legacy's on-demand load).
   useEffect(() => {
     if (
-      completedAnalysisSignature !== analysisSignature || !aoi ||
+      completedAnalysisSignature !== analysisSignature ||
+      !aoi ||
       !changeMapCacheKey ||
       tab !== "maps" ||
       changeMapCache[changeMapCacheKey] ||
@@ -373,14 +492,20 @@ export default function LcChangeModule() {
   const onDatasetChange = (value: LcDataset) => {
     value = canonicalLandCoverKey(value);
     setDataset(value);
-    if (datasetDocs[value]?.monthly !== true && !DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(value)) setDateMode("year");
+    if (datasetDocs[value]?.monthly !== true && !DYNAMIC_WORLD_COMPATIBLE_DATASETS.has(value))
+      setDateMode("year");
   };
 
   /** Per-year request params for the current dateMode (see DateMode above). */
   const dateParamsForYear = useCallback(
     (
       year: number,
-    ): { start_month: number; end_month: number; start_date?: string; end_date?: string } | null => {
+    ): {
+      start_month: number;
+      end_month: number;
+      start_date?: string;
+      end_date?: string;
+    } | null => {
       if (dateMode === "year") return { start_month: 1, end_month: 12 };
       if (dateMode === "date" && isDynamicWorldCompatible) {
         const range = dateRangeForYear(year, tanggalStart, tanggalEnd);
@@ -404,7 +529,17 @@ export default function LcChangeModule() {
     setActiveYears([]);
     setChangeMapCache({});
     setRunError(null);
-  }, [aoi, dataset, dateMode, startMonth, endMonth, tanggalStart, tanggalEnd, dwThresholdEnabled, dwProbabilityThreshold]);
+  }, [
+    aoi,
+    dataset,
+    dateMode,
+    startMonth,
+    endMonth,
+    tanggalStart,
+    tanggalEnd,
+    dwThresholdEnabled,
+    dwProbabilityThreshold,
+  ]);
 
   const runAnalysis = useCallback(async () => {
     const generation = runGeneration.current;
@@ -414,7 +549,10 @@ export default function LcChangeModule() {
     }
     const uniqueYears = [...new Set(years)]
       .sort((a, b) => a - b)
-      .filter((year) => dateMode !== "date" || !isDynamicWorldCompatible || dateParamsForYear(year) != null);
+      .filter(
+        (year) =>
+          dateMode !== "date" || !isDynamicWorldCompatible || dateParamsForYear(year) != null,
+      );
     if (uniqueYears.length < 2) {
       setRunError(
         dateMode === "date" && isDynamicWorldCompatible
@@ -461,7 +599,8 @@ export default function LcChangeModule() {
         console.error(`LC-change: gagal memuat tahun ${year}`, err);
         failedYears.push({
           year,
-          message: err instanceof ApiError ? err.message : "Kesalahan saat memproses Dynamic World.",
+          message:
+            err instanceof ApiError ? err.message : "Kesalahan saat memproses Dynamic World.",
         });
       }
     }
@@ -491,57 +630,108 @@ export default function LcChangeModule() {
     setPeriodFromYear(successYears[0]);
     setPeriodToYear(successYears[successYears.length - 1]);
     setTab("matrix");
-  }, [analysisSignature, aoi, years, dataset, dateMode, isDynamicWorldCompatible, dateParamsForYear, hasConfidence,
-    dwThresholdEnabled, dwProbabilityThreshold, showLoading, setLoadingProgress, hideLoading]);
+  }, [
+    analysisSignature,
+    aoi,
+    years,
+    dataset,
+    dateMode,
+    isDynamicWorldCompatible,
+    dateParamsForYear,
+    hasConfidence,
+    dwThresholdEnabled,
+    dwProbabilityThreshold,
+    showLoading,
+    setLoadingProgress,
+    hideLoading,
+  ]);
 
-  useEffect(() => registerUiCommands("lc_change", {
-    read: () => ({
+  useEffect(
+    () =>
+      registerUiCommands("lc_change", {
+        read: () => ({
+          dataset,
+          availableDatasets: datasetOptions.map((item) => item.value),
+          fromYear: years[0] ?? null,
+          toYear: years[years.length - 1] ?? null,
+          startMonth,
+          endMonth,
+          aoiExists: Boolean(aoi),
+          running,
+          error: runError,
+          hasResult: activeYears.length >= 2,
+        }),
+        execute: async ({ action, target, parameters }) => {
+          const value = parameters?.value;
+          if (action === "run_analysis" && target === "lc_change.analysis") {
+            if (!aoi) throw new Error("AOI diperlukan sebelum analisis perubahan tutupan lahan.");
+            if (running) throw new Error("Analisis masih berjalan.");
+            if (years.length < 2 || years[0] >= years[years.length - 1])
+              throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+            await runAnalysis();
+            return;
+          }
+          if (action !== "set_parameter")
+            throw new Error(
+              `Perintah ${action} tidak didukung oleh modul perubahan tutupan lahan.`,
+            );
+          if (target === "lc_change.dataset") {
+            if (
+              typeof value !== "string" ||
+              !datasetOptions.some((item) => item.value === canonicalLandCoverKey(value))
+            )
+              throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
+            setDataset(canonicalLandCoverKey(value));
+          } else if (target === "lc_change.fromYear" || target === "lc_change.toYear") {
+            if (
+              !Number.isInteger(value) ||
+              (value as number) < minYear ||
+              (value as number) > maxYear
+            )
+              throw new Error("Tahun di luar rentang yang tersedia.");
+            const from = target === "lc_change.fromYear" ? (value as number) : years[0];
+            const to = target === "lc_change.toYear" ? (value as number) : years[years.length - 1];
+            if (from >= to) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+            const doc = datasetDocs[dataset];
+            if (
+              doc &&
+              ((doc.year_min && from < doc.year_min) || (doc.year_max && to > doc.year_max))
+            )
+              throw new Error("Tahun tidak tersedia pada dataset yang dipilih.");
+            setYears([from, to]);
+          } else if (target === "lc_change.startMonth" || target === "lc_change.endMonth") {
+            if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 12)
+              throw new Error("Bulan harus 1 sampai 12.");
+            const from = target === "lc_change.startMonth" ? (value as number) : startMonth;
+            const to = target === "lc_change.endMonth" ? (value as number) : endMonth;
+            if (from > to) throw new Error("Bulan awal harus sebelum bulan akhir.");
+            if (!isDynamicWorldCompatible)
+              throw new Error("Rentang bulan hanya tersedia untuk Dynamic World.");
+            setDateMode("month");
+            if (target === "lc_change.startMonth") setStartMonth(from);
+            else setEndMonth(to);
+          } else {
+            throw new Error(`Target ${target} tidak didukung oleh modul perubahan tutupan lahan.`);
+          }
+        },
+      }),
+    [
       dataset,
-      availableDatasets: datasetOptions.map((item) => item.value),
-      fromYear: years[0] ?? null,
-      toYear: years[years.length - 1] ?? null,
+      years,
       startMonth,
       endMonth,
-      aoiExists: Boolean(aoi),
+      aoi,
       running,
-      error: runError,
-      hasResult: activeYears.length >= 2,
-    }),
-    execute: async ({ action, target, parameters }) => {
-      const value = parameters?.value;
-      if (action === "run_analysis" && target === "lc_change.analysis") {
-        if (!aoi) throw new Error("AOI diperlukan sebelum analisis perubahan tutupan lahan.");
-        if (running) throw new Error("Analisis masih berjalan.");
-        if (years.length < 2 || years[0] >= years[years.length - 1]) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
-        await runAnalysis();
-        return;
-      }
-      if (action !== "set_parameter") throw new Error(`Perintah ${action} tidak didukung oleh modul perubahan tutupan lahan.`);
-      if (target === "lc_change.dataset") {
-        if (typeof value !== "string" || !datasetOptions.some((item) => item.value === canonicalLandCoverKey(value))) throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
-        setDataset(canonicalLandCoverKey(value));
-      } else if (target === "lc_change.fromYear" || target === "lc_change.toYear") {
-        if (!Number.isInteger(value) || (value as number) < minYear || (value as number) > maxYear) throw new Error("Tahun di luar rentang yang tersedia.");
-        const from = target === "lc_change.fromYear" ? value as number : years[0];
-        const to = target === "lc_change.toYear" ? value as number : years[years.length - 1];
-        if (from >= to) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
-        const doc = datasetDocs[dataset];
-        if (doc && ((doc.year_min && from < doc.year_min) || (doc.year_max && to > doc.year_max))) throw new Error("Tahun tidak tersedia pada dataset yang dipilih.");
-        setYears([from, to]);
-      } else if (target === "lc_change.startMonth" || target === "lc_change.endMonth") {
-        if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 12) throw new Error("Bulan harus 1 sampai 12.");
-        const from = target === "lc_change.startMonth" ? value as number : startMonth;
-        const to = target === "lc_change.endMonth" ? value as number : endMonth;
-        if (from > to) throw new Error("Bulan awal harus sebelum bulan akhir.");
-        if (!isDynamicWorldCompatible) throw new Error("Rentang bulan hanya tersedia untuk Dynamic World.");
-        setDateMode("month");
-        if (target === "lc_change.startMonth") setStartMonth(from);
-        else setEndMonth(to);
-      } else {
-        throw new Error(`Target ${target} tidak didukung oleh modul perubahan tutupan lahan.`);
-      }
-    },
-  }), [dataset, years, startMonth, endMonth, aoi, running, runError, activeYears, datasetOptions, datasetDocs, minYear, maxYear, isDynamicWorldCompatible, runAnalysis]);
+      runError,
+      activeYears,
+      datasetOptions,
+      datasetDocs,
+      minYear,
+      maxYear,
+      isDynamicWorldCompatible,
+      runAnalysis,
+    ],
+  );
 
   const downloadData = () => {
     const payload = {
@@ -606,9 +796,7 @@ export default function LcChangeModule() {
         <div className="analysis-hero-main">
           <span className="analysis-eyebrow">{t("lc.eyebrow")}</span>
           <h1 id="lcChangeHeroTitle">{t("lc.title")}</h1>
-          <p>
-            {t("lc.description")}
-          </p>
+          <p>{t("lc.description")}</p>
         </div>
         <div className="analysis-hero-status">
           <div className="analysis-status-card">
@@ -655,15 +843,19 @@ export default function LcChangeModule() {
                 <div className="d-flex align-items-center gap-2">
                   {!aoi && <small className="text-warning">{t("lc.aoiMissing")}</small>}
                   {aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2 && (
-                    <small className="text-warning"><i className="fas fa-triangle-exclamation" /> {t("lc.largeAoiShort")}</small>
+                    <small className="text-warning">
+                      <i className="fas fa-triangle-exclamation" /> {t("lc.largeAoiShort")}
+                    </small>
                   )}
                   <InfoTip
                     label={t("lc.moreInfo")}
-                    content={!aoi
-                      ? t("lc.chooseAoi")
-                      : aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2
-                        ? t("lc.aoiLargeHint", { area: aoiState.areaKm2.toFixed(0) })
-                        : t("lc.aoiHelp")}
+                    content={
+                      !aoi
+                        ? t("lc.chooseAoi")
+                        : aoiState?.areaKm2 != null && aoiState.areaKm2 >= AOI_TIMEOUT_RISK_KM2
+                          ? t("lc.aoiLargeHint", { area: aoiState.areaKm2.toFixed(0) })
+                          : t("lc.aoiHelp")
+                    }
                   />
                 </div>
               </div>
@@ -715,9 +907,11 @@ export default function LcChangeModule() {
                   </label>
                   <InfoTip
                     label={t("lc.moreInfo")}
-                    content={language === "id"
-                      ? "Menampilkan dataset khusus dan model eksperimental yang tersedia. Model RF belum memiliki validasi lokal independen."
-                      : "Show available specialist datasets and experimental models. The RF model has not been independently validated locally."}
+                    content={
+                      language === "id"
+                        ? "Menampilkan dataset khusus dan model eksperimental yang tersedia. Model RF belum memiliki validasi lokal independen."
+                        : "Show available specialist datasets and experimental models. The RF model has not been independently validated locally."
+                    }
                   />
                 </div>
               )}
@@ -736,7 +930,13 @@ export default function LcChangeModule() {
                 </label>
                 <InfoTip label={t("lc.moreInfo")} content={t("lc.yearsHelp")} />
               </div>
-              <YearSelector years={years} minYear={datasetDocs[dataset]?.year_min ?? minYear} maxYear={datasetDocs[dataset]?.year_max ?? maxYear} supportedYears={supportedYears} onChange={setYears} />
+              <YearSelector
+                years={years}
+                minYear={datasetDocs[dataset]?.year_min ?? minYear}
+                maxYear={datasetDocs[dataset]?.year_max ?? maxYear}
+                supportedYears={supportedYears}
+                onChange={setYears}
+              />
             </div>
 
             <div className="mb-3">
@@ -809,7 +1009,9 @@ export default function LcChangeModule() {
                       min={DYNAMIC_WORLD_START_DATE}
                       max={tanggalEnd || todayDate}
                       value={tanggalStart}
-                      onChange={(e) => { if (e.target.value) setTanggalStart(e.target.value); }}
+                      onChange={(e) => {
+                        if (e.target.value) setTanggalStart(e.target.value);
+                      }}
                     />
                     <span className="text-muted">–</span>
                     <input
@@ -818,12 +1020,13 @@ export default function LcChangeModule() {
                       min={tanggalStart || DYNAMIC_WORLD_START_DATE}
                       max={todayDate}
                       value={tanggalEnd}
-                      onChange={(e) => { if (e.target.value) setTanggalEnd(e.target.value); }}
+                      onChange={(e) => {
+                        if (e.target.value) setTanggalEnd(e.target.value);
+                      }}
                     />
                   </div>
                 </div>
               )}
-
             </div>
 
             {hasConfidence && (
@@ -843,7 +1046,9 @@ export default function LcChangeModule() {
                   </div>
                   <InfoTip
                     label={t("lc.moreInfo")}
-                    content={t(dwThresholdEnabled ? "lc.confidenceMaskHint" : "lc.confidenceDisabledHint")}
+                    content={t(
+                      dwThresholdEnabled ? "lc.confidenceMaskHint" : "lc.confidenceDisabledHint",
+                    )}
                   />
                 </div>
                 {dwThresholdEnabled && (
@@ -893,7 +1098,13 @@ export default function LcChangeModule() {
               </button>
               <InfoTip
                 label={t("lc.moreInfo")}
-                content={<>{t("lc.processingTime")}<br />{t("lc.requestPerYear")}</>}
+                content={
+                  <>
+                    {t("lc.processingTime")}
+                    <br />
+                    {t("lc.requestPerYear")}
+                  </>
+                }
               />
             </div>
           </div>
@@ -945,7 +1156,9 @@ export default function LcChangeModule() {
                     </div>
                     <span className="text-muted small">{t("lc.freeComparison")}</span>
                   </div>
-                  <span className="badge bg-secondary">{activeYears.length} {t("lc.yearsAnalyzed")}</span>
+                  <span className="badge bg-secondary">
+                    {activeYears.length} {t("lc.yearsAnalyzed")}
+                  </span>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary ms-auto"
@@ -1039,12 +1252,12 @@ export default function LcChangeModule() {
                 return badges.length ? <div className="mb-3">{badges}</div> : null;
               })()}
 
-              <div className="card mb-3">
-                <div className="card-header">
-                  <ul className="nav nav-tabs card-header-tabs">
+              <div className="card mb-3 lc-results-tabs-card">
+                <div className="card-header lc-results-tabs-header">
+                  <ul className="nav nav-tabs card-header-tabs lc-results-tabs-nav">
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "matrix" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "matrix" ? "active" : ""}`}
                         onClick={() => setTab("matrix")}
                       >
                         <i className="fas fa-th" /> {t("lc.tab.matrix")}
@@ -1052,7 +1265,7 @@ export default function LcChangeModule() {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "netchange" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "netchange" ? "active" : ""}`}
                         onClick={() => setTab("netchange")}
                       >
                         <i className="fas fa-balance-scale" /> {t("lc.tab.netChange")}
@@ -1060,7 +1273,7 @@ export default function LcChangeModule() {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "timeseries" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "timeseries" ? "active" : ""}`}
                         onClick={() => setTab("timeseries")}
                       >
                         <i className="fas fa-chart-area" /> {t("lc.tab.timeSeries")}
@@ -1068,7 +1281,7 @@ export default function LcChangeModule() {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "maps" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "maps" ? "active" : ""}`}
                         onClick={() => setTab("maps")}
                       >
                         <i className="fas fa-map-location-dot" /> {t("lc.tab.changeMap")}
@@ -1076,7 +1289,7 @@ export default function LcChangeModule() {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "hotspot" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "hotspot" ? "active" : ""}`}
                         onClick={() => setTab("hotspot")}
                       >
                         <i className="fas fa-map-pin" /> {t("lc.tab.hotspot")}
@@ -1084,7 +1297,7 @@ export default function LcChangeModule() {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${tab === "fusion" ? "active" : "text-white"}`}
+                        className={`nav-link ${tab === "fusion" ? "active" : ""}`}
                         onClick={() => setTab("fusion")}
                       >
                         <i className="fas fa-layer-group" /> {t("lc.tab.fusion")}
@@ -1092,9 +1305,17 @@ export default function LcChangeModule() {
                     </li>
                   </ul>
                 </div>
-                <div className="card-body pt-3">
-                  {transitionLoading && <p role="status" className="text-muted">Menghitung transisi piksel pada area valid bersama…</p>}
-                  {transitionError && <div role="alert" className="alert alert-danger">{transitionError}</div>}
+                <div className="card-body lc-results-tabs-content">
+                  {transitionLoading && (
+                    <p role="status" className="text-muted">
+                      Menghitung transisi piksel pada area valid bersama…
+                    </p>
+                  )}
+                  {transitionError && (
+                    <div role="alert" className="alert alert-danger">
+                      {transitionError}
+                    </div>
+                  )}
                   {tab === "matrix" && trans && (
                     <TransitionMatrixTable trans={trans} yearA={yearA!} yearB={yearB!} />
                   )}
@@ -1127,12 +1348,16 @@ export default function LcChangeModule() {
                       endDateA={dateRangeA?.end}
                       startDateB={dateRangeB?.start}
                       endDateB={dateRangeB?.end}
-                      dwProbabilityThreshold={hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined}
+                      dwProbabilityThreshold={
+                        hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined
+                      }
                     />
                   )}
                   {tab === "hotspot" && (
                     <HotspotPanel
-                      nativeScale={Number.parseFloat(yearA != null ? yearData[yearA]?.resolution ?? "10" : "10")}
+                      nativeScale={Number.parseFloat(
+                        yearA != null ? (yearData[yearA]?.resolution ?? "10") : "10",
+                      )}
                       aoi={aoi}
                       dataset={dataset}
                       yearA={yearA}
@@ -1143,7 +1368,9 @@ export default function LcChangeModule() {
                       endDateA={dateRangeA?.end}
                       startDateB={dateRangeB?.start}
                       endDateB={dateRangeB?.end}
-                      dwProbabilityThreshold={hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined}
+                      dwProbabilityThreshold={
+                        hasConfidence && dwThresholdEnabled ? dwProbabilityThreshold : undefined
+                      }
                     />
                   )}
                   {tab === "fusion" && (
