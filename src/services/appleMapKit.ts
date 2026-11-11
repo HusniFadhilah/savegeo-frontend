@@ -19,6 +19,10 @@ interface TokenResponse {
   expires_at: number;
 }
 
+interface MapKitStatusResponse {
+  available: boolean;
+}
+
 /* Minimal MapKit JS surface used here. */
 interface MapKitMapRect { origin: unknown; size: unknown }
 interface MapKitMap {
@@ -183,6 +187,8 @@ export class AppleMapKitLayer extends L.Layer {
 
 /** Add the Apple basemaps only when the backend can issue MapKit tokens. */
 export async function withOptionalAppleBasemaps(basemaps: BasemapDefinition[]): Promise<BasemapDefinition[]> {
+  const status = await apiClient.get<MapKitStatusResponse>("/maps/apple-mapkit/status").catch(() => null);
+  if (!status?.available) return basemaps;
   const token = await fetchAppleMapKitToken();
   if (!token) return basemaps;
   const apple: BasemapDefinition[] = [

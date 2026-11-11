@@ -1,5 +1,48 @@
 import type { AoiState } from "@/features/carbon/types";
 
+const TILE_REQUEST_CONCURRENCY = 2;
+const TILE_REQUEST_ATTEMPTS = 3;
+
+function retryDelay(response: Response | null, attempt: number): number {
+  const retryAfter = response?.headers.get("Retry-After");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const retryAt = Number.isFinite(seconds)
+      ? Date.now() + Math.max(0, seconds) * 1000
+      : Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) return Math.min(30_000, Math.max(0, retryAt - Date.now()));
+  }
+  return Math.min(8_000, 750 * 2 ** attempt) + Math.random() * 250;
+}
+
+async function fetchTile(url: string): Promise<Blob> {
+  let lastStatus: number | null = null;
+  for (let attempt = 0; attempt < TILE_REQUEST_ATTEMPTS; attempt++) {
+    let response: Response | null = null;
+    try {
+      response = await fetch(url, {
+        credentials: "same-origin",
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (response.ok) return await response.blob();
+      lastStatus = response.status;
+      const retryable = response.status === 429 || [500, 502, 503, 504].includes(response.status);
+      if (!retryable || attempt + 1 === TILE_REQUEST_ATTEMPTS) break;
+    } catch (error) {
+      if (attempt + 1 === TILE_REQUEST_ATTEMPTS) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, retryDelay(response, attempt)));
+  }
+
+  if (lastStatus === 429) {
+    throw new Error("Earth Engine sedang membatasi permintaan tile (429). PDF sudah mencoba ulang otomatis; tunggu sebentar lalu unduh PDF kembali. Analisis tidak perlu dijalankan ulang.");
+  }
+  if (lastStatus !== null) {
+    throw new Error(`Tile peta PDF gagal (${lastStatus}). Jika tautan peta sudah kedaluwarsa, jalankan ulang analisis untuk memperbaruinya.`);
+  }
+  throw new Error("Tile peta PDF gagal dimuat setelah dicoba ulang.");
+}
+
 /** Compose the result tiles themselves; no screenshot of an unrelated visible map. */
 export async function renderRasterPreview(url: string, aoi: AoiState): Promise<string> {
   const geometry = aoi.feature?.geometry;
@@ -33,9 +76,11 @@ export async function renderRasterPreview(url: string, aoi: AoiState): Promise<s
     0,
     Math.min(
       16,
+      // The PDF image is 768 px wide; one lower zoom reduces Earth Engine
+      // tile requests substantially while retaining enough print detail.
       Math.floor(
         Math.log2(Math.min((width - 32) / (east - west), (height - 32) / (south - north)) / 256),
-      ),
+      ) - 1,
     ),
   );
   const world = 256 * 2 ** zoom;
@@ -54,18 +99,13 @@ export async function renderRasterPreview(url: string, aoi: AoiState): Promise<s
     for (let y = Math.floor(originY / 256); y <= Math.floor((originY + height) / 256); y++) {
       if (x < 0 || x >= 2 ** zoom || y < 0 || y >= 2 ** zoom) continue;
       tasks.push(async () => {
-        const response = await fetch(
+        const tile = await fetchTile(
           url
             .replace("{z}", String(zoom))
             .replace("{x}", String((x + 2 ** zoom) % 2 ** zoom))
             .replace("{y}", String(y)),
-          { credentials: "same-origin", signal: AbortSignal.timeout(20000) },
         );
-        if (!response.ok)
-          throw new Error(
-            `Tile peta PDF gagal (${response.status}). Jalankan ulang analisis untuk memperbarui peta.`,
-          );
-        const bitmap = await createImageBitmap(await response.blob());
+        const bitmap = await createImageBitmap(tile);
         context.drawImage(bitmap, x * 256 - originX, y * 256 - originY, 256, 256);
         bitmap.close();
         loaded++;
@@ -73,8 +113,8 @@ export async function renderRasterPreview(url: string, aoi: AoiState): Promise<s
     }
   }
   // Bound simultaneous tile requests; a missing tile must not produce a misleading partial map.
-  for (let offset = 0; offset < tasks.length; offset += 4)
-    await Promise.all(tasks.slice(offset, offset + 4).map((task) => task()));
+  for (let offset = 0; offset < tasks.length; offset += TILE_REQUEST_CONCURRENCY)
+    await Promise.all(tasks.slice(offset, offset + TILE_REQUEST_CONCURRENCY).map((task) => task()));
   if (!loaded) throw new Error("Raster hasil tidak tersedia untuk PDF.");
   context.strokeStyle = "#153e2b";
   context.lineWidth = 2;
