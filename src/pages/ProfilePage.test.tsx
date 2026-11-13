@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import ProfilePage from "./ProfilePage";
 import AdminProfile from "@/features/admin/components/AdminProfile";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -57,7 +58,7 @@ describe("editable full names", () => {
   it("includes the full name when saving an admin profile", async () => {
     useAuthStore.setState({ user: member, isAuthenticated: true });
     vi.mocked(updateAdminProfile).mockResolvedValue({ message: "ok", user: { ...member, full_name: "Siti Admin" } });
-    render(<AdminProfile />);
+    render(<MemoryRouter><AdminProfile /></MemoryRouter>);
     fireEvent.change(screen.getByLabelText("Nama lengkap"), { target: { value: "  Siti Admin  " } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
     await waitFor(() => expect(updateAdminProfile).toHaveBeenCalledWith({ username: "siti", email: member.email, full_name: "Siti Admin" }));

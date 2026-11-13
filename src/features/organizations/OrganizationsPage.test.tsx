@@ -13,7 +13,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   useI18nStore.getState().setLanguage("id");
   vi.mocked(api.listOrganizations).mockResolvedValue([org]);
-  vi.mocked(api.listOrganizationMembers).mockResolvedValue([{ id: "m1", principal_type: "admin", principal_id: 1, username: "owner", full_name: "Workspace Owner", role: "owner", is_active: true }]);
+  vi.mocked(api.listOrganizationMembers).mockResolvedValue([{ id: "m1", principal_type: "admin", username: "owner", full_name: "Workspace Owner", role: "owner", is_active: true }]);
   vi.mocked(api.listInvitations).mockResolvedValue([]);
 });
 afterEach(cleanup);
@@ -35,7 +35,7 @@ it("refreshes membership before loading management-only data after self-demotion
   render(<MemoryRouter><OrganizationsPage /></MemoryRouter>);
   await screen.findByText("Workspace Owner");
   vi.mocked(api.listOrganizations).mockResolvedValue([{ ...org, role: "member" }]);
-  vi.mocked(api.changeOrganizationMember).mockResolvedValue(undefined);
+  vi.mocked(api.changeOrganizationMember).mockResolvedValue({ id: "m1", role: "member", is_active: true });
   fireEvent.change(screen.getByLabelText("Peran owner"), { target: { value: "member" } });
   expect(await screen.findByText(/Anda anggota organisasi ini/)).toBeInTheDocument();
   expect(api.listOrganizationMembers).toHaveBeenCalledTimes(1);
