@@ -78,6 +78,11 @@ export default function DmrvProjectPage() {
         ) : null}
         {!project && !error ? <p role="status">{t("dmrv.loading")}</p> : null}
 
+        {project && role !== "field_operator" ? <div className="d-flex gap-2 flex-wrap mb-3">
+          <Link className="dmrv-reference-link" to={`/dmrv/projects/${project.id}/integrity`}><i className="bi bi-shield-check" aria-hidden="true" />{t("dmrv.integrity.open")}</Link>
+          <Link className="dmrv-reference-link" to="/dmrv/portfolio"><i className="bi bi-grid" aria-hidden="true" />{t("dmrv.integrity.portfolio")}</Link>
+        </div> : null}
+
         {project ? (
           <section className="dmrv-panel">
             <div role="tablist" aria-label={t("dmrv.project.tabs")} className="nav nav-tabs dmrv-tabs">

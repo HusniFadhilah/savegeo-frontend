@@ -24,6 +24,8 @@ import { VIEWER_FEATURE_CODES } from "@/auth/viewerFeatures";
 import DmrvProjectsPage from "@/features/dmrv/DmrvProjectsPage";
 import DmrvProjectPage from "@/features/dmrv/DmrvProjectPage";
 import ArrIllustrativeAccountingPage from "@/features/dmrv/ArrIllustrativeAccountingPage";
+import IntegrityPage from "@/features/dmrv/integrity/IntegrityPage";
+import PortfolioPage from "@/features/dmrv/integrity/PortfolioPage";
 import OrganizationsPage from "@/features/organizations/OrganizationsPage";
 
 function CarbonEstimationRoute() {
@@ -116,6 +118,8 @@ export default function AppRoutes() {
       {/* dMRV: login required; project membership and roles are enforced by the backend. */}
         <Route path="/dmrv/examples/arr-accounting" element={<ProtectedAppRoute checkFeatureAccess={false}><ArrIllustrativeAccountingPage /></ProtectedAppRoute>} />
       <Route path="/dmrv/projects" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectsPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/portfolio" element={<ProtectedAppRoute checkFeatureAccess={false}><PortfolioPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects/:projectId/integrity" element={<ProtectedAppRoute checkFeatureAccess={false}><IntegrityPage /></ProtectedAppRoute>} />
       <Route path="/organizations" element={<ProtectedAppRoute checkFeatureAccess={false}><OrganizationsPage /></ProtectedAppRoute>} />
       <Route path="/dmrv/projects/:projectId" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectPage /></ProtectedAppRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />

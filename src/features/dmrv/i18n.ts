@@ -3,6 +3,8 @@ import type { Language } from "@/i18n/translations";
 /** dMRV copy. Both languages must define the same keys and placeholders (see i18n.test.ts). */
 export const dmrvTranslations: Record<Language, Record<string, string>> = {
   id: {
+    "dmrv.integrity.open": "Kesiapan dan integritas proyek",
+    "dmrv.integrity.portfolio": "Portofolio proyek",
     "dmrv.loading": "Memuat...",
     "dmrv.errors.generic": "Permintaan gagal. Coba lagi.",
     "dmrv.errors.withCode": "{code}: {message}",
@@ -288,6 +290,8 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.field.readOnly": "Peran Anda hanya dapat melihat data lapangan.",
   },
   en: {
+    "dmrv.integrity.open": "Project readiness and integrity",
+    "dmrv.integrity.portfolio": "Project portfolio",
     "dmrv.loading": "Loading...",
     "dmrv.errors.generic": "The request failed. Please try again.",
     "dmrv.errors.withCode": "{code}: {message}",

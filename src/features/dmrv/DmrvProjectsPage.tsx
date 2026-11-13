@@ -194,6 +194,8 @@ export default function DmrvProjectsPage() {
             <span className="dmrv-section-kicker">{t("dmrv.header.eyebrow")}</span>
             <h2>{t("dmrv.projects.workspaceHeading")}</h2>
           </div>
+          <div className="d-flex gap-2 flex-wrap">
+          <Link className="dmrv-reference-link" to="/dmrv/portfolio"><i className="bi bi-grid" aria-hidden="true" />{t("dmrv.integrity.portfolio")}</Link>
           <Link
             aria-label={t("dmrv.example.heading")}
             className="dmrv-reference-link dmrv-example-action"
@@ -202,6 +204,7 @@ export default function DmrvProjectsPage() {
             <i className="bi bi-calculator" aria-hidden="true" />
             {t("dmrv.projects.exampleAction")}
           </Link>
+          </div>
         </div>
 
         <div className="row g-3">
