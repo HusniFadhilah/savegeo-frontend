@@ -18,6 +18,7 @@ export interface RegionOption {
 }
 
 export interface AdminUser {
+  mfa_enabled?: boolean;
   full_name?: string | null;
   id?: number;
   username: string;
@@ -33,6 +34,13 @@ export interface LoginResponse {
   token?: string;
   user: AdminUser;
   expires_at?: string;
+}
+
+export interface MfaLoginChallenge {
+  mfa_required: true;
+  challenge: string;
+  enrollment_required: boolean;
+  expires_in: number;
 }
 
 export interface ModelInfo {

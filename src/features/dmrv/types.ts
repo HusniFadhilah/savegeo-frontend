@@ -6,6 +6,7 @@ export interface Project {
   id: string;
   name: string;
   organization: string | null;
+  organization_id?: string | null;
   activity_type: string;
   jurisdiction: string | null;
   methodology_id: string | null;
@@ -22,6 +23,7 @@ export interface Project {
 export interface ProjectCreate {
   name: string;
   organization?: string | null;
+  organization_id?: string | null;
   activity_type?: string;
   jurisdiction?: string | null;
   methodology_id?: string | null;

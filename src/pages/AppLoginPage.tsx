@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LoginIllustration from "@/components/auth/LoginIllustration";
+import MfaLoginPanel from "@/components/auth/MfaLoginPanel";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { authService } from "@/services/authService";
@@ -14,6 +15,8 @@ function UnifiedAccessForm() {
   const adminLogin = useAuthStore((state) => state.login);
   const adminLoading = useAuthStore((state) => state.isLoading);
   const adminError = useAuthStore((state) => state.error);
+  const mfaChallenge = useAuthStore((state) => state.mfaChallenge);
+  const recoveryCodes = useAuthStore((state) => state.recoveryCodes);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +36,7 @@ function UnifiedAccessForm() {
     // auth tables, and resolving it as a public user would send an admin to
     // the public workspace instead of the admin dashboard.
     if (await adminLogin(credentials.username, credentials.password)) return;
+    if (useAuthStore.getState().mfaChallenge) { setPassword(""); return; }
     if (await userLogin(credentials.username, credentials.password)) return;
     setFormError(
         useUserAuthStore.getState().error ||
@@ -73,7 +77,7 @@ function UnifiedAccessForm() {
         <div><h2>Login SaveGeo</h2><p>Akses workspace analitik dengan akun user atau admin.</p></div>
       </div>
       <div className="app-login-role-note"><i className="bi bi-shield-check" /> Akses dan authorization akan menyesuaikan role akun Anda.</div>
-      {forgotMode ? (
+      {mfaChallenge || recoveryCodes.length > 0 ? <MfaLoginPanel /> : forgotMode ? (
         <form onSubmit={submitForgot}>
           <label className="app-login-label" htmlFor="unified-reset-identifier">Email atau username</label>
           <input id="unified-reset-identifier" className="app-login-input" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" required />

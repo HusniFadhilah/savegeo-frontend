@@ -4,6 +4,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { useAdmin } from "../AdminContext";
 import { updateAdminProfile } from "../api";
 import PasswordChange from "./PasswordChange";
+import MfaSecurityPanel from "@/components/auth/MfaSecurityPanel";
 
 export default function AdminProfile() {
   const user = useAuthStore((state) => state.user);
@@ -117,6 +118,7 @@ export default function AdminProfile() {
           <PasswordChange open={passwordFormOpen} onOpenChange={setPasswordFormOpen} />
         </div>
       </section>
+      <MfaSecurityPanel />
     </div>
   );
 }

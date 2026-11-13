@@ -12,6 +12,9 @@ export interface GeeCredential {
   client_email: string;
   is_active: boolean;
   uploaded_at?: string | null;
+  last_checked_at?: string | null;
+  last_check_status?: "ok" | "failed" | null;
+  last_check_code?: string | null;
 }
 
 export interface ArcgisStatusInfo {
