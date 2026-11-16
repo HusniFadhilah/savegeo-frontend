@@ -1,6 +1,14 @@
-import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
+import {
+  AdminTableNumberCell,
+  AdminTableNumberHeader,
+} from "@/features/admin/components/AdminTableNumber";
 import { useRef, useState } from "react";
-import { activateGeeCredential, deleteGeeCredential, uploadGeeCredential } from "../api";
+import {
+  activateGeeCredential,
+  deleteGeeCredential,
+  uploadGeeCredential,
+  probeGeeCredential,
+} from "../api";
 import type { GeeCredential } from "../types";
 import { useAdmin } from "../AdminContext";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -12,9 +20,19 @@ const MAX_FILE_BYTES = 1 * 1024 * 1024; // 1 MB — service-account JSON keys ar
 export default function GeeCredentials() {
   const { notify, refreshHealth } = useAdmin();
   const {
-    rows, loading, error, page, pageCount, pageSize,
-    recordsTotal, recordsFiltered, search, setSearch,
-    nextPage, prevPage, reload,
+    rows,
+    loading,
+    error,
+    page,
+    pageCount,
+    pageSize,
+    recordsTotal,
+    recordsFiltered,
+    search,
+    setSearch,
+    nextPage,
+    prevPage,
+    reload,
   } = useServerTable<GeeCredential>("/admin/gee/credentials");
 
   const [formOpen, setFormOpen] = useState(false);
@@ -56,8 +74,13 @@ export default function GeeCredentials() {
     setUploading(true);
     setFormError(null);
     try {
-      await uploadGeeCredential(file, label, notes, activateOnUpload);
-      notify("Kredensial berhasil diunggah", "s");
+      const result = await uploadGeeCredential(file, label, notes, activateOnUpload);
+      notify(
+        result.activation_error
+          ? `Kredensial tersimpan; aktivasi gagal (${result.activation_error}). Kredensial aktif sebelumnya dipertahankan.`
+          : "Kredensial berhasil diunggah",
+        result.activation_error ? "e" : "s",
+      );
       setFormOpen(false);
       setFile(null);
       setLabel("");
@@ -102,17 +125,54 @@ export default function GeeCredentials() {
     }
   };
 
+  const handleProbe = async (id: number) => {
+    if (busyId !== null) return;
+    setBusyId(id);
+    try {
+      const result = await probeGeeCredential(id);
+      notify(
+        result.ok
+          ? "Koneksi Earth Engine berhasil diperiksa"
+          : `Pemeriksaan koneksi gagal (${result.code})`,
+        result.ok ? "s" : "e",
+      );
+    } catch (cause) {
+      notify(cause instanceof Error ? cause.message : "Pemeriksaan koneksi gagal", "e");
+    } finally {
+      await reload();
+      setBusyId(null);
+    }
+  };
+
   const selectableRows = rows.filter((row) => !row.is_active);
-  const allPageSelected = selectableRows.length > 0 && selectableRows.every((row) => selectedIds.includes(row.id));
-  const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
-  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !selectableRows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...selectableRows.map((row) => row.id)]))));
+  const allPageSelected =
+    selectableRows.length > 0 && selectableRows.every((row) => selectedIds.includes(row.id));
+  const toggleSelected = (id: number) =>
+    setSelectedIds((ids) =>
+      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
+    );
+  const toggleAllPage = () =>
+    setSelectedIds((ids) =>
+      allPageSelected
+        ? ids.filter((id) => !selectableRows.some((row) => row.id === id))
+        : Array.from(new Set([...ids, ...selectableRows.map((row) => row.id)])),
+    );
   const handleBulkDelete = async () => {
-    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} credential nonaktif terpilih?`)) return;
+    if (
+      !selectedIds.length ||
+      !confirm(`Hapus ${selectedIds.length} credential nonaktif terpilih?`)
+    )
+      return;
     setBulkBusy(true);
     const results = await Promise.allSettled(selectedIds.map((id) => deleteGeeCredential(id)));
     const failed = results.filter((r) => r.status === "rejected").length;
     setSelectedIds([]);
-    notify(failed ? `${results.length - failed} credential dihapus, ${failed} gagal` : `${results.length} credential dihapus`, failed ? "e" : "s");
+    notify(
+      failed
+        ? `${results.length - failed} credential dihapus, ${failed} gagal`
+        : `${results.length} credential dihapus`,
+      failed ? "e" : "s",
+    );
     await reload();
     setBulkBusy(false);
   };
@@ -163,11 +223,16 @@ export default function GeeCredentials() {
                 pickFile(e.dataTransfer.files[0] ?? null);
               }}
             >
-              <i className="bi bi-filetype-json" style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }} />
+              <i
+                className="bi bi-filetype-json"
+                style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }}
+              />
               <div style={{ fontSize: 12, color: "#64748b" }}>
                 Pilih atau seret dan letakkan file <strong>.json</strong> akun layanan di sini
               </div>
-              {file && <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>✓ {file.name}</div>}
+              {file && (
+                <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>✓ {file.name}</div>
+              )}
             </div>
             <input
               ref={fileInputRef}
@@ -190,7 +255,12 @@ export default function GeeCredentials() {
           </div>
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
           <div style={{ display: "flex", gap: 6 }}>
-            <button type="button" className="btn-sm primary" disabled={uploading} onClick={handleUpload}>
+            <button
+              type="button"
+              className="btn-sm primary"
+              disabled={uploading}
+              onClick={handleUpload}
+            >
               <i className="bi bi-upload" /> {uploading ? "Mengunggah..." : "Unggah"}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
@@ -200,7 +270,12 @@ export default function GeeCredentials() {
         </div>
 
         <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
-          <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
+          <button
+            type="button"
+            className="btn-sm danger"
+            disabled={bulkBusy}
+            onClick={handleBulkDelete}
+          >
             <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
           </button>
         </BulkTableToolbar>
@@ -219,7 +294,15 @@ export default function GeeCredentials() {
             </colgroup>
             <thead>
               <tr>
-                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua credential nonaktif di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection">
+                  <input
+                    className="admin-table-check"
+                    type="checkbox"
+                    aria-label="Pilih semua credential nonaktif di halaman"
+                    checked={allPageSelected}
+                    onChange={toggleAllPage}
+                  />
+                </th>
                 <AdminTableNumberHeader />
                 <th>Label</th>
                 <th>Project ID</th>
@@ -232,21 +315,34 @@ export default function GeeCredentials() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td
+                    colSpan={8}
+                    style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}
+                  >
                     Memuat...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--danger-color, #e53935)", padding: "1.5rem" }}>
+                  <td
+                    colSpan={8}
+                    style={{
+                      textAlign: "center",
+                      color: "var(--danger-color, #e53935)",
+                      padding: "1.5rem",
+                    }}
+                  >
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
+                  <td
+                    colSpan={8}
+                    style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}
+                  >
                     Belum ada kredensial. Unggah file JSON akun layanan.
                   </td>
                 </tr>
@@ -255,7 +351,16 @@ export default function GeeCredentials() {
                 !error &&
                 rows.map((c, index) => (
                   <tr key={c.id}>
-                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih credential ${c.label}`} checked={selectedIds.includes(c.id)} disabled={c.is_active} onChange={() => toggleSelected(c.id)} /></td>
+                    <td className="admin-table-selection">
+                      <input
+                        className="admin-table-check"
+                        type="checkbox"
+                        aria-label={`Pilih credential ${c.label}`}
+                        checked={selectedIds.includes(c.id)}
+                        disabled={c.is_active}
+                        onChange={() => toggleSelected(c.id)}
+                      />
+                    </td>
                     <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td title={c.label}>{c.label}</td>
                     <td className="tbl-mono" title={c.project_id}>
@@ -268,11 +373,42 @@ export default function GeeCredentials() {
                       <span className={`stat-badge ${c.is_active ? "badge-green" : "badge-gray"}`}>
                         {c.is_active ? "Aktif" : "Nonaktif"}
                       </span>
+                      <div
+                        className="small mt-1"
+                        title={
+                          c.last_checked_at
+                            ? new Date(c.last_checked_at).toLocaleString("id-ID")
+                            : undefined
+                        }
+                      >
+                        {c.last_check_status === "ok" ? (
+                          <span className="text-success">
+                            <i className="bi bi-check-circle me-1" aria-hidden="true" />
+                            Terhubung
+                          </span>
+                        ) : c.last_check_status === "failed" ? (
+                          <span className="text-danger">
+                            {c.last_check_code || "Pemeriksaan gagal"}
+                          </span>
+                        ) : (
+                          <span className="text-body-secondary">Belum diperiksa</span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ fontSize: 11, color: "var(--text-muted)" }}>
                       {c.uploaded_at ? new Date(c.uploaded_at).toLocaleDateString("id-ID") : "—"}
                     </td>
                     <td>
+                      <button
+                        type="button"
+                        className="btn-sm"
+                        disabled={busyId !== null || bulkBusy || uploading}
+                        onClick={() => void handleProbe(c.id)}
+                        aria-label={`Periksa koneksi ${c.label}`}
+                      >
+                        <i className="bi bi-plug me-1" aria-hidden="true" />
+                        Periksa
+                      </button>
                       {!c.is_active ? (
                         <>
                           <button

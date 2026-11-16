@@ -64,7 +64,7 @@ export const uploadGeeCredential = (file: File, label: string, notes: string, ac
   fd.append("label", label);
   fd.append("notes", notes);
   fd.append("activate", activate ? "true" : "false");
-  return apiClient.upload<{ message: string; credential: GeeCredential }>("/admin/gee/credentials", fd, {
+  return apiClient.upload<{ message: string; credential: GeeCredential; activation_error?: string }>("/admin/gee/credentials", fd, {
     auth: true,
   });
 };
@@ -73,6 +73,9 @@ export const activateGeeCredential = (id: number) =>
   apiClient.post<{ message: string; gee_initialized: boolean }>(`/admin/gee/credentials/${id}/activate`, undefined, {
     auth: true,
   });
+
+export const probeGeeCredential = (id: number) =>
+  apiClient.post<{ ok: boolean; code: string; checked_at: string }>(`/admin/gee/credentials/${id}/probe`, {}, { auth: true });
 
 export const deleteGeeCredential = (id: number) =>
   apiClient.delete<{ message: string }>(`/admin/gee/credentials/${id}`, { auth: true });

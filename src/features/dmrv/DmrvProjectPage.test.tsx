@@ -23,8 +23,8 @@ const project = (role: ProjectRole | null = "project_owner"): Project => ({
   methodology_id: "VM0047", methodology_version: "1.1", start_date: null, crediting_period_years: null,
   status: "draft", revision: 3, created_at: null, updated_at: null, my_role: role,
 });
-const renderPage = () => render(
-  <MemoryRouter initialEntries={["/dmrv/projects/p-1"]}>
+const renderPage = (search = "") => render(
+  <MemoryRouter initialEntries={[`/dmrv/projects/p-1${search}`]}>
     <Routes><Route path="/dmrv/projects/:projectId" element={<DmrvProjectPage />} /></Routes>
   </MemoryRouter>,
 );
@@ -87,4 +87,18 @@ describe("DmrvProjectPage", () => {
     expect(screen.getByText(`evidence-panel write=${role === "project_owner" || role === "analyst"}`)).toBeInTheDocument();
     expect(screen.getByText(`review-panel submit=${role === "project_owner" || role === "analyst"} review=${role === "reviewer" || role === "verifier"}`)).toBeInTheDocument();
   });
+});
+
+it("restores the selected tab from the URL", async () => {
+  vi.mocked(api.getProject).mockResolvedValue(project());
+  renderPage("?tab=field&period=period1");
+  expect(await screen.findByText("field-panel write=true")).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "Data lapangan" })).toHaveAttribute("aria-selected", "true");
+});
+
+it("falls back to overview for an unknown URL tab", async () => {
+  vi.mocked(api.getProject).mockResolvedValue(project());
+  renderPage("?tab=unknown");
+  await screen.findByRole("heading", { name: "Pilot ARR" });
+  expect(screen.getByRole("tab", { name: "Ringkasan" })).toHaveAttribute("aria-selected", "true");
 });

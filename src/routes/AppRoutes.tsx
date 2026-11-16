@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import AppLoginPage from "@/pages/AppLoginPage";
-import RegisterUserPage from "@/pages/RegisterUserPage";
+import RegistrationRoute from "@/components/auth/RegistrationRoute";
 import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -24,6 +24,9 @@ import { VIEWER_FEATURE_CODES } from "@/auth/viewerFeatures";
 import DmrvProjectsPage from "@/features/dmrv/DmrvProjectsPage";
 import DmrvProjectPage from "@/features/dmrv/DmrvProjectPage";
 import ArrIllustrativeAccountingPage from "@/features/dmrv/ArrIllustrativeAccountingPage";
+import IntegrityPage from "@/features/dmrv/integrity/IntegrityPage";
+import PortfolioPage from "@/features/dmrv/integrity/PortfolioPage";
+import OrganizationsPage from "@/features/organizations/OrganizationsPage";
 
 function CarbonEstimationRoute() {
   const location = useLocation();
@@ -87,7 +90,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AppLoginPage />} />
-      <Route path="/register" element={<RegisterUserPage />} />
+      <Route path="/register" element={<RegistrationRoute />} />
       <Route path="/profile" element={<ProtectedAppRoute checkFeatureAccess={false}><ProfilePage /></ProtectedAppRoute>} />
       <Route
         path="/dashboard"
@@ -115,6 +118,9 @@ export default function AppRoutes() {
       {/* dMRV: login required; project membership and roles are enforced by the backend. */}
         <Route path="/dmrv/examples/arr-accounting" element={<ProtectedAppRoute checkFeatureAccess={false}><ArrIllustrativeAccountingPage /></ProtectedAppRoute>} />
       <Route path="/dmrv/projects" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectsPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/portfolio" element={<ProtectedAppRoute checkFeatureAccess={false}><PortfolioPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects/:projectId/integrity" element={<ProtectedAppRoute checkFeatureAccess={false}><IntegrityPage /></ProtectedAppRoute>} />
+      <Route path="/organizations" element={<ProtectedAppRoute checkFeatureAccess={false}><OrganizationsPage /></ProtectedAppRoute>} />
       <Route path="/dmrv/projects/:projectId" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectPage /></ProtectedAppRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/no-features" element={<ProtectedAppRoute><NoFeatureAccessPage /></ProtectedAppRoute>} />

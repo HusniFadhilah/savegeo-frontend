@@ -3,6 +3,8 @@ import type { Language } from "@/i18n/translations";
 /** dMRV copy. Both languages must define the same keys and placeholders (see i18n.test.ts). */
 export const dmrvTranslations: Record<Language, Record<string, string>> = {
   id: {
+    "dmrv.integrity.open": "Kesiapan dan integritas proyek",
+    "dmrv.integrity.portfolio": "Portofolio proyek",
     "dmrv.loading": "Memuat...",
     "dmrv.errors.generic": "Permintaan gagal. Coba lagi.",
     "dmrv.errors.withCode": "{code}: {message}",
@@ -127,6 +129,7 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.project.tab.overview": "Ringkasan",
     "dmrv.project.tab.boundary": "Batas wilayah",
     "dmrv.project.tab.monitoring": "Periode monitoring",
+    "dmrv.project.tab.analysis": "Analisis",
     "dmrv.project.tab.field": "Data lapangan",
     "dmrv.project.tab.evidence": "Paket bukti",
     "dmrv.evidence.heading": "Paket bukti",
@@ -287,6 +290,8 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.field.readOnly": "Peran Anda hanya dapat melihat data lapangan.",
   },
   en: {
+    "dmrv.integrity.open": "Project readiness and integrity",
+    "dmrv.integrity.portfolio": "Project portfolio",
     "dmrv.loading": "Loading...",
     "dmrv.errors.generic": "The request failed. Please try again.",
     "dmrv.errors.withCode": "{code}: {message}",
@@ -411,6 +416,7 @@ export const dmrvTranslations: Record<Language, Record<string, string>> = {
     "dmrv.project.tab.overview": "Overview",
     "dmrv.project.tab.boundary": "Boundary",
     "dmrv.project.tab.monitoring": "Monitoring periods",
+    "dmrv.project.tab.analysis": "Analyses",
     "dmrv.project.tab.field": "Field data",
     "dmrv.project.tab.evidence": "Evidence package",
     "dmrv.evidence.heading": "Evidence packages",

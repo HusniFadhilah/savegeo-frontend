@@ -1,5 +1,4 @@
-import { apiClient } from "@/services/apiClient";
-import { env } from "@/config/env";
+import { ApiError, apiClient } from "@/services/apiClient";
 import type { ChatSession } from "@/types/api";
 import type { AgentControlResponse, AiCatalog, ChatPageState, GeoAiContext, PendingFileAttachment } from "./types";
 
@@ -10,11 +9,7 @@ import type { AgentControlResponse, AiCatalog, ChatPageState, GeoAiContext, Pend
  * chat.py, utils.py, admin.py `/config/public`). None of these payload/
  * response shapes were changed.
  *
- * `sendAgentControl` uses a raw `fetch` (not `apiClient`) because it needs
- * an externally-owned AbortController so the in-flight request can be
- * cancelled from the "Batalkan"/retry-after-30s UI - `apiClient`'s
- * `request()` always creates and owns its own AbortController for its
- * fixed timeout and does not accept an external `signal` override.
+ * Requests share cancellation, safe errors and session expiry with apiClient.
  */
 
 export interface SendAgentControlArgs {
@@ -51,21 +46,21 @@ export async function sendAgentControl(args: SendAgentControlArgs): Promise<Agen
     };
   }
 
-  const res = await fetch(`${env.apiBaseUrl}/agent/control`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(payload),
-    signal: args.signal,
-  });
-
-  const body = await res.json().catch(() => ({}));
-  // A 500 from the AI layer still carries a user-safe message plus `ai`/`retryable`; hand it to
-  // the caller as a normal response so the conversation stays intact.
-  if (!res.ok && res.status !== 429 && !(res.status === 500 && body?.intent === "error")) {
-    throw new Error((body && (body.error as string)) || `HTTP ${res.status}`);
+  try {
+    return await apiClient.post<AgentControlResponse>("/agent/control", payload, {
+      auth: "app", signal: args.signal,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 429 && error.payload && typeof error.payload === "object") {
+      return error.payload as AgentControlResponse;
+    }
+    if (error instanceof ApiError && error.status === 500 && error.payload && typeof error.payload === "object"
+      && (error.payload as Record<string, unknown>).intent === "error") {
+      // Preserve retry state without reflecting a raw server exception in the conversation.
+      return { ...(error.payload as AgentControlResponse), message: error.message };
+    }
+    throw error;
   }
-  return body as AgentControlResponse;
 }
 
 export const chatbotApi = {
@@ -82,7 +77,7 @@ export const chatbotApi = {
 
   async fetchSessions(): Promise<ChatSession[]> {
     try {
-      const data = await apiClient.get<{ sessions: ChatSession[] }>("/chat/sessions");
+      const data = await apiClient.get<{ sessions: ChatSession[] }>("/chat/sessions", { auth: "app" });
       return data?.sessions || [];
     } catch {
       return [];
@@ -91,7 +86,7 @@ export const chatbotApi = {
 
   async fetchSession(id: number): Promise<ChatSession | null> {
     try {
-      return await apiClient.get<ChatSession>(`/chat/sessions/${id}`);
+      return await apiClient.get<ChatSession>(`/chat/sessions/${id}`, { auth: "app" });
     } catch {
       return null;
     }
@@ -99,7 +94,7 @@ export const chatbotApi = {
 
   async renameSession(id: number, title: string): Promise<boolean> {
     try {
-      await apiClient.put(`/chat/sessions/${id}`, { title });
+      await apiClient.put(`/chat/sessions/${id}`, { title }, { auth: "app" });
       return true;
     } catch {
       return false;
@@ -108,7 +103,7 @@ export const chatbotApi = {
 
   async deleteSession(id: number): Promise<boolean> {
     try {
-      await apiClient.delete(`/chat/sessions/${id}`);
+      await apiClient.delete(`/chat/sessions/${id}`, { auth: "app" });
       return true;
     } catch {
       return false;

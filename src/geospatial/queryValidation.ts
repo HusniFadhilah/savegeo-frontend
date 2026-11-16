@@ -12,7 +12,10 @@ export function validateSpatialQuery(sql: string, maxRows = DEFAULT_QUERY_LIMIT)
   const normalized = sql.trim();
   if (!normalized || normalized.length > 50_000 || FORBIDDEN.test(normalized)) throw new Error("spatial.invalidQuery");
   if (!/^SELECT\b/i.test(normalized) && !/^WITH\b/i.test(normalized)) throw new Error("spatial.readOnlyQuery");
-  if (!/\bLIMIT\s+\d+\b/i.test(normalized)) return `${normalized} LIMIT ${Math.max(1, Math.floor(maxRows))}`;
-  return normalized.replace(/\bLIMIT\s+(\d+)\b/i, (_match, value: string) => `LIMIT ${Math.min(Number(value), maxRows)}`);
+  if (!Number.isFinite(maxRows)) throw new Error("spatial.invalidQuery");
+  // Bound the complete result without rewriting quoted strings, CTEs or
+  // nested limits. This is browser UX; it never authorizes SQL on the server.
+  const limit = Math.min(10_000, Math.max(1, Math.floor(maxRows)));
+  return `SELECT * FROM (${normalized}) AS savegeo_result LIMIT ${limit}`;
 }
 

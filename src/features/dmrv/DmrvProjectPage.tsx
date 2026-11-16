@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -10,12 +10,13 @@ import EvidencePackagePanel from "./EvidencePackagePanel";
 import FieldDataPanel from "./FieldDataPanel";
 import MonitoringPeriodPanel from "./MonitoringPeriodPanel";
 import SubmissionReviewPanel from "./SubmissionReviewPanel";
+import ProjectAnalysisPanel from "./ProjectAnalysisPanel";
 import { getProject } from "./api";
 import { describeDmrvError } from "./errors";
 import type { Project, ProjectRole } from "./types";
 
-type Tab = "overview" | "boundary" | "monitoring" | "field" | "evidence";
-const TABS: Tab[] = ["overview", "boundary", "monitoring", "field", "evidence"];
+type Tab = "overview" | "boundary" | "monitoring" | "analysis" | "field" | "evidence";
+const TABS: Tab[] = ["overview", "boundary", "monitoring", "analysis", "field", "evidence"];
 // Mirrors backend ROLE_ACTIONS (boundary.write / field.write). The backend remains the authority.
 const BOUNDARY_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
 const FIELD_WRITERS: ProjectRole[] = ["project_owner", "field_operator"];
@@ -29,7 +30,16 @@ export default function DmrvProjectPage() {
   const t = useI18nStore((state) => state.t);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("overview");
+  const [query, setQuery] = useSearchParams();
+  const requestedTab = query.get("tab");
+  const tab: Tab = TABS.includes(requestedTab as Tab) ? requestedTab as Tab : "overview";
+  function setTab(value: Tab) {
+    setQuery((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("tab", value);
+      return next;
+    });
+  }
   const [evidenceRevision, setEvidenceRevision] = useState(0);
 
   useEffect(() => {
@@ -77,6 +87,11 @@ export default function DmrvProjectPage() {
         ) : null}
         {!project && !error ? <p role="status">{t("dmrv.loading")}</p> : null}
 
+        {project && role !== "field_operator" ? <div className="d-flex gap-2 flex-wrap mb-3">
+          <Link className="dmrv-reference-link" to={`/dmrv/projects/${project.id}/integrity`}><i className="bi bi-shield-check" aria-hidden="true" />{t("dmrv.integrity.open")}</Link>
+          <Link className="dmrv-reference-link" to="/dmrv/portfolio"><i className="bi bi-grid" aria-hidden="true" />{t("dmrv.integrity.portfolio")}</Link>
+        </div> : null}
+
         {project ? (
           <section className="dmrv-panel">
             <div role="tablist" aria-label={t("dmrv.project.tabs")} className="nav nav-tabs dmrv-tabs">
@@ -118,6 +133,7 @@ export default function DmrvProjectPage() {
               ) : null}
               {tab === "boundary" ? <BoundaryPanel projectId={project.id} canWrite={role !== null && BOUNDARY_WRITERS.includes(role)} /> : null}
               {tab === "monitoring" ? <MonitoringPeriodPanel projectId={project.id} canWrite={role !== null && MONITORING_WRITERS.includes(role)} /> : null}
+              {tab === "analysis" ? <ProjectAnalysisPanel projectId={project.id} organizationId={project.organization_id} canRun={role !== null && FIELD_SUMMARY_RUNNERS.includes(role)} /> : null}
               {tab === "field" ? <FieldDataPanel projectId={project.id} canWrite={role !== null && FIELD_WRITERS.includes(role)} canRunSummary={role !== null && FIELD_SUMMARY_RUNNERS.includes(role)} /> : null}
               {tab === "evidence" ? (
                 <>

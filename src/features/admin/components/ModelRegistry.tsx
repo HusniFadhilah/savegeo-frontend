@@ -10,7 +10,7 @@ import BulkTableToolbar from "./BulkTableToolbar";
 
 const ALGOS = ["Ridge", "Lasso", "Linear", "ElasticNet", "RandomForest", "XGBoost"];
 const TYPES = ["carbon", "vegetation", "landcover"];
-const ALLOWED_EXT = [".pkl", ".joblib", ".h5", ".pt", ".pth", ".onnx", ".bin"];
+const ALLOWED_EXT = [".onnx"];
 const MAX_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 
 function formatAlgorithmName(algo?: string | null): string {
@@ -270,7 +270,7 @@ export default function ModelRegistry() {
             </div>
           </div>
           <div className="form-field">
-            <label className="form-label">File model (.pkl, .joblib, .h5, .onnx, .pt)</label>
+            <label className="form-label">File model ONNX (.onnx)</label>
             <div
               className={`upload-zone ${dragOver ? "dragover" : ""}`}
               onClick={() => fileInputRef.current?.click()}
@@ -302,9 +302,9 @@ export default function ModelRegistry() {
             />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
-            <input type="checkbox" id="ml-setdef" checked={setDefault} onChange={(e) => setSetDefault(e.target.checked)} />
+            <input type="checkbox" id="ml-setdef" checked={setDefault} disabled onChange={(e) => setSetDefault(e.target.checked)} />
             <label htmlFor="ml-setdef" style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Jadikan default untuk tipe ini
+              Tinjau dan aktifkan model setelah unggahan sebelum menjadikannya default
             </label>
           </div>
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}

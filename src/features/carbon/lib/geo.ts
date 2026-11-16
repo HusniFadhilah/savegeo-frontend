@@ -3,7 +3,7 @@ import type { AoiFeature } from "@/types/map";
 import { isFiniteMapBounds } from "@/components/map/mapViewValidation";
 
 /**
- * Spherical-excess polygon area (m^2), ported 1:1 from legacy
+ * Spherical-excess polygon area returned in km^2, ported from legacy
  * `calculateAreaFromGeoJSON` in frontend-nextjs2/public/main.js. Works on
  * Polygon/MultiPolygon/GeometryCollection/Feature/FeatureCollection.
  */
@@ -18,8 +18,9 @@ export function calculateAreaFromGeoJSON(geojson: unknown): number | null {
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const current = ring[i];
       const previous = ring[j];
-      if (!current || !previous) continue;
-      const lonDelta = toRad(current[0] - previous[0]);
+      if (!current || !previous || ![current, previous].every(point =>
+        Number.isFinite(point[0]) && Number.isFinite(point[1]) && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90)) return NaN;
+      const lonDelta = toRad(((current[0] - previous[0] + 540) % 360) - 180);
       const currentLat = toRad(current[1]);
       const previousLat = toRad(previous[1]);
       area += lonDelta * (2 + Math.sin(previousLat) + Math.sin(currentLat));
@@ -76,7 +77,7 @@ export function calculateAreaFromBounds(bounds: L.LatLngBounds): number {
 /** Area in km^2 for a GeoJSON geometry/feature, with bounding-box fallback. */
 export function areaKm2(geojson: unknown, bounds?: L.LatLngBounds | null): number | null {
   const fromGeom = calculateAreaFromGeoJSON(geojson);
-  if (fromGeom !== null) return fromGeom;
+  if (geojson || fromGeom !== null) return fromGeom;
   if (bounds) return calculateAreaFromBounds(bounds);
   return null;
 }

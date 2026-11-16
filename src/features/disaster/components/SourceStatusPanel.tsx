@@ -1,4 +1,5 @@
 import type { DisasterSourcesMap } from "../types";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 
 interface Props {
   loading: boolean;
@@ -41,8 +42,8 @@ export default function SourceStatusPanel({ loading, error, sources }: Props) {
             <strong>{item.name}</strong>
             <div className="small">{item.type}</div>
             <div className="small">{item.configured ? "Terkonfigurasi" : "Belum dikonfigurasi di .env"}</div>
-            {item.official_url && (
-              <a href={item.official_url} target="_blank" rel="noopener noreferrer" className="small">
+            {safeHttpUrl(item.official_url) && (
+              <a href={safeHttpUrl(item.official_url)} target="_blank" rel="noopener noreferrer" className="small">
                 Sumber resmi
               </a>
             )}

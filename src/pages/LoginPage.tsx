@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import LoginIllustration from "@/components/auth/LoginIllustration";
+import MfaLoginPanel from "@/components/auth/MfaLoginPanel";
 import { ApiError } from "@/services/apiClient";
 import { authService } from "@/services/authService";
 
 export default function LoginPage() {
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading, error, mfaChallenge, recoveryCodes } = useAuthStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     await login(username, password);
+    if (useAuthStore.getState().mfaChallenge) setPassword("");
   };
 
   const handleForgotSubmit = async (e: FormEvent) => {
@@ -66,7 +68,7 @@ export default function LoginPage() {
             <h5 className="mb-0">SAVEGEO Admin</h5>
             <small className="text-muted">Masuk untuk mengelola sistem</small>
           </div>
-          {forgotMode ? (
+          {mfaChallenge || recoveryCodes.length > 0 ? <MfaLoginPanel /> : forgotMode ? (
             <form onSubmit={handleForgotSubmit}>
               <div className="reset-password-callout mb-3">
                 <i className="bi bi-shield-lock" />

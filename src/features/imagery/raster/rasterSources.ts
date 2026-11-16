@@ -4,13 +4,18 @@ import type { RasterData, RasterSource } from "./rasterTypes";
 import { RASTER_LIMITS } from "./rasterTypes";
 
 function metadata(image: Awaited<ReturnType<Awaited<ReturnType<typeof fromBlob>>["getImage"]>>, source: RasterSource): RasterSource {
-  const fileDirectory = image.getFileDirectory(); const tags = fileDirectory as unknown as Record<string, unknown>; const origin = image.getOrigin(); const resolution = image.getResolution();
-  const bounds = [origin[0], origin[1] + resolution[1] * image.getHeight(), origin[0] + resolution[0] * image.getWidth(), origin[1]];
-  return { ...source, width: image.getWidth(), height: image.getHeight(), bandCount: image.getSamplesPerPixel(), dataType: String(image.getSampleFormat()), nodata: image.getGDALNoData(), transform: [origin[0], resolution[0], 0, origin[1], 0, resolution[1]], bounds, resolution: Math.abs(resolution[0]), crs: String(tags.ProjectedCSTypeGeoKey ?? tags.GeographicTypeGeoKey ?? "unknown") };
+  const keys = image.getGeoKeys() ?? {};
+  const code = keys.ProjectedCSTypeGeoKey ?? keys.GeographicTypeGeoKey;
+  const crs = typeof code === "number" && code !== 32767 ? `EPSG:${code}` : "unknown";
+  const origin = image.getOrigin(); const resolution = image.getResolution();
+  return { ...source, width: image.getWidth(), height: image.getHeight(), bandCount: image.getSamplesPerPixel(),
+    dataType: String(image.getSampleFormat()), nodata: image.getGDALNoData(),
+    transform: [origin[0], resolution[0], 0, origin[1], 0, resolution[1]],
+    bounds: image.getBoundingBox(), resolution: Math.abs(resolution[0]), crs };
 }
 async function read(imageFile: Awaited<ReturnType<typeof fromBlob>>, source: RasterSource): Promise<RasterData> {
   const image = await imageFile.getImage(); const sourceMetadata = metadata(image, source); const pixels = image.getWidth() * image.getHeight();
-  if (pixels > RASTER_LIMITS.maxPixels) throw new Error("raster.rasterTooLarge");
+  if (pixels > RASTER_LIMITS.maxPixels || pixels * image.getSamplesPerPixel() > 64_000_000) throw new Error("raster.rasterTooLarge");
   const values = await image.readRasters({ interleave: false });
   const bands = (Array.isArray(values) ? values : [values]).map(value => Float32Array.from(value as ArrayLike<number>));
   return { width: image.getWidth(), height: image.getHeight(), bands, nodata: sourceMetadata.nodata ?? null, source: sourceMetadata };

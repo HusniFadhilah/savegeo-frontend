@@ -63,6 +63,13 @@ function formatErrorValue(value: unknown): string | null {
 }
 
 function formatApiErrorMessage(payload: unknown, status: number): string {
+  if (status >= 500) {
+    const requestId = payload && typeof payload === "object" && "request_id" in payload
+      ? (payload as Record<string, unknown>).request_id : undefined;
+    const reference = typeof requestId === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId)
+      ? ` (${requestId})` : "";
+    return `Server temporarily unavailable${reference}`;
+  }
   if (typeof payload === "string") {
     const plainText = payload
       .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")

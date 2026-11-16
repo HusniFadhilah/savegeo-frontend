@@ -8,6 +8,11 @@ import { userAuthService } from "@/services/userAuthService";
 export default function ResetPasswordPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [kind] = useState(() => {
+    const value = new URLSearchParams(location.hash.slice(1)).get("kind")
+      ?? new URLSearchParams(location.search).get("kind");
+    return value === "admin" || value === "user" ? value : null;
+  });
   const [token, setToken] = useState(() =>
     new URLSearchParams(location.hash.slice(1)).get("token") ||
     new URLSearchParams(location.search).get("token") || "",
@@ -35,8 +40,8 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setMessage(null);
     setError(null);
-    if (!token) {
-      setError("Link reset password tidak valid atau token tidak ditemukan.");
+    if (!token || !kind) {
+      setError("Link reset password tidak valid. Minta tautan pemulihan yang baru.");
       return;
     }
     if (password.length < 8) {
@@ -50,13 +55,9 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      let res: { message: string };
-      try {
-        res = await userAuthService.resetPassword(token, password);
-      } catch (userErr) {
-        if (!(userErr instanceof ApiError) || userErr.status !== 401) throw userErr;
-        res = await authService.resetPassword(token, password);
-      }
+      const res = kind === "admin"
+        ? await authService.resetPassword(token, password)
+        : await userAuthService.resetPassword(token, password);
       setMessage(res.message);
       setToken("");
       setPassword("");
