@@ -51,6 +51,7 @@ jobs:
 
       - name: Upload production build
         id: build_artifact
+        if: vars.SAVEGEO_UPLOAD_ARTIFACTS == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -94,8 +95,8 @@ jobs:
           name: savegeo-frontend-dist
           path: dist/
 
-      - name: Rebuild validated source when artifact storage is unavailable
-        if: needs.validate.outputs.build_artifact_outcome == 'failure'
+      - name: Rebuild validated source when no artifact is available
+        if: needs.validate.outputs.build_artifact_outcome != 'success'
         env:
           VITE_API_BASE_URL: /api
           VITE_APP_ENV: production
@@ -103,7 +104,7 @@ jobs:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           SAVEGEO_DEPLOYMENT_ENVIRONMENT: production
         run: |
-          echo '::warning::Build artifact upload failed; rebuilding this validated commit with the lockfile and production configuration.'
+          echo 'Rebuilding this validated commit with the lockfile and production configuration.'
           npm ci
           npm run build
 
@@ -208,6 +209,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload production deployment record
+        if: vars.SAVEGEO_UPLOAD_ARTIFACTS == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
