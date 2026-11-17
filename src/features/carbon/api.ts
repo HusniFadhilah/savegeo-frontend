@@ -50,10 +50,16 @@ export async function listCarbonModels(referenceDataset?: string | null): Promis
   const params = new URLSearchParams();
   params.set("model_type", "carbon");
   if (referenceDataset) params.set("target_dataset", referenceDataset);
-  const res = await apiClient.get<{ models: CarbonModelListItem[]; count: number }>(
-    `/models?${params.toString()}`,
-  );
-  return res.models ?? [];
+  const models: CarbonModelListItem[] = [];
+  for (let offset = 0; offset <= 100_000; offset += 100) {
+    params.set("offset", String(offset));
+    params.set("limit", "100");
+    const res = await apiClient.get<{ models: CarbonModelListItem[]; has_more?: boolean }>(`/models?${params}`);
+    models.push(...res.models);
+    if (!res.has_more) return models;
+  }
+  throw new Error("Model catalog exceeds the supported size");
+
 }
 
 export function getCarbonModelInfo(modelName: string): Promise<CarbonModelInfo> {
@@ -328,8 +334,16 @@ export function loadDirectLandCoverReferenceLayer(
   return apiClient.get<DirectReferenceLayer>(`/landcover/reference-layers/${encodeURIComponent(dataset)}?${query.toString()}`);
 }
 
-export function listCompanies() {
-  return apiClient.get<{ companies: CompanyBoundary[] }>("/companies");
+export function listCompanies(options: { search?: string; industryType?: string; provinces?: string[]; offset?: number } = {}) {
+  const params = new URLSearchParams({ limit: "100", offset: String(options.offset ?? 0) });
+  if (options.search) params.set("search", options.search);
+  if (options.industryType) params.set("industry_type", options.industryType);
+  for (const province of options.provinces ?? []) params.append("provinces", province);
+  return apiClient.get<{ companies: CompanyBoundary[]; total: number; has_more: boolean }>(`/companies?${params}`);
+}
+
+export function listCompanyProvinces() {
+  return apiClient.get<{ provinces: string[] }>("/companies/provinces");
 }
 
 export function getCompanyGeojson(companyId: string) {

@@ -86,10 +86,10 @@ export default function CarbonModule() {
   const showLoading = useUiStore((s) => s.showLoading);
   const setLoadingProgress = useUiStore((s) => s.setLoadingProgress);
   const hideLoading = useUiStore((s) => s.hideLoading);
-  const adminRole = useAuthStore((state) => state.user?.role);
+  const adminAccount = useAuthStore((state) => state.user);
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const viewerFeatures = useViewerFeatures((state) => state.features);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminAccount);
   const availableAnalysisTypes: AnalysisType[] = useMemo(
     () => {
       const allowed = getAllowedCarbonModes(isViewerPrincipal ? viewerFeatures : null);

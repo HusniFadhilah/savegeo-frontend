@@ -27,7 +27,7 @@ export default function FieldPanel({ commodities }: Props) {
   const t = useI18nStore((state) => state.t);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
-  const { fields, selectedField, loading, loadFields, selectField, saveField, clearSelection } =
+  const { fields, selectedField, loading, loadFields, offset, hasMore, error, selectField, saveField, clearSelection } =
     useFieldStore();
 
   const [activeTab, setActiveTab] = useState<TabKey>("existing");
@@ -138,6 +138,11 @@ export default function FieldPanel({ commodities }: Props) {
 
         {activeTab === "existing" && (
           <div className="mb-3">
+            {error && <div role="alert" className="alert alert-danger">{t("location.failed")}</div>}
+            <div className="d-flex gap-2 mb-2">
+              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || offset === 0} onClick={() => void loadFields(Math.max(0, offset - 100))}>?</button>
+              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || !hasMore} onClick={() => void loadFields(offset + 100)}>{t("common.loadMore")} ?</button>
+            </div>
             {loading && <div className="text-muted small">{t("crop.field.loading")}</div>}
             {!loading && fields.length === 0 && (
               <div className="alert alert-secondary py-2 small mb-0">

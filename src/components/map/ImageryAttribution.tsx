@@ -1,3 +1,4 @@
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useBasemapContext } from "./BasemapContext";
@@ -27,9 +28,10 @@ const SATELLITE_BASEMAP_ID = "satellite";
  */
 export default function ImageryAttribution() {
   const map = useMap();
+  const t = useI18nStore(s => s.t);
   const { activeBasemapId, historicalImageryDate } = useBasemapContext();
   const dateTextRef = useRef<string | null>(null);
-  const dateElRef = useRef<HTMLDivElement | null>(null);
+  const dateElRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const container = map.attributionControl?.getContainer();
@@ -39,7 +41,9 @@ export default function ImageryAttribution() {
     const toggle = () => container.classList.toggle("savegeo-attribution-expanded");
     container.addEventListener("click", toggle);
 
-    const dateEl = document.createElement("div");
+    const dateEl = document.createElement("button");
+    dateEl.type = "button";
+    dateEl.style.cssText = "display:block;border:0;background:transparent;color:inherit;font:inherit;text-align:left";
     dateEl.className = "savegeo-attribution-date";
     dateElRef.current = dateEl;
     const ensureAppended = () => {
@@ -67,30 +71,37 @@ export default function ImageryAttribution() {
       return;
     }
 
-    let cancelled = false;
+    let requestId = 0;
+    const dateEl = dateElRef.current;
+    const show = (text: string) => {
+      dateTextRef.current = text;
+      if (!dateEl) return;
+      dateEl.textContent = text;
+      const container = map.attributionControl?.getContainer();
+      if (container && !container.contains(dateEl)) container.appendChild(dateEl);
+    };
     const update = () => {
+      requestId += 1;
+      show(t("map.imageryDateAction"));
+    };
+    const requestDate = (event: MouseEvent) => {
+      event.stopPropagation();
+      const id = ++requestId;
       const center = map.getCenter();
-      fetchEsriImageryDate(center.lat, center.lng, map.getZoom()).then((date) => {
-        if (cancelled) return;
-        dateTextRef.current = date ? `Citra satelit: ${date}` : null;
-        const dateEl = dateElRef.current;
-        if (!dateEl) return;
-        if (!dateTextRef.current) {
-          dateEl.remove();
-          return;
-        }
-        dateEl.textContent = dateTextRef.current;
-        const container = map.attributionControl?.getContainer();
-        if (container && !container.contains(dateEl)) container.appendChild(dateEl);
+      fetchEsriImageryDate(center.lat, center.lng, map.getZoom()).then(date => {
+        if (id !== requestId) return;
+        show(date ? t("map.imageryDate", { date }) : t("map.imageryDateNone"));
       });
     };
     update();
+    dateEl?.addEventListener("click", requestDate);
     map.on("moveend", update);
     return () => {
-      cancelled = true;
+      requestId += 1;
       map.off("moveend", update);
+      dateEl?.removeEventListener("click", requestDate);
     };
-  }, [map, activeBasemapId, historicalImageryDate]);
+  }, [map, activeBasemapId, historicalImageryDate, t]);
 
   useEffect(() => {
     if (activeBasemapId !== "google-satellite") return;

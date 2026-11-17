@@ -17,7 +17,7 @@ export default function AdminPage({ section = DEFAULT_ADMIN_SECTION }: { section
     return <LoginPage />;
   }
 
-  if (isViewerRole(user?.role)) {
+  if (isViewerRole(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 

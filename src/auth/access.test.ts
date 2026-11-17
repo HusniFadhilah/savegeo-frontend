@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { canAccessAdminSection, getDashboardEntryPath, hasAdminPermission, isViewerRole } from "./access";
 
 describe("isViewerRole", () => {
-  it("recognizes viewer regardless of casing and whitespace", () => {
-    expect(isViewerRole(" viewer ")).toBe(true);
-    expect(isViewerRole("VIEWER")).toBe(true);
+  it("recognizes the explicit viewer flag regardless of role name", () => {
+    expect(isViewerRole({ is_viewer: true })).toBe(true);
+    expect(isViewerRole({ is_viewer: true })).toBe(true);
   });
 
   it("does not classify other or missing roles as viewer", () => {
-    expect(isViewerRole("administrator")).toBe(false);
+    expect(isViewerRole({ is_viewer: false })).toBe(false);
     expect(isViewerRole(null)).toBe(false);
     expect(isViewerRole(undefined)).toBe(false);
   });
@@ -16,7 +16,7 @@ describe("isViewerRole", () => {
 
 describe("getDashboardEntryPath", () => {
   it("sends viewer accounts to the regular dashboard", () => {
-    expect(getDashboardEntryPath({ isAdminAuthenticated: true, isUserAuthenticated: false, adminRole: "viewer" })).toBe("/carbon-estimation");
+    expect(getDashboardEntryPath({ isAdminAuthenticated: true, isUserAuthenticated: false, adminRole: "renamed-viewer", adminIsViewer: true })).toBe("/carbon-estimation");
   });
 
   it("keeps non-viewer admin accounts in the admin dashboard", () => {
@@ -69,5 +69,14 @@ describe("explicit admin permissions", () => {
     expect(hasAdminPermission(admin, "model.write")).toBe(true);
     expect(hasAdminPermission(admin, "credential.read")).toBe(false);
     expect(hasAdminPermission(admin, "secret.read")).toBe(false);
+  });
+});
+
+describe("explicit full access", () => {
+  it("denies missing role and missing flag", () => {
+    expect(hasAdminPermission({ role: null }, "secret.write")).toBe(false);
+    expect(hasAdminPermission({ role: null, is_superuser: false }, "secret.write")).toBe(false);
+    expect(hasAdminPermission({ role: null, is_superuser: true }, "secret.write")).toBe(true);
+    expect(hasAdminPermission({ role: "renamed", is_viewer: true, permissions: ["secret.write"] }, "secret.write")).toBe(false);
   });
 });

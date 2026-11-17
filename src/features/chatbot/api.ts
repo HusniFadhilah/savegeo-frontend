@@ -76,38 +76,28 @@ export const chatbotApi = {
   },
 
   async fetchSessions(): Promise<ChatSession[]> {
-    try {
-      const data = await apiClient.get<{ sessions: ChatSession[] }>("/chat/sessions", { auth: "app" });
-      return data?.sessions || [];
-    } catch {
-      return [];
-    }
+    const data = await apiClient.get<{ sessions: ChatSession[] }>("/chat/sessions", { auth: "app" });
+    if (!Array.isArray(data?.sessions)) throw new Error("Invalid chat session response");
+    return data.sessions;
   },
 
   async fetchSession(id: number): Promise<ChatSession | null> {
     try {
       return await apiClient.get<ChatSession>(`/chat/sessions/${id}`, { auth: "app" });
-    } catch {
-      return null;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
     }
   },
 
   async renameSession(id: number, title: string): Promise<boolean> {
-    try {
-      await apiClient.put(`/chat/sessions/${id}`, { title }, { auth: "app" });
-      return true;
-    } catch {
-      return false;
-    }
+    await apiClient.put(`/chat/sessions/${id}`, { title }, { auth: "app" });
+    return true;
   },
 
   async deleteSession(id: number): Promise<boolean> {
-    try {
-      await apiClient.delete(`/chat/sessions/${id}`, { auth: "app" });
-      return true;
-    } catch {
-      return false;
-    }
+    await apiClient.delete(`/chat/sessions/${id}`, { auth: "app" });
+    return true;
   },
 
   /** Public (unauthenticated) config values, used here only for `ai.rate_limit_max_file_mb`. */

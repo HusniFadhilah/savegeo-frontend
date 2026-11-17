@@ -22,11 +22,11 @@ export default function ProtectedAppRoute({
   const isAdminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isUserLoading = useUserAuthStore((state) => state.isLoading);
   const isAdminLoading = useAuthStore((state) => state.isLoading);
-  const adminRole = useAuthStore((state) => state.user?.role);
+  const adminAccount = useAuthStore((state) => state.user);
   const features = useViewerFeatures((state) => state.features);
   const featureError = useViewerFeatures((state) => state.error);
   const loadFeatures = useViewerFeatures((state) => state.load);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminAccount);
   const t = useI18nStore((state) => state.t);
 
   useEffect(() => {

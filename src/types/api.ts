@@ -18,6 +18,8 @@ export interface RegionOption {
 }
 
 export interface AdminUser {
+  is_superuser?: boolean;
+  is_viewer?: boolean;
   mfa_enabled?: boolean;
   full_name?: string | null;
   id?: number;

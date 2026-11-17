@@ -41,7 +41,7 @@ export default function Navbar() {
 
   const activeIsAdmin = isAuthenticated;
   const activeUser = activeIsAdmin ? user : appUser;
-  const isViewer = activeIsAdmin && isViewerRole(user?.role);
+  const isViewer = activeIsAdmin && isViewerRole(user);
   // A non-viewer admin is routed to the admin workspace by /dashboard, so
   // showing both dashboard links would expose two menu items for the same
   // destination. Viewer/admin-less sessions still need the regular app link.

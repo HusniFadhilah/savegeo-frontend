@@ -222,6 +222,7 @@ export const saveViewerFeatureSettings = (enabledFeatures: string[]) =>
   }, { auth: true });
 
 export const createAdminUser = (payload: {
+  is_superuser?: boolean;
   full_name?: string | null;
   username: string;
   password: string;
@@ -232,7 +233,7 @@ export const createAdminUser = (payload: {
 
 export const updateAdminUser = (
   id: number,
-  payload: { full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
+  payload: { is_superuser?: boolean; full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
 ) => apiClient.put<{ message: string; user: AdminUserRow }>(`/admin/users/${id}`, payload, { auth: true });
 
 export const deleteAdminUser = (id: number) =>

@@ -152,12 +152,9 @@ export interface LocationSearchResult {
 export async function searchLocations(query: string): Promise<LocationSearchResult[]> {
   const q = query.trim();
   if (q.length < 3) return [];
-  try {
-    const res = await apiClient.get<{ results: LocationSearchResult[] }>(
-      `/utils/geocode/search?q=${encodeURIComponent(q)}&limit=8`,
-    );
-    return res?.results ?? [];
-  } catch {
-    return [];
-  }
+  const res = await apiClient.get<{ results: LocationSearchResult[] }>(
+    `/utils/geocode/search?q=${encodeURIComponent(q)}&limit=8`,
+  );
+  return res.results;
+
 }

@@ -77,7 +77,7 @@ export default function AdminUsers() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
-  const canAssignFullAccess = hasAdminPermission(me, "secret.write");
+  const canAssignFullAccess = me?.is_superuser === true;
   const canManageViewerFeatures = hasAdminPermission(me, "viewer_features.manage");
 
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function AdminUsers() {
   }, []);
 
   const reload = () => setReloadKey((k) => k + 1);
-  const selectableRows = me ? rows.filter((u) => me.id !== u.id && (!me.role || Boolean(u.role))) : [];
+  const selectableRows = me ? rows.filter((u) => me.id !== u.id && (me.is_superuser || !u.is_superuser)) : [];
   const allPageSelected = selectableRows.length > 0 && selectableRows.every((u) => selectedIds.includes(u.id));
   const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
   const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !selectableRows.some((u) => u.id === id)) : Array.from(new Set([...ids, ...selectableRows.map((u) => u.id)]))));
@@ -151,6 +151,7 @@ export default function AdminUsers() {
           password: form.password,
           email: form.email.trim() || null,
           role_id: roleId,
+          is_superuser: roleId === null,
           is_active: form.isActive,
         });
         notify(t("admin.users.created"), "s");
@@ -164,6 +165,7 @@ export default function AdminUsers() {
           email: form.email.trim() || null,
           is_active: form.isActive,
           role_id: roleId,
+          is_superuser: roleId === null,
           ...(form.password ? { new_password: form.password } : {}),
         });
         if (form.id === me?.id) {
@@ -333,12 +335,12 @@ export default function AdminUsers() {
                 !error &&
                 rows.map((u, index) => (
                   <tr key={u.id}>
-                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (!me?.is_superuser && u.is_superuser === true)} onChange={() => toggleSelected(u.id)} /></td>
                     <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td className="admin-user-identity">
                       <AccountIdentity user={u} missingName={t("admin.users.nameMissing")} />
                     </td>
-                    <td>{u.role ? roleLabel(u.role) : t("admin.users.fullAccess")}</td>
+                    <td>{u.is_superuser ? t("admin.users.fullAccess") : u.role ? roleLabel(u.role) : "?"}</td>
                     <td>
                       <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? t("admin.users.active") : t("admin.users.inactive")}</span>
                     </td>
@@ -346,10 +348,10 @@ export default function AdminUsers() {
                     <td>{formatAdminDate(u.last_login, language)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                        {(!me?.role || u.role) && <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
+                        {(me?.is_superuser || !u.is_superuser) && <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
                           <i className="bi bi-pencil-square" />
                         </button>}
-                        {(!me?.role || u.role) && <button
+                        {(me?.is_superuser || !u.is_superuser) && <button
                           type="button"
                           className="btn-xs danger"
                           title={t("admin.delete")}

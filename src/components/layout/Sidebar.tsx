@@ -24,9 +24,9 @@ export default function Sidebar() {
   const { activeModule, setActiveModule, sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar } = useUiStore();
   const { language, setLanguage, t } = useI18nStore();
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
-  const adminRole = useAuthStore((state) => state.user?.role);
+  const adminAccount = useAuthStore((state) => state.user);
   const features = useViewerFeatures((state) => state.features);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminAccount);
   const visibleMenu = MENU.filter((item) =>
     !isViewerPrincipal || !item.features || item.features.some((feature) => features?.includes(feature)),
   );

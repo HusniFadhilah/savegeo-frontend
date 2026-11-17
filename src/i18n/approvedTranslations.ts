@@ -13,6 +13,18 @@ export type Language = "id" | "en";
  */
 export const approvedTranslations: Record<Language, Record<string, string>> = {
   id: {
+    "location.search": "Cari",
+    "location.disclosure": "Nama lokasi dikirim ke OpenStreetMap saat Anda menekan Cari. Jangan masukkan data pribadi atau rahasia.",
+    "location.enter": "Tekan Cari atau Enter untuk mencari lokasi.",
+    "location.failed": "Pencarian gagal. Coba lagi.",
+    "location.notFound": "Tidak ditemukan",
+    "location.minimum": "Ketik minimal 3 huruf...",
+    "location.loading": "Mencari...",
+    "map.imageryDateAction": "Cek tanggal citra: kirim lokasi perkiraan (?1 km) ke Esri",
+    "map.imageryDate": "Citra satelit: {date}",
+    "map.imageryDateNone": "Tanggal citra tidak tersedia. Klik untuk mencoba lagi.",
+    "common.loadMore": "Muat selanjutnya",
+
     "account.fullName": "Nama lengkap",
     "account.profile": "Profil saya",
     "account.nameHint": "Nama lengkap ditampilkan pada akun. Username digunakan untuk login.",
@@ -1658,6 +1670,18 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.referenceCarbon": "Peta Referensi Asli",
   },
   en: {
+    "location.search": "Search",
+    "location.disclosure": "The place name is sent to OpenStreetMap when you select Search. Do not enter personal or confidential data.",
+    "location.enter": "Select Search or press Enter to find a place.",
+    "location.failed": "Search failed. Please retry.",
+    "location.notFound": "No results",
+    "location.minimum": "Enter at least 3 characters...",
+    "location.loading": "Searching...",
+    "map.imageryDateAction": "Check imagery date: send approximate location (?1 km) to Esri",
+    "map.imageryDate": "Satellite imagery: {date}",
+    "map.imageryDateNone": "Imagery date unavailable. Select to retry.",
+    "common.loadMore": "Load more",
+
     "account.fullName": "Full name",
     "account.profile": "My profile",
     "account.nameHint": "Your full name is shown on your account. Use your username to sign in.",

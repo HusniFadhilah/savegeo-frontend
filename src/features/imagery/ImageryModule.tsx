@@ -32,6 +32,7 @@ import { himawariTileUrlFromSceneId, listHimawariScenes } from "./himawari";
 import { parseQuery, updateUrlFromState } from "./lib/imageryQueryState";
 import GpuEnhancedTileLayer from "./GpuEnhancedTileLayer";
 import { useGpuSuperResolution } from "./hooks/useGpuSuperResolution";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 
 const STAC_EXAMPLES = [
   { name: "Earth Search - Sentinel-2 L2A", url: "https://earth-search.aws.element84.com/v1", collection: "sentinel-2-l2a" },
@@ -1951,8 +1952,8 @@ export default function ImageryModule() {
               <small className="text-muted d-block mt-1">
                 {activeCogAsset ? `Asset aktif: ${activeCogAsset.key}` : "Pilih scene untuk melihat asset COG yang tersedia."}
               </small>
-              {activeCogDownloadUrl && (
-                <a className="btn btn-sm btn-outline-success w-100 mt-2" href={activeCogDownloadUrl} target="_blank" rel="noreferrer">
+              {safeHttpUrl(activeCogDownloadUrl) && (
+                <a className="btn btn-sm btn-outline-success w-100 mt-2" href={safeHttpUrl(activeCogDownloadUrl)} target="_blank" rel="noopener noreferrer">
                   <i className="bi bi-download" /> Download Asset Aktif
                 </a>
               )}
@@ -2268,13 +2269,13 @@ export default function ImageryModule() {
                               >
                                 <i className="bi bi-zoom-in" />
                               </button>
-                              {!group && supportsDownload && scene.download_url && (
+                              {!group && supportsDownload && safeHttpUrl(scene.download_url) && (
                                 <a
                                   className="btn btn-outline-secondary"
-                                  href={scene.download_url}
+                                  href={safeHttpUrl(scene.download_url)}
                                   title="Download source scene"
                                   target="_blank"
-                                  rel="noreferrer"
+                                  rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <i className="bi bi-download" />

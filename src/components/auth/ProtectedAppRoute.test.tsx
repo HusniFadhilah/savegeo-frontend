@@ -6,7 +6,7 @@ import ProtectedAppRoute from "./ProtectedAppRoute";
 import AnalysisTypeSelector from "@/features/carbon/components/AnalysisTypeSelector";
 
 const session = vi.hoisted(() => ({
-  admin: { user: { role: "viewer" }, isAuthenticated: true, isLoading: false },
+  admin: { user: { role: "viewer", is_viewer: true }, isAuthenticated: true, isLoading: false },
   user: { isAuthenticated: false, isLoading: false },
   featureState: {
     features: ["app.feature.carbon_stock"] as string[] | null,
@@ -33,6 +33,7 @@ describe("Viewer route and mode gates", () => {
   afterEach(cleanup);
   beforeEach(() => {
     session.admin.user.role = "viewer";
+    session.admin.user.is_viewer = true;
     session.admin.isAuthenticated = true;
     session.user.isAuthenticated = false;
     session.featureState.features = ["app.feature.carbon_stock"];

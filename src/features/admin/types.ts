@@ -119,6 +119,8 @@ export interface CompanyBoundaryFull {
 }
 
 export interface AdminUserRow {
+  is_superuser?: boolean;
+  is_viewer?: boolean;
   full_name?: string | null;
   id: number;
   username: string;

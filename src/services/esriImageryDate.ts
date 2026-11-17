@@ -1,3 +1,5 @@
+import { apiClient } from "@/services/apiClient";
+
 interface EsriIdentifyAttributes {
   [key: string]: string | undefined;
 }
@@ -28,33 +30,20 @@ const cache = new Map<string, Promise<string | null>>();
  * data.
  */
 export function fetchEsriImageryDate(lat: number, lng: number, zoom: number): Promise<string | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(zoom) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return Promise.resolve(null);
   const key = `${lat.toFixed(2)},${lng.toFixed(2)},${Math.round(zoom)}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
   const promise = lookupEsriImageryDate(lat, lng, zoom).catch(() => null);
+  if (cache.size >= 256) cache.delete(cache.keys().next().value!);
   cache.set(key, promise);
   return promise;
 }
 
 async function lookupEsriImageryDate(lat: number, lng: number, zoom: number): Promise<string | null> {
-  const delta = 0.01;
-  const params = new URLSearchParams({
-    f: "json",
-    geometry: `${lng},${lat}`,
-    geometryType: "esriGeometryPoint",
-    sr: "4326",
-    tolerance: "2",
-    mapExtent: `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`,
-    imageDisplay: "400,400,96",
-    layers: "all",
-    returnGeometry: "false",
-  });
-  const res = await fetch(
-    `https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/identify?${params.toString()}`,
-  );
-  if (!res.ok) return null;
-  const data = (await res.json()) as EsriIdentifyResponse;
+  const params = new URLSearchParams({ lat: lat.toFixed(2), lng: lng.toFixed(2) });
+  const data = await apiClient.get<EsriIdentifyResponse>(`/utils/imagery-date?${params}`);
 
   let best: { date: Date; drawOrder: number } | null = null;
   for (const result of data.results ?? []) {

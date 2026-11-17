@@ -1,3 +1,4 @@
+import { useI18nStore } from "@/hooks/useI18nStore";
 import { useEffect, useRef, useState } from "react";
 import { searchLocations, type LocationSearchResult } from "@/services/analysisService";
 
@@ -18,13 +19,15 @@ interface Props {
  * debounced data source instead of a local option list.
  */
 export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota, provinsi, kecamatan, alamat...", selectedLabel, onClear }: Props) {
+  const t = useI18nStore(s => s.t);
+  const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LocationSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSeq = useRef(0);
 
   useEffect(() => {
@@ -35,28 +38,26 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  useEffect(() => () => { requestSeq.current += 1; }, []);
+
+  async function submitSearch() {
     const q = query.trim();
-    if (q.length < 3) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (q.length < 3 || loading) return;
     const seq = ++requestSeq.current;
-    debounceRef.current = setTimeout(() => {
-      searchLocations(q).then((r) => {
-        if (requestSeq.current !== seq) return; // stale response, a newer query already fired
-        setResults(r);
-        setLoading(false);
-        setActiveIdx(0);
-      });
-    }, 350);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query]);
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+    try {
+      const candidates = await searchLocations(q);
+      if (seq !== requestSeq.current) return;
+      setResults(candidates);
+      setActiveIdx(0);
+    } catch {
+      if (seq === requestSeq.current) setError(t("location.failed"));
+    } finally {
+      if (seq === requestSeq.current) setLoading(false);
+    }
+  }
 
   const commit = (result: LocationSearchResult) => {
     onSelect(result);
@@ -77,6 +78,7 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
       e.preventDefault();
       const r = results[activeIdx];
       if (r) commit(r);
+      else void submitSearch();
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -92,12 +94,17 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
           value={open ? query : ""}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
+            requestSeq.current += 1;
+            setResults([]);
+            setLoading(false);
+            setSearched(false);
+            setError(null);
             setQuery(e.target.value);
             setOpen(true);
           }}
           onKeyDown={handleKeyDown}
         />
-        <i className={`bi ${loading ? "bi-hourglass-split" : "bi-search"} sg-ssel-icon`} />
+        <button type="button" className="btn btn-sm" onClick={() => void submitSearch()} disabled={loading || query.trim().length < 3}>{t("location.search")}</button>
         {selectedLabel && onClear && (
           <button
             type="button"
@@ -113,13 +120,16 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
           </button>
         )}
       </div>
+      <small className="text-muted">{t("location.disclosure")} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">? OpenStreetMap</a></small>
       {open && (
         <div className="sg-ssel-dropdown">
-          {query.trim().length < 3 && <div className="sg-ssel-empty">Ketik minimal 3 huruf...</div>}
-          {query.trim().length >= 3 && loading && <div className="sg-ssel-empty">Mencari...</div>}
-          {query.trim().length >= 3 && !loading && results.length === 0 && (
-            <div className="sg-ssel-empty">Tidak ditemukan</div>
+          {query.trim().length < 3 && <div className="sg-ssel-empty">{t("location.minimum")}</div>}
+          {query.trim().length >= 3 && loading && <div className="sg-ssel-empty">{t("location.loading")}</div>}
+          {query.trim().length >= 3 && searched && !error && !loading && results.length === 0 && (
+            <div className="sg-ssel-empty">{t("location.notFound")}</div>
           )}
+          {!searched && query.trim().length >= 3 && <div className="sg-ssel-empty">{t("location.enter")}</div>}
+          {error && <div role="alert" className="sg-ssel-empty">{error}</div>}
           {results.map((r, idx) => (
             <div
               key={r.osm_id}

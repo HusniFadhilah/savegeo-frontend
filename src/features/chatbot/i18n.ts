@@ -9,8 +9,10 @@ import type { QuickAction } from "./types";
  * errors) was hardcoded Indonesian there too, so it stays Indonesian-only
  * here as well.
  */
-export const CHAT_I18N: Record<"id" | "en", { welcome: string; quickActions: QuickAction[] }> = {
+export const CHAT_I18N: Record<"id" | "en", { welcome: string; quickActions: QuickAction[]; historyLoadFailed: string; historyRetry: string }> = {
   id: {
+    historyLoadFailed: "Riwayat percakapan gagal dimuat. Periksa koneksi lalu coba lagi.",
+    historyRetry: "Coba lagi",
     welcome:
       "Halo, saya SaveGeo Assistant. Saya bisa membantu membaca peta, menjelaskan fitur, memilih dataset, menjalankan analisis, dan membuat ringkasan. Gambar AOI di peta atau tanyakan apa yang ingin dianalisis.",
     quickActions: [
@@ -23,6 +25,8 @@ export const CHAT_I18N: Record<"id" | "en", { welcome: string; quickActions: Qui
     ],
   },
   en: {
+    historyLoadFailed: "Chat history could not be loaded. Check your connection and try again.",
+    historyRetry: "Retry",
     welcome:
       "Hi, I am SaveGeo Assistant. I can help read the map, explain features, choose datasets, run analyses, and prepare summaries. Draw an AOI on the map or ask what you want to analyze.",
     quickActions: [

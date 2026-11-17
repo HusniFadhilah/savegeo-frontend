@@ -288,7 +288,7 @@ const MODEL_DOCS = [
 export default function GuideModule() {
   const t = useI18nStore((state) => state.t);
   const setActiveModule = useUiStore((s) => s.setActiveModule);
-  const isViewer = useAuthStore((s) => isViewerRole(s.user?.role));
+  const isViewer = useAuthStore((s) => isViewerRole(s.user));
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<StepId>("step1");
   const toggle = (id: StepId) => setOpenId((cur) => (cur === id ? ("" as StepId) : id));
