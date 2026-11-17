@@ -53,7 +53,31 @@ export interface MlModel {
   is_active: boolean;
   is_default: boolean;
   is_legacy?: boolean;
+  lifecycle_state: "experimental" | "training" | "evaluated" | "review_pending" | "approved" | "active" | "rejected" | "archived";
+  approved_by?: number | null;
+  approved_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ModelEvaluationResult {
+  evaluation_id: number;
+  artifact_sha256: string;
+  dataset_sha256: string;
+  manifest: Record<string, unknown>;
+  metrics: {
+    metric_type: "regression" | "classification";
+    sample_count: number;
+    independent_group_count: number;
+    rmse?: number;
+    mae?: number;
+    bias_prediction_minus_observed?: number;
+    r2?: number | null;
+    accuracy?: number;
+    balanced_accuracy?: number;
+    class_labels?: number[];
+    confusion_matrix?: number[][];
+  };
+  evaluated_at: string;
 }
 
 export interface AdminConfigItem {
@@ -121,6 +145,10 @@ export interface CompanyBoundaryFull {
 export interface AdminUserRow {
   is_superuser?: boolean;
   is_viewer?: boolean;
+  mfa_enabled?: boolean;
+  mfa_required?: boolean | null;
+  mfa_required_effective?: boolean;
+  mfa_policy_locked?: boolean;
   full_name?: string | null;
   id: number;
   username: string;

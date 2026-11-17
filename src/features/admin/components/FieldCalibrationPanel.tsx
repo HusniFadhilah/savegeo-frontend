@@ -49,6 +49,10 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     { id: string; target_pool: string; status: string; created_at: string }[]
   >([]);
   const [pool, setPool] = useState<Pool>("agb");
+  const [autoPool, setAutoPool] = useState<Pool>("agb");
+  const [autoYear, setAutoYear] = useState(new Date().getFullYear());
+  const [autoOffset, setAutoOffset] = useState(0);
+  const [predictionSource, setPredictionSource] = useState("");
   const [filterPool, setFilterPool] = useState<Pool | undefined>();
   const [inventory, setInventory] = useState<FieldInventory | null>(null);
   const [loadingRows, setLoadingRows] = useState(true);
@@ -148,6 +152,44 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
       changed();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Prediksi gagal disimpan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function extractPredictions(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const { run: queued } = await fieldApi.extractPredictions(datasetId, {
+        pool: autoPool,
+        analysis_year: Number(data.get("year")),
+        offset: Number(data.get("offset")),
+        limit: Number(data.get("limit")),
+      });
+      let run = queued;
+      for (let attempt = 0; attempt < 90 && ["queued", "running"].includes(run.status); attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        run = await fieldApi.run(run.id);
+      }
+      if (run.status === "failed") {
+        throw new Error(run.error?.message ?? "Ekstraksi prediksi GEE gagal.");
+      }
+      if (run.status === "queued" || run.status === "running") {
+        throw new Error(`Ekstraksi masih berjalan. Buka riwayat run ${run.id} untuk memeriksa statusnya.`);
+      }
+      const source = run.metrics?.prediction_source;
+      if (!source) throw new Error("Run selesai tanpa ID sumber prediksi.");
+      setPool(autoPool);
+      setPredictionSource(source);
+      setRefresh((value) => value + 1);
+      setNotice(
+        `Prediksi ${autoPool.toUpperCase()} tersimpan untuk batch ini: ${run.metrics?.predictions_saved ?? 0} baru, ${run.metrics?.predictions_reused ?? 0} dipakai ulang, ${run.metrics?.without_valid_pixels ?? 0} tanpa piksel valid. Sumber: ${source}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Prediksi GEE gagal diproses.");
     } finally {
       setBusy(false);
     }
@@ -400,6 +442,69 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </button>
         </div>
       )}
+      <details className="border rounded p-3 mb-3">
+        <summary className="fw-semibold">Ekstrak prediksi dari model GEE yang disetujui</summary>
+        <form className="mt-3" onSubmit={(event) => void extractPredictions(event)}>
+          <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
+            <div className="row g-2">
+              <label className="col-md-3 form-label">
+                Pool
+                <select
+                  className="form-select"
+                  value={autoPool}
+                  onChange={(event) => setAutoPool(event.target.value as Pool)}
+                >
+                  {FIELD_POOLS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="col-md-3 form-label">
+                Tahun prediksi
+                <input
+                  name="year"
+                  type="number"
+                  min={1984}
+                  max={new Date().getFullYear()}
+                  value={autoYear}
+                  onChange={(event) => setAutoYear(Number(event.target.value))}
+                  className="form-control"
+                  required
+                />
+              </label>
+              <label className="col-md-3 form-label">
+                Offset batch
+                <input
+                  name="offset"
+                  type="number"
+                  min={0}
+                  max={100000}
+                  step={1}
+                  value={autoOffset}
+                  onChange={(event) => setAutoOffset(Number(event.target.value))}
+                  className="form-control"
+                />
+              </label>
+              <label className="col-md-3 form-label">
+                Plot per batch
+                <select name="limit" className="form-select" defaultValue="250">
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="250">250</option>
+                  <option value="500">500</option>
+                </select>
+              </label>
+            </div>
+            <p className="small text-muted mt-2 mb-2">
+              Sistem memilih model GEE aktif dengan evaluasi dan persetujuan independen yang cocok untuk pool ini.
+              Jalankan batch berikutnya dengan offset bertambah sesuai jumlah plot per batch. Geometri plot tersimpan
+              dipakai bila tersedia; selain itu digunakan lingkaran dengan luas setara dari titik koordinat dan luas plot.
+              Hasil tersimpan sebagai snapshot prediksi berversi dan tidak menimpa snapshot sebelumnya.
+            </p>
+            <button type="submit" className="btn btn-outline-success" disabled={busy}>
+              {busy ? "Mengekstrak dari Earth Engine…" : "Ekstrak prediksi batch"}
+            </button>
+          </fieldset>
+        </form>
+      </details>
       <details className="border rounded p-3 my-3">
         <summary className="fw-semibold">Pasangkan prediksi model / raster</summary>
         <form className="mt-3" onSubmit={(event) => void addPrediction(event)}>
@@ -492,6 +597,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                   minLength={3}
                   required
                   className="form-control"
+                  value={predictionSource}
+                  onChange={(event) => setPredictionSource(event.target.value)}
                 />
                 <datalist id="field-prediction-sources">
                   {(

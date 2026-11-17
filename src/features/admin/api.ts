@@ -4,6 +4,7 @@ import type {
   GeeCredential,
   ArcgisStatusInfo,
   MlModel,
+  ModelEvaluationResult,
   AdminConfigCategories,
   KeyPoolStatus,
   OllamaCatalog,
@@ -104,8 +105,7 @@ export const uploadModel = (payload: {
   model_type: string;
   algorithm: string;
   version: string;
-  set_default: boolean;
-  metrics?: string;
+  featureNames: string[];
 }) => {
   const fd = new FormData();
   fd.append("file", payload.file);
@@ -114,16 +114,51 @@ export const uploadModel = (payload: {
   fd.append("model_type", payload.model_type);
   fd.append("algorithm", payload.algorithm);
   fd.append("version", payload.version);
-  fd.append("set_default", payload.set_default ? "true" : "false");
-  if (payload.metrics) fd.append("metrics", payload.metrics);
+  fd.append("feature_names", JSON.stringify(payload.featureNames));
+  fd.append("set_default", "false");
   return apiClient.upload<{ message: string; model: MlModel }>("/admin/models/upload", fd, { auth: true });
 };
 
+export const evaluateModel = (id: number, payload: {
+  file: File;
+  datasetName: string;
+  targetColumn: string;
+  targetUnit: string;
+  groupColumn: string;
+  trainingGroups: string[];
+  splitMethod: string;
+  datasetSource?: string;
+}) => {
+  const fd = new FormData();
+  fd.append("file", payload.file);
+  fd.append("dataset_name", payload.datasetName);
+  fd.append("target_column", payload.targetColumn);
+  fd.append("target_unit", payload.targetUnit);
+  fd.append("group_column", payload.groupColumn);
+  fd.append("training_groups_json", JSON.stringify(payload.trainingGroups));
+  fd.append("split_method", payload.splitMethod);
+  if (payload.datasetSource) fd.append("dataset_source", payload.datasetSource);
+  return apiClient.upload<ModelEvaluationResult>(`/admin/models/${id}/evaluations`, fd, { auth: true });
+};
+
+export const getModelLifecycle = (id: number) =>
+  apiClient.get<{
+    model: MlModel;
+    evaluations: Array<{ id: number; dataset_name: string; dataset_sha256: string; artifact_sha256: string; dataset_source?: string | null; manifest: Record<string, unknown>; metrics: ModelEvaluationResult["metrics"]; evaluated_by?: number | null; created_at: string }>;
+    reviews: Array<{ id: number; evaluation_id: number; artifact_sha256: string; decision: string; reason: string; reviewer_id?: number | null; created_at: string }>;
+  }>(`/admin/models/${id}/lifecycle`, { auth: true });
+
+export const requestModelReview = (id: number) =>
+  apiClient.post<{ message: string; lifecycle_state: string }>(`/admin/models/${id}/request-review`, undefined, { auth: true });
+
+export const reviewModel = (id: number, decision: "approved" | "rejected", reason: string) =>
+  apiClient.post<{ message: string; model: MlModel }>(`/admin/models/${id}/review`, { decision, reason }, { auth: true });
+
+export const activateModel = (id: number) =>
+  apiClient.post<{ message: string; model: MlModel }>(`/admin/models/${id}/activate`, undefined, { auth: true });
+
 export const setDefaultModel = (id: number) =>
   apiClient.post<{ message: string }>(`/admin/models/${id}/set-default`, undefined, { auth: true });
-
-export const toggleModelActive = (id: number, isActive: boolean) =>
-  apiClient.put<{ message: string; model: MlModel }>(`/admin/models/${id}`, { is_active: !isActive }, { auth: true });
 
 export const deleteModel = (id: number) =>
   apiClient.delete<{ message: string }>(`/admin/models/${id}`, { auth: true });
@@ -229,11 +264,12 @@ export const createAdminUser = (payload: {
   email?: string | null;
   role_id?: number | null;
   is_active?: boolean;
+  mfa_required?: boolean;
 }) => apiClient.post<{ message: string; user: AdminUserRow }>("/admin/users", payload, { auth: true });
 
 export const updateAdminUser = (
   id: number,
-  payload: { is_superuser?: boolean; full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
+  payload: { is_superuser?: boolean; full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; mfa_required?: boolean; new_password?: string },
 ) => apiClient.put<{ message: string; user: AdminUserRow }>(`/admin/users/${id}`, payload, { auth: true });
 
 export const deleteAdminUser = (id: number) =>

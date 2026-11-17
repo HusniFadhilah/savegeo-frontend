@@ -19,9 +19,11 @@ interface FormState {
   password: string;
   roleId: string;
   isActive: boolean;
+  isSuperuser: boolean;
+  mfaRequired: boolean;
 }
 
-const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "", password: "", roleId: "", isActive: true };
+const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "", password: "", roleId: "", isActive: true, isSuperuser: false, mfaRequired: false };
 
 function roleLabel(name: string): string {
   return name === "geospatial_expert" ? "Ahli Geospasial" : name;
@@ -79,6 +81,10 @@ export default function AdminUsers() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const canAssignFullAccess = me?.is_superuser === true;
   const canManageViewerFeatures = hasAdminPermission(me, "viewer_features.manage");
+  const selectedRole = roles.find((role) => String(role.id) === form.roleId);
+  const selectedRoleIsPrivileged = form.isSuperuser || Boolean(selectedRole?.permissions.some((code) => code.endsWith(".write")));
+  const mfaPolicyLocked = Boolean(me?.mfa_policy_locked && selectedRoleIsPrivileged);
+  const currentAccountHasMfa = form.id !== null && rows.some((user) => user.id === form.id && user.mfa_enabled);
 
   useEffect(() => {
     listRoles()
@@ -122,6 +128,8 @@ export default function AdminUsers() {
       password: "",
       roleId: role ? String(role.id) : "",
       isActive: u.is_active,
+      isSuperuser: Boolean(u.is_superuser),
+      mfaRequired: u.mfa_required == null ? Boolean(u.mfa_enabled) : u.mfa_required,
     });
     setFormError(null);
     setFormOpen(true);
@@ -151,8 +159,9 @@ export default function AdminUsers() {
           password: form.password,
           email: form.email.trim() || null,
           role_id: roleId,
-          is_superuser: roleId === null,
+          is_superuser: form.isSuperuser,
           is_active: form.isActive,
+          mfa_required: form.mfaRequired,
         });
         notify(t("admin.users.created"), "s");
       } else {
@@ -165,7 +174,8 @@ export default function AdminUsers() {
           email: form.email.trim() || null,
           is_active: form.isActive,
           role_id: roleId,
-          is_superuser: roleId === null,
+          is_superuser: form.isSuperuser,
+          mfa_required: form.mfaRequired,
           ...(form.password ? { new_password: form.password } : {}),
         });
         if (form.id === me?.id) {
@@ -257,7 +267,7 @@ export default function AdminUsers() {
               </div>
               <div className="form-field">
                 <label className="form-label">{t("admin.users.role")}</label>
-                <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}>
+                <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value, isSuperuser: !e.target.value && canAssignFullAccess }))}>
                   {canAssignFullAccess && <option value="">{t("admin.users.fullAccess")}</option>}
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -272,6 +282,24 @@ export default function AdminUsers() {
               <span />
               <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
             </label>
+            <label className="cfg-switch" style={{ marginBottom: "0.25rem" }}>
+              <input
+                type="checkbox"
+                aria-label={t("admin.users.mfaRequired")}
+                checked={form.mfaRequired || mfaPolicyLocked}
+                disabled={mfaPolicyLocked}
+                onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
+              />
+              <span />
+              <strong>{t("admin.users.mfaRequired")}</strong>
+            </label>
+            <div className="text-muted small" style={{ marginBottom: "0.75rem" }}>
+              {mfaPolicyLocked
+                ? t("admin.users.mfaLocked")
+                : currentAccountHasMfa
+                  ? t("admin.users.mfaEnrolledHelp")
+                  : t("admin.users.mfaHelp")}
+            </div>
             {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
@@ -339,6 +367,10 @@ export default function AdminUsers() {
                     <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td className="admin-user-identity">
                       <AccountIdentity user={u} missingName={t("admin.users.nameMissing")} />
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}>
+                        {u.mfa_required_effective ? t("admin.users.mfaRequired") : t("admin.users.mfaOptional")}
+                        {u.mfa_enabled ? ` · ${t("admin.users.mfaEnrolled")}` : ""}
+                      </div>
                     </td>
                     <td>{u.is_superuser ? t("admin.users.fullAccess") : u.role ? roleLabel(u.role) : "?"}</td>
                     <td>
