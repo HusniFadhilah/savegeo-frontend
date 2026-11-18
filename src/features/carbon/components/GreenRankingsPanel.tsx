@@ -49,6 +49,10 @@ export default function GreenRankingsPanel({
   const keepRunning = useRef(false);
   const scopeRef = useRef("");
   const mounted = useRef(true);
+  const onResultRef = useRef(onResult);
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
   const filters = { level, province, city, district };
   const storageKey = `savegeo-green:v1:${year}:${startMonth}:${endMonth}:${level}:${province}:${city}:${district}`;
   scopeRef.current = storageKey;
@@ -109,7 +113,7 @@ export default function GreenRankingsPanel({
     const acceptResult = (data: GreenRankingResult) => {
       if (!active) return;
       setResult(data);
-      onResult(data);
+      onResultRef.current(data);
       setTableSearch(data.search || "");
       setTableSort(data.sort_by || "rank");
       setTableSortDir(data.sort_dir || "asc");
@@ -141,7 +145,7 @@ export default function GreenRankingsPanel({
     return () => {
       active = false;
     };
-  }, [storageKey]);
+  }, [city, district, endMonth, level, province, startMonth, storageKey, year]);
   async function run(fresh = false) {
     setBusy(true);
     setError(null);

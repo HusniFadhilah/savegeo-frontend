@@ -1,5 +1,5 @@
 import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { hasAdminPermission } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -26,15 +26,15 @@ export default function ArcgisStatus() {
   const [requestTimeout, setRequestTimeout] = useState(30);
   const canManageCredentials = hasAdminPermission(user, "secret.write");
 
-  const applyStatus = (next: ArcgisStatusInfo) => {
+  const applyStatus = useCallback((next: ArcgisStatusInfo) => {
     setStatus(next);
     setEnabled(next.enabled);
     setPortalUrl(next.portal_url || "https://www.arcgis.com");
     setAuthMode(next.auth_mode === "api_key" ? "api_key" : "none");
     setRequestTimeout(next.request_timeout ?? 30);
-  };
+  }, []);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -44,11 +44,11 @@ export default function ArcgisStatus() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [applyStatus, t]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

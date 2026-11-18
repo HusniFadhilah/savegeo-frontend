@@ -16,7 +16,6 @@ import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
-import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
@@ -382,16 +381,6 @@ function ScientificCapabilitiesPanel({ support, providerKey }: { support: Scient
   </ProviderFeatureAccordion>;
 }
 
-function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!aoi) return;
-    const bounds = L.geoJSON(aoi as GeoJSON.Feature).getBounds();
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [aoi, map]);
-  return null;
-}
-
 function FitToSceneOrAoi({
   aoi,
   focusKey,
@@ -658,18 +647,6 @@ export default function ImageryModule() {
   const imagerySearchAoi = aoi ?? sceneSearchRegion ?? mapViewportAoi;
   const [aoiModalOpen, setAoiModalOpen] = useState(false);
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
-
-  const handleAoiChange = useCallback(
-    (feature: AoiFeature | null) => {
-      if (!feature) {
-        setAoiState(null);
-        return;
-      }
-      const bounds = boundsFromGeoJSON(feature);
-      setAoiState({ source: "drawn", name: "Poligon Kustom", areaKm2: areaKm2(feature, bounds), feature, bounds });
-    },
-    [setAoiState],
-  );
 
   const [satellites, setSatellites] = useState<Record<string, ImageryProvider>>({});
   const [satellite, setSatellite] = useState(query.satellite ?? query.provider ?? "sentinel2");

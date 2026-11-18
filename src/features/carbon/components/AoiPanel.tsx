@@ -8,7 +8,7 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools, { setAoiOnMap, SyncAoiToGroup } from "@/components/map/AoiDrawingTools";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
-import type { AoiFeature, AoiGeometry } from "@/types/map";
+import type { AoiFeature } from "@/types/map";
 import AoiRegionTab from "./AoiRegionTab";
 import AoiCoordinateTab from "./AoiCoordinateTab";
 import AoiUploadTab from "./AoiUploadTab";
@@ -41,16 +41,6 @@ const TAB_ICONS: Record<TabKey, string> = {
   upload: "bi-upload",
   company: "bi-building-fill",
 };
-
-function mergeGeometry(geometries: AoiGeometry[]): AoiGeometry {
-  if (geometries.length === 1) return geometries[0];
-  const coordinates: GeoJSON.Position[][][] = [];
-  for (const geometry of geometries) {
-    if (geometry.type === "Polygon") coordinates.push(geometry.coordinates);
-    else coordinates.push(...geometry.coordinates);
-  }
-  return { type: "MultiPolygon", coordinates };
-}
 
 /**
  * AOI selection card: 5 tabs (Indonesia Admin / Koordinat / Gambar di Peta /

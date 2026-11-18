@@ -21,6 +21,22 @@ export const getPortfolio = (search: string, offset = 0) =>
     `/dmrv/portfolio?search=${encodeURIComponent(search)}&limit=50&offset=${offset}`,
     AUTH,
   );
+export interface PortfolioDashboard {
+  summary: { project_count: number; job_count: number; report_count: number; submission_count: number;
+    risk_count: number; period_count: number; jobs_by_status: Record<string, number>; reports_ready: number };
+  projects: Array<{ id: string; name: string; organization_id: string | null; status: string;
+    activity_type: string; monitoring_period_count: number; job_counts: Record<string, number>;
+    job_count: number; report_count: number; submission_count: number; risk_count: number }>;
+  recent_jobs: Array<{ id: string; project_id: string; kind: string; status: string; created_at: string }>;
+  recent_periods: Array<{ id: string; project_id: string; name: string; start_date: string; end_date: string; status: string }>;
+  recent_reports: Array<{ id: string; project_id: string; snapshot_id: string; readiness: string; created_at: string }>;
+  recent_submissions: Array<{ id: string; project_id: string; version: number; status: string; created_at: string }>;
+  recent_risks: Array<{ id: string; project_id: string; title: string; status: string; updated_at: string }>;
+}
+export const getPortfolioDashboard = (year?: number) => {
+  const range = year ? `?period_from=${year}-01-01&period_to=${year}-12-31` : "";
+  return apiClient.get<PortfolioDashboard>(`/dmrv/dashboard${range}`, AUTH);
+};
 export const saveRecord = (
   id: string,
   category: Category,

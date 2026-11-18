@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getConfig, resetAllConfig, saveConfig } from "../api";
 import { AI_PROVIDERS, CAT_COLORS, CAT_LABELS } from "../types";
 import type { AdminConfigCategories, AdminConfigItem } from "../types";
@@ -205,7 +205,7 @@ export default function ConfigEditor() {
   const [resetting, setResetting] = useState(false);
   const canManageKeyPool = hasAdminPermission(user, "secret.read") && hasAdminPermission(user, "secret.write");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -224,11 +224,11 @@ export default function ConfigEditor() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const providerStatus = useMemo(() => {
     const status: Record<string, boolean> = {};

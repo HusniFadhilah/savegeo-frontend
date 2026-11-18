@@ -11,7 +11,7 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { env } from "@/config/env";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { safeHttpUrl } from "@/utils/safeHttpUrl";
-import { formatDate, formatNumber, translate } from "@/hooks/useI18nStore";
+import { formatDate, formatNumber } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/services/analysisService";
 import {
@@ -1231,12 +1231,13 @@ export function KarhutlaDetailPage() {
       setEventLookup({ slug, status: eventQuery.isPending ? "loading" : "unavailable" });
     }
   }, [slug, eventQuery.data, eventQuery.isPending]);
+  const eventRegionSlug = event?.slug;
   useEffect(() => {
-    if (!event) return undefined;
+    if (!eventRegionSlug) return undefined;
     let cancelled = false;
     setRegionOptionsLoading(true);
     setRegionOptionsError(null);
-    fetchProvinces(wildfireEventIsland(event.slug))
+    fetchProvinces(wildfireEventIsland(eventRegionSlug))
       .then((options) => {
         if (cancelled) return;
         const allowedCodes = new Set(eventProvinceCodesKey.split(",").filter(Boolean));
@@ -1249,7 +1250,7 @@ export function KarhutlaDetailPage() {
         if (!cancelled) setRegionOptionsLoading(false);
       });
     return () => { cancelled = true; };
-  }, [event?.slug, eventProvinceCodesKey]);
+  }, [eventRegionSlug, eventProvinceCodesKey]);
   useEffect(() => {
     if (!query.province || query.provinceCode) return;
     const option = matchRegionOption(provinceOptions, query.province);

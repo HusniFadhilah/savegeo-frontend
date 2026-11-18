@@ -442,7 +442,7 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       if (isWaybackLayer) setWaybackTilesLoading(false);
       setHistoricalImageryDate?.(null);
     };
-  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, setHistoricalImageryDate, t, visible]);
+  }, [activeBasemapId, analysisDate, blackMarbleYear, copernicusSelectedScene, copernicusTileScene, copernicusTileScene?.id, copernicusTileScene?.acquired_at, copernicusTileUrl, enabled, effectiveNasaTileDate, effectiveViirsNightTileDate, eoxYear, historySource, isCurrent, isCurrentBasemapSource, isFetching, map, selectedReleaseDate, selectedTileUrl, sentinelToday, setHistoricalImageryDate, t, visible]);
 
   const choose = (nextIndex: number) => {
     const scene = entries[nextIndex];

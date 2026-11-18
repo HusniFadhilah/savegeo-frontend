@@ -3,7 +3,6 @@ import type { AoiFeature } from "@/types/map";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
-import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import InfoTip from "@/components/ui/InfoTip";
@@ -128,23 +127,6 @@ export default function LcChangeModule() {
   // function here would get a new identity every render (tab switch, dataset
   // fetch, etc.), churning that effect and wiping the just-synced AOI layer
   // (SyncAoiToGroup won't redraw it since none of *its* deps changed).
-  const handleAoiChange = useCallback(
-    (feature: AoiFeature | null) => {
-      if (!feature) {
-        setAoiState(null);
-        return;
-      }
-      const bounds = boundsFromGeoJSON(feature);
-      setAoiState({
-        source: "drawn",
-        name: "Poligon Kustom",
-        areaKm2: areaKm2(feature, bounds),
-        feature,
-        bounds,
-      });
-    },
-    [setAoiState],
-  );
   const [dataset, setDataset] = useState<LcDataset>(
     canonicalLandCoverKey(query.dataset || "Dynamic_World"),
   );
@@ -1332,7 +1314,6 @@ export default function LcChangeModule() {
                   {tab === "maps" && (
                     <BeforeAfterMaps
                       aoi={aoi}
-                      onAoiChange={handleAoiChange}
                       dataset={dataset}
                       yearA={yearA}
                       yearB={yearB}
@@ -1415,7 +1396,6 @@ export default function LcChangeModule() {
           {!hasResults && (
             <BeforeAfterMaps
               aoi={aoi}
-              onAoiChange={handleAoiChange}
               dataset={dataset}
               yearA={null}
               yearB={null}

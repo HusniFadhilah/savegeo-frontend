@@ -20,9 +20,10 @@ vi.mock("./api", () => ({
   fetchDisasterStatistics: vi.fn(),
 }));
 
-vi.mock("@/hooks/useI18nStore", () => ({
-  useI18nStore: () => ({ t: (key: string) => key }),
-}));
+vi.mock("@/hooks/useI18nStore", () => {
+  const t = (key: string) => key;
+  return { useI18nStore: () => ({ t }) };
+});
 
 vi.mock("./components/SegmentationComparison", () => ({ default: () => null }));
 vi.mock("./components/SatelliteViewer", () => ({ default: () => null }));

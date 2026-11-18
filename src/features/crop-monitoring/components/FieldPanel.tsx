@@ -46,17 +46,6 @@ export default function FieldPanel({ commodities }: Props) {
     if (!commodity && commodities.length) setCommodity(commodities[0].key);
   }, [commodities, commodity]);
 
-  function handleDrawChange(feature: AoiFeature | null) {
-    if (selectedField) clearSelection();
-    if (!feature) {
-      setAoi(null);
-      return;
-    }
-    const bounds = boundsFromGeoJSON(feature);
-    const area = areaKm2(feature, bounds);
-    setAoi({ source: "drawn", name: "Poligon Baru", areaKm2: area, feature, bounds });
-  }
-
   function handleUploadApply(feature: AoiFeature, fileName: string) {
     if (selectedField) clearSelection();
     const bounds = boundsFromGeoJSON(feature);
