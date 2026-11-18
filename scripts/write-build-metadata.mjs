@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(process.cwd(), process.argv[2] || "public/build-metadata.json");
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+const lock = JSON.parse(await readFile(resolve(root, "package-lock.json"), "utf8"));
+if (lock.version !== packageJson.version || lock.packages?.[""]?.version !== packageJson.version) {
+  throw new Error("package.json and package-lock.json versions must match");
+}
 
 function text(value) {
   const normalized = String(value ?? "").trim();

@@ -30,6 +30,18 @@ function buildRows(data: HealthStatus | null, t: (key: string) => string): Statu
       value: data.database_connected ? t("status.connected") : t("status.disconnected"),
       ok: data.database_connected,
     }] : []),
+    ...(data.model_lifecycle_schema_current === false ? [{
+      icon: "bi-database-exclamation",
+      label: t("status.modelSchema"),
+      value: t("status.migrationRequired"),
+      ok: false,
+    }] : []),
+    ...(data.active_model_catalog_available === false ? [{
+      icon: "bi-collection",
+      label: t("status.modelCatalog"),
+      value: t("status.unavailable"),
+      ok: false,
+    }] : []),
     {
       icon: "bi-broadcast",
       label: t("status.earthEngine"),
@@ -39,8 +51,8 @@ function buildRows(data: HealthStatus | null, t: (key: string) => string): Statu
     {
       icon: "bi-key",
       label: t("status.activeModel"),
-      value: typeof data.active_models === "number" ? String(data.active_models) : data.active_model || "-",
-      ok: typeof data.active_models === "number" || Boolean(data.active_model),
+      value: data.active_model_catalog_available === false ? t("status.unavailable") : typeof data.active_models === "number" ? String(data.active_models) : data.active_model || "-",
+      ok: data.active_model_catalog_available !== false && (typeof data.active_models === "number" || Boolean(data.active_model)),
     },
   ];
 }
@@ -112,12 +124,12 @@ export default function SystemStatusModal({ open, onClose, health: data, checked
               <div>
                 <span className="text-muted">{t("status.pair")}</span>{" "}
                 <span className={`badge ${getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? "bg-success-subtle text-success" : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? "bg-warning-subtle text-warning-emphasis" : "bg-secondary-subtle text-secondary"}`}>
-                  {getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? t("status.compatible") : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? t("status.different") : t("status.metadataUnavailable")}
+                  {getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? t("status.sameVersion") : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? t("status.different") : t("status.metadataUnavailable")}
                 </span>
               </div>
               {backendMetadata?.deployed_at_utc && <div><span className="text-muted">{t("status.backendDeploy")}</span> {new Date(backendMetadata.deployed_at_utc).toLocaleString(language === "en" ? "en-US" : "id-ID")}</div>}
             </div>
-            <a className="small d-inline-block mt-2" href="https://github.com/HusniFadhilah/savegeo-frontend/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">
+            <a className="small d-inline-block mt-2" href="https://github.com/HusniFadhilah/savegeo-frontend/blob/main/README.md#versi-dan-rilis" target="_blank" rel="noreferrer">
               <i className="bi bi-journal-text me-1" />{t("status.openChangelog")}
             </a>
           </div>

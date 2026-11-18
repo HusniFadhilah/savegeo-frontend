@@ -130,3 +130,15 @@ dist/             Output production build
 - Thumbnail `404`: pastikan proxy `/disaster-thumbnails/` aktif.
 - Halaman kosong: periksa console browser, hasil build, dan `/api/health`.
 - Login gagal: pastikan backend aktif, migration selesai, dan akun admin tersedia.
+
+# Versi dan rilis
+
+SAVEGEO menggunakan versi produk bersama untuk frontend dan backend. Mulai 1.1.0, kedua repository menaikkan versi secara terkoordinasi sebelum rilis: MAJOR untuk perubahan yang tidak kompatibel, MINOR untuk kemampuan baru yang kompatibel, dan PATCH untuk perbaikan yang kompatibel. Riwayat sebelum 1.1.0 tidak direkonstruksi dari nomor build.
+
+Ubah `version` pada `package.json` dan kedua entri versi proyek pada `package-lock.json` bersama versi backend; pembuatan metadata akan gagal bila keduanya tidak cocok. Nomor build adalah nomor run workflow masing-masing repository, bukan versi produk dan tidak dapat dibandingkan antar-workflow. Commit SHA, ID run, dan percobaan mengidentifikasi artefak yang benar-benar dibuat. Build lokal ditandai `local` dan tidak mengklaim sebagai deployment production.
+
+Sebelum rilis, jalankan lint, tes, audit, build, dan uji integrasi; cocokkan versi produk frontend dan backend serta catat SHA dan workflow deployment yang berhasil. Label versi sama hanya menunjukkan nomor versi cocok, bukan bukti pengujian kompatibilitas. Kegagalan validasi atau deployment harus diperbaiki sebelum rilis dinyatakan selesai.
+
+## 1.1.0
+
+Baseline versi terkoordinasi pertama setelah 1.0.0, mencakup peningkatan keamanan, analisis dan pemantauan, serta penjelasan status sistem. Rincian riwayat perubahan tersedia pada commit Git masing-masing repository.
