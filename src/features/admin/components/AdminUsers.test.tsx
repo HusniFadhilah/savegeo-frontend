@@ -99,3 +99,4 @@ describe("admin user table numbering", () => {
     await waitFor(() => expect(updateAdminUser).toHaveBeenCalledWith(1, expect.objectContaining({ mfa_required: true })));
   });
 });
+
