@@ -10,6 +10,7 @@ export interface HealthStatus {
   ee_initialized: boolean;
   database_connected?: boolean;
   active_model?: string | null;
+  active_models?: number;
 }
 
 export interface RegionOption {

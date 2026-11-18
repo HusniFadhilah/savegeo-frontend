@@ -10,7 +10,7 @@ import { useUiStore } from "@/hooks/useUiStore";
 import SystemStatusModal from "@/components/modals/SystemStatusModal";
 
 export default function Navbar() {
-  const { state } = useConnectionStatus();
+  const { state, health, checkedAt, checking, recheck } = useConnectionStatus();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { isAuthenticated: isUserAuthenticated, user: appUser, logout: logoutUser } = useUserAuthStore();
   const t = useI18nStore((s) => s.t);
@@ -26,7 +26,7 @@ export default function Navbar() {
     state === "online"
       ? ` ${t("status.online")}`
       : state === "degraded"
-        ? ` ${t("status.degraded")}`
+        ? ` ${t(health?.database_connected === false || health?.status !== "ok" ? "status.backendDegraded" : "status.degraded")}`
         : state === "offline"
           ? ` ${t("status.offline")}`
           : ` ${t("status.connecting")}`;
@@ -161,7 +161,7 @@ export default function Navbar() {
           </button>
         </div>
       </div>
-      <SystemStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} />
+      <SystemStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} health={health} checkedAt={checkedAt} checking={checking} recheck={recheck} />
     </nav>
   );
 }
