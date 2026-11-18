@@ -405,7 +405,7 @@ export default function ModelRegistry() {
               <button type="button" className="btn-sm" onClick={() => setLifecycleDetail(null)}>Tutup</button>
             </div>
             <div className="card-body-custom">
-              {lifecycleDetail.model.metadata_json?.training_manifest && (
+              {lifecycleDetail.model.metadata_json?.training_manifest != null && (
                 <details className="border rounded p-2 mb-2">
                   <summary>Manifest training reproducible</summary>
                   <pre className="small mt-2 mb-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>

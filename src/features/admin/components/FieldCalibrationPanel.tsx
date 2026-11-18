@@ -184,9 +184,33 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
       if (!source) throw new Error("Run selesai tanpa ID sumber prediksi.");
       setPool(autoPool);
       setPredictionSource(source);
+      let validationNotice = "";
+      try {
+        const assessment = await fieldApi.assess(datasetId, {
+          pool: autoPool,
+          prediction_source: source,
+          max_year_gap: Number(data.get("year_gap") ?? 0),
+          allow_point_pixel: false,
+          create_calibration_candidate: false,
+          ...(autoPool === "soc"
+            ? {
+                depth_top_cm: Number(data.get("soc_top")),
+                depth_bottom_cm: Number(data.get("soc_bottom")),
+              }
+            : {}),
+        });
+        setAssessment(assessment);
+        validationNotice = assessment.metrics.baseline_validation.status === "computed"
+          ? `Validasi lapangan otomatis tersimpan: ${assessment.metrics.validation_plots} plot validasi terpisah.`
+          : `Evaluasi lapangan tersimpan, tetapi metrik validasi belum dapat dihitung (${assessment.metrics.validation_plots} plot validasi cocok).`;
+      } catch (assessmentError) {
+        validationNotice = assessmentError instanceof Error
+          ? `Prediksi tersimpan; evaluasi otomatis belum berhasil: ${assessmentError.message}`
+          : "Prediksi tersimpan; evaluasi otomatis belum berhasil. Jalankan evaluasi manual setelah memeriksa pasangan plot.";
+      }
       setRefresh((value) => value + 1);
       setNotice(
-        `Prediksi ${autoPool.toUpperCase()} tersimpan untuk batch ini: ${run.metrics?.predictions_saved ?? 0} baru, ${run.metrics?.predictions_reused ?? 0} dipakai ulang, ${run.metrics?.without_valid_pixels ?? 0} tanpa piksel valid. Sumber: ${source}`,
+        `Prediksi ${autoPool.toUpperCase()} tersimpan untuk batch ini: ${run.metrics?.predictions_saved ?? 0} baru, ${run.metrics?.predictions_reused ?? 0} dipakai ulang, ${run.metrics?.without_valid_pixels ?? 0} tanpa piksel valid. ${validationNotice} Sumber: ${source}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Prediksi GEE gagal diproses.");
@@ -492,12 +516,31 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                   <option value="500">500</option>
                 </select>
               </label>
+              <label className="col-md-3 form-label">
+                Selisih tahun survei maksimum
+                <input name="year_gap" type="number" min={0} max={5} step={1} defaultValue={0} className="form-control" />
+              </label>
+              {autoPool === "soc" && (
+                <>
+                  <label className="col-md-3 form-label">
+                    Kedalaman SOC atas (cm)
+                    <input name="soc_top" type="number" min={0} step="any" required className="form-control" />
+                  </label>
+                  <label className="col-md-3 form-label">
+                    Kedalaman SOC bawah (cm)
+                    <input name="soc_bottom" type="number" min={0.001} step="any" required className="form-control" />
+                  </label>
+                </>
+              )}
             </div>
             <p className="small text-muted mt-2 mb-2">
               Sistem memilih model GEE aktif dengan evaluasi dan persetujuan independen yang cocok untuk pool ini.
               Jalankan batch berikutnya dengan offset bertambah sesuai jumlah plot per batch. Geometri plot tersimpan
               dipakai bila tersedia; selain itu digunakan lingkaran dengan luas setara dari titik koordinat dan luas plot.
-              Hasil tersimpan sebagai snapshot prediksi berversi dan tidak menimpa snapshot sebelumnya.
+              Hasil tersimpan sebagai snapshot prediksi berversi dan tidak menimpa snapshot sebelumnya. Setelah ekstraksi,
+              pasangan dievaluasi otomatis terhadap plot kalibrasi dan validasi; SOC hanya dibandingkan pada kedalaman
+              yang Anda isi dan plot tanpa pasangan cocok tetap dilaporkan sebagai pengecualian. Evaluasi otomatis tidak
+              membuat kandidat kalibrasi; gunakan evaluasi manual setelah seluruh batch tersedia untuk membuat kandidat.
             </p>
             <button type="submit" className="btn btn-outline-success" disabled={busy}>
               {busy ? "Mengekstrak dari Earth Engine…" : "Ekstrak prediksi batch"}

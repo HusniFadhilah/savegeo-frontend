@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { exportGeoTiff } from "@/features/carbon/api";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
-import { downloadStatisticsJson, generatePdfReport } from "@/features/reports/export";
+import { downloadStatisticsJson, downloadStoredAnalysisReport, generatePdfReport } from "@/features/reports/export";
 import { ApiError, apiClient } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 
@@ -10,6 +10,7 @@ interface Props {
   reportContext: ReportContext;
   aoiPayload: AoiPayload;
   modelName: string | null;
+  reportJobs: { job_id: string; type: string }[];
 }
 
 interface ExportChoice {
@@ -52,11 +53,13 @@ function buildLayerOptions(results: AnalysisResultsBundle) {
 }
 
 /** Ported from main.js exportToGoogleDrive()/showExportDialog()/downloadStatistics()/generateReport(). */
-export default function ExportPanel({ reportContext, aoiPayload, modelName }: Props) {
+export default function ExportPanel({ reportContext, aoiPayload, modelName, reportJobs }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [choice, setChoice] = useState<ExportChoice | null>(null);
   const [exporting, setExporting] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
+  const [storedReportBusy, setStoredReportBusy] = useState(false);
+  const [storedReportJob, setStoredReportJob] = useState("");
   const [autoScale, setAutoScale] = useState(true);
   const [exportMode, setExportMode] = useState<"direct" | "batch_gcs">("direct");
   const [batchTask, setBatchTask] = useState<{ token: string; destination: string; state: string; error?: string } | null>(null);
@@ -67,6 +70,10 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
   const layerOptions = buildLayerOptions(results);
   const selectedPool = choice?.pool?.startsWith("extension:") ? results.carbonExtensions?.[choice.pool.slice(10)] : choice?.pool ? results.carbonPools?.[choice.pool as keyof NonNullable<typeof results.carbonPools>] : results.carbon;
   const sourceResolution = choice?.layerType === "carbon" ? selectedPool?.carbon_reference?.resolution : undefined;
+
+  useEffect(() => {
+    setStoredReportJob(reportJobs[0]?.job_id ?? "");
+  }, [reportJobs]);
 
   function openModal() {
     const first = layerOptions[0];
@@ -156,6 +163,47 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName }: Pr
             </button>
           </div>
         </div>
+        {reportJobs.length > 0 && (
+          <div className="row align-items-end g-2 mt-2 border-top pt-3">
+            <div className="col-md-8">
+              <label className="form-label mb-1" htmlFor="storedAnalysisReportJob">
+                Ringkasan dari hasil job tersimpan
+              </label>
+              <select
+                id="storedAnalysisReportJob"
+                className="form-select"
+                value={storedReportJob}
+                onChange={(event) => setStoredReportJob(event.target.value)}
+              >
+                {reportJobs.map((job) => (
+                  <option key={job.job_id} value={job.job_id}>
+                    {job.type} · {job.job_id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-4">
+              <button
+                type="button"
+                className="btn btn-outline-primary w-100"
+                disabled={storedReportBusy || !storedReportJob}
+                onClick={async () => {
+                  setStoredReportBusy(true);
+                  setExportError(null);
+                  try {
+                    await downloadStoredAnalysisReport(storedReportJob, reportContext.aoi.name);
+                  } catch (error) {
+                    setExportError(error instanceof Error ? error.message : "Laporan server gagal dibuat.");
+                  } finally {
+                    setStoredReportBusy(false);
+                  }
+                }}
+              >
+                {storedReportBusy ? "Menyiapkan DOCX…" : "Unduh DOCX berprovenance"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {exportNotice && <div className="alert alert-success mx-3" role="status">{exportNotice}</div>}

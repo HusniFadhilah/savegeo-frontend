@@ -54,6 +54,7 @@ import { parseCarbonQuery, serializeCarbonQuery } from "./lib/carbonQueryState";
 import { registerUiCommands, type UiCommandOutcome } from "@/features/chatbot/uiCommandBus";
 import { useChatContextStore } from "@/features/chatbot/chatContextStore";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
+import { useAnalysisJobStore } from "@/services/analysisJobStore";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
 
@@ -291,6 +292,7 @@ export default function CarbonModule() {
   const registerExtraRun = useCallback((run: (() => Promise<boolean>) | null) => { extraAnalysisRun.current = run; }, []);
   const [runError, setRunError] = useState<string | null>(null);
   const [results, setResults] = useState<AnalysisResultsBundle>({});
+  const [reportJobs, setReportJobs] = useState<{ job_id: string; type: string }[]>([]);
   const [processingTimes, setProcessingTimes] = useState<AnalysisProcessingTimes>({});
   const [mapKey, setMapKey] = useState(0);
   const [directLoadEnabled, setDirectLoadEnabled] = useState(false);
@@ -535,6 +537,21 @@ export default function CarbonModule() {
   }
 
   async function handleRunAnalysis(): Promise<UiCommandOutcome> {
+    const previousJobIds = new Set(useAnalysisJobStore.getState().jobs.map((job) => job.job_id));
+    setReportJobs([]);
+    const captureReportJobs = () => {
+      const expectedTypes = new Set(
+        analysisType === "combined" ? ["carbon", "carbon_local", "vegetation", "landcover"]
+          : analysisType === "carbon" ? ["carbon", "carbon_local", "carbon_delta"]
+            : analysisType === "vegetation" ? ["vegetation"]
+              : ["landcover"],
+      );
+      setReportJobs(
+        useAnalysisJobStore.getState().jobs
+          .filter((job) => !previousJobIds.has(job.job_id) && job.status === "succeeded" && expectedTypes.has(job.type))
+          .map(({ job_id, type }) => ({ job_id, type })),
+      );
+    };
     if (["green_rankings", "productivity"].includes(analysisType)) {
       if (!extraAnalysisRun.current) return { hasResult: false, error: "Parameter analisis belum siap." };
       setRunning(true);
@@ -542,13 +559,19 @@ export default function CarbonModule() {
       finally { setRunning(false); }
     }
     if (analysisType === "carbon" && carbonUiMode === "basic") {
-      return handleRunBasicCarbon();
+      const outcome = await handleRunBasicCarbon();
+      captureReportJobs();
+      return outcome;
     }
     if (deltaEnabled && analysisType === "carbon") {
-      return handleRunDelta();
+      const outcome = await handleRunDelta();
+      captureReportJobs();
+      return outcome;
     }
     if (vegTsEnabled && analysisType === "vegetation") {
-      return handleRunVegTs();
+      const outcome = await handleRunVegTs();
+      captureReportJobs();
+      return outcome;
     }
     setDeltaResult(null);
     setVegTsResult(null);
@@ -680,6 +703,7 @@ export default function CarbonModule() {
     setResults(newResults);
     setProcessingTimes(times);
     setMapKey((k) => k + 1);
+    captureReportJobs();
 
     if (Object.keys(newResults).length === 0) {
       setRunError(errors.join(" ") || t("carbon.err.noResults"));
@@ -1305,6 +1329,7 @@ export default function CarbonModule() {
                 reportContext={reportContext}
                 aoiPayload={aoiPayloadForExport}
                 modelName={carbonParams.modelName}
+                reportJobs={reportJobs}
               />
             )}
           </>
