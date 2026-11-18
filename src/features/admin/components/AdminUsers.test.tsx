@@ -28,7 +28,7 @@ vi.mock("../AdminContext", () => ({ useAdmin: () => ({ notify }) }));
 vi.mock("../api", () => ({
   createAdminUser: vi.fn(),
   deleteAdminUser: vi.fn(),
-  getCurrentAdminUser: vi.fn().mockResolvedValue({ id: 99, role: null }),
+  getCurrentAdminUser: vi.fn().mockResolvedValue({ id: 99, role: null, is_superuser: true }),
   listRoles: vi.fn().mockResolvedValue({ roles: [] }),
   updateAdminUser: vi.fn(),
 }));
@@ -99,3 +99,4 @@ describe("admin user table numbering", () => {
     await waitFor(() => expect(updateAdminUser).toHaveBeenCalledWith(1, expect.objectContaining({ mfa_required: true })));
   });
 });
+

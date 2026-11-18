@@ -129,7 +129,7 @@ export default function AdminUsers() {
       roleId: role ? String(role.id) : "",
       isActive: u.is_active,
       isSuperuser: Boolean(u.is_superuser),
-      mfaRequired: u.mfa_required == null ? Boolean(u.mfa_enabled) : u.mfa_required,
+      mfaRequired: Boolean(u.mfa_required),
     });
     setFormError(null);
     setFormOpen(true);
@@ -161,7 +161,7 @@ export default function AdminUsers() {
           role_id: roleId,
           is_superuser: form.isSuperuser,
           is_active: form.isActive,
-          mfa_required: form.mfaRequired,
+          ...(me?.is_superuser ? { mfa_required: form.mfaRequired } : {}),
         });
         notify(t("admin.users.created"), "s");
       } else {
@@ -175,7 +175,7 @@ export default function AdminUsers() {
           is_active: form.isActive,
           role_id: roleId,
           is_superuser: form.isSuperuser,
-          mfa_required: form.mfaRequired,
+          ...(me?.is_superuser ? { mfa_required: form.mfaRequired } : {}),
           ...(form.password ? { new_password: form.password } : {}),
         });
         if (form.id === me?.id) {
@@ -282,24 +282,26 @@ export default function AdminUsers() {
               <span />
               <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
             </label>
-            <label className="cfg-switch" style={{ marginBottom: "0.25rem" }}>
-              <input
-                type="checkbox"
-                aria-label={t("admin.users.mfaRequired")}
-                checked={form.mfaRequired || mfaPolicyLocked}
-                disabled={mfaPolicyLocked}
-                onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
-              />
-              <span />
-              <strong>{t("admin.users.mfaRequired")}</strong>
-            </label>
-            <div className="text-muted small" style={{ marginBottom: "0.75rem" }}>
-              {mfaPolicyLocked
-                ? t("admin.users.mfaLocked")
-                : currentAccountHasMfa
-                  ? t("admin.users.mfaEnrolledHelp")
-                  : t("admin.users.mfaHelp")}
-            </div>
+            {me?.is_superuser && <>
+              <label className="cfg-switch" style={{ marginBottom: "0.25rem" }}>
+                <input
+                  type="checkbox"
+                  aria-label={t("admin.users.mfaRequired")}
+                  checked={form.mfaRequired || mfaPolicyLocked}
+                  disabled={mfaPolicyLocked}
+                  onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
+                />
+                <span />
+                <strong>{t("admin.users.mfaRequired")}</strong>
+              </label>
+              <div className="text-muted small" style={{ marginBottom: "0.75rem" }}>
+                {mfaPolicyLocked
+                  ? t("admin.users.mfaLocked")
+                  : currentAccountHasMfa
+                    ? t("admin.users.mfaEnrolledHelp")
+                    : t("admin.users.mfaHelp")}
+              </div>
+            </>}
             {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
@@ -417,3 +419,4 @@ export default function AdminUsers() {
     </div>
   );
 }
+
