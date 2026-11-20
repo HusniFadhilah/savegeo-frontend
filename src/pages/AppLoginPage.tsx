@@ -117,10 +117,9 @@ export default function AppLoginPage() {
   const adminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userLoading = useUserAuthStore((state) => state.isLoading);
   const adminLoading = useAuthStore((state) => state.isLoading);
-  // All authenticated accounts enter the main analysis workspace. Keeping a
-  // single landing route avoids role-dependent redirects and makes login
-  // behavior consistent after session expiry and deep links.
-  const destination = "/carbon-estimation";
+  // The shared entry route selects the correct workspace for the active role.
+  // This preserves the admin dashboard as the landing page after admin login.
+  const destination = "/dashboard";
 
   useEffect(() => {
     if (userAuthenticated || adminAuthenticated) navigate(destination, { replace: true });

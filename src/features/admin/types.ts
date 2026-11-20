@@ -53,7 +53,7 @@ export interface MlModel {
   is_active: boolean;
   is_default: boolean;
   is_legacy?: boolean;
-  lifecycle_state: "experimental" | "training" | "evaluated" | "review_pending" | "approved" | "active" | "rejected" | "archived";
+  lifecycle_state: "experimental" | "training" | "evaluated" | "review_pending" | "approved" | "active" | "rejected" | "archived" | "legacy_unmigrated";
   approved_by?: number | null;
   approved_at?: string | null;
   updated_at?: string | null;

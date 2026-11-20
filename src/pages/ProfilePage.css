@@ -1,0 +1,30 @@
+.profile-page {
+  width: 100%;
+  padding: clamp(1rem, 2.5vw, 2rem);
+}
+
+.profile-page__card {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 0.875rem;
+}
+
+.profile-page__header {
+  padding: 1rem 1.25rem;
+}
+
+.profile-page__form {
+  padding: 1.5rem;
+}
+
+@media (max-width: 575.98px) {
+  .profile-page {
+    padding: 1rem 0.75rem;
+  }
+
+  .profile-page__form {
+    padding: 1.125rem;
+  }
+}

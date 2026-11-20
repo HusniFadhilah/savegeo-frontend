@@ -33,16 +33,17 @@ function ModelStatusBadges({ m }: { m: MlModel }) {
   const colors: Record<MlModel["lifecycle_state"], string> = {
     experimental: "badge-gray", training: "badge-blue", evaluated: "badge-blue",
     review_pending: "badge-amber", approved: "badge-green", active: "badge-green",
-    rejected: "badge-red", archived: "badge-gray",
+    rejected: "badge-red", archived: "badge-gray", legacy_unmigrated: "badge-amber",
   };
   const labels: Record<MlModel["lifecycle_state"], string> = {
     experimental: "Eksperimental", training: "Training", evaluated: "Dievaluasi",
     review_pending: "Menunggu review", approved: "Disetujui", active: "Aktif",
-    rejected: "Ditolak", archived: "Diarsipkan",
+    rejected: "Ditolak", archived: "Diarsipkan", legacy_unmigrated: "Legacy - lifecycle belum dimigrasikan",
   };
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
       <span className={`stat-badge ${colors[m.lifecycle_state] || "badge-gray"}`}>{labels[m.lifecycle_state] || m.lifecycle_state}</span>
+      {m.lifecycle_state === "legacy_unmigrated" && m.is_active && <span className="stat-badge badge-green">Aktif di server</span>}
       {m.is_default && <span className="stat-badge badge-blue">{t("admin.default")}</span>}
       {m.is_legacy && <span className="stat-badge badge-amber">{t("admin.legacy")}</span>}
     </div>
@@ -259,9 +260,11 @@ export default function ModelRegistry() {
     }
   };
 
-  const allPageSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+  const actionableRows = rows.filter((row) => row.lifecycle_state !== "legacy_unmigrated" && row.lifecycle_state !== "archived");
+  const legacySchemaDetected = rows.some((model) => model.lifecycle_state === "legacy_unmigrated");
+  const allPageSelected = actionableRows.length > 0 && actionableRows.every((row) => selectedIds.includes(row.id));
   const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
-  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !rows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...rows.map((row) => row.id)]))));
+  const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !actionableRows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...actionableRows.map((row) => row.id)]))));
   const handleBulkDelete = async () => {
     if (!selectedIds.length || !confirm(`Arsipkan ${selectedIds.length} model terpilih?`)) return;
     setBulkBusy(true);
@@ -277,11 +280,16 @@ export default function ModelRegistry() {
     <div className="card">
       <div className="card-header-custom">
         <span>{t("admin.models.title")}</span>
-        <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
+        <button type="button" className="btn-sm primary" disabled={legacySchemaDetected} onClick={() => setFormOpen((o) => !o)}>
           <i className="bi bi-plus-lg" /> {t("admin.models.upload")}
         </button>
       </div>
       <div className="card-body-custom">
+        {legacySchemaDetected && (
+          <div className="alert alert-warning py-2 px-3 small" role="status">
+            Skema katalog ini belum memiliki lifecycle review. Model lama ditampilkan apa adanya; aksi lifecycle dinonaktifkan sampai migrasi ditinjau dan diterapkan.
+          </div>
+        )}
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="three-col" style={{ marginBottom: "0.5rem" }}>
             <div className="form-field">
@@ -453,7 +461,7 @@ export default function ModelRegistry() {
             </colgroup>
             <thead>
               <tr>
-                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua model di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua model di halaman" checked={allPageSelected} disabled={actionableRows.length === 0} onChange={toggleAllPage} /></th>
                 <AdminTableNumberHeader />
                 <th>Model</th>
                 <th>Tipe</th>
@@ -490,9 +498,10 @@ export default function ModelRegistry() {
                 rows.map((m, index) => {
                   const featureCount = m.feature_names?.length ?? 0;
                   const updatedAt = m.updated_at ? new Date(m.updated_at).toLocaleDateString("id-ID") : "—";
+                  const lifecycleUnavailable = m.lifecycle_state === "legacy_unmigrated";
                   return (
                     <tr key={m.id}>
-                      <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${m.name}`} checked={selectedIds.includes(m.id)} onChange={() => toggleSelected(m.id)} /></td>
+                      <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${m.name}`} checked={selectedIds.includes(m.id)} disabled={lifecycleUnavailable || m.lifecycle_state === "archived"} onChange={() => toggleSelected(m.id)} /></td>
                       <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                       <td>
                         <div style={{ fontWeight: 600 }}>{m.name || "—"}</div>
@@ -529,12 +538,12 @@ export default function ModelRegistry() {
                         </>}
                         {m.lifecycle_state === "approved" && <button type="button" className="btn-sm primary" disabled={busyId === m.id || bulkBusy} onClick={() => doActivate(m.id)}>Aktifkan</button>}
                         {m.lifecycle_state === "active" && !m.is_default && m.metadata_json?.format === "onnx" && <button type="button" className="btn-sm" disabled={busyId === m.id || bulkBusy} onClick={() => doSetDefault(m.id)}>Jadikan default</button>}
-                        <button type="button" className="btn-sm" disabled={lifecycleBusy} onClick={() => showLifecycle(m.id)}>Riwayat</button>
+                        {!lifecycleUnavailable && <button type="button" className="btn-sm" disabled={lifecycleBusy} onClick={() => showLifecycle(m.id)}>Riwayat</button>}
                         <button
                           type="button"
                           className="btn-sm danger"
                           style={{ marginLeft: 3 }}
-                          disabled={busyId === m.id || bulkBusy || m.lifecycle_state === "archived"}
+                          disabled={lifecycleUnavailable || busyId === m.id || bulkBusy || m.lifecycle_state === "archived"}
                           onClick={() => doDelete(m.id)}
                         >
                           Arsipkan

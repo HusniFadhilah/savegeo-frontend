@@ -3246,15 +3246,6 @@
   white-space: nowrap;
 }
 
-.savegeo-attribution-date {
-  font-weight: 600;
-  color: #2e7d32;
-}
-
-.savegeo-attribution:not(.savegeo-attribution-expanded) .savegeo-attribution-date {
-  display: none;
-}
-
 .fullscreen-control-btn {
   display: flex;
   align-items: center;

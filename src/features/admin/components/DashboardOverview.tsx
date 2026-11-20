@@ -12,6 +12,7 @@ interface OverviewData {
   activeCredEmail: string | null;
   modelCount: number | string;
   cfgCount: number | string;
+  databaseConnected: boolean;
 }
 
 export default function DashboardOverview({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
@@ -21,6 +22,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partialWarning, setPartialWarning] = useState<string | null>(null);
   const [reiniting, setReiniting] = useState(false);
   const canCredentialRead = hasAdminPermission(user, "credential.read");
   const canModelRead = hasAdminPermission(user, "model.read");
@@ -34,13 +36,22 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
   const load = async () => {
     setLoading(true);
     setError(null);
+    setPartialWarning(null);
     try {
-      const [health, gee, models, cfg] = await Promise.all([
-        getHealth(),
+      const health = await getHealth();
+      const [geeResult, modelsResult, configResult] = await Promise.allSettled([
         canCredentialRead ? getGeeStatus() : Promise.resolve(null),
         canModelRead ? listModels("carbon") : Promise.resolve(null),
         canConfigRead ? getConfig() : Promise.resolve(null),
       ]);
+      const gee = geeResult.status === "fulfilled" ? geeResult.value : null;
+      const models = modelsResult.status === "fulfilled" ? modelsResult.value : null;
+      const cfg = configResult.status === "fulfilled" ? configResult.value : null;
+      const databaseConnected = health.database_connected !== false;
+      const partialFailure = [geeResult, modelsResult, configResult].some((result) => result.status === "rejected") ||
+        health.active_model_catalog_available === false || health.model_lifecycle_schema_current === false || !databaseConnected;
+      if (partialFailure) setPartialWarning(t("admin.overview.partialWarning"));
+
       const cfgCount = cfg ? Object.values(cfg.config).reduce((s, v) => s + v.length, 0) : "—";
       setData({
         eeOk: Boolean(health.ee_initialized),
@@ -48,6 +59,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
         activeCredEmail: gee?.active_credential?.client_email ?? null,
         modelCount: models?.models.length ?? "—",
         cfgCount,
+        databaseConnected,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.overview.loadFailed"));
@@ -101,6 +113,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
   return (
     <>
       {hero}
+      {partialWarning && <div className="alert alert-warning py-2 px-3 small" role="status">{partialWarning}</div>}
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-icon">
@@ -147,7 +160,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (s: Admi
           <div className="card-body-custom">
             {[
               [t("admin.stat.earthEngine"), data.eeOk ? t("admin.initialized") : t("admin.offline"), data.eeOk ? "badge-green" : "badge-red"],
-              [t("admin.stat.database"), t("admin.connected"), "badge-green"],
+              [t("admin.stat.database"), data.databaseConnected ? t("admin.connected") : t("admin.offline"), data.databaseConnected ? "badge-green" : "badge-red"],
               [
                 t("admin.stat.activeCredential"),
                 data.activeCredEmail ? data.activeCredEmail.split("@")[0] : t("admin.none"),

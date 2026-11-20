@@ -26,7 +26,9 @@ export default function ProtectedAppRoute({
   const features = useViewerFeatures((state) => state.features);
   const featureError = useViewerFeatures((state) => state.error);
   const loadFeatures = useViewerFeatures((state) => state.load);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminAccount);
+  const isViewerPrincipal = isAdminAuthenticated
+    ? isViewerRole(adminAccount)
+    : isUserAuthenticated;
   const t = useI18nStore((state) => state.t);
 
   useEffect(() => {

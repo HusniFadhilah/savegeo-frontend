@@ -20,7 +20,9 @@ export default function DashboardEntryRoute() {
   const featureError = useViewerFeatures((state) => state.error);
   const loadFeatures = useViewerFeatures((state) => state.load);
   const t = useI18nStore((state) => state.t);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminAccount);
+  const isViewerPrincipal = isAdminAuthenticated
+    ? isViewerRole(adminAccount)
+    : isUserAuthenticated;
 
   useEffect(() => {
     if (!isAdminLoading && !isUserLoading && isViewerPrincipal && features === null) void loadFeatures();
