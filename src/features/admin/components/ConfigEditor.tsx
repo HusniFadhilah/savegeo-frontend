@@ -258,7 +258,12 @@ export default function ConfigEditor() {
         })
         .map((item) => ({ key: item.key, value: values[item.key] ?? "" }));
       const r = await saveConfig(updates);
-      notify(`${r.updated?.length ?? updates.length} ${t("admin.config.saved")}`, "s");
+      if (r.errors?.length) {
+        const firstError = r.errors[0];
+        notify(`${r.updated?.length ?? 0} ${t("admin.config.saved")}; ${r.errors.length} gagal (${firstError.key}: ${firstError.error})`, "e");
+      } else {
+        notify(`${r.updated?.length ?? updates.length} ${t("admin.config.saved")}`, "s");
+      }
       await load();
     } catch (err) {
       notify(err instanceof Error ? err.message : t("admin.saveFailed"), "e");
@@ -324,8 +329,8 @@ export default function ConfigEditor() {
               ) : (
                 items.map((item) => (
                   <div className="cfg-row" key={item.key}>
-                    <span className="cfg-key" title={item.key}>
-                      {item.key.split(".").pop()}
+                    <span className="cfg-key" title={item.description || item.key}>
+                      {item.label || item.key.split(".").pop()}
                     </span>
                     <div className="cfg-val">
                       {item.is_secret ? (

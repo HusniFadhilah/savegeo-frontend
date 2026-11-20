@@ -82,6 +82,7 @@ export interface ModelEvaluationResult {
 
 export interface AdminConfigItem {
   key: string;
+  label?: string | null;
   /** Present for non-secret keys; omitted (not `false`) by the backend for secret keys - see `is_secret` below. */
   raw_value?: string | null;
   value_type: string;
@@ -201,6 +202,7 @@ export const CAT_LABELS: Record<string, string> = {
   analysis: "Analisis",
   year: "Rentang Tahun",
   carbon: "Carbon & Visualisasi",
+  carbon_maps: "Peta Densitas Karbon",
   app: "Aplikasi",
   maps: "Peta & Basemap",
   ai: "AI Controller",
@@ -210,6 +212,7 @@ export const CAT_COLORS: Record<string, string> = {
   analysis: "badge-blue",
   year: "badge-amber",
   carbon: "badge-green",
+  carbon_maps: "badge-green",
   app: "badge-gray",
   maps: "badge-green",
   ai: "badge-purple",
