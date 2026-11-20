@@ -40,8 +40,8 @@ describe("simple carbon geographic coverage", () => {
   });
 
   it("uses the built-in AOI calibrated models when a frozen national release is unavailable", async () => {
-    vi.mocked(listCarbonModels).mockImplementation(async (dataset: string) => [{
-      name: `pool_rf_${dataset.toLowerCase()}`,
+    vi.mocked(listCarbonModels).mockImplementation(async (dataset?: string | null) => [{
+      name: `pool_rf_${(dataset ?? "").toLowerCase()}`,
       algorithm: "Random Forest",
       metadata_json: { builtin: true, training_mode: "reference_raster", gee_deployable: true },
     }]);
