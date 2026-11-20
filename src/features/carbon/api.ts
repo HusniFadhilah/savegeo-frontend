@@ -46,10 +46,14 @@ interface CarbonDatasetApiItem {
  * `{models: [...], count}` / the model dict itself - no {success,data}
  * envelope (verified against app/api/routes/models.py + live curl).
  */
-export async function listCarbonModels(referenceDataset?: string | null): Promise<CarbonModelListItem[]> {
+export async function listCarbonModels(
+  referenceDataset?: string | null,
+  options: { includeFallback?: boolean } = {},
+): Promise<CarbonModelListItem[]> {
   const params = new URLSearchParams();
   params.set("model_type", "carbon");
   if (referenceDataset) params.set("target_dataset", referenceDataset);
+  if (options.includeFallback) params.set("include_fallback", "true");
   const models: CarbonModelListItem[] = [];
   for (let offset = 0; offset <= 100_000; offset += 100) {
     params.set("offset", String(offset));

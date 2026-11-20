@@ -35,14 +35,25 @@ describe("simple carbon geographic coverage", () => {
 
   it("uses the reference directly only for its available year", async () => {
     const aoi = { west: 94, south: -11, east: 142, north: 6 };
-    expect((await buildBasicCarbonPlan(2010, aoi)).map((target) => target.referenceOnly)).toEqual([true, true, false, false, false]);
+    expect((await buildBasicCarbonPlan(2010, aoi)).map((target) => target.referenceOnly)).toEqual([true, true, false, true, true]);
     expect((await buildBasicCarbonPlan(2020, aoi)).map((target) => target.referenceOnly)).toEqual([false, false, true, false, false]);
   });
 
-  it("does not silently substitute a static raster when the annual model is missing", async () => {
-    vi.mocked(listCarbonModels).mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+  it("uses the built-in AOI calibrated models when a frozen national release is unavailable", async () => {
+    vi.mocked(listCarbonModels).mockImplementation(async (dataset: string) => [{
+      name: `pool_rf_${dataset.toLowerCase()}`,
+      algorithm: "Random Forest",
+      metadata_json: { builtin: true, training_mode: "reference_raster", gee_deployable: true },
+    }]);
+    const plan = await buildBasicCarbonPlan(2026, { west: 94, south: -11, east: 142, north: 6 });
+    expect(plan.map((target) => target.key)).toEqual(["agb", "bgb", "soc", "litter", "deadwood"]);
+    expect(plan.every((target) => target.model?.metadata_json?.builtin && !target.referenceOnly)).toBe(true);
+  });
+
+  it("does not silently substitute a static raster when no annual model is available", async () => {
+    vi.mocked(listCarbonModels).mockResolvedValue([]);
     await expect(buildBasicCarbonPlan(2026, { west: 94, south: -11, east: 142, north: 6 }))
-      .rejects.toThrow("tidak dapat diganti dengan referensi");
+      .rejects.toThrow("Model tahunan litter belum tersedia");
   });
 
   it("retains annual model selection for city and village AOIs", () => {
