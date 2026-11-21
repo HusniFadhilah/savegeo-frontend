@@ -270,6 +270,16 @@ export default function GreenRankingsPanel({
       </button>
     </th>
   );
+  const classComposition = result ? [
+    { key: "trees", label: "Pohon", value: result.statistics.trees_ha ?? 0 },
+    { key: "grass", label: "Rumput", value: result.statistics.grass_ha ?? 0 },
+    { key: "crops", label: "Tanaman", value: result.statistics.crops_ha ?? 0 },
+    { key: "shrubs", label: "Semak", value: result.statistics.shrubs_ha ?? 0 },
+    { key: "flooded", label: "Vegetasi tergenang", value: result.statistics.flooded_ha ?? 0 },
+  ].map((item) => ({ ...item, value: Math.max(0, item.value) })) : [];
+  const compositionTotal = classComposition.reduce((sum, item) => sum + item.value, 0);
+  const histogramBins = result?.statistics.histogram ?? [];
+  const histogramMax = Math.max(1, ...histogramBins.map((bin) => bin.count));
   return (
     <section className="green-rankings" aria-label="Peringkat wilayah hijau">
       <div className="green-rankings__intro">
@@ -285,9 +295,9 @@ export default function GreenRankingsPanel({
                   semak.
                 </p>
                 <p>
-                  Nilai dibandingkan terhadap luas penuh batas administrasi. Wilayah dengan
-                  cakupan data di bawah 80% tidak diberi peringkat. Peringkat parsial dapat berubah
-                  sampai seluruh wilayah selesai diproses; proses yang dihentikan dapat dilanjutkan.
+                  Nilai dibandingkan terhadap luas penuh batas administrasi. Wilayah dengan cakupan
+                  data di bawah 80% tidak diberi peringkat. Peringkat parsial dapat berubah sampai
+                  seluruh wilayah selesai diproses; proses yang dihentikan dapat dilanjutkan.
                 </p>
                 <p>
                   Hasil dapat dihitung secara nasional atau dibatasi induk wilayah. Filter ini
@@ -305,30 +315,57 @@ export default function GreenRankingsPanel({
             }
           />
         </span>
-        <p className="small text-muted mb-0">Peringkat tutupan hijau untuk periode analisis yang dipilih.</p>
+        <p className="small text-muted mb-0">
+          Peringkat tutupan hijau untuk periode analisis yang dipilih.
+        </p>
       </div>
-      <CropPanelAccordion title="Wilayah dan tingkat peringkat" icon="bi-sliders" className="green-rankings__accordion" defaultOpen>
+      <CropPanelAccordion
+        title="Wilayah dan tingkat peringkat"
+        icon="bi-sliders"
+        className="green-rankings__accordion"
+        defaultOpen
+      >
         <div className="row g-3">
           <div className="col-md-4">
-            <label className="form-label" htmlFor="green-level">Tingkat peringkat</label>
-            <select id="green-level" className="form-select" value={level} disabled={busy} onChange={(event) => {
-              setLevel(event.target.value);
-              setProvince("");
-              setCity("");
-              setDistrict("");
-            }}>
-              {LEVELS.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+            <label className="form-label" htmlFor="green-level">
+              Tingkat peringkat
+            </label>
+            <select
+              id="green-level"
+              className="form-select"
+              value={level}
+              disabled={busy}
+              onChange={(event) => {
+                setLevel(event.target.value);
+                setProvince("");
+                setCity("");
+                setDistrict("");
+              }}
+            >
+              {LEVELS.map(([key, name]) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
+              ))}
             </select>
           </div>
-          {depth > 0 && select("Provinsi", province, provinces, (value) => {
-            setProvince(value);
-            setCity("");
-            setDistrict("");
-          })}
-          {depth > 1 && select("Kabupaten/kota", city, cities, (value) => {
-            setCity(value);
-            setDistrict("");
-          }, !province)}
+          {depth > 0 &&
+            select("Provinsi", province, provinces, (value) => {
+              setProvince(value);
+              setCity("");
+              setDistrict("");
+            })}
+          {depth > 1 &&
+            select(
+              "Kabupaten/kota",
+              city,
+              cities,
+              (value) => {
+                setCity(value);
+                setDistrict("");
+              },
+              !province,
+            )}
           {depth > 2 && select("Kecamatan", district, districts, setDistrict, !city)}
         </div>
       </CropPanelAccordion>
@@ -365,7 +402,9 @@ export default function GreenRankingsPanel({
             disabled={busy}
             onClick={() => void run(true)}
           >
-            {result.snapshot_refresh_due ? "Perbarui data dari Dynamic World" : "Hitung ulang dari awal"}
+            {result.snapshot_refresh_due
+              ? "Perbarui data dari Dynamic World"
+              : "Hitung ulang dari awal"}
           </button>
         )}
       </div>
@@ -376,14 +415,20 @@ export default function GreenRankingsPanel({
       )}
       {result && (
         <div className="green-rankings__results">
-          <div className={`green-rankings__status ${result.done ? "is-complete" : "is-partial"}`} role="status">
-            <i className={`bi ${result.done ? "bi-check-circle-fill" : "bi-info-circle-fill"}`} aria-hidden="true" />
+          <div
+            className={`green-rankings__status ${result.done ? "is-complete" : "is-partial"}`}
+            role="status"
+          >
+            <i
+              className={`bi ${result.done ? "bi-check-circle-fill" : "bi-info-circle-fill"}`}
+              aria-hidden="true"
+            />
             <span>
-            {result.done
-              ? "Penelusuran wilayah selesai"
-              : "Hasil parsial; belum merupakan peringkat lengkap"}{" "}
-            · {result.statistics.processed} wilayah diproses · {result.statistics.eligible || 0}{" "}
-            layak peringkat (cakupan ≥80%).
+              {result.done
+                ? "Penelusuran wilayah selesai"
+                : "Hasil parsial; belum merupakan peringkat lengkap"}{" "}
+              · {result.statistics.processed} wilayah diproses · {result.statistics.eligible || 0}{" "}
+              layak peringkat (cakupan ≥80%).
             </span>
           </div>
           {result.snapshot_saved_at && (
@@ -397,15 +442,60 @@ export default function GreenRankingsPanel({
           )}
           <div className="green-rankings__stats">
             {[
-              { label: "Hijau tertimbang (%)", value: result.statistics.area_weighted_green_percent, icon: "bi-leaf-fill", tone: "green" },
-              { label: "Rata-rata wilayah (%)", value: result.statistics.mean_percent, icon: "bi-bar-chart-line-fill", tone: "blue" },
-              { label: "Median (%)", value: result.statistics.median_percent, icon: "bi-distribute-vertical", tone: "teal" },
-              { label: "Simpangan baku (%)", value: result.statistics.std_dev_percent, icon: "bi-activity", tone: "violet" },
-              { label: "Minimum (%)", value: result.statistics.min_percent, icon: "bi-arrow-down-short", tone: "amber" },
-              { label: "Maksimum (%)", value: result.statistics.max_percent, icon: "bi-arrow-up-short", tone: "green" },
-              { label: "Luas batas (ha)", value: result.statistics.area_ha, icon: "bi-bounding-box", tone: "blue" },
-              { label: "Luas data valid (ha)", value: result.statistics.valid_area_ha, icon: "bi-patch-check-fill", tone: "teal" },
-              { label: "Luas hijau teramati (ha)", value: result.statistics.green_area_ha, icon: "bi-tree-fill", tone: "green" },
+              {
+                label: "Hijau tertimbang (%)",
+                value: result.statistics.area_weighted_green_percent,
+                icon: "bi-leaf-fill",
+                tone: "green",
+              },
+              {
+                label: "Rata-rata wilayah (%)",
+                value: result.statistics.mean_percent,
+                icon: "bi-bar-chart-line-fill",
+                tone: "blue",
+              },
+              {
+                label: "Median (%)",
+                value: result.statistics.median_percent,
+                icon: "bi-distribute-vertical",
+                tone: "teal",
+              },
+              {
+                label: "Simpangan baku (%)",
+                value: result.statistics.std_dev_percent,
+                icon: "bi-activity",
+                tone: "violet",
+              },
+              {
+                label: "Minimum (%)",
+                value: result.statistics.min_percent,
+                icon: "bi-arrow-down-short",
+                tone: "amber",
+              },
+              {
+                label: "Maksimum (%)",
+                value: result.statistics.max_percent,
+                icon: "bi-arrow-up-short",
+                tone: "green",
+              },
+              {
+                label: "Luas batas (ha)",
+                value: result.statistics.area_ha,
+                icon: "bi-bounding-box",
+                tone: "blue",
+              },
+              {
+                label: "Luas data valid (ha)",
+                value: result.statistics.valid_area_ha,
+                icon: "bi-patch-check-fill",
+                tone: "teal",
+              },
+              {
+                label: "Luas hijau teramati (ha)",
+                value: result.statistics.green_area_ha,
+                icon: "bi-tree-fill",
+                tone: "green",
+              },
             ].map(({ label, value, icon, tone }) => (
               <div key={label} className="green-rankings__stat">
                 <span className={`green-rankings__stat-icon is-${tone}`} aria-hidden="true">
@@ -418,138 +508,260 @@ export default function GreenRankingsPanel({
               </div>
             ))}
           </div>
-          <CropPanelAccordion title="Distribusi dan komposisi tutupan hijau" icon="bi-bar-chart-line" className="green-rankings__accordion">
-            <p>
-              Geometri gagal: {result.statistics.failed_geometry || 0}. Pohon{" "}
-              {fmt(result.statistics.trees_ha)} ha; rumput {fmt(result.statistics.grass_ha)} ha;
-              tanaman {fmt(result.statistics.crops_ha)} ha; semak {fmt(result.statistics.shrubs_ha)}{" "}
-              ha; vegetasi tergenang {fmt(result.statistics.flooded_ha)} ha.
-            </p>
-            {result.statistics.histogram?.map((bin) => (
-              <div className="d-flex align-items-center gap-2 mb-1" key={bin.from_percent}>
-                <span style={{ minWidth: 80 }}>
-                  {bin.from_percent}–{bin.to_percent}%
-                </span>
-                <meter
-                  className="flex-grow-1"
-                  min={0}
-                  max={Math.max(1, result.statistics.eligible)}
-                  value={bin.count}
-                />
-                <span>{bin.count} wilayah</span>
-              </div>
-            ))}
-          </CropPanelAccordion>
-          <a
-            className="btn btn-outline-success green-rankings__export"
-            href={`${env.apiBaseUrl}/carbon/green-rankings/${result.run_id}/export`}
+          <CropPanelAccordion
+            title="Distribusi dan komposisi tutupan hijau"
+            icon="bi-bar-chart-line"
+            className="green-rankings__accordion green-rankings__visual-accordion"
+            defaultOpen
           >
-            Unduh seluruh statistik CSV ({result.status})
-          </a>
-          <div className="green-rankings__datatable-toolbar">
-            <label className="green-rankings__search">
-              <i className="bi bi-search" aria-hidden="true" />
-              <input
-                type="search"
-                className="form-control"
-                aria-label="Cari wilayah berdasarkan nama atau kode"
-                placeholder="Cari wilayah atau kode"
-                value={tableSearch}
-                onChange={(event) => setTableSearch(event.target.value)}
-              />
-            </label>
-            <label className="green-rankings__page-size">
-              <span>Baris</span>
-              <select
-                className="form-select"
-                aria-label="Jumlah baris per halaman"
-                value={tablePageSize}
-                onChange={(event) => {
-                  const nextSize = Number(event.target.value);
-                  setTablePageSize(nextSize);
-                  void page(1, { pageSize: nextSize });
-                }}
-              >
-                {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-              </select>
-              <span>per halaman</span>
-            </label>
-          </div>
-          <div className="table-responsive green-rankings__table-wrap">
-            <table className="table table-sm align-middle green-rankings__table">
-              <thead>
-                <tr>
-                  <th scope="col">No</th>
-                  {sortHeading("rank", "Peringkat")}
-                  {sortHeading("code", "Kode")}
-                  {sortHeading("name", "Wilayah")}
-                  {sortHeading("green_percent", "Hijau %")}
-                  {sortHeading("coverage_percent", "Cakupan %")}
-                  {sortHeading("area_ha", "Luas ha")}
-                  {sortHeading("green_area_ha", "Hijau ha")}
-                  {sortHeading("trees_ha", "Pohon ha")}
-                  {sortHeading("grass_ha", "Rumput ha")}
-                  {sortHeading("crops_ha", "Tanaman ha")}
-                  {sortHeading("shrubs_ha", "Semak ha")}
-                  {sortHeading("flooded_ha", "Vegetasi tergenang ha")}
-                </tr>
-              </thead>
-              <tbody>
-                {result.rows.length ? result.rows.map((row, i) => (
-                    <tr key={row.code}>
-                      <td>{(result.page - 1) * result.page_size + i + 1}</td>
-                      <td>{row.rank ?? "—"}</td>
-                      <td>{row.code}</td>
-                      <td>
-                        {row.name}
-                        {row.error && <small className="d-block text-danger">{row.error}</small>}
-                      </td>
-                      {[
-                        row.green_percent,
-                        row.coverage_percent,
-                        row.area_ha,
-                        row.green_area_ha,
-                        row.classes_ha?.trees,
-                        row.classes_ha?.grass,
-                        row.classes_ha?.crops,
-                        row.classes_ha?.shrubs,
-                        row.classes_ha?.flooded,
-                      ].map((value, index) => (
-                        <td key={index}>{fmt(value)}</td>
+            <div className="green-rankings__visual-grid">
+              <article className="green-rankings__chart-card">
+                <div className="green-rankings__chart-heading">
+                  <div>
+                    <span className="green-rankings__chart-icon is-green">
+                      <i className="bi bi-tree-fill" aria-hidden="true" />
+                    </span>
+                    <h3>Komposisi kelas vegetasi</h3>
+                  </div>
+                  <strong>{fmt(compositionTotal)} ha</strong>
+                </div>
+                <p className="green-rankings__chart-caption">
+                  Proporsi luas vegetasi yang teramati pada periode terpilih.
+                </p>
+                {compositionTotal > 0 ? (
+                  <>
+                    <div
+                      className="green-rankings__stacked-bar"
+                      role="img"
+                      aria-label={"Komposisi vegetasi, total " + fmt(compositionTotal) + " hektare"}
+                    >
+                      {classComposition
+                        .filter((item) => item.value > 0)
+                        .map((item) => (
+                          <span
+                            key={item.key}
+                            className={"is-" + item.key}
+                            style={{ width: (item.value / compositionTotal) * 100 + "%" }}
+                            title={item.label + ": " + fmt(item.value) + " ha"}
+                          />
+                        ))}
+                    </div>
+                    <div className="green-rankings__composition-legend">
+                      {classComposition.map((item) => (
+                        <div className="green-rankings__composition-item" key={item.key}>
+                          <span
+                            className={"green-rankings__legend-swatch is-" + item.key}
+                            aria-hidden="true"
+                          />
+                          <span className="green-rankings__legend-label">{item.label}</span>
+                          <strong>{fmt(item.value)} ha</strong>
+                          <small>{fmt((item.value / compositionTotal) * 100)}%</small>
+                        </div>
                       ))}
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={13} className="green-rankings__empty">
-                        {tableSearch.trim() ? "Tidak ada wilayah yang cocok dengan pencarian." : "Belum ada wilayah pada halaman ini."}
-                      </td>
-                    </tr>
-                  )}
-              </tbody>
-            </table>
-          </div>
-          <div className="green-rankings__datatable-footer">
-            <span>Menampilkan {firstRow}–{lastRow} dari {recordsFiltered} wilayah{recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal})` : ""}</span>
-            <div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={busy || result.page <= 1}
-                onClick={() => void page(result.page - 1)}
-              >
-                Sebelumnya
-              </button>
-              <span>Halaman {result.page} dari {pageCount}</span>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={busy || result.page >= pageCount}
-                onClick={() => void page(result.page + 1)}
-              >
-                Berikutnya
-              </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="green-rankings__chart-empty">
+                    Belum ada data komposisi vegetasi.
+                  </div>
+                )}
+              </article>
+              <article className="green-rankings__chart-card">
+                <div className="green-rankings__chart-heading">
+                  <div>
+                    <span className="green-rankings__chart-icon is-blue">
+                      <i className="bi bi-bar-chart-fill" aria-hidden="true" />
+                    </span>
+                    <h3>Sebaran persentase hijau</h3>
+                  </div>
+                  <span className="green-rankings__chart-unit">jumlah wilayah</span>
+                </div>
+                <p className="green-rankings__chart-caption">
+                  Banyaknya wilayah pada setiap rentang tutupan hijau.
+                </p>
+                {histogramBins.length > 0 ? (
+                  <div
+                    className="green-rankings__histogram"
+                    role="img"
+                    aria-label="Histogram sebaran persentase tutupan hijau"
+                  >
+                    {histogramBins.map((bin) => (
+                      <div
+                        className="green-rankings__histogram-column"
+                        key={bin.from_percent}
+                        title={
+                          bin.from_percent + "–" + bin.to_percent + "%: " + bin.count + " wilayah"
+                        }
+                      >
+                        <span className="green-rankings__histogram-count">{bin.count}</span>
+                        <div className="green-rankings__histogram-track">
+                          <span
+                            style={{ height: Math.max(4, (bin.count / histogramMax) * 100) + "%" }}
+                          />
+                        </div>
+                        <small>
+                          {bin.from_percent}–{bin.to_percent}%
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="green-rankings__chart-empty">
+                    Histogram belum tersedia untuk hasil ini.
+                  </div>
+                )}
+              </article>
             </div>
-          </div>
+            <div className="green-rankings__quality-note">
+              <span>
+                <i className="bi bi-check2-circle" aria-hidden="true" />{" "}
+                {result.statistics.processed - (result.statistics.failed_geometry || 0)} geometri
+                berhasil diproses
+              </span>
+              <span>
+                <i className="bi bi-exclamation-triangle" aria-hidden="true" />{" "}
+                {result.statistics.failed_geometry || 0} geometri bermasalah
+              </span>
+            </div>
+          </CropPanelAccordion>
+          <CropPanelAccordion
+            title="Tabel peringkat wilayah"
+            icon="bi-table"
+            className="green-rankings__accordion green-rankings__table-accordion"
+            defaultOpen
+            headerTrailing={fmt(recordsFiltered) + " wilayah"}
+          >
+            <div className="green-rankings__table-content">
+              <div className="green-rankings__table-actions">
+                <a
+                  className="btn btn-outline-success green-rankings__export"
+                  href={`${env.apiBaseUrl}/carbon/green-rankings/${result.run_id}/export`}
+                >
+                  <i className="bi bi-download me-1" aria-hidden="true" />
+                  Unduh statistik CSV ({result.status})
+                </a>
+                <div className="green-rankings__datatable-toolbar">
+                  <label className="green-rankings__search">
+                    <i className="bi bi-search" aria-hidden="true" />
+                    <input
+                      type="search"
+                      className="form-control"
+                      aria-label="Cari wilayah berdasarkan nama atau kode"
+                      placeholder="Cari wilayah atau kode"
+                      value={tableSearch}
+                      onChange={(event) => setTableSearch(event.target.value)}
+                    />
+                  </label>
+                  <label className="green-rankings__page-size">
+                    <span>Baris</span>
+                    <select
+                      className="form-select"
+                      aria-label="Jumlah baris per halaman"
+                      value={tablePageSize}
+                      onChange={(event) => {
+                        const nextSize = Number(event.target.value);
+                        setTablePageSize(nextSize);
+                        void page(1, { pageSize: nextSize });
+                      }}
+                    >
+                      {[10, 25, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span>per halaman</span>
+                  </label>
+                </div>
+              </div>
+              <div className="table-responsive green-rankings__table-wrap">
+                <table className="table table-sm align-middle green-rankings__table">
+                  <thead>
+                    <tr>
+                      <th scope="col">No</th>
+                      {sortHeading("rank", "Peringkat")}
+                      {sortHeading("code", "Kode")}
+                      {sortHeading("name", "Wilayah")}
+                      {sortHeading("green_percent", "Hijau %")}
+                      {sortHeading("coverage_percent", "Cakupan %")}
+                      {sortHeading("area_ha", "Luas ha")}
+                      {sortHeading("green_area_ha", "Hijau ha")}
+                      {sortHeading("trees_ha", "Pohon ha")}
+                      {sortHeading("grass_ha", "Rumput ha")}
+                      {sortHeading("crops_ha", "Tanaman ha")}
+                      {sortHeading("shrubs_ha", "Semak ha")}
+                      {sortHeading("flooded_ha", "Vegetasi tergenang ha")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.rows.length ? (
+                      result.rows.map((row, i) => (
+                        <tr key={row.code}>
+                          <td>{(result.page - 1) * result.page_size + i + 1}</td>
+                          <td>{row.rank ?? "—"}</td>
+                          <td>{row.code}</td>
+                          <td>
+                            {row.name}
+                            {row.error && (
+                              <small className="d-block text-danger">{row.error}</small>
+                            )}
+                          </td>
+                          {[
+                            row.green_percent,
+                            row.coverage_percent,
+                            row.area_ha,
+                            row.green_area_ha,
+                            row.classes_ha?.trees,
+                            row.classes_ha?.grass,
+                            row.classes_ha?.crops,
+                            row.classes_ha?.shrubs,
+                            row.classes_ha?.flooded,
+                          ].map((value, index) => (
+                            <td key={index}>{fmt(value)}</td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={13} className="green-rankings__empty">
+                          {tableSearch.trim()
+                            ? "Tidak ada wilayah yang cocok dengan pencarian."
+                            : "Belum ada wilayah pada halaman ini."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="green-rankings__datatable-footer">
+                <span>
+                  Menampilkan {firstRow}–{lastRow} dari {recordsFiltered} wilayah
+                  {recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal})` : ""}
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    disabled={busy || result.page <= 1}
+                    onClick={() => void page(result.page - 1)}
+                  >
+                    Sebelumnya
+                  </button>
+                  <span>
+                    Halaman {result.page} dari {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    disabled={busy || result.page >= pageCount}
+                    onClick={() => void page(result.page + 1)}
+                  >
+                    Berikutnya
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CropPanelAccordion>
         </div>
       )}
     </section>

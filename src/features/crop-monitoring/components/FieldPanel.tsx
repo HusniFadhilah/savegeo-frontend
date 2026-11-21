@@ -129,8 +129,12 @@ export default function FieldPanel({ commodities }: Props) {
           <div className="mb-3">
             {error && <div role="alert" className="alert alert-danger">{t("location.failed")}</div>}
             <div className="d-flex gap-2 mb-2">
-              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || offset === 0} onClick={() => void loadFields(Math.max(0, offset - 100))}>?</button>
-              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || !hasMore} onClick={() => void loadFields(offset + 100)}>{t("common.loadMore")} ?</button>
+              <button type="button" className="btn btn-sm btn-outline-secondary" aria-label={t("common.previous")} title={t("common.previous")} disabled={loading || offset === 0} onClick={() => void loadFields(Math.max(0, offset - 100))}>
+                <i className="bi bi-chevron-left" aria-hidden="true" />
+              </button>
+              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || !hasMore} onClick={() => void loadFields(offset + 100)}>
+                {t("common.loadMore")} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+              </button>
             </div>
             {loading && <div className="text-muted small">{t("crop.field.loading")}</div>}
             {!loading && fields.length === 0 && (

@@ -181,8 +181,12 @@ export default function AoiCompanyTab({ onApply }: Props) {
       )}
 
       <div className="d-flex gap-2 mt-2">
-        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={offset === 0 || loading} onClick={() => setOffset(n => Math.max(0, n - 100))}>?</button>
-        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={!hasMore || loading} onClick={() => setOffset(n => n + 100)}>{t("common.loadMore")} ?</button>
+        <button type="button" className="btn btn-sm btn-outline-secondary" aria-label={t("common.previous")} title={t("common.previous")} disabled={offset === 0 || loading} onClick={() => setOffset(n => Math.max(0, n - 100))}>
+          <i className="bi bi-chevron-left" aria-hidden="true" />
+        </button>
+        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={!hasMore || loading} onClick={() => setOffset(n => n + 100)}>
+          {t("common.loadMore")} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+        </button>
       </div>
       {selected && (
         <button className="btn btn-success mt-3" onClick={handleUseAsAoi} disabled={applying}>

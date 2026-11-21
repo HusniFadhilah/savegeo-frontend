@@ -638,20 +638,32 @@ export default function AoiRegionTab({ onApply }: Props) {
 
       {scope === "indonesia" && (
         <div className="mb-3">
-          <label className="form-label">{t("carbon.aoiRegion.searchLocation")}</label>
+          <div className="form-label d-flex align-items-center gap-1">
+            <span>{t("carbon.aoiRegion.searchLocation")}</span>
+            <InfoTip
+              label={t("carbon.aoiRegion.searchLocation")}
+              content={(
+                <>
+                  {t("location.disclosure")} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+                  <br />
+                  {t("carbon.aoiRegion.emptySearchHint")}
+                </>
+              )}
+            />
+          </div>
           <AsyncLocationSelect
             selectedLabel={searchedLocation?.display_name}
             onSelect={setSearchedLocation}
             onClear={() => setSearchedLocation(null)}
             placeholder={t("carbon.aoiRegion.searchPlaceholder")}
           />
-          <small className="text-muted d-block mt-1">
-            {searchedLocation
-              ? searchedLocation.geojson
+          {searchedLocation && (
+            <small className="text-muted d-block mt-1">
+              {searchedLocation.geojson
                 ? t("carbon.aoiRegion.hasRealBoundary")
-                : t("carbon.aoiRegion.bboxFallback")
-              : t("carbon.aoiRegion.emptySearchHint")}
-          </small>
+                : t("carbon.aoiRegion.bboxFallback")}
+            </small>
+          )}
         </div>
       )}
 

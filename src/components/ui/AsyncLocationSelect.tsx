@@ -120,7 +120,6 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
           </button>
         )}
       </div>
-      <small className="text-muted">{t("location.disclosure")} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">? OpenStreetMap</a></small>
       {open && (
         <div className="sg-ssel-dropdown">
           {query.trim().length < 3 && <div className="sg-ssel-empty">{t("location.minimum")}</div>}
