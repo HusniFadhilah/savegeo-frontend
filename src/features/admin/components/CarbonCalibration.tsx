@@ -2,9 +2,11 @@ import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/c
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useAdmin, type ToastType } from "../AdminContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import TablePagination from "@/components/ui/TablePagination";
 import { ApiError } from "@/services/apiClient";
 import {
   createCarbonCalibrationDataset,
+  createUndipCarbonReferenceDataset,
   importCarbonCalibrationSources,
   extractCarbonCalibrationDataset,
   getCarbonCalibrationDataset,
@@ -38,6 +40,8 @@ const DEFAULT_DATASET = {
   access: "restricted",
   status: "draft",
 };
+
+const UNDIP_DATASET_ID = "undip_carbon_reference_2026";
 
 function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
@@ -102,6 +106,8 @@ export default function CarbonCalibration() {
   const [datasets, setDatasets] = useState<CarbonCalibrationDataset[]>([]);
   const [selected, setSelected] = useState<CarbonCalibrationDataset | null>(null);
   const [files, setFiles] = useState<CarbonCalibrationFile[]>([]);
+  const [filesPage, setFilesPage] = useState(0);
+  const [filesSearch, setFilesSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [revisedWorkbook, setRevisedWorkbook] = useState<File | null>(null);
   const [previousWorkbook, setPreviousWorkbook] = useState<File | null>(null);
@@ -126,6 +132,9 @@ export default function CarbonCalibration() {
 
       const created = await createCarbonCalibrationDataset(DEFAULT_DATASET);
       setSelected(created);
+      setFiles([]);
+      setFilesPage(0);
+      setFilesSearch("");
       setDatasets((current) => [created, ...current]);
       notify(t("admin.calibration.created"), "s");
     } catch (error) {
@@ -150,8 +159,50 @@ export default function CarbonCalibration() {
     finally { setBusy(false); }
   }
 
+  async function createUndipDataset() {
+    setBusy(true);
+    try {
+      const existing = datasets.find((dataset) => dataset.dataset_id === UNDIP_DATASET_ID);
+      if (existing) {
+        await selectDataset(existing);
+        notify("Dataset acuan UNDIP dibuka.", "s");
+        return;
+      }
+
+      const created = await createUndipCarbonReferenceDataset();
+      setSelected(created);
+      setFiles([]);
+      setFilesPage(0);
+      setFilesSearch("");
+      setDatasets((current) => [created, ...current]);
+      notify("Dataset acuan UNDIP ditambahkan sebagai draf.", "s");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        try {
+          const latest = await listCarbonCalibrationDatasets();
+          const available = latest.datasets ?? [];
+          setDatasets(available);
+          const existing = available.find((dataset) => dataset.dataset_id === UNDIP_DATASET_ID);
+          if (existing) {
+            await selectDataset(existing);
+            notify("Dataset acuan UNDIP dibuka.", "s");
+            return;
+          }
+        } catch {
+          // Keep the original conflict message if the dataset list cannot be refreshed.
+        }
+      }
+      const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.createFailed"));
+      notify(outcome.message, outcome.type);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function selectDataset(dataset: CarbonCalibrationDataset) {
     setSelected(dataset);
+    setFilesPage(0);
+    setFilesSearch("");
     try {
       const detail = await getCarbonCalibrationDataset(dataset.dataset_id);
       setFiles(detail.files ?? []);
@@ -168,6 +219,8 @@ export default function CarbonCalibration() {
       const uploaded: CarbonCalibrationFile[] = [];
       for (const file of Array.from(event.target.files)) uploaded.push(await uploadCarbonCalibrationFile(selected.dataset_id, file));
       setFiles((current) => [...current, ...uploaded]);
+      setFilesPage(0);
+      setFilesSearch("");
       notify(t("admin.calibration.uploaded"), "s");
     } catch (error) {
       const outcome = readableApiMessage(error instanceof Error ? error.message : error, t("admin.calibration.uploadFailed"));
@@ -175,6 +228,13 @@ export default function CarbonCalibration() {
     }
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
   }
+
+  const filteredFiles = files.filter((file) => {
+    const query = filesSearch.trim().toLocaleLowerCase();
+    return !query || [file.source_name, file.file_kind, file.sha256].some((value) => value.toLocaleLowerCase().includes(query));
+  });
+  const filesPageSize = 10;
+  const visibleFiles = filteredFiles.slice(filesPage * filesPageSize, (filesPage + 1) * filesPageSize);
 
   async function importSources() {
     if (!revisedWorkbook) {
@@ -221,6 +281,7 @@ export default function CarbonCalibration() {
   const totalPlots = datasets.reduce((sum, dataset) => sum + Number(dataset.manifest.plot_count ?? 0), 0);
   const selectedStatus = selected?.status ?? "Not configured";
   const statusClass = selected?.status === "validated" || selected?.status === "ready" ? "is-ready" : "is-draft";
+  const isUndipReference = selected?.dataset_id === UNDIP_DATASET_ID;
 
   return (
     <section className="calibration-admin">
@@ -245,6 +306,19 @@ export default function CarbonCalibration() {
         <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Alur sumber terlindungi</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">SUMBER HANYA BACA</span>
       </div>
       <NewCalibrationDatasetForm onCreated={(dataset) => { setDatasets((current) => [dataset, ...current]); void selectDataset(dataset); }} />
+      <div className="admin-card calibration-undip-reference calibration-surface-card">
+        <div className="calibration-undip-copy">
+          <span className="calibration-undip-icon"><i className="bi bi-building" /></span>
+          <div>
+            <h3>Kalibrasi karbon UNDIP</h3>
+            <p>Mulai ruang kerja acuan untuk data multi-kampus 2026. Ringkasan PDF dan spreadsheet disimpan sebagai konteks; label model tetap berasal dari pengamatan plot yang sudah ditinjau.</p>
+          </div>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={() => void createUndipDataset()} disabled={busy}>
+          <i className={`bi ${datasets.some((dataset) => dataset.dataset_id === UNDIP_DATASET_ID) ? "bi-folder2-open" : "bi-plus-lg"}`} />
+          {datasets.some((dataset) => dataset.dataset_id === UNDIP_DATASET_ID) ? "Buka dataset UNDIP" : "Tambahkan dataset UNDIP"}
+        </button>
+      </div>
       <details className="admin-card calibration-import-wizard calibration-surface-card">
         <summary className="p-3 fw-semibold">Impor sumber survei pohon · buku kerja dan UAV</summary>
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
@@ -264,10 +338,36 @@ export default function CarbonCalibration() {
           {!selected ? <div className="empty-state"><i className="bi bi-database-gear" /><p>{t("admin.calibration.selectHint")}</p></div> : <>
             <div className="admin-card-head"><div><h3>{selected.name}</h3><span className="stat-badge badge-amber">{selected.access}</span></div><span className="calibration-status">{selected.status}</span></div>
             <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{selected.manifest.field_reference_type === "pool_specific_field_observations" ? "Sesuai metode tiap pengukuran" : t("admin.calibration.allometric")}</strong></div></div>
+            {isUndipReference && <div className="calibration-undip-details">
+              <div className="calibration-undip-details-head"><div><strong>Ringkasan sumber 2026</strong><span>Angka agregat untuk konteks laporan, belum menjadi label kalibrasi.</span></div><span className="badge bg-warning-subtle text-warning-emphasis">Draf · perlu tinjauan</span></div>
+              <div className="field-calibration-table-wrap"><table className="tbl tbl-wide field-calibration-table field-calibration-table--summary"><thead><tr><AdminTableNumberHeader /><th>Komponen</th><th>Workbook revisi</th><th>Tabel PDF</th><th>Narasi PDF</th></tr></thead><tbody>
+                <tr><AdminTableNumberCell index={0} /><td>AGB</td><td>23.712,35 ton C</td><td>23.712,35 ton C</td><td>23.721,25 ton C</td></tr>
+                <tr><AdminTableNumberCell index={1} /><td>SOC</td><td>1.623.742,67 ton C</td><td>1.729.329,77 ton C</td><td>1.139.921,61 ton C</td></tr>
+              </tbody></table></div>
+              <p className="calibration-undip-warning"><i className="bi bi-exclamation-triangle" /> Angka AGB dan SOC berbeda antarbagian/sumber. Tinjau dan rekonsiliasi sebelum memakai angka agregat; koordinat dan luas plot juga perlu diverifikasi.</p>
+              <div className="calibration-undip-sources"><strong>Berkas sumber</strong>
+                <a href="https://drive.google.com/file/d/1yjT3k2Prt6zBr4536Eqz6oDfN1EZrNc9/view" target="_blank" rel="noreferrer">Laporan carbon offset UNDIP 2026 (PDF) <i className="bi bi-box-arrow-up-right" /></a>
+                <a href="https://docs.google.com/spreadsheets/d/1Woq1AfB-qsEezr-6kmPhQv25beisfiv_/edit?gid=1711374899#gid=1711374899" target="_blank" rel="noreferrer">Data Survei Carbon.xlsx <i className="bi bi-box-arrow-up-right" /></a>
+                <a href="https://docs.google.com/spreadsheets/d/1ml2cFL62vuyLocQQ8HelvcZ-c50DRNNh/edit?rtpof=true" target="_blank" rel="noreferrer">2026 OLAH DATA CARBON (REVISI).xlsx <i className="bi bi-box-arrow-up-right" /></a>
+              </div>
+              <p className="calibration-undip-limits">Workbook Excel dapat diunggah melalui tombol <b>Tambah file</b> untuk ekstraksi plot AGB. Data SOC perlu dimasukkan sebagai pengamatan tersendiri setelah rekonsiliasi. BGB, litter, dan deadwood tidak tercakup dalam sumber ini.</p>
+            </div>}
             <div className="calibration-actions"><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("validate")}><i className="bi bi-check2-circle" /> {t("admin.calibration.validate")}</button><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("extract")}><i className="bi bi-gear" /> {t("admin.calibration.extract")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("spatial")}><i className="bi bi-bounding-box" /> {t("admin.calibration.validateSpatial")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("features")}><i className="bi bi-bezier2" /> {t("admin.calibration.extractFeatures")}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}><i className="bi bi-upload" /> {t("admin.calibration.addFiles")}</button><input ref={fileInput} type="file" multiple hidden accept=".tif,.tiff,.zip,.obj,.csv,.xlsx,.docx,.pdf,.geojson,.json,.shp" onChange={(event) => void uploadFiles(event)} /></div>
             <FieldCalibrationPanel key={selected.dataset_id} datasetId={selected.dataset_id} />
-            <h4>{t("admin.calibration.files")}</h4>
-            <div className="table-responsive"><table className="table table-sm align-middle"><thead><tr><AdminTableNumberHeader /><th>{t("admin.calibration.source")}</th><th>{t("admin.calibration.kind")}</th><th>{t("admin.calibration.size")}</th><th>SHA-256</th></tr></thead><tbody>{files.map((file, index) => <tr key={file.id}><AdminTableNumberCell index={index} /><td>{file.source_name}</td><td>{file.file_kind}</td><td>{formatBytes(file.size_bytes)}</td><td><code title={file.sha256}>{file.sha256.slice(0, 16)}…</code></td></tr>)}</tbody></table></div>
+            <div className="calibration-files-heading"><div><h4>{t("admin.calibration.files")}</h4><p>{filteredFiles.length} berkas</p></div></div>
+            <div className="field-calibration-table-wrap calibration-file-table"><table className="tbl tbl-wide field-calibration-table field-calibration-table--files"><thead><tr><AdminTableNumberHeader /><th>{t("admin.calibration.source")}</th><th>{t("admin.calibration.kind")}</th><th>{t("admin.calibration.size")}</th><th>SHA-256</th></tr></thead><tbody>{visibleFiles.map((file, index) => <tr key={file.id}><AdminTableNumberCell index={filesPage * filesPageSize + index} /><td>{file.source_name}</td><td>{file.file_kind}</td><td>{formatBytes(file.size_bytes)}</td><td><code title={file.sha256}>{file.sha256.slice(0, 16)}…</code></td></tr>)}</tbody></table></div>
+            <TablePagination
+              page={filesPage}
+              pageCount={Math.max(1, Math.ceil(filteredFiles.length / filesPageSize))}
+              recordsTotal={files.length}
+              recordsFiltered={filteredFiles.length}
+              pageSize={filesPageSize}
+              search={filesSearch}
+              searchPlaceholder="Cari nama file, jenis, hash"
+              onSearchChange={(value) => { setFilesSearch(value); setFilesPage(0); }}
+              onPrev={() => setFilesPage((current) => Math.max(0, current - 1))}
+              onNext={() => setFilesPage((current) => Math.min(Math.max(0, Math.ceil(filteredFiles.length / filesPageSize) - 1), current + 1))}
+            />
             <div className="calibration-method-note"><i className="bi bi-info-circle" /><span>{t("admin.calibration.methodNote")}</span></div>
           </>}
         </div>

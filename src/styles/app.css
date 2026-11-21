@@ -3525,7 +3525,6 @@
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  min-height: 200px;
   padding: 34px 38px;
   border-radius: 12px;
   background: linear-gradient(135deg, #1f6d2b 0%, #15551e 100%);

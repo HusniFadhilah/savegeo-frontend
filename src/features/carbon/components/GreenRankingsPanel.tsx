@@ -18,6 +18,19 @@ const LEVELS = [
 ];
 const fmt = (value?: number | null) =>
   value == null ? "—" : value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+const formatRankingValue = (value: number | null | undefined, compact: boolean, unit: "%" | "ha") => {
+  if (value == null) return "—";
+  const formatted = new Intl.NumberFormat(
+    "id-ID",
+    compact
+      ? { notation: "compact", minimumFractionDigits: 1, maximumFractionDigits: 1 }
+      : { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+  )
+    .format(value)
+    .replace(/\u00a0/g, " ");
+  if (!compact) return formatted;
+  return unit === "%" ? `${formatted}%` : `${formatted} ${unit}`;
+};
 
 export default function GreenRankingsPanel({
   year,
@@ -44,6 +57,7 @@ export default function GreenRankingsPanel({
   const [tableSort, setTableSort] = useState("rank");
   const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("asc");
   const [tablePageSize, setTablePageSize] = useState(50);
+  const [compactNumbers, setCompactNumbers] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const keepRunning = useRef(false);
@@ -123,8 +137,11 @@ export default function GreenRankingsPanel({
     const loadLatest = () =>
       apiClient.get<GreenRankingResult>(`/carbon/green-rankings/latest?${params}`, { auth: "app" });
     if (saved) {
+      const savedUrl = saved.startsWith("snapshot:")
+        ? `/carbon/green-rankings/${encodeURIComponent(saved)}?${params}`
+        : `/carbon/green-rankings/${encodeURIComponent(saved)}`;
       void apiClient
-        .get<GreenRankingResult>(`/carbon/green-rankings/${encodeURIComponent(saved)}`, { auth: "app" })
+        .get<GreenRankingResult>(savedUrl, { auth: "app" })
         .then(async (data) => {
           if (!data.done || data.run_id.startsWith("snapshot:")) {
             acceptResult(data);
@@ -208,6 +225,15 @@ export default function GreenRankingsPanel({
       });
       const search = (overrides.search ?? tableSearch).trim();
       if (search) params.set("search", search);
+      if (result.run_id.startsWith("snapshot:")) {
+        params.set("year", String(year));
+        params.set("start_month", String(startMonth));
+        params.set("end_month", String(endMonth));
+        params.set("level", level);
+        if (province) params.set("province", province);
+        if (city) params.set("city", city);
+        if (district) params.set("district", district);
+      }
       const data = await apiClient.get<GreenRankingResult>(
         `/carbon/green-rankings/${result.run_id}?${params.toString()}`,
         { auth: "app" },
@@ -259,6 +285,18 @@ export default function GreenRankingsPanel({
   const pageCount = result ? Math.max(1, Math.ceil(recordsFiltered / result.page_size)) : 1;
   const firstRow = recordsFiltered === 0 ? 0 : ((result?.page ?? 1) - 1) * (result?.page_size ?? 50) + 1;
   const lastRow = Math.min(recordsFiltered, (result?.page ?? 1) * (result?.page_size ?? 50));
+  const exportScopeParams = new URLSearchParams({
+    year: String(year),
+    start_month: String(startMonth),
+    end_month: String(endMonth),
+    level,
+  });
+  if (province) exportScopeParams.set("province", province);
+  if (city) exportScopeParams.set("city", city);
+  if (district) exportScopeParams.set("district", district);
+  const exportScopeSuffix = result?.run_id.startsWith("snapshot:")
+    ? "?" + exportScopeParams.toString()
+    : "";
   const sortHeading = (key: string, label: string) => (
     <th
       scope="col"
@@ -635,7 +673,7 @@ export default function GreenRankingsPanel({
               <div className="green-rankings__table-actions">
                 <a
                   className="btn btn-outline-success green-rankings__export"
-                  href={`${env.apiBaseUrl}/carbon/green-rankings/${result.run_id}/export`}
+                  href={env.apiBaseUrl + "/carbon/green-rankings/" + result.run_id + "/export" + exportScopeSuffix}
                 >
                   <i className="bi bi-download me-1" aria-hidden="true" />
                   Unduh statistik CSV ({result.status})
@@ -652,26 +690,41 @@ export default function GreenRankingsPanel({
                       onChange={(event) => setTableSearch(event.target.value)}
                     />
                   </label>
-                  <label className="green-rankings__page-size">
-                    <span>Baris</span>
-                    <select
-                      className="form-select"
-                      aria-label="Jumlah baris per halaman"
-                      value={tablePageSize}
-                      onChange={(event) => {
-                        const nextSize = Number(event.target.value);
-                        setTablePageSize(nextSize);
-                        void page(1, { pageSize: nextSize });
-                      }}
+                  <div className="green-rankings__table-display">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary green-rankings__number-format-toggle"
+                      aria-label={compactNumbers ? "Tampilkan angka penuh" : "Ringkas angka tabel"}
+                      aria-pressed={compactNumbers}
+                      title={compactNumbers ? "Tampilkan angka penuh" : "Tampilkan angka ringkas"}
+                      onClick={() => setCompactNumbers((value) => !value)}
                     >
-                      {[10, 25, 50, 100].map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                    <span>per halaman</span>
-                  </label>
+                      <i
+                        className={`bi ${compactNumbers ? "bi-arrows-angle-expand" : "bi-arrows-angle-contract"}`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <label className="green-rankings__page-size">
+                      <span>Baris</span>
+                      <select
+                        className="form-select"
+                        aria-label="Jumlah baris per halaman"
+                        value={tablePageSize}
+                        onChange={(event) => {
+                          const nextSize = Number(event.target.value);
+                          setTablePageSize(nextSize);
+                          void page(1, { pageSize: nextSize });
+                        }}
+                      >
+                        {[10, 25, 50, 100].map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                      <span>per halaman</span>
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="table-responsive green-rankings__table-wrap">
@@ -707,17 +760,19 @@ export default function GreenRankingsPanel({
                             )}
                           </td>
                           {[
-                            row.green_percent,
-                            row.coverage_percent,
-                            row.area_ha,
-                            row.green_area_ha,
-                            row.classes_ha?.trees,
-                            row.classes_ha?.grass,
-                            row.classes_ha?.crops,
-                            row.classes_ha?.shrubs,
-                            row.classes_ha?.flooded,
+                            { value: row.green_percent, unit: "%" as const },
+                            { value: row.coverage_percent, unit: "%" as const },
+                            { value: row.area_ha, unit: "ha" as const },
+                            { value: row.green_area_ha, unit: "ha" as const },
+                            { value: row.classes_ha?.trees, unit: "ha" as const },
+                            { value: row.classes_ha?.grass, unit: "ha" as const },
+                            { value: row.classes_ha?.crops, unit: "ha" as const },
+                            { value: row.classes_ha?.shrubs, unit: "ha" as const },
+                            { value: row.classes_ha?.flooded, unit: "ha" as const },
                           ].map((value, index) => (
-                            <td key={index}>{fmt(value)}</td>
+                            <td key={index}>
+                              {formatRankingValue(value.value, compactNumbers, value.unit)}
+                            </td>
                           ))}
                         </tr>
                       ))

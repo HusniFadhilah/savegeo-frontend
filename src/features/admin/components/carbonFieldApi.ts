@@ -139,11 +139,22 @@ export const fieldApi = {
     apiClient.get<Assessment>(`${base}/runs/${encodeURIComponent(id)}`, { auth: true }),
   run: (id: string) =>
     apiClient.get<FieldPredictionRun>(`${base}/runs/${encodeURIComponent(id)}`, { auth: true }),
-  list: (dataset: string, page = 1, pool?: Pool) =>
-    apiClient.get<{ rows: FieldObservation[]; total: number; page: number; page_size: number }>(
-      `${base}/datasets/${encodeURIComponent(dataset)}/observations?page=${page}${pool ? `&pool=${pool}` : ""}`,
+  list: (dataset: string, page = 1, pool?: Pool, search?: string) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (pool) params.set("pool", pool);
+    if (search?.trim()) params.set("q", search.trim());
+    return apiClient.get<{
+      rows: FieldObservation[];
+      total: number;
+      records_total?: number;
+      records_filtered?: number;
+      page: number;
+      page_size: number;
+    }>(
+      `${base}/datasets/${encodeURIComponent(dataset)}/observations?${params.toString()}`,
       { auth: true },
-    ),
+    );
+  },
   add: (dataset: string, record: Record<string, unknown>) =>
     apiClient.post(
       `${base}/datasets/${encodeURIComponent(dataset)}/observations`,
