@@ -6,6 +6,7 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { plainTextContent } from "@/lib/leafletText";
 import { ApiError } from "@/services/apiClient";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 import { fetchCities, fetchProvinces } from "@/services/analysisService";
 import type { RegionOption } from "@/types/api";
 import {
@@ -567,7 +568,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             )}
             <div className="small text-muted mt-2">
               Layer:{" "}
-              <a href={KALIMANTAN_FIRE_2026.boundarySource} target="_blank" rel="noreferrer">
+              <a href={safeHttpUrl(KALIMANTAN_FIRE_2026.boundarySource)} target="_blank" rel="noopener noreferrer">
                 BIG · 34 Provinsi
               </a>
             </div>
@@ -881,17 +882,14 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             bukan otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.
           </div>
           <div className="disaster-kalimantan-sources">
-            {KALIMANTAN_FIRE_2026.sources.map((source) => (
-              <a
-                key={source.url}
-                href={source.url}
-                target="_blank"
-                rel="noreferrer"
-                title={source.summary}
-              >
-                {source.publisher} · {source.date}
-              </a>
-            ))}
+            {KALIMANTAN_FIRE_2026.sources.map((source) => {
+              const url = safeHttpUrl(source.url);
+              return url ? (
+                <a key={source.url} href={url} target="_blank" rel="noopener noreferrer" title={source.summary}>
+                  {source.publisher} · {source.date}
+                </a>
+              ) : null;
+            })}
           </div>
         </div>
       )}

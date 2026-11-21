@@ -10,6 +10,7 @@ import { ESRI_WAYBACK_START_DATE, listEsriWaybackScenes, selectEsriWaybackScene,
 import { clampNasaGibsDate, nasaGibsBlackMarbleTileUrl, NASA_GIBS_BLACK_MARBLE_YEARS, NASA_GIBS_FIRST_DATE, NASA_GIBS_VIIRS_NIGHT_FIRST_DATE, nasaGibsDateAt, nasaGibsDateIndex, nasaGibsTimelineTicks, nasaGibsTrueColorTileUrl, nasaGibsViirsNightTileUrl, type NasaGibsBlackMarbleYear } from "@/features/imagery/nasaGibs";
 import { EOX_CLOUDLESS_YEARS, eoxCloudlessTileUrl, type EoxCloudlessYear } from "@/features/imagery/eoxCloudless";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { escapeHtmlText } from "@/utils/safeHttpUrl";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import { BASEMAP_FOR_HISTORICAL_SOURCE, historicalSourceForBasemap, type HistoricalImagerySource } from "@/config/historicalBasemapSync";
 import { useBasemapContext } from "./BasemapContext";
@@ -392,16 +393,16 @@ export default function HistoricalImageryControl({ enabled = true, targetDate }:
       return;
     }
     const attribution = historySource === "nasa-gibs"
-      ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - MODIS Terra Corrected Reflectance True Color - ${effectiveNasaTileDate}`
+      ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - MODIS Terra Corrected Reflectance True Color - ${escapeHtmlText(effectiveNasaTileDate)}`
       : historySource === "nasa-viirs-night"
-        ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Day/Night Band ENCC - ${effectiveViirsNightTileDate}`
+        ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Day/Night Band ENCC - ${escapeHtmlText(effectiveViirsNightTileDate)}`
       : historySource === "nasa-black-marble"
         ? `<a href="https://earthdata.nasa.gov/" target="_blank" rel="noreferrer">NASA Earthdata GIBS</a> - VIIRS Black Marble ${blackMarbleYear}`
       : historySource === "copernicus-sentinel2"
-        ? `<a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus Sentinel-2 L1C</a> - Contains modified Copernicus Sentinel data ${copernicusTileScene?.acquired_at.slice(0, 4) ?? sentinelToday.slice(0, 4)}, via <a href="https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_HARMONIZED" target="_blank" rel="noreferrer">Earth Engine</a>`
+        ? `<a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus Sentinel-2 L1C</a> - Contains modified Copernicus Sentinel data ${escapeHtmlText(copernicusTileScene?.acquired_at.slice(0, 4) ?? sentinelToday.slice(0, 4))}, via <a href="https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_HARMONIZED" target="_blank" rel="noreferrer">Earth Engine</a>`
       : historySource === "eox-cloudless"
           ? `<a href="https://cloudless.eox.at/" target="_blank" rel="noreferrer">EOxCloudless</a> by EOX IT Services GmbH - modified Copernicus Sentinel data ${eoxYear} - <a href="${eoxYear === 2016 ? "https://creativecommons.org/licenses/by/4.0/" : "https://creativecommons.org/licenses/by-nc-sa/4.0/"}" target="_blank" rel="noreferrer">${eoxYear === 2016 ? "CC BY 4.0" : "CC BY-NC-SA 4.0 (non-commercial use)"}</a>`
-          : `Esri World Imagery Wayback · ${t("map.history.release", { date: selectedReleaseDate })}`;
+          : `Esri World Imagery Wayback · ${escapeHtmlText(t("map.history.release", { date: selectedReleaseDate }))}`;
     const maxNativeZoom = historySource === "nasa-gibs" ? 9 : historySource === "nasa-black-marble" || historySource === "nasa-viirs-night" ? 8 : historySource === "eox-cloudless" ? 14 : historySource === "copernicus-sentinel2" ? 16 : 19;
     const layer = L.tileLayer(tileUrl, {
       pane: paneName,

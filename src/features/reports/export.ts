@@ -7,6 +7,7 @@ import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { renderRasterPreview } from "./rasterPreview";
 import type { GreenRankingResult } from "@/features/carbon/extendedTypes";
 import { env } from "@/config/env";
+import { formatApiErrorMessage } from "@/services/apiClient";
 
 export interface AnalysisResultsBundle {
   vegetation?: VegetationResult | null;
@@ -48,16 +49,13 @@ export async function downloadStoredAnalysisReport(jobId: string, aoiName: strin
   );
   if (!response.ok) {
     const raw = await response.text().catch(() => "");
-    let message = raw;
+    let payload: unknown = raw;
     try {
-      const payload = JSON.parse(raw) as { detail?: unknown; message?: unknown };
-      message = typeof payload.detail === "string" ? payload.detail
-        : typeof payload.message === "string" ? payload.message
-          : raw;
+      payload = JSON.parse(raw);
     } catch {
       // Keep the plain response body when the API returns a non-JSON error.
     }
-    throw new Error(message || `Laporan server gagal dibuat (${response.status}).`);
+    throw new Error(formatApiErrorMessage(payload, response.status));
   }
   const blob = await response.blob();
   const safeAoi = aoiName.replace(/[^\p{L}\p{N}_-]/gu, "_").slice(0, 60) || "area";

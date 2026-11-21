@@ -5,6 +5,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 
 type StepId = "step1" | "step2" | "step3" | "step4" | "stepTips";
 type NoteTone = "info" | "warn" | "success" | "danger";
@@ -983,12 +984,8 @@ export default function GuideModule() {
                     <td>{dataset.accuracy}</td>
                     <td>
                       <div className="guide-doc-links">
-                        <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">
-                          Dataset
-                        </a>
-                        <a href={dataset.paperUrl} target="_blank" rel="noreferrer">
-                          Paper/Dok.
-                        </a>
+                        {safeHttpUrl(dataset.sourceUrl) && <a href={safeHttpUrl(dataset.sourceUrl)} target="_blank" rel="noopener noreferrer">Dataset</a>}
+                        {safeHttpUrl(dataset.paperUrl) && <a href={safeHttpUrl(dataset.paperUrl)} target="_blank" rel="noopener noreferrer">Paper/Dok.</a>}
                       </div>
                     </td>
                   </tr>

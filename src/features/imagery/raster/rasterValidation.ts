@@ -6,6 +6,12 @@ export function validateRaster(data: RasterData) {
   if (!Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width <= 0 || data.height <= 0 || !data.bands.length) throw new Error("raster.invalidMetadata");
   if (dimensions(data) > RASTER_LIMITS.maxPixels || dimensions(data) * data.bands.length > 64_000_000) throw new Error("raster.rasterTooLarge");
   if (data.bands.some(b => b.length !== dimensions(data))) throw new Error("raster.invalidMetadata");
+  if (data.nodata != null && !Number.isFinite(data.nodata) && !Number.isNaN(data.nodata)) throw new Error("raster.invalidMetadata");
+  const bounds = data.source?.bounds;
+  if (bounds && (bounds.length !== 4 || bounds.some(value => !Number.isFinite(value)) || bounds[0] >= bounds[2] || bounds[1] >= bounds[3])) throw new Error("raster.invalidMetadata");
+  const transform = data.source?.transform;
+  if (transform && (transform.length !== 6 || transform.some(value => !Number.isFinite(value))
+    || Math.abs(transform[1] * transform[5] - transform[2] * transform[4]) < 1e-15)) throw new Error("raster.invalidMetadata");
 }
 export function validateOperation(data: RasterData, params: RasterOperationParams) {
   validateRaster(data);
@@ -20,6 +26,8 @@ export function validateOperation(data: RasterData, params: RasterOperationParam
     if (number != null && !Number.isFinite(number)) throw new Error("raster.invalidMetadata");
   }
   if (params.scale != null && params.scale <= 0) throw new Error("raster.invalidMetadata");
+  if (["slope", "aspect", "hillshade"].includes(params.operation) && data.source?.transform
+    && (Math.abs(data.source.transform[2]) > 1e-12 || Math.abs(data.source.transform[4]) > 1e-12)) throw new Error("raster.reprojectionRequired");
   if (params.operation === "zonal_statistics" && !params.clipGeometry) throw new Error("raster.invalidAoi");
   if (["zonal_statistics", "clip", "clip_stretch"].includes(params.operation)) {
     if (!data.source?.bounds) throw new Error("raster.invalidAoi");

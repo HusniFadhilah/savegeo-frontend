@@ -9,3 +9,14 @@ export function safeHttpUrl(value: unknown): string | undefined {
     return undefined;
   }
 }
+
+export function escapeHtmlText(value: unknown): string {
+  const escaped: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return String(value).replace(/[&<>"']/g, (character) => escaped[character] ?? character);
+}
