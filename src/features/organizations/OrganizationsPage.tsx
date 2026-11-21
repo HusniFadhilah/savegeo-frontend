@@ -5,6 +5,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import { newIdempotencyKey } from "@/features/dmrv/api";
 import * as api from "./api";
+import "./organizations.css";
 
 export default function OrganizationsPage() {
   const english = useI18nStore((s) => s.language === "en");
@@ -132,9 +133,9 @@ export default function OrganizationsPage() {
 
   return (
     <DashboardShell>
-      <main className="analysis-page container-fluid py-3">
-        <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
-          <h1 className="h3">
+      <main className="analysis-page organizations-page">
+        <div className="organizations-page__heading">
+          <h1>
             <i className="bi bi-buildings me-2" aria-hidden="true" />
             {tr("Organisasi dan ruang kerja", "Organizations and workspaces")}
           </h1>
@@ -148,14 +149,14 @@ export default function OrganizationsPage() {
           </div>
         )}
         {loading && <p role="status">{tr("Memuat ruang kerja…", "Loading workspaces…")}</p>}
-        <div className="row g-3">
+        <div className="row g-3 organizations-page__grid">
           <div className="col-lg-4">
-            <section className="card mb-3">
-              <div className="card-header text-white">
+            <section className="card organizations-page__card mb-3">
+              <div className="card-header organizations-page__card-header">
                 <i className="bi bi-building-add me-2" />
                 {tr("Buat organisasi", "Create organization")}
               </div>
-              <form className="card-body" onSubmit={create}>
+              <form className="card-body organizations-page__card-body" onSubmit={create}>
                 <label htmlFor="org-name" className="form-label">
                   {tr("Nama organisasi", "Organization name")}
                 </label>
@@ -172,13 +173,13 @@ export default function OrganizationsPage() {
                 </button>
               </form>
             </section>
-            <section className="card">
-              <div className="card-header text-white">
+            <section className="card organizations-page__card">
+              <div className="card-header organizations-page__card-header">
                 <i className="bi bi-envelope-check me-2" />
                 {tr("Terima undangan", "Accept invitation")}
               </div>
               <form
-                className="card-body"
+                className="card-body organizations-page__card-body"
                 onSubmit={(e) => {
                   e.preventDefault();
                   void run(async () => {
@@ -215,12 +216,12 @@ export default function OrganizationsPage() {
             </section>
           </div>
           <div className="col-lg-8">
-            <section className="card">
-              <div className="card-header text-white">
+            <section className="card organizations-page__card">
+              <div className="card-header organizations-page__card-header">
                 <i className="bi bi-people me-2" />
                 {tr("Keanggotaan organisasi", "Organization membership")}
               </div>
-              <div className="card-body">
+              <div className="card-body organizations-page__card-body">
                 <label htmlFor="org-select" className="form-label">
                   {tr("Ruang kerja aktif", "Active workspace")}
                 </label>

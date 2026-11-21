@@ -204,6 +204,62 @@ export const getCarbonCalibrationDataset = (datasetId: string) =>
 export const createCarbonCalibrationDataset = (payload: Record<string, unknown>) =>
   apiClient.post<CarbonCalibrationDataset>("/admin/carbon-calibration/datasets", payload, { auth: true });
 
+export const createUndipCarbonReferenceDataset = () =>
+  createCarbonCalibrationDataset({
+    dataset_id: "undip_carbon_reference_2026",
+    name: "UNDIP Carbon Stock Reference 2026",
+    site: "Multi-campus Universitas Diponegoro",
+    location: "Pekalongan, Batang, Teluk Awur, Rembang, Tembalang, KHDTK, Pleburan",
+    crs: "EPSG:4326",
+    survey_year: 2026,
+    ecosystem: "mixed_campus_landscapes",
+    species: [],
+    sampling_design: "purposive_multi_site",
+    plot_count: 0,
+    plot_size_m: [],
+    sample_area_ha: 0,
+    mapped_area_ha: 320.39,
+    target_pools: ["aboveground_biomass_carbon", "soil_organic_carbon"],
+    carbon_fraction: 0.47,
+    field_reference_type: "source_report_and_workbooks_requires_qa",
+    access: "restricted",
+    status: "draft",
+    soil_depth_cm: [0, 30],
+    source_reference_only: true,
+    source_references: [
+      {
+        label: "Laporan capaian carbon offset UNDIP 2026 (PDF)",
+        url: "https://drive.google.com/file/d/1yjT3k2Prt6zBr4536Eqz6oDfN1EZrNc9/view",
+      },
+      {
+        label: "Data Survei Carbon.xlsx",
+        url: "https://docs.google.com/spreadsheets/d/1Woq1AfB-qsEezr-6kmPhQv25beisfiv_/edit?gid=1711374899#gid=1711374899",
+      },
+      {
+        label: "2026 OLAH DATA CARBON (REVISI).xlsx",
+        url: "https://docs.google.com/spreadsheets/d/1ml2cFL62vuyLocQQ8HelvcZ-c50DRNNh/edit?rtpof=true",
+      },
+    ],
+    reported_2026_summary: {
+      vegetation_area_ha_pdf: 320.39,
+      agb_ton_c_workbook: 23712.345478627954,
+      agb_ton_c_pdf_table: 23712.35,
+      agb_ton_c_pdf_narrative: 23721.25,
+      soc_ton_c_workbook: 1623742.6671532108,
+      soc_ton_c_pdf_table: 1729329.77,
+      soc_ton_c_pdf_narrative: 1139921.61,
+      soc_difference_ton_c: 105587.10284678917,
+      summary_use: "context_only_not_training_labels",
+    },
+    calibration_readiness: {
+      plot_observations_imported: false,
+      plot_area_confirmed: false,
+      coordinate_review_required: true,
+      soc_totals_reconciled: false,
+      unsupported_pools: ["belowground_biomass_carbon", "litter_carbon", "deadwood_carbon"],
+    },
+  });
+
 export const uploadCarbonCalibrationFile = (datasetId: string, file: File) => {
   const form = new FormData();
   form.append("file", file);
