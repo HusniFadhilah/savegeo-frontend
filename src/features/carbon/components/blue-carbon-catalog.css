@@ -22,6 +22,10 @@
 .blue-carbon-catalog__notes { margin: 0 0 .8rem; color: #60717f; font-size: .83rem; }
 .blue-carbon-catalog__source { overflow: hidden; margin: 0 !important; border: 1px solid #e0e8e5; border-radius: 10px; }
 .blue-carbon-catalog__source > .cm-panel-accordion-summary { min-height: 40px; padding: .55rem .7rem; color: #276548 !important; background: #f5faf6 !important; font-size: .83rem; }
+.blue-carbon-catalog__source > .cm-panel-accordion-summary:hover,
+.blue-carbon-catalog__source > .cm-panel-accordion-summary:hover > * {
+  color: #fff !important;
+}
 .blue-carbon-catalog__source > .card-body { display: grid; gap: .3rem; padding: .8rem; font-size: .83rem; }
 .blue-carbon-catalog__links { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .2rem; }
 .blue-carbon-catalog__empty { display: grid; justify-items: center; gap: .4rem; padding: 2.2rem 1rem; border: 1px dashed #bfd8ca; border-radius: 12px; color: #60717f; text-align: center; }

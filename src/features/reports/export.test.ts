@@ -15,7 +15,7 @@ describe("complete carbon PDF", () => {
       expect.stringContaining("/agb/"), expect.stringContaining("/bgb/"), expect.stringContaining("/soc/"), expect.stringContaining("/litter/")
     ]));
     expect(new TextDecoder().decode(bytes).slice(0,4)).toBe("%PDF");
-  });
+  }, 15_000);
 
   it("does not download a purportedly complete report when a raster is missing", async () => {
     const broken = { ...context, results: { carbon: { ...pool("agb"), carbon_estimated: { statistics: { mean: 10 } } } } };

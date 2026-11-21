@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import TablePagination from "@/components/ui/TablePagination";
+import InfoTip from "@/components/ui/InfoTip";
 import { AdminTableNumberCell, AdminTableNumberHeader } from "./AdminTableNumber";
 import {
   downloadJson,
@@ -37,7 +39,9 @@ function MetricRow({ label, metric, index }: { label: string; metric?: Metric; i
 export default function FieldCalibrationPanel({ datasetId }: { datasetId: string }) {
   const [rows, setRows] = useState<FieldObservation[]>([]);
   const [total, setTotal] = useState(0);
+  const [recordsTotal, setRecordsTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
@@ -88,11 +92,12 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     let active = true;
     setLoadingRows(true);
     void fieldApi
-      .list(datasetId, page, filterPool)
+      .list(datasetId, page, filterPool, search)
       .then((result) => {
         if (active) {
           setRows(result.rows);
           setTotal(result.total);
+          setRecordsTotal(result.records_total ?? result.total);
         }
       })
       .catch((e: unknown) => {
@@ -104,7 +109,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     return () => {
       active = false;
     };
-  }, [datasetId, page, refresh, filterPool]);
+  }, [datasetId, page, refresh, filterPool, search]);
   function changed() {
     setRefresh((n) => n + 1);
     setAssessment(null);
@@ -252,43 +257,42 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     URL.revokeObjectURL(url);
   }
   return (
-    <section className="admin-card p-3 mt-3" aria-label="Data lapangan dan kalibrasi per pool">
-      <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2">
-        <div>
-          <h3 className="h5 mb-1">Data lapangan dan kalibrasi karbon</h3>
-          <span className="small text-muted">
-            {inventory?.total_records ?? total} pengukuran · 5 pool · Mg C/ha · WGS84
-          </span>
+    <section className="field-calibration-panel" aria-label="Data lapangan dan kalibrasi per pool">
+      <header className="field-calibration-panel__header">
+        <div className="field-calibration-panel__title">
+          <span className="field-calibration-panel__icon"><i className="bi bi-clipboard-data" aria-hidden="true" /></span>
+          <div>
+            <h3>Data lapangan dan kalibrasi karbon</h3>
+            <span>{inventory?.total_records ?? recordsTotal} pengukuran <span aria-hidden="true">·</span> 5 pool <span aria-hidden="true">·</span> Mg C/ha <span aria-hidden="true">·</span> WGS84</span>
+          </div>
+          <InfoTip label="Panduan data lapangan dan kalibrasi" content="Pisahkan plot kalibrasi dan validasi sejak awal. Persamaan allometri, rasio akar:tajuk, metode laboratorium, sumber, luas, dan tanggal pengukuran perlu dicatat per pengamatan. Ringkasan mencakup seluruh kunjungan. Kalibrasi memerlukan minimal tiga plot; statistik validasi terpisah memerlukan minimal dua plot lain. Evaluasi menyaring kesesuaian tahun, dukungan spasial, dan kedalaman SOC." />
         </div>
-        <button type="button" className="btn btn-outline-primary btn-sm" onClick={template}>
-          Unduh template CSV
+        <button type="button" className="btn btn-light field-calibration-panel__template" onClick={template}>
+          <i className="bi bi-download" aria-hidden="true" /> Unduh template CSV
         </button>
-      </div>
-      <p className="small text-muted">
-        Pisahkan plot kalibrasi dan validasi sejak awal. Persamaan allometri, rasio akar:tajuk,
-        metode laboratorium, sumber, luas, dan tanggal pengukuran dicatat untuk tiap pengamatan.
-      </p>
+      </header>
+      <div className="field-calibration-panel__body">
       <div
-        className="d-flex gap-2 flex-wrap mb-3"
+        className="field-pool-filters"
         role="group"
         aria-label="Filter data berdasarkan pool"
       >
         <button
           type="button"
-          className={`btn btn-sm ${filterPool ? "btn-outline-secondary" : "btn-primary"}`}
+          className={`field-pool-filter ${filterPool ? "" : "is-active"}`}
           aria-pressed={!filterPool}
           onClick={() => {
             setFilterPool(undefined);
             setPage(1);
           }}
         >
-          Semua pool
+          <strong>Semua pool</strong><small>{inventory?.total_records ?? recordsTotal} pengukuran</small>
         </button>
         {FIELD_POOLS.map(({ value, label }) => (
           <button
             type="button"
             key={value}
-            className={`btn btn-sm text-start ${filterPool === value ? "btn-primary" : "btn-outline-secondary"}`}
+            className={`field-pool-filter ${filterPool === value ? "is-active" : ""}`}
             aria-pressed={filterPool === value}
             onClick={() => {
               setFilterPool(value);
@@ -306,13 +310,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </button>
         ))}
       </div>
-      <p className="small text-muted">
-        Ringkasan mencakup seluruh kunjungan. Kalibrasi memerlukan minimal tiga plot; statistik
-        validasi terpisah memerlukan minimal dua plot lain. Evaluasi menyaring kesesuaian tahun,
-        dukungan spasial, dan kedalaman SOC.
-      </p>
       <FieldObservationForm datasetId={datasetId} onSaved={changed} />
-      <details className="border rounded p-3 mb-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Impor CSV · pratinjau sebelum menyimpan</summary>
         <div className="d-flex gap-2 flex-wrap mt-3">
           <input
@@ -362,8 +361,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 ))}
               </ul>
             )}
-            <div className="table-responsive">
-              <table className="table table-sm">
+            <div className="field-calibration-table-wrap">
+              <table className="tbl tbl-wide field-calibration-table field-calibration-table--preview">
                 <thead>
                   <tr>
                     <AdminTableNumberHeader />
@@ -391,8 +390,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </>
         )}
       </details>
-      <div className="table-responsive">
-        <table className="table table-sm align-middle">
+      <div className="field-calibration-table-wrap">
+        <table className="tbl tbl-wide field-calibration-table field-calibration-table--observations">
           <thead>
             <tr>
               <AdminTableNumberHeader />
@@ -432,41 +431,29 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </tbody>
         </table>
       </div>
+      <TablePagination
+        page={page - 1}
+        pageCount={Math.max(1, Math.ceil(total / 100))}
+        recordsTotal={recordsTotal}
+        recordsFiltered={total}
+        pageSize={100}
+        search={search}
+        searchPlaceholder="Cari plot, pool, referensi, sumber"
+        onSearchChange={(value) => { setSearch(value); setPage(1); }}
+        onPrev={() => setPage((current) => Math.max(1, current - 1))}
+        onNext={() => setPage((current) => Math.min(Math.max(1, Math.ceil(total / 100)), current + 1))}
+      />
       {loadingRows && (
         <p role="status" className="text-muted">
           Memuat pengukuran…
         </p>
       )}
       {!loadingRows && !rows.length && (
-        <p className="text-muted">
-          Belum ada pengukuran dalam format lintas pool ini. Berkas survei lama tetap tersedia di
-          bagian sumber dataset.
+        <p className="field-calibration-empty">
+          {search ? "Tidak ada pengukuran yang cocok dengan pencarian." : "Belum ada pengukuran pada filter ini. Berkas survei lama tetap tersedia di bagian sumber dataset."}
         </p>
       )}
-      {total > 100 && (
-        <div className="d-flex gap-2 align-items-center">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Sebelumnya
-          </button>
-          <span>
-            {page} / {Math.ceil(total / 100)}
-          </span>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            disabled={page * 100 >= total}
-            onClick={() => setPage(page + 1)}
-          >
-            Berikutnya
-          </button>
-        </div>
-      )}
-      <details className="border rounded p-3 mb-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Ekstrak prediksi dari model GEE yang disetujui</summary>
         <form className="mt-3" onSubmit={(event) => void extractPredictions(event)}>
           <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
@@ -548,7 +535,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </fieldset>
         </form>
       </details>
-      <details className="border rounded p-3 my-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Pasangkan prediksi model / raster</summary>
         <form className="mt-3" onSubmit={(event) => void addPrediction(event)}>
           <fieldset disabled={busy || !rows.length}>
@@ -613,7 +600,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </fieldset>
         </form>
       </details>
-      <details className="border rounded p-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Validasi dan kalibrasi model</summary>
         <form className="mt-3" onSubmit={(event) => void evaluate(event)}>
           <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
@@ -746,7 +733,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
         </label>
       )}
       {assessment && (
-        <div className="border rounded p-3 mt-3">
+        <div className="field-assessment-card">
           <div className="d-flex gap-3 flex-wrap justify-content-between">
             <h4 className="h6">
               Hasil evaluasi ·{" "}
@@ -773,8 +760,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               Sumber prediksi: {assessment.metrics.configuration.prediction_source}
             </p>
           )}
-          <div className="table-responsive">
-            <table className="table table-sm">
+          <div className="field-calibration-table-wrap">
+            <table className="tbl tbl-wide field-calibration-table field-calibration-table--metrics">
               <thead>
                 <tr>
                   <AdminTableNumberHeader />
@@ -856,6 +843,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           )}
         </div>
       )}
+      </div>
     </section>
   );
 }

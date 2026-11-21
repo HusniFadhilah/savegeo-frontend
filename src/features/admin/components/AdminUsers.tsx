@@ -277,31 +277,33 @@ export default function AdminUsers() {
                 </select>
               </div>
             </div>
-            <label className="cfg-switch" style={{ marginBottom: "0.75rem" }}>
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
-              <span />
-              <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
-            </label>
-            {me?.is_superuser && <>
-              <label className="cfg-switch" style={{ marginBottom: "0.25rem" }}>
-                <input
-                  type="checkbox"
-                  aria-label={t("admin.users.mfaRequired")}
-                  checked={form.mfaRequired || mfaPolicyLocked}
-                  disabled={mfaPolicyLocked}
-                  onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
-                />
-                <span />
-                <strong>{t("admin.users.mfaRequired")}</strong>
-              </label>
-              <div className="text-muted small" style={{ marginBottom: "0.75rem" }}>
+            <div className="admin-user-security-settings">
+              <div className="admin-user-security-settings__toggles">
+                <label className="cfg-switch">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
+                  <span />
+                  <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
+                </label>
+                {me?.is_superuser && <label className="cfg-switch">
+                  <input
+                    type="checkbox"
+                    aria-label={t("admin.users.mfaRequired")}
+                    checked={form.mfaRequired || mfaPolicyLocked}
+                    disabled={mfaPolicyLocked}
+                    onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
+                  />
+                  <span />
+                  <strong>{t("admin.users.mfaRequired")}</strong>
+                </label>}
+              </div>
+              {me?.is_superuser && <div className="admin-user-security-settings__help text-muted small">
                 {mfaPolicyLocked
                   ? t("admin.users.mfaLocked")
                   : currentAccountHasMfa
                     ? t("admin.users.mfaEnrolledHelp")
                     : t("admin.users.mfaHelp")}
-              </div>
-            </>}
+              </div>}
+            </div>
             {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
