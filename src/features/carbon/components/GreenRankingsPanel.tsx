@@ -123,8 +123,11 @@ export default function GreenRankingsPanel({
     const loadLatest = () =>
       apiClient.get<GreenRankingResult>(`/carbon/green-rankings/latest?${params}`, { auth: "app" });
     if (saved) {
+      const savedUrl = saved.startsWith("snapshot:")
+        ? `/carbon/green-rankings/${encodeURIComponent(saved)}?${params}`
+        : `/carbon/green-rankings/${encodeURIComponent(saved)}`;
       void apiClient
-        .get<GreenRankingResult>(`/carbon/green-rankings/${encodeURIComponent(saved)}`, { auth: "app" })
+        .get<GreenRankingResult>(savedUrl, { auth: "app" })
         .then(async (data) => {
           if (!data.done || data.run_id.startsWith("snapshot:")) {
             acceptResult(data);
@@ -208,6 +211,15 @@ export default function GreenRankingsPanel({
       });
       const search = (overrides.search ?? tableSearch).trim();
       if (search) params.set("search", search);
+      if (result.run_id.startsWith("snapshot:")) {
+        params.set("year", String(year));
+        params.set("start_month", String(startMonth));
+        params.set("end_month", String(endMonth));
+        params.set("level", level);
+        if (province) params.set("province", province);
+        if (city) params.set("city", city);
+        if (district) params.set("district", district);
+      }
       const data = await apiClient.get<GreenRankingResult>(
         `/carbon/green-rankings/${result.run_id}?${params.toString()}`,
         { auth: "app" },
@@ -259,6 +271,18 @@ export default function GreenRankingsPanel({
   const pageCount = result ? Math.max(1, Math.ceil(recordsFiltered / result.page_size)) : 1;
   const firstRow = recordsFiltered === 0 ? 0 : ((result?.page ?? 1) - 1) * (result?.page_size ?? 50) + 1;
   const lastRow = Math.min(recordsFiltered, (result?.page ?? 1) * (result?.page_size ?? 50));
+  const exportScopeParams = new URLSearchParams({
+    year: String(year),
+    start_month: String(startMonth),
+    end_month: String(endMonth),
+    level,
+  });
+  if (province) exportScopeParams.set("province", province);
+  if (city) exportScopeParams.set("city", city);
+  if (district) exportScopeParams.set("district", district);
+  const exportScopeSuffix = result?.run_id.startsWith("snapshot:")
+    ? "?" + exportScopeParams.toString()
+    : "";
   const sortHeading = (key: string, label: string) => (
     <th
       scope="col"
@@ -635,7 +659,7 @@ export default function GreenRankingsPanel({
               <div className="green-rankings__table-actions">
                 <a
                   className="btn btn-outline-success green-rankings__export"
-                  href={`${env.apiBaseUrl}/carbon/green-rankings/${result.run_id}/export`}
+                  href={env.apiBaseUrl + "/carbon/green-rankings/" + result.run_id + "/export" + exportScopeSuffix}
                 >
                   <i className="bi bi-download me-1" aria-hidden="true" />
                   Unduh statistik CSV ({result.status})
