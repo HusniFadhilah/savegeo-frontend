@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { rasterStatistics, runRasterOperation } from "./rasterEngine";
 import type { RasterData } from "./rasterTypes";
 
-const raster = (bands: number[][], width = 2, height = 2): RasterData => ({ width, height, bands: bands.map(values => Float32Array.from(values)), nodata: -9999, source: { kind: "array", bounds: [0, 0, width, height] } });
+const raster = (bands: number[][], width = 2, height = 2): RasterData => ({ width, height, bands: bands.map(values => Float32Array.from(values)), nodata: -9999, source: { kind: "array", crs: "EPSG:4326", bounds: [0, 0, width, height] } });
 
 describe("local raster engine", () => {
   it("computes NDVI and propagates nodata", () => {
@@ -37,17 +37,42 @@ describe("local raster engine", () => {
       expect(() => runRasterOperation(raster([[1,2,3,4]]), { operation: "band_math", bands: { A: index }, expression: "A" })).toThrow("raster.missingBand");
     }
   });
-  it("propagates nodata over the full terrain kernel including the centre", () => {
-    const values = Array(25).fill(10); values[12] = -9999;
+  it("propagates nodata across the terrain kernel and leaves edge cells without a complete neighborhood", () => {
+    const values = Array(49).fill(10); values[24] = -9999;
     for (const operation of ["slope", "aspect", "hillshade"] as const) {
-      const result = runRasterOperation(raster([values], 5, 5), { operation, scale: 1 });
-      for (const index of [6,7,8,11,12,13,16,17,18]) expect(result.bands[0][index]).toBe(-9999);
-      expect(Number.isFinite(result.bands[0][0])).toBe(true);
+      const result = runRasterOperation(raster([values], 7, 7), { operation, scale: 1 });
+      for (const index of [16,17,18,23,24,25,30,31,32]) expect(result.bands[0][index]).toBe(-9999);
+      expect(result.bands[0][0]).toBe(-9999);
     }
+  });
+  it("converts geographic DEM pixel spacing to metres at the raster latitude", () => {
+    const heights = [0,10,20, 0,10,20, 0,10,20];
+    const atEquator = raster([heights], 3, 3);
+    atEquator.source = { kind: "array", crs: "EPSG:4326", bounds: [0, 0, 0.03, 0.03] };
+    const atHighLatitude = raster([heights], 3, 3);
+    atHighLatitude.source = { kind: "array", crs: "EPSG:4326", bounds: [0, 59.985, 0.03, 60.015] };
+    const equatorSlope = runRasterOperation(atEquator, { operation: "slope" }).bands[0][4];
+    const highLatitudeSlope = runRasterOperation(atHighLatitude, { operation: "slope" }).bands[0][4];
+    expect(equatorSlope).toBeGreaterThan(0.5);
+    expect(equatorSlope).toBeLessThan(0.6);
+    expect(highLatitudeSlope).toBeGreaterThan(equatorSlope * 1.9);
+  });
+  it("rejects rotated or degenerate raster transforms for terrain analysis", () => {
+    const data = raster([[1,2,3,4,5,6,7,8,9]], 3, 3);
+    data.source!.transform = [0, 1, 0.25, 3, 0, -1];
+    expect(() => runRasterOperation(data, { operation: "slope" })).toThrow("raster.reprojectionRequired");
+    data.source!.transform = [0, 1, 2, 3, 2, 4];
+    expect(() => runRasterOperation(data, { operation: "slope" })).toThrow("raster.invalidMetadata");
   });
   it("rejects same-sized rasters with different extents", () => {
     const before = raster([[1,2,3,4]]); const after = raster([[2,3,4,5]]);
     after.source!.bounds = [1,0,3,2];
+    expect(() => runRasterOperation(before, { operation: "change_detection", changeMode: "difference" }, undefined, after)).toThrow("raster.gridMismatch");
+  });
+  it("rejects change detection when the rasters lack a comparable coordinate grid", () => {
+    const before = raster([[1,2,3,4]]); const after = raster([[2,3,4,5]]);
+    delete before.source;
+    delete after.source;
     expect(() => runRasterOperation(before, { operation: "change_detection", changeMode: "difference" }, undefined, after)).toThrow("raster.gridMismatch");
   });
   it("requires AOI for zonal statistics and uses it for histogram and mean", () => {
@@ -62,7 +87,10 @@ describe("local raster engine", () => {
     const data = raster([[1, 2, 3, 4], [5, 6, 7, 8]], 2, 2);
     expect(runRasterOperation(data, { operation: "clip", clipGeometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 2], [0, 2], [0, 0]]] } }).width).toBe(1);
     expect(Array.from(runRasterOperation(data, { operation: "reclassify", reclassRules: [{ min: 0, max: 4, value: 1 }, { min: 4, max: 10, value: 2 }] }).bands[0])).toEqual([1, 1, 1, 2]);
-    expect(runRasterOperation(data, { operation: "slope", scale: 1 }).bands[0].every(Number.isFinite)).toBe(true);
+    const dem = raster([[1,2,3,4,5,6,7,8,9]], 3, 3);
+    const slope = runRasterOperation(dem, { operation: "slope", scale: 1 });
+    expect(Number.isFinite(slope.bands[0][4])).toBe(true);
+    expect(slope.bands[0][0]).toBe(-9999);
     expect(Array.from(runRasterOperation(data, { operation: "change_detection", changeMode: "difference" }, undefined, raster([[2, 4, 6, 8], [1, 1, 1, 1]], 2, 2)).bands[0])).toEqual([1, 2, 3, 4]);
   });
 });

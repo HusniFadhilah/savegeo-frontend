@@ -84,12 +84,49 @@ function clip(data: RasterData, geometry: NonNullable<RasterOperationParams["cli
   return { ...data, width, height, bands, source: { ...data.source!, width, height, bounds: snapped, transform } };
 }
 function terrain(data: RasterData, params: RasterOperationParams, mode: "slope" | "aspect" | "hillshade") {
-  const elevation = data.bands[0]; const out = new Float32Array(data.width * data.height); const scale = params.scale ?? 1; const azimuth = (params.hillshadeAzimuth ?? 315) * Math.PI / 180; const altitude = (params.hillshadeAltitude ?? 45) * Math.PI / 180;
-  const at = (x: number, y: number) => elevation[Math.max(0, Math.min(data.height - 1, y)) * data.width + Math.max(0, Math.min(data.width - 1, x))];
-  for (let y = 0; y < data.height; y++) for (let x = 0; x < data.width; x++) {
-    const neighbours = [-1, 0, 1].flatMap(dy => [-1, 0, 1].map(dx => at(x + dx, y + dy)));
-    if (neighbours.some(value => !valid(value, data.nodata))) { out[y * data.width + x] = data.nodata ?? NaN; continue; }
-    const dx = ((at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1))) / (8 * scale); const dy = ((at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1))) / (8 * scale); const slope = Math.atan(Math.hypot(dx, dy)); const aspect = Math.atan2(dy, -dx); const index = y * data.width + x; out[index] = mode === "slope" ? slope * 180 / Math.PI : mode === "aspect" ? ((aspect * 180 / Math.PI) + 360) % 360 : clamp(255 * (Math.cos(altitude) * Math.cos(slope) + Math.sin(altitude) * Math.sin(slope) * Math.cos(azimuth - aspect)), 0, 255); }
+  const elevation = data.bands[0];
+  const nodata = data.nodata ?? NaN;
+  const out = new Float32Array(data.width * data.height).fill(nodata);
+  const azimuth = (params.hillshadeAzimuth ?? 315) * Math.PI / 180;
+  const altitude = (params.hillshadeAltitude ?? 45) * Math.PI / 180;
+  const transform = data.source?.transform;
+  const bounds = data.source?.bounds;
+  const geographic = ["EPSG:4326", "CRS:84", "OGC:CRS84"].includes((data.source?.crs ?? "").toUpperCase());
+  const pixelWidth = Math.abs(transform?.[1] ?? (bounds ? (bounds[2] - bounds[0]) / data.width : 0));
+  const pixelHeight = Math.abs(transform?.[5] ?? (bounds ? (bounds[3] - bounds[1]) / data.height : 0));
+  const explicitScale = params.scale;
+  const radiansPerDegree = Math.PI / 180;
+  const earthRadiusMetres = 6_378_137;
+  const sample = (x: number, y: number) => elevation[y * data.width + x];
+
+  // Horn's 3 x 3 kernel needs a complete neighborhood. Geographic rasters
+  // store pixels in degrees, so convert their horizontal spacing to metres at
+  // each row; using degrees as metres produces meaningless slope/aspect values.
+  for (let y = 1; y < data.height - 1; y++) for (let x = 1; x < data.width - 1; x++) {
+    const neighbors = [-1, 0, 1].flatMap(dy => [-1, 0, 1].map(dx => sample(x + dx, y + dy)));
+    if (neighbors.some(value => !valid(value, data.nodata))) continue;
+
+    let dxMetres = explicitScale ?? pixelWidth;
+    let dyMetres = explicitScale ?? pixelHeight;
+    if (geographic && explicitScale == null) {
+      const latitude = (bounds ? bounds[3] - (y + 0.5) * (bounds[3] - bounds[1]) / data.height : 0) * radiansPerDegree;
+      const metresPerDegree = earthRadiusMetres * radiansPerDegree;
+      dxMetres = pixelWidth * metresPerDegree * Math.max(Math.abs(Math.cos(latitude)), 1e-8);
+      dyMetres = pixelHeight * metresPerDegree;
+    }
+    if (!Number.isFinite(dxMetres) || !Number.isFinite(dyMetres) || dxMetres <= 0 || dyMetres <= 0) continue;
+
+    const left = sample(x - 1, y - 1) + 2 * sample(x - 1, y) + sample(x - 1, y + 1);
+    const right = sample(x + 1, y - 1) + 2 * sample(x + 1, y) + sample(x + 1, y + 1);
+    const top = sample(x - 1, y - 1) + 2 * sample(x, y - 1) + sample(x + 1, y - 1);
+    const bottom = sample(x - 1, y + 1) + 2 * sample(x, y + 1) + sample(x + 1, y + 1);
+    const dzdx = (right - left) / (8 * dxMetres);
+    const dzdy = (bottom - top) / (8 * dyMetres);
+    const slope = Math.atan(Math.hypot(dzdx, dzdy));
+    const aspect = Math.atan2(dzdy, -dzdx);
+    const index = y * data.width + x;
+    out[index] = mode === "slope" ? slope * 180 / Math.PI : mode === "aspect" ? ((aspect * 180 / Math.PI) + 360) % 360 : clamp(255 * (Math.cos(altitude) * Math.cos(slope) + Math.sin(altitude) * Math.sin(slope) * Math.cos(azimuth - aspect)), 0, 255);
+  }
   return out;
 }
 function reclassify(data: RasterData, params: RasterOperationParams) { const rules = params.reclassRules ?? []; const out = new Float32Array(data.width * data.height); data.bands[0].forEach((value, i) => { const rule = rules.find(item => value >= item.min && value < item.max); out[i] = rule ? rule.value : (data.nodata ?? NaN); }); return out; }
@@ -105,7 +142,10 @@ export function runRasterOperation(data: RasterData, params: RasterOperationPara
   else if (["slope", "aspect", "hillshade"].includes(params.operation)) output = terrain(working, params, params.operation as "slope" | "aspect" | "hillshade");
   else if (params.operation === "change_detection") { if (after) validateRaster(after);
     const sameNumbers = (a?: number[], b?: number[]) => !a && !b || Boolean(a && b && a.length === b.length && a.every((n, i) => Number.isFinite(n) && Number.isFinite(b[i]) && Math.abs(n - b[i]) < 1e-9));
-    const sameGrid = after && after.width === working.width && after.height === working.height && after.bands.length === working.bands.length
+    const hasReferenceGrid = Boolean(working.source?.crs && (working.source?.bounds || working.source?.transform));
+    const afterHasReferenceGrid = Boolean(after?.source?.crs && (after.source?.bounds || after.source?.transform));
+    const sameGrid = after && hasReferenceGrid && afterHasReferenceGrid
+      && after.width === working.width && after.height === working.height && after.bands.length === working.bands.length
       && after.source?.crs === working.source?.crs
       && after.source?.resolution === working.source?.resolution
       && sameNumbers(after.source?.bounds, working.source?.bounds)

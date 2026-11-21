@@ -45,4 +45,17 @@ describe("disaster event table numbering", () => {
       expect(within(screen.getByRole("row", { name: /Kejadian 11 Banjir/ })).getAllByRole("cell")[1]).toHaveTextContent("1");
     });
   }, 20000);
+
+  it("renders hostile event names as text rather than executable markup", async () => {
+    const hostileName = '<img src=x onerror="alert(1)">';
+    vi.mocked(listDisasterEvents).mockResolvedValueOnce({
+      events: [{ ...events[0], name: hostileName }],
+    });
+
+    const { container } = render(<DisasterEventList onCreateNew={vi.fn()} onEdit={vi.fn()} onOpen={vi.fn()} />);
+    await screen.findByText(hostileName);
+
+    expect(container.querySelector("img, script, svg")).toBeNull();
+    expect(container.textContent).toContain(hostileName);
+  });
 });

@@ -5,6 +5,7 @@ import L from "leaflet";
 import type { Feature, FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
 import { localeFor, useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
+import { escapeHtmlText } from "@/utils/safeHttpUrl";
 import "./MapExportControl.css";
 
 type ExportAction = "png" | "geotiff" | "geojson" | "csv" | "json" | "print";
@@ -222,14 +223,16 @@ function openPrintLayout(
   const center = map.getCenter();
   const bounds = map.getBounds();
   const safeTitle = escapeHtml(title);
-  const safeImageUrl = imageUrl.replace(/"/g, "&quot;");
+  const safeImageUrl = escapeHtmlText(imageUrl);
   const label = (key: string, params?: Record<string, string | number>) =>
     escapeHtml(translate(key, params));
   printWindow.document.open();
   printWindow.document.write(`<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeTitle} - SAVEGEO</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
     @page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;color:#172b36;font:14px/1.45 'Montserrat','Segoe UI',Arial,sans-serif}header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:1px solid #bccbd2;padding:0 0 12px;margin-bottom:12px}h1{font-size:22px;margin:0 0 4px}.meta{font-size:11px;color:#52636b}.map{display:block;width:100%;height:auto;max-height:165mm;object-fit:contain;margin:0 auto}.note{font-size:10px;color:#62747b;margin-top:8px}.actions{position:fixed;right:18px;top:12px;display:flex;gap:8px}.actions button{border:0;border-radius:6px;padding:9px 13px;background:#166534;color:white;font-family:inherit;font-weight:700;cursor:pointer}.actions button.secondary{background:#e8eef0;color:#243a44}@media print{.actions{display:none}.map{max-height:165mm}}
-  </style></head><body><div class="actions"><button onclick="window.print()">${label("map.export.printAction")}</button><button class="secondary" onclick="window.close()">${label("map.export.printClose")}</button></div><header><div><h1>${safeTitle}</h1><div class="meta">SAVEGEO &middot; ${new Date().toLocaleString(localeFor(language))} &middot; CRS ${escapeHtml(mapCrs(map))}</div></div><div class="meta">${label("map.export.printCenter")} ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)} &middot; ${label("map.export.printZoom")} ${map.getZoom()}<br>${label("map.export.printBounds")} ${escapeHtml(bounds.toBBoxString())}</div></header><img class="map" src="${safeImageUrl}" alt="${label("map.export.printMapAlt", { title })}"><div class="note">${label("map.export.printNote")}</div></body></html>`);
+  </style></head><body><div class="actions"><button id="savegeo-print-action">${label("map.export.printAction")}</button><button id="savegeo-close-action" class="secondary">${label("map.export.printClose")}</button></div><header><div><h1>${safeTitle}</h1><div class="meta">SAVEGEO &middot; ${new Date().toLocaleString(localeFor(language))} &middot; CRS ${escapeHtml(mapCrs(map))}</div></div><div class="meta">${label("map.export.printCenter")} ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)} &middot; ${label("map.export.printZoom")} ${map.getZoom()}<br>${label("map.export.printBounds")} ${escapeHtml(bounds.toBBoxString())}</div></header><img class="map" src="${safeImageUrl}" alt="${label("map.export.printMapAlt", { title })}"><div class="note">${label("map.export.printNote")}</div></body></html>`);
   printWindow.document.close();
+  printWindow.document.getElementById("savegeo-print-action")?.addEventListener("click", () => printWindow.print());
+  printWindow.document.getElementById("savegeo-close-action")?.addEventListener("click", () => printWindow.close());
   printWindow.focus();
 }
 export default function MapExportControl({ mapTitle, enabled = true }: Props) {
@@ -273,7 +276,7 @@ export default function MapExportControl({ mapTitle, enabled = true }: Props) {
         printWindow = window.open("", "_blank");
         if (!printWindow) throw new ExportUiError(t("map.export.popupBlocked"));
         printWindow.document.write(
-          `<!doctype html><title>${t("map.export.printPreparing")}</title><p style="font:16px 'Montserrat',Arial,sans-serif;padding:24px">${t("map.export.printPreparing")}</p>`,
+          `<!doctype html><title>${escapeHtmlText(t("map.export.printPreparing"))}</title><p style="font:16px 'Montserrat',Arial,sans-serif;padding:24px">${escapeHtmlText(t("map.export.printPreparing"))}</p>`,
         );
       }
       if (action === "geojson" || action === "csv" || action === "json") {

@@ -36,3 +36,27 @@ it("extracts a concise message from an HTML proxy error page", async () => {
   await expect(apiClient.post("/analysis-jobs", { type: "carbon", payload: {} }))
     .rejects.toMatchObject({ status: 400, message: "400 Bad Request" });
 });
+
+it("keeps typed error codes but omits submitted values and internal details", async () => {
+  const payload = {
+    code: "invalid_aoi",
+    detail: [{ loc: ["body", "aoi"], msg: "AOI tidak valid", input: "private-coordinate", ctx: { path: "C:\\private\\file" } }],
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), {
+    status: 422,
+    headers: { "content-type": "application/problem+json" },
+  })));
+
+  await expect(apiClient.post("/analysis-jobs", { type: "carbon", payload: {} }))
+    .rejects.toMatchObject({ status: 422, code: "invalid_aoi", message: "AOI tidak valid" });
+});
+
+it("redacts credential-like values from client-visible error messages", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+    JSON.stringify({ detail: "token=secret-value" }),
+    { status: 400, headers: { "content-type": "application/problem+json" } },
+  )));
+
+  await expect(apiClient.post("/analysis-jobs", { type: "carbon", payload: {} }))
+    .rejects.toMatchObject({ status: 400, message: "token=[redacted]" });
+});

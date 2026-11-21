@@ -4,10 +4,7 @@ export function isViewerRole(account?: { is_viewer?: boolean } | null): boolean 
 
 export type AdminPermission = string;
 
-/**
- * Legacy admins with no assigned role are full-access by design. Explicit
- * roles are evaluated from the permission codes returned by /admin/auth/me.
- */
+/** Only explicit superuser status or a returned permission grants access. */
 export function hasAdminPermission(
   user: { role?: string | null; permissions?: string[] | null; is_superuser?: boolean; is_viewer?: boolean } | null | undefined,
   permission: AdminPermission,
