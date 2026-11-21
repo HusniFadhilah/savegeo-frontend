@@ -3,6 +3,7 @@ import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 import { commitFieldImport, listPlots, listVisits, newIdempotencyKey, previewFieldImport } from "./api";
 import { describeDmrvError } from "./errors";
 import FieldSummaryJobPanel from "./FieldSummaryJobPanel";
+import MobileCapturePanel from "./MobileCapturePanel";
 import type { ImportPreview, ImportResult, Plot, RowIssue, Visit } from "./types";
 
 const TWO_DECIMALS = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
@@ -131,6 +132,7 @@ export default function FieldDataPanel({ projectId, canWrite, canRunSummary = fa
       <h2 id="dmrv-field-heading" className="h5">{t("dmrv.field.heading")}</h2>
 
       <FieldSummaryJobPanel projectId={projectId} canRun={canRunSummary} />
+      <MobileCapturePanel projectId={projectId} canWrite={canWrite} />
 
       {!canWrite && <p className="text-muted">{t("dmrv.field.readOnly")}</p>}
       {canWrite && (

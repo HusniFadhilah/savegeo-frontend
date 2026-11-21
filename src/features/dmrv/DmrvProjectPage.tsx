@@ -19,7 +19,7 @@ type Tab = "overview" | "boundary" | "monitoring" | "analysis" | "field" | "evid
 const TABS: Tab[] = ["overview", "boundary", "monitoring", "analysis", "field", "evidence"];
 // Mirrors backend ROLE_ACTIONS (boundary.write / field.write). The backend remains the authority.
 const BOUNDARY_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
-const FIELD_WRITERS: ProjectRole[] = ["project_owner", "field_operator"];
+const FIELD_WRITERS: ProjectRole[] = ["project_owner", "analyst", "field_operator"];
 const FIELD_SUMMARY_RUNNERS: ProjectRole[] = ["project_owner", "analyst"];
 const MONITORING_WRITERS: ProjectRole[] = ["project_owner", "analyst"];
 const EVIDENCE_WRITERS: ProjectRole[] = ["project_owner", "analyst"];

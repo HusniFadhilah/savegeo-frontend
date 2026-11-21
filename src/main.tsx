@@ -15,6 +15,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 });
 
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/savegeo-sw.js", { scope: "/" }).catch(() => undefined);
+  });
+}
+
 window.addEventListener("savegeo:logout", () => {
   void queryClient.cancelQueries();
   queryClient.clear();

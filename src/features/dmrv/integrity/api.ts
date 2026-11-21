@@ -2,10 +2,13 @@ import { env } from "@/config/env";
 import { ApiError, apiClient } from "@/services/apiClient";
 import type {
   Category,
+  CreditLedger,
   IntegrityDocument,
   IntegrityRecord,
   IntegrityWorkspace,
   Portfolio,
+  MethodologyChecklist,
+  ReviewerPriority,
   RecordSave,
   RiskPolicy,
 } from "./types";
@@ -14,6 +17,14 @@ const AUTH = { auth: "app" } as const;
 const base = (id: string) => `/dmrv/projects/${encodeURIComponent(id)}/integrity`;
 const match = (revision: number) => ({ ...AUTH, headers: { "If-Match": `"${revision}"` } });
 export const getWorkspace = (id: string) => apiClient.get<IntegrityWorkspace>(base(id), AUTH);
+export const getMethodologyChecklist = (id: string) =>
+  apiClient.get<MethodologyChecklist>(`${base(id)}/methodology-checklist`, AUTH);
+export const getReviewerPriority = (id: string) =>
+  apiClient.get<ReviewerPriority>(`${base(id)}/risk-priority`, AUTH);
+export const getCreditLedger = (id: string) =>
+  apiClient.get<CreditLedger>(`${base(id)}/credit-events`, AUTH);
+export const appendCreditEvent = (id: string, payload: object) =>
+  apiClient.post(`${base(id)}/credit-events`, payload, AUTH);
 export const getRecord = (id: string, recordId: string) =>
   apiClient.get<IntegrityRecord>(`${base(id)}/records/${recordId}`, AUTH);
 export const getPortfolio = (search: string, offset = 0) =>

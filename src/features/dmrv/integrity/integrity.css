@@ -352,6 +352,38 @@
   font-size: 0.8rem;
   color: #627b69;
 }
+.integrity-methodology-list {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+.integrity-methodology-item {
+  border: 1px solid #e2ebe4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px;
+}
+.integrity-methodology-item h4 {
+  font-size: 0.94rem;
+  margin: 0 0 5px;
+  color: #254b34;
+}
+.integrity-methodology-item p {
+  max-width: 780px;
+  margin: 0 0 8px;
+  color: #687c6d;
+  font-size: 0.82rem;
+}
+.integrity-methodology-status {
+  width: min(100%, 190px);
+  flex: 0 0 190px;
+}
+.integrity-record {
+  padding: 16px;
+  background: #fbfdfb;
+  border: 1px solid #e1eae3;
+  border-radius: 12px;
+}
 .integrity-subheading {
   font-size: 1.05rem;
   margin: 30px 0 10px;
@@ -424,6 +456,9 @@
   .integrity-section-title {
     align-items: flex-start;
   }
+  .integrity-methodology-status {
+    flex-basis: 100%;
+  }
 }
 [data-theme="dark"] .integrity-page {
   color: #d6e7d9;
@@ -444,6 +479,15 @@
   color: #dcf0e0;
 }
 [data-theme="dark"] .integrity-note,
-[data-theme="dark"] .integrity-field {
+[data-theme="dark"] .integrity-field,
+[data-theme="dark"] .integrity-methodology-item p {
   color: #b1c6b7;
+}
+[data-theme="dark"] .integrity-methodology-item,
+[data-theme="dark"] .integrity-record {
+  background: #18271e;
+  border-color: #354b3b;
+}
+[data-theme="dark"] .integrity-methodology-item h4 {
+  color: #d6e7d9;
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { listDmrvJobs, newIdempotencyKey } from "../api";
 import type { DmrvJob } from "../types";
-import { queueRiskScan, saveRecord, saveRiskPolicy } from "./api";
+import { getReviewerPriority, queueRiskScan, saveRecord, saveRiskPolicy } from "./api";
 import { EvidenceField, Field, RecordList, type SectionProps } from "./shared";
 import { errorMessage, references, useCopy } from "./helpers";
-import type { RiskPolicy } from "./types";
+import type { ReviewerPriority, RiskPolicy } from "./types";
 
 export function IssueForm({
   category,
@@ -171,6 +171,7 @@ export default function RisksPanel({ policy, ...props }: SectionProps & { policy
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [jobs, setJobs] = useState<DmrvJob[]>([]);
+  const [priority, setPriority] = useState<ReviewerPriority | null>(null);
   const [tick, setTick] = useState(0);
   const previouslyActive = useRef(false);
   const { projectId, onChanged } = props;
@@ -198,6 +199,12 @@ export default function RisksPanel({ policy, ...props }: SectionProps & { policy
       clearTimeout(timeout);
     };
   }, [projectId, onChanged, tick]);
+  useEffect(() => {
+    let active = true;
+    void getReviewerPriority(projectId).then((result) => { if (active) setPriority(result); })
+      .catch((cause: unknown) => { if (active) setError(errorMessage(cause)); });
+    return () => { active = false; };
+  }, [projectId, props.records]);
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -226,6 +233,18 @@ export default function RisksPanel({ policy, ...props }: SectionProps & { policy
   }
   return (
     <>
+      {priority && (
+        <div className={`alert ${priority.priority === "urgent" ? "alert-danger" : priority.priority === "elevated" ? "alert-warning" : "alert-success"}`}>
+          <div className="d-flex flex-wrap justify-content-between gap-2">
+            <strong>{c("Prioritas pemeriksaan reviewer", "Reviewer review priority")}: {priority.label}</strong>
+            <span>{c("Risiko terbuka", "Open risks")}: {priority.open_risks}</span>
+          </div>
+          {priority.factors.length > 0 ? (
+            <ul className="mb-2 mt-2">{priority.factors.map((factor, index) => <li key={`${factor.key}-${factor.record_id || index}`}>{factor.detail}</li>)}</ul>
+          ) : <p className="mb-2 mt-2">{c("Tidak ada pemicu antrean yang tercatat.", "No recorded triage triggers.")}</p>}
+          <small>{priority.qualification}</small>
+        </div>
+      )}
       <p className="integrity-note">
         {c(
           "Bandingkan dua jendela waktu Dynamic World dan periksa sel termal FIRMS. Temuan adalah sinyal untuk review; luas terbakar atau kehilangan karbon belum dihitung. Jadwal berjalan saat worker dMRV aktif.",

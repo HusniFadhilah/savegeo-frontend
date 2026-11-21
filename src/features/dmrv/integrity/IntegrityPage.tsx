@@ -5,6 +5,7 @@ import DmrvPageHeader from "../DmrvPageHeader";
 import { getProject, listMonitoringPeriods } from "../api";
 import type { MonitoringPeriod, Project } from "../types";
 import AccountingPanel from "./AccountingPanel";
+import { CreditLedgerPanel, MethodologyPanel, SatelliteProvenancePanel } from "./AdvancedPanels";
 import ChecklistPanel from "./ChecklistPanel";
 import { RegistryPanel, ValidationPanel } from "./DataPanels";
 import DocumentsPanel from "./DocumentsPanel";
@@ -19,7 +20,9 @@ const SECTIONS = [
   ["readiness", "bi-clipboard-check", "Kesiapan", "Readiness"],
   ["risks", "bi-shield-exclamation", "Risiko", "Risks"],
   ["accounting", "bi-calculator", "Mitigasi", "Mitigation"],
+  ["methodology", "bi-journal-check", "Metodologi & data", "Methodology & data"],
   ["registry", "bi-intersect", "Registry", "Registry"],
+  ["credits", "bi-arrow-left-right", "Siklus kredit", "Credit lifecycle"],
   ["validation", "bi-graph-up", "Validasi", "Validation"],
   ["safeguards", "bi-people", "Safeguards", "Safeguards"],
   ["documents", "bi-folder2-open", "Dokumen", "Documents"],
@@ -255,6 +258,13 @@ export default function IntegrityPage() {
                   records={workspace.records.filter((r) => r.category === "accounting")}
                 />
               ) : null}
+              {section === "methodology" ? (
+                <>
+                  <MethodologyPanel {...props} />
+                  <h3 className="integrity-subheading">{c("Jejak mutu citra satelit", "Satellite data quality trail")}</h3>
+                  <SatelliteProvenancePanel {...props} />
+                </>
+              ) : null}
               {section === "registry" ? (
                 <RegistryPanel
                   {...props}
@@ -262,6 +272,7 @@ export default function IntegrityPage() {
                   records={workspace.records.filter((r) => r.category === "registry")}
                 />
               ) : null}
+              {section === "credits" ? <CreditLedgerPanel projectId={projectId} canWrite={canWrite} /> : null}
               {section === "validation" ? (
                 <ValidationPanel
                   {...props}

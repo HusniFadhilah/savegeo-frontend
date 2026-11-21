@@ -1,4 +1,6 @@
 import { ApiError, apiClient } from "@/services/apiClient";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import type {
   BoundaryVersion,
   ArrIllustrativePreview,
@@ -16,6 +18,7 @@ import type {
   ProjectCreate,
   Visit,
 } from "./types";
+import type { FieldCapture } from "./integrity/types";
 
 const AUTH = { auth: "app" } as const;
 const base = (id: string) => `/dmrv/projects/${encodeURIComponent(id)}`;
@@ -26,7 +29,56 @@ export const listProjects = () => apiClient.get<Project[]>("/dmrv/projects", AUT
 export const createProject = (payload: ProjectCreate, idempotencyKey: string) =>
   apiClient.post<Project>("/dmrv/projects", payload, withKey(idempotencyKey));
 
-export const getProject = (id: string) => apiClient.get<Project>(base(id), AUTH);
+const offlineProjectKey = (id: string) => {
+  const user = useUserAuthStore.getState().user;
+  const admin = useAuthStore.getState().user;
+  const principalKey = user ? `user:${user.id}` : admin ? `admin:${admin.id}` : null;
+  return principalKey ? `savegeo-dmrv-project:${principalKey}:${id}` : null;
+};
+export async function getProject(id: string): Promise<Project> {
+  try {
+    const project = await apiClient.get<Project>(base(id), AUTH);
+    // Keep only the identity and role needed to reopen the field capture form offline.
+    try {
+      const minimal: Project = {
+        id: project.id,
+        name: project.name,
+        organization: null,
+        organization_id: null,
+        activity_type: project.activity_type,
+        jurisdiction: null,
+        methodology_id: project.methodology_id,
+        methodology_version: project.methodology_version,
+        start_date: null,
+        crediting_period_years: null,
+        status: "offline_snapshot",
+        revision: project.revision,
+        created_at: null,
+        updated_at: null,
+        my_role: project.my_role,
+      };
+      const key = offlineProjectKey(id);
+      if (key) localStorage.setItem(key, JSON.stringify(minimal));
+    } catch {
+      // Browser storage may be disabled; the online project page still works.
+    }
+    return project;
+  } catch (cause) {
+    if (!navigator.onLine) {
+      try {
+        const key = offlineProjectKey(id);
+        const cached = key ? localStorage.getItem(key) : null;
+        if (cached) {
+          const project = JSON.parse(cached) as Project;
+          if (project.id === id && project.my_role) return project;
+        }
+      } catch {
+        // Fall through to the original API error if local data is unavailable.
+      }
+    }
+    throw cause;
+  }
+}
 
 export const getArrIllustrativeExample = () =>
   apiClient.get<ArrIllustrativePreview>("/dmrv/examples/arr-accounting", AUTH);
@@ -149,6 +201,28 @@ export const listPlots = (id: string) => apiClient.get<Plot[]>(`${base(id)}/fiel
 
 export const listVisits = (id: string, plotCode: string) =>
   apiClient.get<Visit[]>(`${base(id)}/field-data/plots/${encodeURIComponent(plotCode)}/visits`, AUTH);
+
+export interface FieldCaptureDraft {
+  capture_id: string;
+  plot_code: string;
+  observed_at: string;
+  latitude: number;
+  longitude: number;
+  gps_accuracy_m: number | null;
+  observation: string;
+  photo: File | null;
+}
+
+export const listFieldCaptures = (id: string) =>
+  apiClient.get<FieldCapture[]>(`${base(id)}/field-data/captures`, AUTH);
+
+export const syncFieldCapture = (id: string, draft: FieldCaptureDraft) => {
+  const form = new FormData();
+  const { photo, ...payload } = draft;
+  form.append("data", JSON.stringify(payload));
+  if (photo) form.append("file", photo, photo.name);
+  return apiClient.upload<FieldCapture>(`${base(id)}/field-data/captures`, form, AUTH);
+};
 
 /** Machine-readable code from the dMRV error body, or null when the error is not a dMRV error. */
 export function dmrvErrorCode(error: unknown): string | null {

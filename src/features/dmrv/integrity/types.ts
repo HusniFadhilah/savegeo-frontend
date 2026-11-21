@@ -8,7 +8,9 @@ export type Category =
   | "registry"
   | "validation"
   | "scan"
-  | "grievance";
+  | "grievance"
+  | "methodology_check"
+  | "satellite_provenance";
 export interface Criterion {
   category: Category;
   key: string;
@@ -105,6 +107,73 @@ export interface IntegrityWorkspace {
   documents: IntegrityDocument[];
   risk_policy: RiskPolicy;
   registry_check: RegistryCheck;
+}
+export interface MethodologyRuleItem {
+  key: string;
+  title: string;
+  description: string;
+  source: string;
+  required: boolean;
+  approach?: "area_based" | "census_based";
+  status: "not_assessed" | "complete" | "partial" | "not_applicable";
+  notes: string;
+  evidence: string[];
+}
+export interface MethodologyChecklist {
+  methodology_id: string | null;
+  methodology_version: string | null;
+  supported: boolean;
+  pack_id: string | null;
+  reviewed_on: string | null;
+  approach: "area_based" | "census_based" | null;
+  approach_options: ("area_based" | "census_based")[];
+  items: MethodologyRuleItem[];
+  record_id: string | null;
+  revision: number;
+  record_status: string | null;
+  qualification: string;
+}
+export interface ReviewerPriority {
+  priority: "urgent" | "elevated" | "routine";
+  label: string;
+  open_risks: number;
+  factors: { key: string; count?: number; level: string; record_id?: string; detail: string }[];
+  qualification: string;
+}
+export interface CreditEvent {
+  event_id: string;
+  batch_reference: string;
+  event_type: "issuance_reported" | "transfer_reported" | "use_reported" | "retirement_reported" | "cancellation_reported";
+  quantity: number;
+  owner_from: string | null;
+  owner_to: string | null;
+  registry: string;
+  external_transaction_id: string;
+  effective_date: string;
+  evidence: string[];
+  record_status: "reported_internal_only";
+  created_at: string | null;
+  created_by: string;
+}
+export interface CreditLedger {
+  events: CreditEvent[];
+  batches: { batch_reference: string; registry: string; reported_balances: { owner: string; quantity: number }[] }[];
+  qualification: string;
+}
+export interface FieldCapture {
+  capture_id: string;
+  project_id: string;
+  plot_code: string;
+  observed_at: string;
+  latitude: number;
+  longitude: number;
+  gps_accuracy_m: number | null;
+  observation: string;
+  photo_document_id: string | null;
+  photo_url: string | null;
+  qa_flags: string[];
+  created_at: string | null;
+  created_by: string;
 }
 export interface PortfolioItem {
   id: string;
