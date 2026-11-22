@@ -214,11 +214,14 @@ export async function captureMapScreenshot(): Promise<string> {
   if (!mapEl) throw new Error("Elemen peta tidak ditemukan.");
 
   const { default: html2canvas } = await import("html2canvas");
+  const cssPixels = Math.max(1, mapEl.clientWidth * mapEl.clientHeight);
+  const requestedScale = Math.max(0.1, window.devicePixelRatio || 1);
+  const scale = Math.min(requestedScale, Math.sqrt(2_000_000 / cssPixels));
   const canvas = await html2canvas(mapEl, {
     allowTaint: true,
     useCORS: true,
     logging: false,
-    scale: window.devicePixelRatio || 1,
+    scale,
   });
   const dataUrl = canvas.toDataURL("image/png");
   return dataUrl.replace(/^data:image\/png;base64,/, "");
