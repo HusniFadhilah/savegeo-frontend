@@ -111,4 +111,21 @@ describe("CamsFireEmissionsPanel", () => {
 
     expect(await screen.findByText("wildfire.cams.status.validationBlocked")).toBeTruthy();
   });
+
+  it("does not render provider links with executable URL schemes", async () => {
+    fetchCapabilities.mockResolvedValue({
+      ...capabilities,
+      products: [
+        { ...capabilities.products[0], source_url: "javascript:alert(1)" },
+        capabilities.products[1],
+      ],
+    });
+    const { container } = render(<CamsFireEmissionsPanel slug="kalimantan-2026" eventConfirmed />);
+    fireEvent.click(screen.getByText("wildfire.cams.title"));
+
+    await screen.findByText("wildfire.cams.status.needsCredentials");
+    const catalogLinks = container.querySelectorAll('a[href^="https://ads.atmosphere.copernicus.eu/"]');
+    expect(catalogLinks).toHaveLength(1);
+    expect(container.querySelector('a[href^="javascript:"]')).toBeNull();
+  });
 });

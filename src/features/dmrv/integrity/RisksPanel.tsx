@@ -201,9 +201,16 @@ export default function RisksPanel({ policy, ...props }: SectionProps & { policy
   }, [projectId, onChanged, tick]);
   useEffect(() => {
     let active = true;
-    void getReviewerPriority(projectId).then((result) => { if (active) setPriority(result); })
-      .catch((cause: unknown) => { if (active) setError(errorMessage(cause)); });
-    return () => { active = false; };
+    void getReviewerPriority(projectId)
+      .then((result) => {
+        if (active) setPriority(result);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(errorMessage(cause));
+      });
+    return () => {
+      active = false;
+    };
   }, [projectId, props.records]);
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -233,18 +240,38 @@ export default function RisksPanel({ policy, ...props }: SectionProps & { policy
   }
   return (
     <>
-      {priority && (
-        <div className={`alert ${priority.priority === "urgent" ? "alert-danger" : priority.priority === "elevated" ? "alert-warning" : "alert-success"}`}>
+      {priority ? (
+        <div
+          className={`alert ${
+            priority.priority === "urgent"
+              ? "alert-danger"
+              : priority.priority === "elevated"
+                ? "alert-warning"
+                : "alert-success"
+          }`}
+        >
           <div className="d-flex flex-wrap justify-content-between gap-2">
-            <strong>{c("Prioritas pemeriksaan reviewer", "Reviewer review priority")}: {priority.label}</strong>
-            <span>{c("Risiko terbuka", "Open risks")}: {priority.open_risks}</span>
+            <strong>
+              {c("Prioritas pemeriksaan reviewer", "Reviewer review priority")}: {priority.label}
+            </strong>
+            <span>
+              {c("Risiko terbuka", "Open risks")}: {priority.open_risks}
+            </span>
           </div>
           {priority.factors.length > 0 ? (
-            <ul className="mb-2 mt-2">{priority.factors.map((factor, index) => <li key={`${factor.key}-${factor.record_id || index}`}>{factor.detail}</li>)}</ul>
-          ) : <p className="mb-2 mt-2">{c("Tidak ada pemicu antrean yang tercatat.", "No recorded triage triggers.")}</p>}
+            <ul className="mb-2 mt-2">
+              {priority.factors.map((factor, index) => (
+                <li key={`${factor.key}-${factor.record_id || index}`}>{factor.detail}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mb-2 mt-2">
+              {c("Tidak ada pemicu antrean yang tercatat.", "No recorded triage triggers.")}
+            </p>
+          )}
           <small>{priority.qualification}</small>
         </div>
-      )}
+      ) : null}
       <p className="integrity-note">
         {c(
           "Bandingkan dua jendela waktu Dynamic World dan periksa sel termal FIRMS. Temuan adalah sinyal untuk review; luas terbakar atau kehilangan karbon belum dihitung. Jadwal berjalan saat worker dMRV aktif.",

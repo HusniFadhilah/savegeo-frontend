@@ -19,9 +19,11 @@ interface FormState {
   password: string;
   roleId: string;
   isActive: boolean;
+  isSuperuser: boolean;
+  mfaRequired: boolean;
 }
 
-const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "", password: "", roleId: "", isActive: true };
+const EMPTY_FORM: FormState = { id: null, fullName: "", username: "", email: "", password: "", roleId: "", isActive: true, isSuperuser: false, mfaRequired: false };
 
 function roleLabel(name: string): string {
   return name === "geospatial_expert" ? "Ahli Geospasial" : name;
@@ -77,8 +79,12 @@ export default function AdminUsers() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
-  const canAssignFullAccess = hasAdminPermission(me, "secret.write");
+  const canAssignFullAccess = me?.is_superuser === true;
   const canManageViewerFeatures = hasAdminPermission(me, "viewer_features.manage");
+  const selectedRole = roles.find((role) => String(role.id) === form.roleId);
+  const selectedRoleIsPrivileged = form.isSuperuser || Boolean(selectedRole?.permissions.some((code) => code.endsWith(".write")));
+  const mfaPolicyLocked = Boolean(me?.mfa_policy_locked && selectedRoleIsPrivileged);
+  const currentAccountHasMfa = form.id !== null && rows.some((user) => user.id === form.id && user.mfa_enabled);
 
   useEffect(() => {
     listRoles()
@@ -90,7 +96,7 @@ export default function AdminUsers() {
   }, []);
 
   const reload = () => setReloadKey((k) => k + 1);
-  const selectableRows = me ? rows.filter((u) => me.id !== u.id && (!me.role || Boolean(u.role))) : [];
+  const selectableRows = me ? rows.filter((u) => me.id !== u.id && (me.is_superuser || !u.is_superuser)) : [];
   const allPageSelected = selectableRows.length > 0 && selectableRows.every((u) => selectedIds.includes(u.id));
   const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
   const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !selectableRows.some((u) => u.id === id)) : Array.from(new Set([...ids, ...selectableRows.map((u) => u.id)]))));
@@ -122,6 +128,8 @@ export default function AdminUsers() {
       password: "",
       roleId: role ? String(role.id) : "",
       isActive: u.is_active,
+      isSuperuser: Boolean(u.is_superuser),
+      mfaRequired: Boolean(u.mfa_required),
     });
     setFormError(null);
     setFormOpen(true);
@@ -151,7 +159,9 @@ export default function AdminUsers() {
           password: form.password,
           email: form.email.trim() || null,
           role_id: roleId,
+          is_superuser: form.isSuperuser,
           is_active: form.isActive,
+          ...(me?.is_superuser ? { mfa_required: form.mfaRequired } : {}),
         });
         notify(t("admin.users.created"), "s");
       } else {
@@ -164,6 +174,8 @@ export default function AdminUsers() {
           email: form.email.trim() || null,
           is_active: form.isActive,
           role_id: roleId,
+          is_superuser: form.isSuperuser,
+          ...(me?.is_superuser ? { mfa_required: form.mfaRequired } : {}),
           ...(form.password ? { new_password: form.password } : {}),
         });
         if (form.id === me?.id) {
@@ -255,7 +267,7 @@ export default function AdminUsers() {
               </div>
               <div className="form-field">
                 <label className="form-label">{t("admin.users.role")}</label>
-                <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}>
+                <select className="form-select" value={form.roleId} onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value, isSuperuser: !e.target.value && canAssignFullAccess }))}>
                   {canAssignFullAccess && <option value="">{t("admin.users.fullAccess")}</option>}
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -265,11 +277,33 @@ export default function AdminUsers() {
                 </select>
               </div>
             </div>
-            <label className="cfg-switch" style={{ marginBottom: "0.75rem" }}>
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
-              <span />
-              <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
-            </label>
+            <div className="admin-user-security-settings">
+              <div className="admin-user-security-settings__toggles">
+                <label className="cfg-switch">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
+                  <span />
+                  <strong>{form.isActive ? t("admin.users.active") : t("admin.users.inactive")}</strong>
+                </label>
+                {me?.is_superuser && <label className="cfg-switch">
+                  <input
+                    type="checkbox"
+                    aria-label={t("admin.users.mfaRequired")}
+                    checked={form.mfaRequired || mfaPolicyLocked}
+                    disabled={mfaPolicyLocked}
+                    onChange={(e) => setForm((f) => ({ ...f, mfaRequired: e.target.checked }))}
+                  />
+                  <span />
+                  <strong>{t("admin.users.mfaRequired")}</strong>
+                </label>}
+              </div>
+              {me?.is_superuser && <div className="admin-user-security-settings__help text-muted small">
+                {mfaPolicyLocked
+                  ? t("admin.users.mfaLocked")
+                  : currentAccountHasMfa
+                    ? t("admin.users.mfaEnrolledHelp")
+                    : t("admin.users.mfaHelp")}
+              </div>}
+            </div>
             {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSave}>
@@ -333,12 +367,16 @@ export default function AdminUsers() {
                 !error &&
                 rows.map((u, index) => (
                   <tr key={u.id}>
-                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (Boolean(me?.role) && !u.role)} onChange={() => toggleSelected(u.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${u.username}`} checked={selectedIds.includes(u.id)} disabled={me?.id === u.id || (!me?.is_superuser && u.is_superuser === true)} onChange={() => toggleSelected(u.id)} /></td>
                     <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td className="admin-user-identity">
                       <AccountIdentity user={u} missingName={t("admin.users.nameMissing")} />
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}>
+                        {u.mfa_required_effective ? t("admin.users.mfaRequired") : t("admin.users.mfaOptional")}
+                        {u.mfa_enabled ? ` · ${t("admin.users.mfaEnrolled")}` : ""}
+                      </div>
                     </td>
-                    <td>{u.role ? roleLabel(u.role) : t("admin.users.fullAccess")}</td>
+                    <td>{u.is_superuser ? t("admin.users.fullAccess") : u.role ? roleLabel(u.role) : "?"}</td>
                     <td>
                       <span className={`stat-badge ${u.is_active ? "badge-green" : "badge-gray"}`}>{u.is_active ? t("admin.users.active") : t("admin.users.inactive")}</span>
                     </td>
@@ -346,10 +384,10 @@ export default function AdminUsers() {
                     <td>{formatAdminDate(u.last_login, language)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                        {(!me?.role || u.role) && <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
+                        {(me?.is_superuser || !u.is_superuser) && <button type="button" className="btn-xs" title={t("admin.edit")} aria-label={t("admin.edit")} onClick={() => openEdit(u)}>
                           <i className="bi bi-pencil-square" />
                         </button>}
-                        {(!me?.role || u.role) && <button
+                        {(me?.is_superuser || !u.is_superuser) && <button
                           type="button"
                           className="btn-xs danger"
                           title={t("admin.delete")}

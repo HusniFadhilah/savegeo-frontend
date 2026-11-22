@@ -15,6 +15,7 @@ import type { IntegrityRecord } from "./types";
 vi.mock("./api", () => ({
   saveRecord: vi.fn(),
   getPortfolio: vi.fn(),
+  getPortfolioDashboard: vi.fn(),
   reviewRecord: vi.fn(),
   getHistory: vi.fn(),
   getRecord: vi.fn(),
@@ -68,6 +69,10 @@ const props = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(api.getPortfolioDashboard).mockResolvedValue({
+    summary: { project_count: 0, job_count: 0, report_count: 0, submission_count: 0, risk_count: 0, period_count: 0, jobs_by_status: {}, reports_ready: 0 },
+    projects: [], recent_jobs: [], recent_periods: [], recent_reports: [], recent_submissions: [], recent_risks: [],
+  });
   useI18nStore.getState().setLanguage("id");
 });
 afterEach(cleanup);

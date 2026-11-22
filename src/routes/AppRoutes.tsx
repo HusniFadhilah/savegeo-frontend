@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import AppLoginPage from "@/pages/AppLoginPage";
-import RegisterUserPage from "@/pages/RegisterUserPage";
+import RegistrationRoute from "@/components/auth/RegistrationRoute";
 import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -90,7 +90,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AppLoginPage />} />
-      <Route path="/register" element={<RegisterUserPage />} />
+      <Route path="/register" element={<RegistrationRoute />} />
       <Route path="/profile" element={<ProtectedAppRoute checkFeatureAccess={false}><ProfilePage /></ProtectedAppRoute>} />
       <Route
         path="/dashboard"

@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import TablePagination from "@/components/ui/TablePagination";
+import InfoTip from "@/components/ui/InfoTip";
 import { AdminTableNumberCell, AdminTableNumberHeader } from "./AdminTableNumber";
 import {
   downloadJson,
@@ -37,7 +39,9 @@ function MetricRow({ label, metric, index }: { label: string; metric?: Metric; i
 export default function FieldCalibrationPanel({ datasetId }: { datasetId: string }) {
   const [rows, setRows] = useState<FieldObservation[]>([]);
   const [total, setTotal] = useState(0);
+  const [recordsTotal, setRecordsTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
@@ -49,6 +53,10 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     { id: string; target_pool: string; status: string; created_at: string }[]
   >([]);
   const [pool, setPool] = useState<Pool>("agb");
+  const [autoPool, setAutoPool] = useState<Pool>("agb");
+  const [autoYear, setAutoYear] = useState(new Date().getFullYear());
+  const [autoOffset, setAutoOffset] = useState(0);
+  const [predictionSource, setPredictionSource] = useState("");
   const [filterPool, setFilterPool] = useState<Pool | undefined>();
   const [inventory, setInventory] = useState<FieldInventory | null>(null);
   const [loadingRows, setLoadingRows] = useState(true);
@@ -84,11 +92,12 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     let active = true;
     setLoadingRows(true);
     void fieldApi
-      .list(datasetId, page, filterPool)
+      .list(datasetId, page, filterPool, search)
       .then((result) => {
         if (active) {
           setRows(result.rows);
           setTotal(result.total);
+          setRecordsTotal(result.records_total ?? result.total);
         }
       })
       .catch((e: unknown) => {
@@ -100,7 +109,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     return () => {
       active = false;
     };
-  }, [datasetId, page, refresh, filterPool]);
+  }, [datasetId, page, refresh, filterPool, search]);
   function changed() {
     setRefresh((n) => n + 1);
     setAssessment(null);
@@ -152,6 +161,68 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
       setBusy(false);
     }
   }
+  async function extractPredictions(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const { run: queued } = await fieldApi.extractPredictions(datasetId, {
+        pool: autoPool,
+        analysis_year: Number(data.get("year")),
+        offset: Number(data.get("offset")),
+        limit: Number(data.get("limit")),
+      });
+      let run = queued;
+      for (let attempt = 0; attempt < 90 && ["queued", "running"].includes(run.status); attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        run = await fieldApi.run(run.id);
+      }
+      if (run.status === "failed") {
+        throw new Error(run.error?.message ?? "Ekstraksi prediksi GEE gagal.");
+      }
+      if (run.status === "queued" || run.status === "running") {
+        throw new Error(`Ekstraksi masih berjalan. Buka riwayat run ${run.id} untuk memeriksa statusnya.`);
+      }
+      const source = run.metrics?.prediction_source;
+      if (!source) throw new Error("Run selesai tanpa ID sumber prediksi.");
+      setPool(autoPool);
+      setPredictionSource(source);
+      let validationNotice = "";
+      try {
+        const assessment = await fieldApi.assess(datasetId, {
+          pool: autoPool,
+          prediction_source: source,
+          max_year_gap: Number(data.get("year_gap") ?? 0),
+          allow_point_pixel: false,
+          create_calibration_candidate: false,
+          ...(autoPool === "soc"
+            ? {
+                depth_top_cm: Number(data.get("soc_top")),
+                depth_bottom_cm: Number(data.get("soc_bottom")),
+              }
+            : {}),
+        });
+        setAssessment(assessment);
+        validationNotice = assessment.metrics.baseline_validation.status === "computed"
+          ? `Validasi lapangan otomatis tersimpan: ${assessment.metrics.validation_plots} plot validasi terpisah.`
+          : `Evaluasi lapangan tersimpan, tetapi metrik validasi belum dapat dihitung (${assessment.metrics.validation_plots} plot validasi cocok).`;
+      } catch (assessmentError) {
+        validationNotice = assessmentError instanceof Error
+          ? `Prediksi tersimpan; evaluasi otomatis belum berhasil: ${assessmentError.message}`
+          : "Prediksi tersimpan; evaluasi otomatis belum berhasil. Jalankan evaluasi manual setelah memeriksa pasangan plot.";
+      }
+      setRefresh((value) => value + 1);
+      setNotice(
+        `Prediksi ${autoPool.toUpperCase()} tersimpan untuk batch ini: ${run.metrics?.predictions_saved ?? 0} baru, ${run.metrics?.predictions_reused ?? 0} dipakai ulang, ${run.metrics?.without_valid_pixels ?? 0} tanpa piksel valid. ${validationNotice} Sumber: ${source}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Prediksi GEE gagal diproses.");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function evaluate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -186,43 +257,42 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     URL.revokeObjectURL(url);
   }
   return (
-    <section className="admin-card p-3 mt-3" aria-label="Data lapangan dan kalibrasi per pool">
-      <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2">
-        <div>
-          <h3 className="h5 mb-1">Data lapangan dan kalibrasi karbon</h3>
-          <span className="small text-muted">
-            {inventory?.total_records ?? total} pengukuran · 5 pool · Mg C/ha · WGS84
-          </span>
+    <section className="field-calibration-panel" aria-label="Data lapangan dan kalibrasi per pool">
+      <header className="field-calibration-panel__header">
+        <div className="field-calibration-panel__title">
+          <span className="field-calibration-panel__icon"><i className="bi bi-clipboard-data" aria-hidden="true" /></span>
+          <div>
+            <h3>Data lapangan dan kalibrasi karbon</h3>
+            <span>{inventory?.total_records ?? recordsTotal} pengukuran <span aria-hidden="true">·</span> 5 pool <span aria-hidden="true">·</span> Mg C/ha <span aria-hidden="true">·</span> WGS84</span>
+          </div>
+          <InfoTip label="Panduan data lapangan dan kalibrasi" content="Pisahkan plot kalibrasi dan validasi sejak awal. Persamaan allometri, rasio akar:tajuk, metode laboratorium, sumber, luas, dan tanggal pengukuran perlu dicatat per pengamatan. Ringkasan mencakup seluruh kunjungan. Kalibrasi memerlukan minimal tiga plot; statistik validasi terpisah memerlukan minimal dua plot lain. Evaluasi menyaring kesesuaian tahun, dukungan spasial, dan kedalaman SOC." />
         </div>
-        <button type="button" className="btn btn-outline-primary btn-sm" onClick={template}>
-          Unduh template CSV
+        <button type="button" className="btn btn-light field-calibration-panel__template" onClick={template}>
+          <i className="bi bi-download" aria-hidden="true" /> Unduh template CSV
         </button>
-      </div>
-      <p className="small text-muted">
-        Pisahkan plot kalibrasi dan validasi sejak awal. Persamaan allometri, rasio akar:tajuk,
-        metode laboratorium, sumber, luas, dan tanggal pengukuran dicatat untuk tiap pengamatan.
-      </p>
+      </header>
+      <div className="field-calibration-panel__body">
       <div
-        className="d-flex gap-2 flex-wrap mb-3"
+        className="field-pool-filters"
         role="group"
         aria-label="Filter data berdasarkan pool"
       >
         <button
           type="button"
-          className={`btn btn-sm ${filterPool ? "btn-outline-secondary" : "btn-primary"}`}
+          className={`field-pool-filter ${filterPool ? "" : "is-active"}`}
           aria-pressed={!filterPool}
           onClick={() => {
             setFilterPool(undefined);
             setPage(1);
           }}
         >
-          Semua pool
+          <strong>Semua pool</strong><small>{inventory?.total_records ?? recordsTotal} pengukuran</small>
         </button>
         {FIELD_POOLS.map(({ value, label }) => (
           <button
             type="button"
             key={value}
-            className={`btn btn-sm text-start ${filterPool === value ? "btn-primary" : "btn-outline-secondary"}`}
+            className={`field-pool-filter ${filterPool === value ? "is-active" : ""}`}
             aria-pressed={filterPool === value}
             onClick={() => {
               setFilterPool(value);
@@ -240,13 +310,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </button>
         ))}
       </div>
-      <p className="small text-muted">
-        Ringkasan mencakup seluruh kunjungan. Kalibrasi memerlukan minimal tiga plot; statistik
-        validasi terpisah memerlukan minimal dua plot lain. Evaluasi menyaring kesesuaian tahun,
-        dukungan spasial, dan kedalaman SOC.
-      </p>
       <FieldObservationForm datasetId={datasetId} onSaved={changed} />
-      <details className="border rounded p-3 mb-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Impor CSV · pratinjau sebelum menyimpan</summary>
         <div className="d-flex gap-2 flex-wrap mt-3">
           <input
@@ -296,8 +361,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 ))}
               </ul>
             )}
-            <div className="table-responsive">
-              <table className="table table-sm">
+            <div className="field-calibration-table-wrap">
+              <table className="tbl tbl-wide field-calibration-table field-calibration-table--preview">
                 <thead>
                   <tr>
                     <AdminTableNumberHeader />
@@ -325,8 +390,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </>
         )}
       </details>
-      <div className="table-responsive">
-        <table className="table table-sm align-middle">
+      <div className="field-calibration-table-wrap">
+        <table className="tbl tbl-wide field-calibration-table field-calibration-table--observations">
           <thead>
             <tr>
               <AdminTableNumberHeader />
@@ -366,41 +431,111 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </tbody>
         </table>
       </div>
+      <TablePagination
+        page={page - 1}
+        pageCount={Math.max(1, Math.ceil(total / 100))}
+        recordsTotal={recordsTotal}
+        recordsFiltered={total}
+        pageSize={100}
+        search={search}
+        searchPlaceholder="Cari plot, pool, referensi, sumber"
+        onSearchChange={(value) => { setSearch(value); setPage(1); }}
+        onPrev={() => setPage((current) => Math.max(1, current - 1))}
+        onNext={() => setPage((current) => Math.min(Math.max(1, Math.ceil(total / 100)), current + 1))}
+      />
       {loadingRows && (
         <p role="status" className="text-muted">
           Memuat pengukuran…
         </p>
       )}
       {!loadingRows && !rows.length && (
-        <p className="text-muted">
-          Belum ada pengukuran dalam format lintas pool ini. Berkas survei lama tetap tersedia di
-          bagian sumber dataset.
+        <p className="field-calibration-empty">
+          {search ? "Tidak ada pengukuran yang cocok dengan pencarian." : "Belum ada pengukuran pada filter ini. Berkas survei lama tetap tersedia di bagian sumber dataset."}
         </p>
       )}
-      {total > 100 && (
-        <div className="d-flex gap-2 align-items-center">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Sebelumnya
-          </button>
-          <span>
-            {page} / {Math.ceil(total / 100)}
-          </span>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            disabled={page * 100 >= total}
-            onClick={() => setPage(page + 1)}
-          >
-            Berikutnya
-          </button>
-        </div>
-      )}
-      <details className="border rounded p-3 my-3">
+      <details className="field-panel-accordion">
+        <summary className="fw-semibold">Ekstrak prediksi dari model GEE yang disetujui</summary>
+        <form className="mt-3" onSubmit={(event) => void extractPredictions(event)}>
+          <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
+            <div className="row g-2">
+              <label className="col-md-3 form-label">
+                Pool
+                <select
+                  className="form-select"
+                  value={autoPool}
+                  onChange={(event) => setAutoPool(event.target.value as Pool)}
+                >
+                  {FIELD_POOLS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="col-md-3 form-label">
+                Tahun prediksi
+                <input
+                  name="year"
+                  type="number"
+                  min={1984}
+                  max={new Date().getFullYear()}
+                  value={autoYear}
+                  onChange={(event) => setAutoYear(Number(event.target.value))}
+                  className="form-control"
+                  required
+                />
+              </label>
+              <label className="col-md-3 form-label">
+                Offset batch
+                <input
+                  name="offset"
+                  type="number"
+                  min={0}
+                  max={100000}
+                  step={1}
+                  value={autoOffset}
+                  onChange={(event) => setAutoOffset(Number(event.target.value))}
+                  className="form-control"
+                />
+              </label>
+              <label className="col-md-3 form-label">
+                Plot per batch
+                <select name="limit" className="form-select" defaultValue="250">
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="250">250</option>
+                  <option value="500">500</option>
+                </select>
+              </label>
+              <label className="col-md-3 form-label">
+                Selisih tahun survei maksimum
+                <input name="year_gap" type="number" min={0} max={5} step={1} defaultValue={0} className="form-control" />
+              </label>
+              {autoPool === "soc" && (
+                <>
+                  <label className="col-md-3 form-label">
+                    Kedalaman SOC atas (cm)
+                    <input name="soc_top" type="number" min={0} step="any" required className="form-control" />
+                  </label>
+                  <label className="col-md-3 form-label">
+                    Kedalaman SOC bawah (cm)
+                    <input name="soc_bottom" type="number" min={0.001} step="any" required className="form-control" />
+                  </label>
+                </>
+              )}
+            </div>
+            <p className="small text-muted mt-2 mb-2">
+              Sistem memilih model GEE aktif dengan evaluasi dan persetujuan independen yang cocok untuk pool ini.
+              Jalankan batch berikutnya dengan offset bertambah sesuai jumlah plot per batch. Geometri plot tersimpan
+              dipakai bila tersedia; selain itu digunakan lingkaran dengan luas setara dari titik koordinat dan luas plot.
+              Hasil tersimpan sebagai snapshot prediksi berversi dan tidak menimpa snapshot sebelumnya. Setelah ekstraksi,
+              pasangan dievaluasi otomatis terhadap plot kalibrasi dan validasi; SOC hanya dibandingkan pada kedalaman
+              yang Anda isi dan plot tanpa pasangan cocok tetap dilaporkan sebagai pengecualian. Evaluasi otomatis tidak
+              membuat kandidat kalibrasi; gunakan evaluasi manual setelah seluruh batch tersedia untuk membuat kandidat.
+            </p>
+            <button type="submit" className="btn btn-outline-success" disabled={busy}>
+              {busy ? "Mengekstrak dari Earth Engine…" : "Ekstrak prediksi batch"}
+            </button>
+          </fieldset>
+        </form>
+      </details>
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Pasangkan prediksi model / raster</summary>
         <form className="mt-3" onSubmit={(event) => void addPrediction(event)}>
           <fieldset disabled={busy || !rows.length}>
@@ -465,7 +600,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </fieldset>
         </form>
       </details>
-      <details className="border rounded p-3">
+      <details className="field-panel-accordion">
         <summary className="fw-semibold">Validasi dan kalibrasi model</summary>
         <form className="mt-3" onSubmit={(event) => void evaluate(event)}>
           <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
@@ -492,6 +627,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                   minLength={3}
                   required
                   className="form-control"
+                  value={predictionSource}
+                  onChange={(event) => setPredictionSource(event.target.value)}
                 />
                 <datalist id="field-prediction-sources">
                   {(
@@ -596,7 +733,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
         </label>
       )}
       {assessment && (
-        <div className="border rounded p-3 mt-3">
+        <div className="field-assessment-card">
           <div className="d-flex gap-3 flex-wrap justify-content-between">
             <h4 className="h6">
               Hasil evaluasi ·{" "}
@@ -623,8 +760,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               Sumber prediksi: {assessment.metrics.configuration.prediction_source}
             </p>
           )}
-          <div className="table-responsive">
-            <table className="table table-sm">
+          <div className="field-calibration-table-wrap">
+            <table className="tbl tbl-wide field-calibration-table field-calibration-table--metrics">
               <thead>
                 <tr>
                   <AdminTableNumberHeader />
@@ -706,6 +843,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           )}
         </div>
       )}
+      </div>
     </section>
   );
 }

@@ -261,7 +261,9 @@ export default function IntegrityPage() {
               {section === "methodology" ? (
                 <>
                   <MethodologyPanel {...props} />
-                  <h3 className="integrity-subheading">{c("Jejak mutu citra satelit", "Satellite data quality trail")}</h3>
+                  <h3 className="integrity-subheading">
+                    {c("Jejak mutu citra satelit", "Satellite data quality trail")}
+                  </h3>
                   <SatelliteProvenancePanel {...props} />
                 </>
               ) : null}
@@ -272,7 +274,9 @@ export default function IntegrityPage() {
                   records={workspace.records.filter((r) => r.category === "registry")}
                 />
               ) : null}
-              {section === "credits" ? <CreditLedgerPanel projectId={projectId} canWrite={canWrite} /> : null}
+              {section === "credits" ? (
+                <CreditLedgerPanel projectId={projectId} canWrite={canWrite} />
+              ) : null}
               {section === "validation" ? (
                 <ValidationPanel
                   {...props}

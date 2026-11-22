@@ -38,7 +38,7 @@ export default function TablePagination({
   const filteredNote = recordsFiltered !== recordsTotal ? ` (${t("table.filteredFrom", { count: formatNumber(recordsTotal, language) })})` : "";
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+    <div className="admin-table-pagination" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
       {showSearch ? (
         <input
           className="form-input"

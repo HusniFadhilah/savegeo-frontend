@@ -106,7 +106,6 @@ export default function DisasterDashboard() {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const [layers, setLayers] = useState<DisasterLayersResponse | null>(null);
-  const [layersLoading, setLayersLoading] = useState(true);
   const [layersError, setLayersError] = useState<string | null>(null);
 
   const [statistics, setStatistics] = useState<DisasterStatisticsResponse | null>(null);
@@ -204,7 +203,7 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, navigate]);
+  }, [eventId, navigate, t]);
 
   // FIRMS is a wildfire-only layer. Reset local state and remove stale URL
   // controls when the selected event is a flood, earthquake, or another type.
@@ -222,12 +221,10 @@ export default function DisasterDashboard() {
     if (readyEventId == null) {
       setLayers(null);
       setLayersError(null);
-      setLayersLoading(false);
       setCheckedAnalyses(new Set());
       return;
     }
     let cancelled = false;
-    setLayersLoading(true);
     setLayersError(null);
     fetchDisasterLayers(readyEventId)
       .then((res) => {
@@ -238,14 +235,11 @@ export default function DisasterDashboard() {
       .catch((err) => {
         if (cancelled) return;
         setLayersError(errorMessage(err, t("disaster.detail.layersFailed")));
-      })
-      .finally(() => {
-        if (!cancelled) setLayersLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [readyEventId]);
+  }, [readyEventId, t]);
 
   useEffect(() => {
     if (readyEventId == null) {
@@ -271,7 +265,7 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [readyEventId]);
+  }, [readyEventId, t]);
 
   useEffect(() => {
     if (readyEventId == null) {
@@ -297,7 +291,7 @@ export default function DisasterDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [readyEventId]);
+  }, [readyEventId, t]);
 
   const toggleAnalysis = (modelId: string) => {
     setCheckedAnalyses((prev) => {

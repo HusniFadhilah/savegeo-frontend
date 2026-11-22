@@ -9,7 +9,7 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   parserOptions: { ecmaVersion: "latest", sourceType: "module" },
   plugins: ["react-refresh"],
-  ignorePatterns: ["dist", "node_modules", "*.cjs"],
+  ignorePatterns: ["dist", "node_modules", "vendor/picomatch", "*.cjs"],
   rules: {
     "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],

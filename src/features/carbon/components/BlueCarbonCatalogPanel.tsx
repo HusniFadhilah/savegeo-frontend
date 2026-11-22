@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/services/apiClient";
 import CropPanelAccordion from "@/features/crop-monitoring/components/CropPanelAccordion";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 import "./blue-carbon-catalog.css";
 
 type BlueCarbonProfile = {
@@ -93,8 +94,8 @@ export default function BlueCarbonCatalogPanel() {
                 {profile.citation && <p className="small mb-2">{profile.citation}</p>}
                 {profile.license && <small><strong>Lisensi:</strong> {profile.license}</small>}
                 <div className="blue-carbon-catalog__links">
-                  {profile.source_url && <a href={profile.source_url} target="_blank" rel="noreferrer">Dataset / arsip <i className="bi bi-box-arrow-up-right" /></a>}
-                  {profile.viewer_url && <a href={profile.viewer_url} target="_blank" rel="noreferrer">Peta interaktif <i className="bi bi-box-arrow-up-right" /></a>}
+                  {safeHttpUrl(profile.source_url) && <a href={safeHttpUrl(profile.source_url)} target="_blank" rel="noopener noreferrer">Dataset / arsip <i className="bi bi-box-arrow-up-right" /></a>}
+                  {safeHttpUrl(profile.viewer_url) && <a href={safeHttpUrl(profile.viewer_url)} target="_blank" rel="noopener noreferrer">Peta interaktif <i className="bi bi-box-arrow-up-right" /></a>}
                 </div>
               </CropPanelAccordion>
             </article>

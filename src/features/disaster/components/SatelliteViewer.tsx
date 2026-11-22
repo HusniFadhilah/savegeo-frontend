@@ -12,6 +12,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import { env } from "@/config/env";
 import { useBasemaps } from "@/hooks/useBasemaps";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { escapeHtmlText } from "@/utils/safeHttpUrl";
 import { getImagerySceneTile, listImageryScenes } from "@/features/imagery/api";
 import {
   ESRI_WAYBACK_START_DATE,
@@ -353,7 +354,7 @@ async function loadDynamicImagery({ source, phase, aoi, range, targetDate, basem
     tileUrl: scene.tile_url,
     acquisitionDate: scene.release_label,
     resolutionM: null,
-    attribution: `Esri World Imagery Wayback - Rilis ${scene.release_label}`,
+    attribution: `Esri World Imagery Wayback - Rilis ${escapeHtmlText(scene.release_label)}`,
   };
 }
 

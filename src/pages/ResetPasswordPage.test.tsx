@@ -1,39 +1,39 @@
-// @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import "@testing-library/jest-dom/vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import ResetPasswordPage from "./ResetPasswordPage";
 import { userAuthService } from "@/services/userAuthService";
-
+import { authService } from "@/services/authService";
+import { ApiError } from "@/services/apiClient";
 vi.mock("@/components/auth/LoginIllustration", () => ({ default: () => null }));
-vi.mock("@/services/userAuthService", () => ({ userAuthService: { resetPassword: vi.fn() } }));
-vi.mock("@/services/authService", () => ({ authService: { resetPassword: vi.fn() } }));
-
-function LocationProbe() {
-  const location = useLocation();
-  return <output data-testid="address">{location.pathname + location.search + location.hash}</output>;
+vi.mock("@/services/userAuthService", () => ({ userAuthService: { resetPassword: vi.fn() }, handleUserUnauthorized: vi.fn() }));
+vi.mock("@/services/authService", () => ({ authService: { resetPassword: vi.fn() }, clearAuthToken: vi.fn() }));
+beforeEach(() => vi.clearAllMocks());
+afterEach(cleanup);
+function open(kind: string) {
+  render(<MemoryRouter initialEntries={[`/reset-password#token=dummy-test&${kind}`]}><ResetPasswordPage /></MemoryRouter>);
+  const inputs = screen.getAllByDisplayValue("");
+  fireEvent.change(inputs[0], { target: { value: "a-test-password" } });
+  fireEvent.change(inputs[1], { target: { value: "a-test-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "Simpan Password Baru" }));
 }
-
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
-
-describe("reset link token privacy", () => {
-  it.each(["#token=private-reset-token", "?token=private-reset-token"])(
-    "scrubs %s from the address while preserving it for the reset request",
-    async (suffix) => {
-      vi.mocked(userAuthService.resetPassword).mockResolvedValue({ message: "Password updated" });
-      const { container } = render(
-        <MemoryRouter initialEntries={[`/reset-password${suffix}`]}>
-          <ResetPasswordPage /><LocationProbe />
-        </MemoryRouter>,
-      );
-      await waitFor(() => expect(screen.getByTestId("address").textContent).toBe("/reset-password"));
-      const inputs = container.querySelectorAll('input[type="password"]');
-      fireEvent.change(inputs[0], { target: { value: "new-password-123" } });
-      fireEvent.change(inputs[1], { target: { value: "new-password-123" } });
-      fireEvent.submit(container.querySelector("form")!);
-      await waitFor(() => expect(userAuthService.resetPassword).toHaveBeenCalledWith("private-reset-token", "new-password-123"));
-      await screen.findByText("Password updated");
-      expect(screen.getByTestId("address").textContent).not.toContain("token");
-    },
-  );
+it("sends an admin reset only to the admin endpoint", async () => {
+  vi.mocked(authService.resetPassword).mockResolvedValue({ message: "Password diperbarui" });
+  open("kind=admin");
+  await screen.findByText("Password diperbarui");
+  expect(authService.resetPassword).toHaveBeenCalledOnce();
+  expect(userAuthService.resetPassword).not.toHaveBeenCalled();
+});
+it("preserves a user reset failure without retrying as admin", async () => {
+  vi.mocked(userAuthService.resetPassword).mockRejectedValue(new ApiError("Token kedaluwarsa", 401));
+  open("kind=user");
+  await screen.findByText("Token kedaluwarsa");
+  expect(authService.resetPassword).not.toHaveBeenCalled();
+});
+it("requires an explicit supported account kind", async () => {
+  open("kind=other");
+  await waitFor(() => expect(screen.getByText(/Minta tautan/)).toBeInTheDocument());
+  expect(userAuthService.resetPassword).not.toHaveBeenCalled();
+  expect(authService.resetPassword).not.toHaveBeenCalled();
 });

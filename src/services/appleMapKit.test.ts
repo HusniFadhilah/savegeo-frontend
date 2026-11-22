@@ -34,21 +34,28 @@ describe("mapRectForView", () => {
 
 describe("withOptionalAppleBasemaps", () => {
   it("adds Apple basemaps only when the backend issues a token", async () => {
-    get
-      .mockResolvedValueOnce({ available: true })
-      .mockResolvedValueOnce({ token: "t", expires_at: Date.now() / 1000 + 1800 });
+    get.mockResolvedValueOnce({ available: true }).mockResolvedValueOnce({ token: "t", expires_at: Date.now() / 1000 + 1800 });
     const { withOptionalAppleBasemaps } = await freshModule();
     const result = await withOptionalAppleBasemaps([base]);
     expect(get).toHaveBeenNthCalledWith(1, "/maps/apple-mapkit/status");
-    expect(get).toHaveBeenNthCalledWith(2, "/maps/apple-mapkit/token");
+    expect(get).toHaveBeenCalledWith("/maps/apple-mapkit/token");
     expect(result.map((item) => item.id)).toEqual(["satellite", "apple-satellite", "apple-hybrid"]);
     expect(result.filter((item) => item.renderer === "mapkit").map((item) => item.mapkitType)).toEqual(["satellite", "hybrid"]);
   });
 
   it("keeps the list unchanged when Apple MapKit is not configured", async () => {
-    get.mockRejectedValueOnce(new Error("503"));
+    get.mockResolvedValueOnce({ available: false });
     const { withOptionalAppleBasemaps } = await freshModule();
     expect(await withOptionalAppleBasemaps([base])).toEqual([base]);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).not.toHaveBeenCalledWith("/maps/apple-mapkit/token");
+  });
+
+  it("keeps the list unchanged when token issuance fails after a successful status check", async () => {
+    get.mockResolvedValueOnce({ available: true }).mockRejectedValueOnce(new Error("503"));
+    const { withOptionalAppleBasemaps } = await freshModule();
+    expect(await withOptionalAppleBasemaps([base])).toEqual([base]);
+    expect(get).toHaveBeenCalledTimes(2);
   });
 
   it("reuses a valid token instead of requesting a new one", async () => {

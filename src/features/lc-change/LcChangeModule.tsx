@@ -3,7 +3,6 @@ import type { AoiFeature } from "@/types/map";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
-import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import { ApiError } from "@/services/apiClient";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import InfoTip from "@/components/ui/InfoTip";
@@ -128,23 +127,6 @@ export default function LcChangeModule() {
   // function here would get a new identity every render (tab switch, dataset
   // fetch, etc.), churning that effect and wiping the just-synced AOI layer
   // (SyncAoiToGroup won't redraw it since none of *its* deps changed).
-  const handleAoiChange = useCallback(
-    (feature: AoiFeature | null) => {
-      if (!feature) {
-        setAoiState(null);
-        return;
-      }
-      const bounds = boundsFromGeoJSON(feature);
-      setAoiState({
-        source: "drawn",
-        name: "Poligon Kustom",
-        areaKm2: areaKm2(feature, bounds),
-        feature,
-        bounds,
-      });
-    },
-    [setAoiState],
-  );
   const [dataset, setDataset] = useState<LcDataset>(
     canonicalLandCoverKey(query.dataset || "Dynamic_World"),
   );
@@ -572,37 +554,48 @@ export default function LcChangeModule() {
     const failedYears: Array<{ year: number; message: string }> = [];
 
     showLoading("Menganalisis tutupan lahan…", `0 dari ${uniqueYears.length} tahun diproses`);
-    for (let i = 0; i < uniqueYears.length; i++) {
+    let processedYears = 0;
+    // The analysis worker pool is small. Run two yearly summaries in parallel
+    // to use it efficiently without flooding the job queue for long ranges.
+    for (let i = 0; i < uniqueYears.length; i += 2) {
       if (generation !== runGeneration.current) break;
-      const year = uniqueYears[i];
-      setLoadingProgress(
-        Math.round((i / uniqueYears.length) * 85) + 5,
-        `${i + 1} dari ${uniqueYears.length} tahun diproses (${year})`,
+      const batch = uniqueYears.slice(i, i + 2);
+      await Promise.all(
+        batch.map(async (year) => {
+          try {
+            const res = await analyzeLandCoverYear({
+              aoi: { geojson: aoi },
+              year,
+              datasets: [dataset],
+              ...(dateParamsForYear(year) ?? { start_month: 1, end_month: 12 }),
+              ...(hasConfidence && dwThresholdEnabled
+                ? { dw_probability_threshold: dwProbabilityThreshold }
+                : {}),
+            });
+            const bucket = res[dataset];
+            if (bucket?.classes) {
+              collected[year] = bucket;
+            } else {
+              failedYears.push({ year, message: "Backend tidak mengembalikan kelas land cover." });
+            }
+          } catch (err) {
+            console.error(`LC-change: gagal memuat tahun ${year}`, err);
+            failedYears.push({
+              year,
+              message:
+                err instanceof ApiError ? err.message : "Kesalahan saat memproses Dynamic World.",
+            });
+          } finally {
+            if (generation === runGeneration.current) {
+              processedYears += 1;
+              setLoadingProgress(
+                Math.round((processedYears / uniqueYears.length) * 85) + 5,
+                `${processedYears} dari ${uniqueYears.length} tahun diproses`,
+              );
+            }
+          }
+        }),
       );
-      try {
-        const res = await analyzeLandCoverYear({
-          aoi: { geojson: aoi },
-          year,
-          datasets: [dataset],
-          ...(dateParamsForYear(year) ?? { start_month: 1, end_month: 12 }),
-          ...(hasConfidence && dwThresholdEnabled
-            ? { dw_probability_threshold: dwProbabilityThreshold }
-            : {}),
-        });
-        const bucket = res[dataset];
-        if (bucket?.classes) {
-          collected[year] = bucket;
-        } else {
-          failedYears.push({ year, message: "Backend tidak mengembalikan kelas land cover." });
-        }
-      } catch (err) {
-        console.error(`LC-change: gagal memuat tahun ${year}`, err);
-        failedYears.push({
-          year,
-          message:
-            err instanceof ApiError ? err.message : "Kesalahan saat memproses Dynamic World.",
-        });
-      }
     }
     hideLoading();
     setRunning(false);
@@ -611,6 +604,7 @@ export default function LcChangeModule() {
     const successYears = Object.keys(collected)
       .map(Number)
       .sort((a, b) => a - b);
+    failedYears.sort((a, b) => a.year - b.year);
     if (successYears.length < 2) {
       const detail = failedYears.map(({ year, message }) => `${year}: ${message}`).join(" | ");
       setRunError(
@@ -1332,7 +1326,6 @@ export default function LcChangeModule() {
                   {tab === "maps" && (
                     <BeforeAfterMaps
                       aoi={aoi}
-                      onAoiChange={handleAoiChange}
                       dataset={dataset}
                       yearA={yearA}
                       yearB={yearB}
@@ -1415,7 +1408,6 @@ export default function LcChangeModule() {
           {!hasResults && (
             <BeforeAfterMaps
               aoi={aoi}
-              onAoiChange={handleAoiChange}
               dataset={dataset}
               yearA={null}
               yearB={null}

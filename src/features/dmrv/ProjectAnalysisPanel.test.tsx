@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import ProjectAnalysisPanel from "./ProjectAnalysisPanel";
@@ -97,4 +97,101 @@ it("does not offer submit to a reader", async () => {
   await screen.findByText("Belum ada pekerjaan untuk filter ini.");
   expect(screen.queryByRole("button", { name: "Jalankan analisis" })).not.toBeInTheDocument();
   expect(api.createAnalysisRun).not.toHaveBeenCalled();
+});
+
+function CurrentQuery() {
+  return <output aria-label="query">{useLocation().search}</output>;
+}
+
+it("restores kind and baseline, preserves unrelated URL filters and resets pagination", async () => {
+  vi.mocked(dmrv.listMonitoringPeriods).mockResolvedValue([
+    period,
+    { ...period, id: "baseline1", name: "2025", start_date: "2025-01-01", end_date: "2025-12-31" },
+  ]);
+  render(
+    <MemoryRouter
+      initialEntries={[
+        "/?tab=analysis&period=period1&analysis_kind=landcover_transition&baseline_period=baseline1&analysis_page=3&basemap=satellite",
+      ]}
+    >
+      <ProjectAnalysisPanel projectId="project1" organizationId="org1" canRun />
+      <CurrentQuery />
+    </MemoryRouter>,
+  );
+  await screen.findByText("Belum ada pekerjaan untuk filter ini.");
+  expect(screen.getByLabelText("Jenis analisis")).toHaveValue("landcover_transition");
+  expect(screen.getByLabelText("Baseline")).toHaveValue("baseline1");
+  expect(api.listAnalysisRuns).toHaveBeenCalledWith("project1", "period1", 20, 40);
+  fireEvent.click(screen.getByRole("button", { name: "Jalankan analisis" }));
+  await waitFor(() =>
+    expect(api.createAnalysisRun).toHaveBeenCalledWith(
+      "project1",
+      {
+        kind: "landcover_transition",
+        monitoring_period_id: "period1",
+        baseline_period_id: "baseline1",
+        parameters: {},
+      },
+      expect.any(String),
+    ),
+  );
+  fireEvent.change(screen.getByLabelText("Jenis analisis"), { target: { value: "vegetation" } });
+  const query = new URLSearchParams(screen.getByLabelText("query").textContent || "");
+  expect(query.get("basemap")).toBe("satellite");
+  expect(query.get("tab")).toBe("analysis");
+  expect(query.get("analysis_kind")).toBe("vegetation");
+  expect(query.has("baseline_period")).toBe(false);
+  expect(query.has("analysis_page")).toBe(false);
+});
+
+it.each(["missing", "planned"])("rejects unavailable URL period %s", async (id) => {
+  vi.mocked(dmrv.listMonitoringPeriods).mockResolvedValue([
+    period,
+    { ...period, id: "planned", status: "planned" },
+  ]);
+  render(
+    <MemoryRouter initialEntries={[`/?period=${id}`]}>
+      <ProjectAnalysisPanel projectId="project1" organizationId="org1" canRun />
+    </MemoryRouter>,
+  );
+  await screen.findByText("Belum ada pekerjaan untuk filter ini.");
+  expect(screen.getByRole("button", { name: "Jalankan analisis" })).toBeDisabled();
+  expect(api.createAnalysisRun).not.toHaveBeenCalled();
+});
+
+it("recovers from an empty trailing page and localizes job status", async () => {
+  const row: api.AnalysisRun = {
+    job: {
+      id: "job1",
+      project_id: "project1",
+      kind: "analysis.carbon",
+      status: "succeeded",
+      progress: {},
+      result: {},
+      error: null,
+      attempts: 1,
+      cancel_requested: false,
+      created_at: "2026-11-14T01:00:00Z",
+      started_at: null,
+      finished_at: null,
+    },
+    context_hash: "hash",
+    context: {
+      period: { id: "period1", start: "2026-01-01", end: "2026-12-31", revision: 1 },
+      boundary: { id: "aoi1", version: 1, checksum: "hash", area_ha: 100 },
+    },
+  };
+  vi.mocked(api.listAnalysisRuns).mockImplementation(async (_project, _period, _limit, offset) =>
+    offset ? [] : [row],
+  );
+  render(
+    <MemoryRouter initialEntries={["/?period=period1&analysis_page=2"]}>
+      <ProjectAnalysisPanel projectId="project1" organizationId="org1" canRun />
+    </MemoryRouter>,
+  );
+  await screen.findByText("Belum ada pekerjaan untuk filter ini.");
+  expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Sebelumnya" }));
+  expect(await screen.findByText("Selesai")).toBeInTheDocument();
+  expect(api.listAnalysisRuns).toHaveBeenLastCalledWith("project1", "period1", 20, 0);
 });

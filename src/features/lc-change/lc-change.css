@@ -18,6 +18,11 @@
   color: #fff;
 }
 
+.lc-results-tabs-nav .nav-link:not(.active):hover,
+.lc-results-tabs-nav .nav-link:not(.active):focus-visible {
+  color: #fff;
+}
+
 .lc-results-tabs-content {
   padding: 1rem !important;
 }
@@ -53,6 +58,11 @@ html[data-theme="dark"] .lc-results-tabs-nav .nav-link {
   color: #cbd5e1;
   background: #111827;
   border-color: #334155;
+}
+
+html[data-theme="dark"] .lc-results-tabs-nav .nav-link:not(.active):hover,
+html[data-theme="dark"] .lc-results-tabs-nav .nav-link:not(.active):focus-visible {
+  color: #fff;
 }
 
 html[data-theme="dark"] .lc-results-tabs-nav .nav-link.active {

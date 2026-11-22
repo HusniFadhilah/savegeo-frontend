@@ -13,8 +13,7 @@ import type {
 } from "./types";
 
 // ---------------------------------------------------------------------------
-// Field CRUD - all public routes, no auth header (unlike the Disaster
-// Dashboard, Field/crop-monitoring routes require no login).
+// Field CRUD - authenticated app session; access is checked by the server.
 // ---------------------------------------------------------------------------
 
 /** POST /fields - geojson is a bare Polygon/MultiPolygon geometry, not a
@@ -26,8 +25,8 @@ export function createField(payload: CreateFieldPayload) {
 }
 
 /** GET /fields - list view, each Field WITHOUT geojson. */
-export function listFields() {
-  return apiClient.get<ListFieldsResponse>("/fields");
+export function listFields(offset = 0) {
+  return apiClient.get<ListFieldsResponse & { has_more: boolean }>(`/fields?offset=${offset}&limit=100`, { auth: "app" });
 }
 
 /** GET /fields/{id} - single Field WITH geojson. */

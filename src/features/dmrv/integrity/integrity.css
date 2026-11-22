@@ -15,7 +15,7 @@
   text-decoration: none;
 }
 .integrity-progress-card {
-  padding: 24px 28px;
+  padding: var(--dmrv-content-padding, 22px);
   border: 1px solid #dce8df;
   border-radius: 16px;
   background: #fff;
@@ -92,7 +92,7 @@
   font-size: 0.72rem;
 }
 .integrity-section {
-  padding: clamp(18px, 2.4vw, 30px);
+  padding: var(--dmrv-content-padding, 22px);
   min-width: 0;
 }
 .integrity-section-title,
@@ -105,8 +105,8 @@
 }
 .integrity-section-title {
   border-bottom: 1px solid #e7eee8;
-  padding-bottom: 17px;
-  margin-bottom: 20px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
 }
 .integrity-section-title h2 {
   margin: 0;
@@ -122,7 +122,7 @@
 .integrity-record {
   border: 1px solid #e1e9e3;
   border-radius: 12px;
-  padding: 19px;
+  padding: 18px;
   background: #fff;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -174,7 +174,7 @@
   align-items: center;
 }
 .integrity-editor {
-  padding: 22px;
+  padding: 20px;
   background: #f7faf8;
   border: 1px solid #dce7df;
   border-radius: 13px;
@@ -315,7 +315,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 20px;
+  padding: 18px;
   background: #f6faf7;
   border: 1px solid #e1eae3;
   border-radius: 12px;
@@ -378,15 +378,9 @@
   width: min(100%, 190px);
   flex: 0 0 190px;
 }
-.integrity-record {
-  padding: 16px;
-  background: #fbfdfb;
-  border: 1px solid #e1eae3;
-  border-radius: 12px;
-}
 .integrity-subheading {
   font-size: 1.05rem;
-  margin: 30px 0 10px;
+  margin: 24px 0 10px;
 }
 .integrity-search {
   display: flex;
@@ -408,7 +402,7 @@
   padding: 13px 12px;
 }
 .integrity-portfolio-table td {
-  padding: 20px 12px;
+  padding: 12px;
   vertical-align: middle;
 }
 .integrity-portfolio-table small {
@@ -447,14 +441,26 @@
     grid-template-columns: 1fr;
   }
   .integrity-progress-card,
-  .integrity-editor {
-    padding: 18px;
+  .integrity-editor,
+  .integrity-section,
+  .integrity-record,
+  .integrity-stat {
+    padding: 16px;
   }
   .integrity-toolbar .dmrv-reference-link {
     font-size: 0.77rem;
   }
   .integrity-section-title {
     align-items: flex-start;
+  }
+
+  .integrity-portfolio-table th,
+  .integrity-portfolio-table td {
+    padding: 9px 8px;
+  }
+
+  .integrity-subheading {
+    margin-top: 20px;
   }
   .integrity-methodology-status {
     flex-basis: 100%;
@@ -464,7 +470,8 @@
   color: #d6e7d9;
 }
 [data-theme="dark"] .integrity-record,
-[data-theme="dark"] .integrity-progress-card {
+[data-theme="dark"] .integrity-progress-card,
+[data-theme="dark"] .integrity-methodology-item {
   background: #18271e;
   border-color: #354b3b;
 }
@@ -482,11 +489,6 @@
 [data-theme="dark"] .integrity-field,
 [data-theme="dark"] .integrity-methodology-item p {
   color: #b1c6b7;
-}
-[data-theme="dark"] .integrity-methodology-item,
-[data-theme="dark"] .integrity-record {
-  background: #18271e;
-  border-color: #354b3b;
 }
 [data-theme="dark"] .integrity-methodology-item h4 {
   color: #d6e7d9;

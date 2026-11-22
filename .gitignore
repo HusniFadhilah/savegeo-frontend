@@ -20,3 +20,11 @@ SWIPE_COMPARE_VERIFICATION.md
 .tmp-chrome-profile/
 .ruff_cache/
 .security-audit-cache/
+
+# Internal notes, reports, and agent prompts live in ../docs/frontend/.
+*.[mM][dD]
+!/README.md
+!/OPERATIONS.md
+!/RELEASE.md
+!/scripts/README.md
+!/public/images/satellite-examples/SOURCES.md

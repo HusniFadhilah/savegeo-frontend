@@ -1,0 +1,110 @@
+.organizations-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+  padding: clamp(18px, 2vw, 30px) clamp(16px, 2.25vw, 36px) 40px;
+}
+
+.organizations-page__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.organizations-page__heading h1 {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: clamp(1.35rem, 1.8vw, 1.7rem);
+  line-height: 1.25;
+}
+
+.organizations-page__heading > .btn {
+  min-height: 42px;
+  padding: 0.55rem 1rem;
+}
+
+.organizations-page__grid {
+  --bs-gutter-x: 1rem;
+  --bs-gutter-y: 1rem;
+}
+
+.organizations-page__card {
+  overflow: hidden;
+  border: 1px solid #dce7df;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(18, 55, 34, 0.055);
+}
+
+.organizations-page__card-header {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0.85rem 1.15rem;
+  border: 0;
+  color: #fff !important;
+  background: linear-gradient(110deg, #287b36, #1d653e);
+  font-weight: 700;
+}
+
+.organizations-page__card-header .bi {
+  flex: 0 0 auto;
+}
+
+.organizations-page__card-body {
+  padding: clamp(1rem, 1.35vw, 1.35rem);
+}
+
+.organizations-page__card-body .form-label {
+  margin-bottom: 0.45rem;
+  color: var(--text-primary, #26372e);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.organizations-page__card-body .form-control,
+.organizations-page__card-body .form-select {
+  min-height: 42px;
+  border-radius: 9px;
+}
+
+.organizations-page__card-body .btn {
+  min-height: 40px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 9px;
+}
+
+.organizations-page__card-body > p:last-child {
+  margin-bottom: 0;
+}
+
+html[data-theme="dark"] .organizations-page__card {
+  border-color: #334155;
+  background: #111c2c;
+  color: #e2e8f0;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .organizations-page__card-body .form-label {
+  color: #e2e8f0;
+}
+
+@media (max-width: 575.98px) {
+  .organizations-page {
+    padding: 16px 12px 28px;
+  }
+
+  .organizations-page__heading {
+    align-items: stretch;
+    margin-bottom: 1rem;
+  }
+
+  .organizations-page__heading > .btn {
+    width: 100%;
+  }
+}

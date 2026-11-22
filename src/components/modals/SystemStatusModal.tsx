@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { fetchHealth } from "@/services/analysisService";
+import { useCallback, useEffect, useState } from "react";
 import type { HealthStatus } from "@/types/api";
 import { buildLabel, fetchFrontendBuildMetadata, getCompatibilityStatus, localFrontendMetadata, shortCommit, type BuildMetadata } from "@/config/version";
 import { fetchBackendVersion } from "@/services/releaseService";
@@ -8,6 +7,10 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 interface Props {
   open: boolean;
   onClose: () => void;
+  health: HealthStatus | null;
+  checkedAt: Date | null;
+  checking: boolean;
+  recheck: () => Promise<void>;
 }
 
 interface StatusRow {
@@ -20,12 +23,24 @@ interface StatusRow {
 function buildRows(data: HealthStatus | null, t: (key: string) => string): StatusRow[] {
   if (!data) return [];
   return [
-    { icon: "bi-server", label: t("status.backend"), value: data.status === "ok" ? t("status.online") : t("status.error"), ok: data.status === "ok" },
+    { icon: "bi-server", label: t("status.backend"), value: t("status.connected"), ok: true },
     ...(typeof data.database_connected === "boolean" ? [{
       icon: "bi-database",
       label: t("status.database"),
       value: data.database_connected ? t("status.connected") : t("status.disconnected"),
       ok: data.database_connected,
+    }] : []),
+    ...(data.model_lifecycle_schema_current === false ? [{
+      icon: "bi-database-exclamation",
+      label: t("status.modelSchema"),
+      value: t("status.migrationRequired"),
+      ok: false,
+    }] : []),
+    ...(data.active_model_catalog_available === false ? [{
+      icon: "bi-collection",
+      label: t("status.modelCatalog"),
+      value: t("status.unavailable"),
+      ok: false,
     }] : []),
     {
       icon: "bi-broadcast",
@@ -36,41 +51,34 @@ function buildRows(data: HealthStatus | null, t: (key: string) => string): Statu
     {
       icon: "bi-key",
       label: t("status.activeModel"),
-      value: data.active_model || "-",
-      ok: Boolean(data.active_model),
+      value: data.active_model_catalog_available === false ? t("status.unavailable") : typeof data.active_models === "number" ? String(data.active_models) : data.active_model || "-",
+      ok: data.active_model_catalog_available !== false && (typeof data.active_models === "number" || Boolean(data.active_model)),
     },
   ];
 }
 
-export default function SystemStatusModal({ open, onClose }: Props) {
+export default function SystemStatusModal({ open, onClose, health: data, checkedAt, checking, recheck }: Props) {
   const language = useI18nStore((state) => state.language);
   const t = useI18nStore((state) => state.t);
-  const [data, setData] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [checkedAt, setCheckedAt] = useState<Date | null>(null);
   const [frontendMetadata, setFrontendMetadata] = useState<BuildMetadata>(localFrontendMetadata);
   const [backendMetadata, setBackendMetadata] = useState<BuildMetadata | null>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
-    const [healthResult, frontendResult, backendResult] = await Promise.allSettled([
-      fetchHealth(),
+    const [, frontendResult, backendResult] = await Promise.allSettled([
+      recheck(),
       fetchFrontendBuildMetadata(),
       fetchBackendVersion(),
     ]);
-    setData(healthResult.status === "fulfilled" ? healthResult.value : null);
     if (frontendResult.status === "fulfilled") setFrontendMetadata(frontendResult.value);
     setBackendMetadata(backendResult.status === "fulfilled" ? backendResult.value : null);
-    try {
-      setCheckedAt(new Date());
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(false);
+  }, [recheck]);
 
   useEffect(() => {
     if (open) refresh();
-  }, [open]);
+  }, [open, refresh]);
 
   if (!open) return null;
 
@@ -85,8 +93,8 @@ export default function SystemStatusModal({ open, onClose }: Props) {
           <button type="button" className="btn-close" onClick={onClose} aria-label={t("status.close")} />
         </div>
         <div className="modal-card-body">
-          {loading && <div className="text-center text-muted py-3">{t("status.loading")}</div>}
-          {!loading && !data && (
+          {(loading || (checking && !data)) && <div className="text-center text-muted py-3">{t("status.loading")}</div>}
+          {!loading && !checking && !data && (
             <div className="text-danger text-center py-2">
               <i className="bi bi-x-circle me-1" /> {t("status.loadFailed")}
             </div>
@@ -116,12 +124,12 @@ export default function SystemStatusModal({ open, onClose }: Props) {
               <div>
                 <span className="text-muted">{t("status.pair")}</span>{" "}
                 <span className={`badge ${getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? "bg-success-subtle text-success" : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? "bg-warning-subtle text-warning-emphasis" : "bg-secondary-subtle text-secondary"}`}>
-                  {getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? t("status.compatible") : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? t("status.different") : t("status.metadataUnavailable")}
+                  {getCompatibilityStatus(frontendMetadata, backendMetadata) === "compatible" ? t("status.sameVersion") : getCompatibilityStatus(frontendMetadata, backendMetadata) === "different" ? t("status.different") : t("status.metadataUnavailable")}
                 </span>
               </div>
               {backendMetadata?.deployed_at_utc && <div><span className="text-muted">{t("status.backendDeploy")}</span> {new Date(backendMetadata.deployed_at_utc).toLocaleString(language === "en" ? "en-US" : "id-ID")}</div>}
             </div>
-            <a className="small d-inline-block mt-2" href="https://github.com/HusniFadhilah/savegeo-frontend/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">
+            <a className="small d-inline-block mt-2" href="https://github.com/HusniFadhilah/savegeo-frontend/blob/main/README.md#versi-dan-rilis" target="_blank" rel="noreferrer">
               <i className="bi bi-journal-text me-1" />{t("status.openChangelog")}
             </a>
           </div>

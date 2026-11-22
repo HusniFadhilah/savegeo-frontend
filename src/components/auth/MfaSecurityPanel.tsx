@@ -1,21 +1,42 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { authService } from "@/services/authService";
+import { hasAdminPermission } from "@/auth/access";
 
 export default function MfaSecurityPanel() {
   const user = useAuthStore((state) => state.user);
   const en = useI18nStore((state) => state.language === "en");
   const tr = (id: string, english: string) => (en ? english : id);
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"step-up" | "recovery" | "reset">("step-up");
+  const [mode, setMode] = useState<"step-up" | "recovery" | "reset" | "reset-account">("step-up");
+  const [target, setTarget] = useState("");
+  const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [events, setEvents] = useState<Awaited<ReturnType<typeof authService.mfaSecurityEvents>>>(
+    [],
+  );
+  useEffect(() => {
+    let active = true;
+    if (user?.id)
+      void authService
+        .mfaSecurityEvents()
+        .then((rows) => {
+          if (active) setEvents(rows);
+        })
+        .catch(() => {
+          if (active) setEvents([]);
+        });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -35,6 +56,16 @@ export default function MfaSecurityPanel() {
       } else if (mode === "recovery") {
         const result = await authService.regenerateMfaRecovery(password, code.trim());
         setCodes(result.recovery_codes);
+      } else if (mode === "reset-account") {
+        await authService.resetAccountMfa(target.trim(), password, code.trim(), reason.trim());
+        setMessage(
+          tr(
+            "MFA akun direset dan seluruh sesi akun tersebut dicabut. Pemberitahuan tercatat pada profil penerima.",
+            "Account MFA was reset and its sessions revoked. A security notice is recorded on the recipient's profile.",
+          ),
+        );
+        setTarget("");
+        setReason("");
       } else {
         await authService.resetMfa(password, code.trim());
         useAuthStore.setState({
@@ -122,6 +153,11 @@ export default function MfaSecurityPanel() {
                   "Reset authenticator and revoke all sessions",
                 )}
               </option>
+              {hasAdminPermission(user, "secret.write") && (
+                <option value="reset-account">
+                  {tr("Pulihkan MFA akun admin lain", "Recover another admin's MFA")}
+                </option>
+              )}
             </select>
             {mode === "reset" && (
               <p className="small text-body-secondary">
@@ -130,6 +166,36 @@ export default function MfaSecurityPanel() {
                   "Reset ends every session. Sign in again and enroll a new authenticator if your account policy requires it.",
                 )}
               </p>
+            )}
+            {mode === "reset-account" && (
+              <>
+                <label htmlFor="mfa-reset-target" className="form-label">
+                  {tr("Username akun yang dipulihkan", "Account username to recover")}
+                </label>
+                <input
+                  id="mfa-reset-target"
+                  className="form-control mb-3"
+                  required
+                  maxLength={64}
+                  value={target}
+                  onChange={(event) => setTarget(event.target.value)}
+                />
+                <label htmlFor="mfa-reset-reason" className="form-label">
+                  {tr(
+                    "Alasan dan hasil verifikasi identitas penerima",
+                    "Reason and recipient identity check",
+                  )}
+                </label>
+                <textarea
+                  id="mfa-reset-reason"
+                  className="form-control mb-3"
+                  required
+                  minLength={16}
+                  maxLength={2000}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </>
             )}
             {mode !== "step-up" && (
               <div className="mb-3">
@@ -180,6 +246,21 @@ export default function MfaSecurityPanel() {
               {busy ? tr("Memproses…", "Processing…") : tr("Lanjutkan", "Continue")}
             </button>
           </form>
+        )}
+        {events.length > 0 && (
+          <details className="mt-3">
+            <summary>{tr("Riwayat keamanan akun", "Account security history")}</summary>
+            <ul className="mt-2 small">
+              {events.map((event) => (
+                <li key={event.id} className="mb-2">
+                  <strong>{event.action}</strong> ·{" "}
+                  {new Date(event.created_at).toLocaleString(en ? "en-GB" : "id-ID")}
+                  {event.detail?.actor_username && <span> · {event.detail.actor_username}</span>}
+                  {event.detail?.reason && <div>{event.detail.reason}</div>}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
     </section>

@@ -99,6 +99,7 @@ export function useChatSession() {
   const [maxFileMb, setMaxFileMb] = useState(DEFAULT_MAX_FILE_MB);
   const [fileInputAccept, setFileInputAccept] = useState(DEFAULT_FILE_ACCEPT);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false);
   const [sessionSearch, setSessionSearch] = useState("");
   const [sessionId, setSessionIdState] = useState<number | null>(null);
@@ -116,6 +117,7 @@ export function useChatSession() {
   const isOpenRef = useRef(isOpen);
   const isLoadingRef = useRef(isLoading);
   const sessionIdRef = useRef<number | null>(null);
+  const sessionRequestRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
   /** Set right before an intentional abort-and-immediately-retry, so the AbortError handler in
@@ -192,8 +194,14 @@ export function useChatSession() {
   }
 
   async function fetchSessions() {
-    const list = await chatbotApi.fetchSessions();
-    setSessions(list);
+    const requestId = ++sessionRequestRef.current;
+    setSessionError(null);
+    try {
+      const list = await chatbotApi.fetchSessions();
+      if (requestId === sessionRequestRef.current) setSessions(list);
+    } catch {
+      if (requestId === sessionRequestRef.current) setSessionError(t().historyLoadFailed);
+    }
   }
 
   /* ── Panel / open-close ──────────────────────────────────────── */
@@ -243,7 +251,13 @@ export function useChatSession() {
   }
 
   async function openSession(id: number) {
-    const data = await chatbotApi.fetchSession(id);
+    let data: ChatSession | null;
+    try {
+      data = await chatbotApi.fetchSession(id);
+    } catch {
+      setSessionError(t().historyLoadFailed);
+      return;
+    }
     if (!data) return;
     setSessionId(id);
     const newLog: LogEntry[] = [];
@@ -295,7 +309,13 @@ export function useChatSession() {
   }
 
   async function deleteSession(id: number) {
-    const ok = await chatbotApi.deleteSession(id);
+    let ok: boolean;
+    try {
+      ok = await chatbotApi.deleteSession(id);
+    } catch {
+      setSessionError(t().historyLoadFailed);
+      return;
+    }
     if (!ok) return;
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (sessionIdRef.current === id) {
@@ -307,7 +327,13 @@ export function useChatSession() {
   async function renameSession(id: number, title: string): Promise<boolean> {
     const trimmed = title.trim().slice(0, 120);
     if (!trimmed) return false;
-    const ok = await chatbotApi.renameSession(id, trimmed);
+    let ok: boolean;
+    try {
+      ok = await chatbotApi.renameSession(id, trimmed);
+    } catch {
+      setSessionError(t().historyLoadFailed);
+      return false;
+    }
     if (ok) setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: trimmed } : s)));
     return ok;
   }
@@ -936,6 +962,9 @@ export function useChatSession() {
     cancelConfirmCard,
     // sessions
     sessions,
+    sessionError,
+    refetchSessions: fetchSessions,
+    historyRetry: t().historyRetry,
     sessionId,
     sessionPanelOpen,
     toggleSessionPanel,

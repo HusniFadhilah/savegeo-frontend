@@ -67,6 +67,12 @@ export const authService = {
       { auth: "admin" },
     );
   },
+  resetAccountMfa(targetUsername: string, password: string, code: string, reason: string) {
+    return apiClient.post<{ message: string }>("/admin/auth/mfa/reset-account", { target_username: targetUsername, password, code, reason }, { auth: "admin" });
+  },
+  mfaSecurityEvents() {
+    return apiClient.get<{ id: number; action: string; created_at: string; detail: { reason?: string; actor_username?: string } | null }[]>("/admin/auth/mfa/events", { auth: "admin" });
+  },
   me(): Promise<AdminUser> {
     return apiClient.get<AdminUser>("/admin/auth/me", { auth: "admin" });
   },

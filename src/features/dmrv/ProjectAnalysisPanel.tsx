@@ -4,6 +4,16 @@ import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 import { listMonitoringPeriods, newIdempotencyKey } from "./api";
 import * as api from "./analysisApi";
 import type { MonitoringPeriod } from "./types";
+import SnapshotResultPanel from "./SnapshotResultPanel";
+
+const PAGE_SIZE = 20;
+const STATUS_LABELS = {
+  queued: ["Mengantre", "Queued"],
+  running: ["Berjalan", "Running"],
+  succeeded: ["Selesai", "Completed"],
+  failed: ["Gagal", "Failed"],
+  cancelled: ["Dibatalkan", "Cancelled"],
+} as const;
 
 const KIND_LABELS: Record<api.AnalysisKind, [string, string]> = {
   carbon: ["Stok karbon", "Carbon stock"],
@@ -26,9 +36,31 @@ export default function ProjectAnalysisPanel({
   const tr = (id: string, english: string) => (en ? english : id);
   const [query, setQuery] = useSearchParams();
   const periodId = query.get("period") || "";
+  const snapshotId = query.get("snapshot") || "";
   const [periods, setPeriods] = useState<MonitoringPeriod[]>([]);
-  const [kind, setKind] = useState<api.AnalysisKind>("carbon");
-  const [baseline, setBaseline] = useState("");
+  const requestedKind = query.get("analysis_kind") || "carbon";
+  const kind: api.AnalysisKind = Object.prototype.hasOwnProperty.call(KIND_LABELS, requestedKind)
+    ? (requestedKind as api.AnalysisKind)
+    : "carbon";
+  const baseline = query.get("baseline_period") || "";
+  const pageValue = Number(query.get("analysis_page") || "1");
+  const page =
+    Number.isSafeInteger(pageValue) && pageValue > 0 && pageValue <= 100000 ? pageValue : 1;
+  const availablePeriods = periods.filter((p) => p.status !== "planned");
+  const selectedPeriod = availablePeriods.find((p) => p.id === periodId);
+  const baselinePeriods = availablePeriods.filter((p) => p.id !== periodId);
+  const validBaseline = baselinePeriods.some((p) => p.id === baseline);
+  function updateQuery(values: Record<string, string | null>, resetPage = true) {
+    setQuery((previous) => {
+      const next = new URLSearchParams(previous);
+      if (resetPage) next.delete("analysis_page");
+      for (const [key, value] of Object.entries(values)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      return next;
+    });
+  }
   const [rows, setRows] = useState<api.AnalysisRun[] | null>(null);
   const [usage, setUsage] = useState<api.UsageSummary | null>(null);
   const [error, setError] = useState("");
@@ -43,7 +75,6 @@ export default function ProjectAnalysisPanel({
     setRows(null);
     setUsage(null);
     setError("");
-    setBaseline("");
     listMonitoringPeriods(projectId)
       .then((result) => {
         if (active) setPeriods(result);
@@ -62,7 +93,7 @@ export default function ProjectAnalysisPanel({
     async function poll() {
       try {
         const [runs, quota] = await Promise.all([
-          api.listAnalysisRuns(projectId, periodId),
+          api.listAnalysisRuns(projectId, periodId, PAGE_SIZE, (page - 1) * PAGE_SIZE),
           organizationId ? api.getWorkspaceUsage(organizationId) : Promise.resolve(null),
         ]);
         if (!active) return;
@@ -81,7 +112,7 @@ export default function ProjectAnalysisPanel({
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [projectId, organizationId, periodId, refresh]);
+  }, [projectId, organizationId, periodId, page, refresh]);
 
   async function run(action: () => Promise<void>) {
     if (guard.current) return;
@@ -100,7 +131,7 @@ export default function ProjectAnalysisPanel({
   }
 
   function submit() {
-    if (!canRun || !periodId) return;
+    if (!canRun || !selectedPeriod || (kind === "landcover_transition" && !validBaseline)) return;
     const request: api.AnalysisRequest = {
       kind,
       monitoring_period_id: periodId,
@@ -179,14 +210,7 @@ export default function ProjectAnalysisPanel({
               id="analysis-period"
               value={periodId}
               disabled={busy}
-              onChange={(e) =>
-                setQuery((previous) => {
-                  const next = new URLSearchParams(previous);
-                  if (e.target.value) next.set("period", e.target.value);
-                  else next.delete("period");
-                  return next;
-                })
-              }
+              onChange={(e) => updateQuery({ period: e.target.value, baseline_period: null })}
             >
               <option value="">{tr("Pilih periode", "Choose period")}</option>
               {periods
@@ -207,7 +231,9 @@ export default function ProjectAnalysisPanel({
               id="project-analysis-kind"
               value={kind}
               disabled={busy}
-              onChange={(e) => setKind(e.target.value as api.AnalysisKind)}
+              onChange={(e) =>
+                updateQuery({ analysis_kind: e.target.value, baseline_period: null })
+              }
             >
               {Object.entries(KIND_LABELS).map(([value, labels]) => (
                 <option key={value} value={value}>
@@ -226,7 +252,7 @@ export default function ProjectAnalysisPanel({
                 className="form-select"
                 value={baseline}
                 disabled={busy}
-                onChange={(e) => setBaseline(e.target.value)}
+                onChange={(e) => updateQuery({ baseline_period: e.target.value })}
               >
                 <option value="">{tr("Pilih baseline", "Choose baseline")}</option>
                 {periods
@@ -252,8 +278,8 @@ export default function ProjectAnalysisPanel({
             className="btn btn-success mb-3"
             disabled={
               busy ||
-              !periodId ||
-              (kind === "landcover_transition" && !baseline) ||
+              !selectedPeriod ||
+              (kind === "landcover_transition" && !validBaseline) ||
               usage?.remaining === 0
             }
             onClick={submit}
@@ -281,7 +307,7 @@ export default function ProjectAnalysisPanel({
               <tbody>
                 {rows.map(({ job, context }, i) => (
                   <tr key={job.id}>
-                    <td>{i + 1}</td>
+                    <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td>
                       {KIND_LABELS[job.kind.replace("analysis.", "") as api.AnalysisKind]?.[
                         en ? 1 : 0
@@ -301,7 +327,7 @@ export default function ProjectAnalysisPanel({
                       </div>
                     </td>
                     <td>
-                      {job.status}
+                      {STATUS_LABELS[job.status][en ? 1 : 0]}
                       <div className="small text-danger">
                         {typeof job.error?.message === "string" ? job.error.message : ""}
                       </div>
@@ -323,17 +349,59 @@ export default function ProjectAnalysisPanel({
                             : tr("Batalkan", "Cancel")}
                         </button>
                       )}
-                      {job.status === "succeeded" && (
-                        <span className="badge text-bg-success">
-                          {tr("Snapshot tersimpan", "Snapshot saved")}
-                        </span>
-                      )}
+                      {job.status === "succeeded" &&
+                        typeof job.result?.snapshot_id === "string" && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-success"
+                            onClick={() =>
+                              updateQuery({ snapshot: String(job.result?.snapshot_id) }, false)
+                            }
+                          >
+                            <i className="bi bi-journal-check me-1" aria-hidden="true" />
+                            {tr("Lihat hasil", "View result")}
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+        {rows !== null && (page > 1 || rows.length === PAGE_SIZE) && (
+          <nav
+            className="d-flex align-items-center justify-content-between gap-2 mt-3"
+            aria-label={tr("Halaman riwayat analisis", "Analysis history pages")}
+          >
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              disabled={busy || page === 1}
+              onClick={() => updateQuery({ analysis_page: String(page - 1) }, false)}
+            >
+              {tr("Sebelumnya", "Previous")}
+            </button>
+            <span role="status">
+              {tr("Halaman", "Page")} {page}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              disabled={busy || rows.length < PAGE_SIZE}
+              onClick={() => updateQuery({ analysis_page: String(page + 1) }, false)}
+            >
+              {tr("Berikutnya", "Next")}
+            </button>
+          </nav>
+        )}
+        {snapshotId && (
+          <SnapshotResultPanel
+            key={`${projectId}:${snapshotId}`}
+            projectId={projectId}
+            snapshotId={snapshotId}
+            onClose={() => updateQuery({ snapshot: null }, false)}
+          />
         )}
       </div>
     </section>

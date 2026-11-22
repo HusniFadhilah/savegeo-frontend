@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useI18nStore } from "@/hooks/useI18nStore";
@@ -30,7 +30,16 @@ export default function DmrvProjectPage() {
   const t = useI18nStore((state) => state.t);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("overview");
+  const [query, setQuery] = useSearchParams();
+  const requestedTab = query.get("tab");
+  const tab: Tab = TABS.includes(requestedTab as Tab) ? requestedTab as Tab : "overview";
+  function setTab(value: Tab) {
+    setQuery((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("tab", value);
+      return next;
+    });
+  }
   const [evidenceRevision, setEvidenceRevision] = useState(0);
 
   useEffect(() => {

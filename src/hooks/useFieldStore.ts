@@ -7,7 +7,10 @@ interface FieldStore {
   fields: Field[];
   selectedField: Field | null;
   loading: boolean;
-  loadFields: () => Promise<void>;
+  offset: number;
+  hasMore: boolean;
+  error: string | null;
+  loadFields: (offset?: number) => Promise<void>;
   selectField: (id: number) => Promise<void>;
   saveField: (payload: CreateFieldPayload) => Promise<Field>;
   clearSelection: () => void;
@@ -24,11 +27,16 @@ export const useFieldStore = create<FieldStore>((set, get) => ({
   selectedField: null,
   loading: false,
 
-  loadFields: async () => {
-    set({ loading: true });
+  offset: 0,
+  hasMore: false,
+  error: null,
+  loadFields: async (offset = 0) => {
+    set({ loading: true, error: null });
     try {
-      const res = await listFields();
-      set({ fields: res.fields });
+      const res = await listFields(offset);
+      set({ fields: res.fields, offset, hasMore: Boolean(res.has_more) });
+    } catch {
+      set({ error: "load_failed" });
     } finally {
       set({ loading: false });
     }

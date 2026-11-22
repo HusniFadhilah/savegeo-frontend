@@ -35,12 +35,15 @@ export default function LayerOpacityControl({ opacity, onChange, label = "Opacit
       L.DomEvent.on(trigger, "click", (e) => L.DomEvent.preventDefault(e));
 
       const panel = L.DomUtil.create("div", "opacity-panel", wrapper);
-      panel.innerHTML =
-        `<label class="opacity-panel-label">${label}: <span class="opacity-value"></span></label>` +
-        `<input type="range" class="form-range" min="0" max="1" step="0.05" />`;
-
-      const slider = panel.querySelector("input") as HTMLInputElement;
-      const valueLabel = panel.querySelector(".opacity-value") as HTMLSpanElement;
+      const labelElement = L.DomUtil.create("label", "opacity-panel-label", panel);
+      labelElement.append(document.createTextNode(`${label}: `));
+      const valueLabel = L.DomUtil.create("span", "opacity-value", labelElement);
+      const slider = L.DomUtil.create("input", "form-range", panel);
+      slider.type = "range";
+      slider.min = "0";
+      slider.max = "1";
+      slider.step = "0.05";
+      slider.setAttribute("aria-label", label);
       sliderRef.current = slider;
       valueRef.current = valueLabel;
       slider.value = String(opacity);

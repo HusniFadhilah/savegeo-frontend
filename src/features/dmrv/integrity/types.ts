@@ -108,6 +108,34 @@ export interface IntegrityWorkspace {
   risk_policy: RiskPolicy;
   registry_check: RegistryCheck;
 }
+export interface PortfolioItem {
+  id: string;
+  name: string;
+  organization: string | null;
+  activity_type: string;
+  methodology_id: string | null;
+  methodology_version: string | null;
+  my_role: ProjectRole;
+  area_ha: number | null;
+  readiness: Readiness;
+  open_risks: number;
+  overdue_periods: number;
+  open_findings: number;
+  data_gaps: string[];
+}
+export interface Portfolio {
+  total: number;
+  limit: number;
+  offset: number;
+  items: PortfolioItem[];
+  summary: { projects: number; open_risks: number; overdue_periods: number; scope?: string };
+}
+export interface RecordSave {
+  title: string;
+  payload: Record<string, unknown>;
+  status: "draft" | "submitted" | "open";
+}
+
 export interface MethodologyRuleItem {
   key: string;
   title: string;
@@ -143,7 +171,12 @@ export interface ReviewerPriority {
 export interface CreditEvent {
   event_id: string;
   batch_reference: string;
-  event_type: "issuance_reported" | "transfer_reported" | "use_reported" | "retirement_reported" | "cancellation_reported";
+  event_type:
+    | "issuance_reported"
+    | "transfer_reported"
+    | "use_reported"
+    | "retirement_reported"
+    | "cancellation_reported";
   quantity: number;
   owner_from: string | null;
   owner_to: string | null;
@@ -157,7 +190,11 @@ export interface CreditEvent {
 }
 export interface CreditLedger {
   events: CreditEvent[];
-  batches: { batch_reference: string; registry: string; reported_balances: { owner: string; quantity: number }[] }[];
+  batches: {
+    batch_reference: string;
+    registry: string;
+    reported_balances: { owner: string; quantity: number }[];
+  }[];
   qualification: string;
 }
 export interface FieldCapture {
@@ -174,31 +211,4 @@ export interface FieldCapture {
   qa_flags: string[];
   created_at: string | null;
   created_by: string;
-}
-export interface PortfolioItem {
-  id: string;
-  name: string;
-  organization: string | null;
-  activity_type: string;
-  methodology_id: string | null;
-  methodology_version: string | null;
-  my_role: ProjectRole;
-  area_ha: number | null;
-  readiness: Readiness;
-  open_risks: number;
-  overdue_periods: number;
-  open_findings: number;
-  data_gaps: string[];
-}
-export interface Portfolio {
-  total: number;
-  limit: number;
-  offset: number;
-  items: PortfolioItem[];
-  summary: { projects: number; open_risks: number; overdue_periods: number; scope?: string };
-}
-export interface RecordSave {
-  title: string;
-  payload: Record<string, unknown>;
-  status: "draft" | "submitted" | "open";
 }

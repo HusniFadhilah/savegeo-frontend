@@ -8,6 +8,8 @@ import type {
 import { DEFAULT_CARBON_REFERENCE_DATASET } from "@/features/carbon/referenceDatasets";
 import { boundsFromGeoJSON, calculateAreaFromGeoJSON, type AoiPayload } from "./geo";
 
+const listSimpleCarbonModels = (dataset: string) => listCarbonModels(dataset, { includeFallback: true });
+
 function carbonFootprint(aoi: AoiPayload) {
   const bounds = "geojson" in aoi ? boundsFromGeoJSON(aoi.geojson) : null;
   const west = bounds?.getWest() ?? ("west" in aoi ? aoi.west : 0);
@@ -17,7 +19,7 @@ function carbonFootprint(aoi: AoiPayload) {
   const width = Math.abs(east - west) * 111.32 * Math.cos((north + south) * Math.PI / 360);
   const height = Math.abs(north - south) * 111.32;
   const area = "geojson" in aoi ? (calculateAreaFromGeoJSON(aoi.geojson) ?? 0) : width * height;
-  return { width, height, area };
+  return { west, east, south, north, width, height, area };
 }
 
 export function simpleCarbonSummaryScale(aoi: AoiPayload): number {
@@ -28,8 +30,9 @@ export function simpleCarbonSummaryScale(aoi: AoiPayload): number {
 export function needsNationalCarbonModel(aoi?: AoiPayload): boolean {
   if (!aoi) return false;
   const { width, height, area } = carbonFootprint(aoi);
-  // Large regions need a frozen national model rather than fitting a local RF
-  // within the AOI's bounding box plus a 20 km calibration buffer.
+  // Large regions use national reference products and a coarse summary scale;
+  // the backend can fit the built-in RF from a bounded pixel sample if no
+  // frozen nationwide release is available.
   return area > 10_000 || (width + 40) * (height + 40) > 80_000;
 }
 
@@ -59,6 +62,32 @@ function compareRecommendedModels(a: CarbonModelListItem, b: CarbonModelListItem
   return (a.display_name || a.name).localeCompare(b.display_name || b.name);
 }
 
+function modelCoversAoi(model: CarbonModelListItem, aoi?: AoiPayload): boolean {
+  const bbox = model.metadata_json?.training_bbox;
+  if (!Array.isArray(bbox) || bbox.length !== 4 || !aoi) return true;
+  const bounds = carbonFootprint(aoi);
+  const [west, south, east, north] = bbox.map(Number);
+  return Number.isFinite(west) && Number.isFinite(south) && Number.isFinite(east) && Number.isFinite(north)
+    && west <= bounds.west && south <= bounds.south && east >= bounds.east && north >= bounds.north;
+}
+
+function automaticAnnualModel(models: CarbonModelListItem[], aoi?: AoiPayload): CarbonModelListItem | null {
+  const candidates = models.filter((item) => modelCoversAoi(item, aoi));
+  const indonesiaModels = candidates.filter((item) => item.metadata_json?.method === "saved_reference_ensemble"
+    && item.metadata_json?.training_domain === "indonesia"
+    && item.metadata_json?.gee_deployable);
+  if (indonesiaModels.length) return [...indonesiaModels].sort(compareRecommendedModels)[0];
+
+  // Built-in reference-raster RFs fit a bounded training sample from the
+  // selected AOI and apply it to the requested year's imagery. They are the
+  // supported fallback while a frozen nationwide release is unavailable.
+  const builtInRegionalModels = candidates.filter((item) => item.metadata_json?.builtin
+    && item.metadata_json?.training_mode === "reference_raster"
+    && item.metadata_json?.gee_deployable
+    && item.algorithm?.toLowerCase().includes("random forest"));
+  return [...builtInRegionalModels].sort(compareRecommendedModels)[0] ?? null;
+}
+
 function preferredYear(dataset: CarbonReferenceDatasetOption, fallback: number): number {
   const years = carbonDatasetYearOptions(dataset);
   if (years.length) return years[0];
@@ -71,28 +100,34 @@ export async function buildBasicCarbonPlan(
   fallbackYear: number,
   aoi?: AoiPayload,
 ): Promise<BasicCarbonTarget[]> {
-  const [datasets, defaultAgbModels, bgbModels, socModels] = await Promise.all([
+  const [datasets, defaultAgbModels, bgbModels, socModels, litterModels, deadwoodModels] = await Promise.all([
     listCarbonDatasets(),
-    listCarbonModels(DEFAULT_CARBON_REFERENCE_DATASET),
-    listCarbonModels("ORNL_BGB"),
-    listCarbonModels("SOILGRIDS_OCS_0_30CM"),
+    listSimpleCarbonModels(DEFAULT_CARBON_REFERENCE_DATASET),
+    listSimpleCarbonModels("ORNL_BGB"),
+    listSimpleCarbonModels("SOILGRIDS_OCS_0_30CM"),
+    listSimpleCarbonModels("TROPICAL_LITTER_REFERENCE"),
+    listSimpleCarbonModels("TROPICAL_DEADWOOD_REFERENCE"),
   ]);
-  const detritusTargets: BasicCarbonTarget[] = ([['litter', 'TROPICAL_LITTER_REFERENCE'], ['deadwood', 'TROPICAL_DEADWOOD_REFERENCE']] as const).map(([key, datasetKey]) => {
+  const detritusTargets: BasicCarbonTarget[] = ([
+    ['litter', 'TROPICAL_LITTER_REFERENCE', litterModels],
+    ['deadwood', 'TROPICAL_DEADWOOD_REFERENCE', deadwoodModels],
+  ] as const).map(([key, datasetKey, models]) => {
     const dataset = datasets.find((item) => item.value === datasetKey);
     if (!dataset) throw new Error(`Referensi pelatihan ${key} belum tersedia pada backend.`);
-    return { key, dataset, datasetYear: 2010, model: null, referenceOnly: false };
+    const referenceOnly = fallbackYear === 2010;
+    const model = referenceOnly ? null : automaticAnnualModel(models, aoi);
+    if (!referenceOnly && !model) throw new Error(`Model tahunan ${key} belum tersedia pada katalog backend.`);
+    return { key, dataset, datasetYear: 2010, model, referenceOnly };
   });
 
   if (needsNationalCarbonModel(aoi)) {
-    const nationalAgbModels = await listCarbonModels("SPAWN");
-    const primaryTargets = ([['agb', 'SPAWN', 2010, nationalAgbModels], ['bgb', 'ORNL_BGB', 2010, bgbModels], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020, socModels]] as const).map(([key, datasetKey, datasetYear, models]) => {
+    const agbModels = await listSimpleCarbonModels("SPAWN");
+    const primaryTargets = ([['agb', 'SPAWN', 2010, agbModels], ['bgb', 'ORNL_BGB', 2010, bgbModels], ['soc', 'SOILGRIDS_OCS_0_30CM', 2020, socModels]] as const).map(([key, datasetKey, datasetYear, models]) => {
       const dataset = datasets.find((item) => item.value === datasetKey);
       if (!dataset) throw new Error(`Sumber referensi ${datasetKey} belum tersedia untuk AOI besar.`);
       if (fallbackYear === datasetYear) return { key, dataset, datasetYear, model: null, referenceOnly: true };
-      const model = [...models].filter((item) => item.metadata_json?.method === "saved_reference_ensemble"
-        && item.metadata_json?.training_domain === "indonesia"
-        && item.metadata_json?.gee_deployable).sort(compareRecommendedModels)[0];
-      if (!model) throw new Error(`Model estimasi tahunan nasional ${key.toUpperCase()} belum tersedia. Tahun ${fallbackYear} tidak dapat diganti dengan referensi ${datasetYear}.`);
+      const model = automaticAnnualModel(models, aoi);
+      if (!model) throw new Error(`Model tahunan ${key.toUpperCase()} belum tersedia. Tahun ${fallbackYear} tetap memerlukan inferensi tahunan; referensi ${datasetYear} tidak akan disajikan sebagai estimasi tahun berjalan.`);
       return { key, dataset, datasetYear, model, referenceOnly: false };
     });
     return [...primaryTargets, ...detritusTargets];
@@ -110,8 +145,10 @@ export async function buildBasicCarbonPlan(
   for (const dataset of orderedAgbDatasets) {
     const models = dataset.value === DEFAULT_CARBON_REFERENCE_DATASET
       ? defaultAgbModels
-      : await listCarbonModels(dataset.value);
-    const model = [...models].sort(compareRecommendedModels)[0];
+      : await listSimpleCarbonModels(dataset.value);
+    const model = automaticAnnualModel(models, aoi)
+      ?? [...models].filter((item) => modelCoversAoi(item, aoi)).sort(compareRecommendedModels)[0]
+      ?? null;
     if (model) {
       const modelYear = Number(model.metadata_json?.reference_year);
       agbTarget = {
@@ -126,17 +163,19 @@ export async function buildBasicCarbonPlan(
   }
 
   const bgbDataset = datasets.find((dataset) => dataset.value === "ORNL_BGB");
-  const bgbModel = [...bgbModels]
-    .filter((model) => model.metadata_json?.method !== "ipcc_root_to_shoot")
+  const bgbModel = [...bgbModels].filter((item) => modelCoversAoi(item, aoi))
+    .filter((model) => model.metadata_json?.method !== "ipcc_root_to_shoot"
+      && model.metadata_json?.method !== "soil_stock_integration")
     .sort(compareRecommendedModels)[0] ?? null;
   const socDataset = datasets.find((dataset) => dataset.value === "SOILGRIDS_OCS_0_30CM");
   // Prefer an annual model for the selected analysis year. Soil stock
   // integration is a static SoilGrids reference and cannot produce an annual
   // estimate on its own.
-  const annualSocModels = socModels.filter((model) => model.metadata_json?.method !== "soil_stock_integration");
+  const annualSocModels = socModels.filter((model) => model.metadata_json?.method !== "soil_stock_integration"
+    && modelCoversAoi(model, aoi));
   const socModel = [...annualSocModels].sort(compareRecommendedModels)[0]
-    ?? socModels.find((model) => model.name === "soc_stock_integration_0_30cm")
-    ?? [...socModels].sort(compareRecommendedModels)[0]
+    ?? socModels.find((model) => model.name === "soc_stock_integration_0_30cm" && modelCoversAoi(model, aoi))
+    ?? [...socModels].filter((model) => modelCoversAoi(model, aoi)).sort(compareRecommendedModels)[0]
     ?? null;
 
   const plan: BasicCarbonTarget[] = [];

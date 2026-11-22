@@ -6,12 +6,14 @@ import { handleUserUnauthorized } from "@/services/userAuthService";
 export class ApiError extends Error {
   status: number;
   payload: unknown;
+  code?: string;
 
-  constructor(message: string, status: number, payload?: unknown) {
+  constructor(message: string, status: number, payload?: unknown, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.payload = payload;
+    this.code = code;
   }
 }
 
@@ -39,8 +41,29 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+function sanitizeErrorText(value: string): string | null {
+  const safe = value
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted]")
+    .replace(/\b(?:postgres(?:ql)?|mysql|redis):\/\/[^\s"'<>]+/gi, "[connection string]")
+    .replace(/\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token|password|secret)\b\s*[:=]\s*["']?[^\s,;"']+/gi, "$1=[redacted]")
+    .replace(/(?:[A-Za-z]:\\|\/(?:home|app|workspace|var|tmp)\/)[^\s"'<>]+/g, "[server path]")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\p{Cc}/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return safe ? safe.slice(0, 500) : null;
+}
+
 function formatErrorValue(value: unknown): string | null {
-  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "string" && value.trim()) return sanitizeErrorText(value);
   if (Array.isArray(value)) {
     const messages = value.map((item) => formatErrorValue(item)).filter((item): item is string => Boolean(item));
     return messages.length ? messages.join("; ") : null;
@@ -48,35 +71,29 @@ function formatErrorValue(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
 
   const record = value as Record<string, unknown>;
-  const message = formatErrorValue(record.message) ?? formatErrorValue(record.error);
+  const message = formatErrorValue(record.message) ?? formatErrorValue(record.error) ?? formatErrorValue(record.msg);
   const reasons = Array.isArray(record.reasons)
     ? record.reasons.map((reason) => formatErrorValue(reason) ?? String(reason)).filter(Boolean)
     : [];
   if (message && reasons.length) return `${message}: ${reasons.join("; ")}`;
   if (message) return message;
   if (reasons.length) return reasons.join("; ");
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return null;
-  }
+  // Never serialize unknown error objects: validation payloads can include
+  // submitted input, environment details, paths, or provider responses.
+  return null;
 }
 
-function formatApiErrorMessage(payload: unknown, status: number): string {
+export function formatApiErrorMessage(payload: unknown, status: number): string {
+  if (status >= 500) {
+    const requestId = payload && typeof payload === "object" && "request_id" in payload
+      ? (payload as Record<string, unknown>).request_id : undefined;
+    const reference = typeof requestId === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId)
+      ? ` (${requestId})` : "";
+    return `Server temporarily unavailable${reference}`;
+  }
   if (typeof payload === "string") {
-    const plainText = payload
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/&amp;/gi, "&")
-      .replace(/&lt;/gi, "<")
-      .replace(/&gt;/gi, ">")
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (plainText) return plainText.slice(0, 500);
+    const plainText = sanitizeErrorText(payload);
+    if (plainText) return plainText;
   }
   if (payload && typeof payload === "object") {
     const record = payload as Record<string, unknown>;
@@ -149,7 +166,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!res.ok) {
     const message = formatApiErrorMessage(parsed, res.status);
-    throw new ApiError(message, res.status, parsed);
+    const record = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+    const detail = record?.detail && typeof record.detail === "object"
+      ? record.detail as Record<string, unknown> : null;
+    const code = [record?.code, detail?.code].find((value): value is string =>
+      typeof value === "string" && /^[A-Z0-9_.:-]{1,80}$/i.test(value),
+    );
+    throw new ApiError(message, res.status, parsed, code);
   }
 
   return parsed as T;

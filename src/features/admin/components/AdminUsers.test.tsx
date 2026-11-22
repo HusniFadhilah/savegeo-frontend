@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { updateAdminUser } from "../api";
 import AdminUsers from "./AdminUsers";
 
 const { tableState, notify } = vi.hoisted(() => ({
@@ -27,7 +28,7 @@ vi.mock("../AdminContext", () => ({ useAdmin: () => ({ notify }) }));
 vi.mock("../api", () => ({
   createAdminUser: vi.fn(),
   deleteAdminUser: vi.fn(),
-  getCurrentAdminUser: vi.fn().mockResolvedValue({ id: 99, role: null }),
+  getCurrentAdminUser: vi.fn().mockResolvedValue({ id: 99, role: null, is_superuser: true }),
   listRoles: vi.fn().mockResolvedValue({ roles: [] }),
   updateAdminUser: vi.fn(),
 }));
@@ -38,7 +39,7 @@ vi.mock("@/components/ui/TablePagination", () => ({ default: () => null }));
 
 const user = (id: number) => ({
   id, username: `user${id}`, full_name: `User ${id}`, email: null, role: "admin",
-  is_active: true, created_at: null, last_login: null,
+  is_active: true, created_at: null, last_login: null, mfa_required: false, mfa_required_effective: false, mfa_enabled: false,
 });
 
 function view() {
@@ -80,5 +81,21 @@ describe("admin user table numbering", () => {
     tableState.rows = [];
     rerender(view());
     expect(screen.getByText("admin.users.empty")).toHaveAttribute("colspan", "8");
+  });
+
+  it("shows each account's effective MFA status", async () => {
+    render(view());
+    await waitFor(() => expect(screen.getAllByText("admin.users.mfaOptional")).toHaveLength(2));
+  });
+
+  it("saves an administrator's per-account MFA requirement", async () => {
+    render(view());
+    const row = await screen.findByRole("row", { name: /User 1/ });
+    fireEvent.click(within(row).getByRole("button", { name: "admin.edit" }));
+    const mfaToggle = screen.getByRole("checkbox", { name: "admin.users.mfaRequired" });
+    fireEvent.click(mfaToggle);
+    fireEvent.click(screen.getByRole("button", { name: "admin.update" }));
+
+    await waitFor(() => expect(updateAdminUser).toHaveBeenCalledWith(1, expect.objectContaining({ mfa_required: true })));
   });
 });

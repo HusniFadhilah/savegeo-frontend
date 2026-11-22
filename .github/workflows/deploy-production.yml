@@ -23,10 +23,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -48,8 +51,9 @@ jobs:
 
       - name: Upload production build
         id: build_artifact
+        if: vars.SAVEGEO_UPLOAD_ARTIFACTS == 'true'
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: savegeo-frontend-dist
           path: dist/
@@ -74,22 +78,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node.js for artifact validation
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
 
       - name: Download production build
         if: needs.validate.outputs.build_artifact_outcome == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: savegeo-frontend-dist
           path: dist/
 
-      - name: Rebuild validated source when artifact storage is unavailable
-        if: needs.validate.outputs.build_artifact_outcome == 'failure'
+      - name: Rebuild validated source when no artifact is available
+        if: needs.validate.outputs.build_artifact_outcome != 'success'
         env:
           VITE_API_BASE_URL: /api
           VITE_APP_ENV: production
@@ -97,7 +104,7 @@ jobs:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           SAVEGEO_DEPLOYMENT_ENVIRONMENT: production
         run: |
-          echo '::warning::Build artifact upload failed; rebuilding this validated commit with the lockfile and production configuration.'
+          echo 'Rebuilding this validated commit with the lockfile and production configuration.'
           npm ci
           npm run build
 
@@ -109,7 +116,7 @@ jobs:
       - name: Install VPN and deployment tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y openvpn sshpass rsync netcat-openbsd
+          sudo apt-get install -y openvpn rsync netcat-openbsd
 
       - name: Connect VPN
         env:
@@ -133,32 +140,34 @@ jobs:
       - name: Configure SSH host verification
         env:
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
 
       - name: Deploy static files
-        env:
-          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -e ssh -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "mkdir -p '$FRONTEND_REMOTE_DIR/dist'"
           # Keep older Vite hashes so open tabs can finish loading the build
           # they already received while index.html moves to the new release.
           rsync -az --delay-updates \
-            -e "sshpass -e ssh -p $DEPLOY_SSH_PORT" \
+            -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p $DEPLOY_SSH_PORT" \
             dist/ "$DEPLOY_USER@$DEPLOY_HOST:$FRONTEND_REMOTE_DIR/dist/"
-          sshpass -e ssh -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "mkdir -p '$FRONTEND_REMOTE_DIR/deploy'"
           rsync -az \
-            -e "sshpass -e ssh -p $DEPLOY_SSH_PORT" \
+            -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p $DEPLOY_SSH_PORT" \
             deploy/savegeo-apache.conf "$DEPLOY_USER@$DEPLOY_HOST:$FRONTEND_REMOTE_DIR/deploy/savegeo-apache.conf"
           rsync -az \
-            -e "sshpass -e ssh -p $DEPLOY_SSH_PORT" \
+            -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p $DEPLOY_SSH_PORT" \
             deploy/savegeo-nginx-timeouts.conf "$DEPLOY_USER@$DEPLOY_HOST:$FRONTEND_REMOTE_DIR/deploy/savegeo-nginx-timeouts.conf"
-          sshpass -e ssh -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
             set -euo pipefail
             sudo install -m 0644 \
               '$FRONTEND_REMOTE_DIR/deploy/savegeo-apache.conf' \
@@ -200,8 +209,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload production deployment record
+        if: vars.SAVEGEO_UPLOAD_ARTIFACTS == 'true'
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: savegeo-frontend-production-deployment-record
           path: frontend-production-deployment-record.json
@@ -213,13 +223,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Scan working tree for secrets
+      - name: Scan Git history for secrets
         env:
-          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
+          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
         run: |
           set -euo pipefail
           pulled=false
@@ -239,6 +250,5 @@ jobs:
             -v "${{ github.workspace }}:/repo" \
             "$GITLEAKS_IMAGE" detect \
             --source /repo \
-            --no-git \
             --redact \
             --exit-code 1

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { fetchWildfireCamsCapabilities } from "@/features/disaster/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import type { WildfireCamsCapabilities, WildfireCamsProduct } from "./types";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 
 const CamsArchiveMap = lazy(() => import("./CamsArchiveMap"));
 
@@ -28,6 +29,7 @@ function statusTranslationKey(status: WildfireCamsCapabilities["status"]): strin
 
 function ProductCard({ product, t, available = false }: { product: WildfireCamsProduct; t: (key: string) => string; available?: boolean }) {
   const isGfas = product.id === "gfas";
+  const sourceUrl = safeHttpUrl(product.source_url);
   const versionText = (product.products ?? [])
     .map((item) => `${item.version} (${item.coverage_start} – ${item.coverage_end ?? t("wildfire.cams.present")})`)
     .join("; ");
@@ -72,9 +74,11 @@ function ProductCard({ product, t, available = false }: { product: WildfireCamsP
       {!available && <button className="wildfire-cams-unavailable" type="button" disabled>
         <i className="bi bi-lock" aria-hidden="true" /> {t("wildfire.cams.visualizationUnavailable")}
       </button>}
-      <a href={product.source_url} target="_blank" rel="noreferrer">
-        {t("wildfire.cams.openCatalog")} <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
-      </a>
+      {sourceUrl && (
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+          {t("wildfire.cams.openCatalog")} <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
+        </a>
+      )}
       <small>{product.provider} · {product.license} · DOI {product.doi}</small>
     </article>
   );

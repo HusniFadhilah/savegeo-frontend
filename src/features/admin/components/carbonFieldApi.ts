@@ -113,6 +113,18 @@ export interface Assessment {
     artifact?: { slope: number; intercept: number; clip_min?: number } | null;
   };
 }
+export interface FieldPredictionRun {
+  id: string;
+  status: string;
+  progress: number;
+  error?: { message?: string } | null;
+  metrics?: {
+    prediction_source?: string;
+    predictions_saved?: number;
+    predictions_reused?: number;
+    without_valid_pixels?: number;
+  } | null;
+}
 const base = "/admin/carbon-calibration";
 export const fieldApi = {
   summary: (dataset: string) =>
@@ -125,11 +137,24 @@ export const fieldApi = {
     }>(`${base}/datasets/${encodeURIComponent(dataset)}/field-assessments`, { auth: true }),
   assessment: (id: string) =>
     apiClient.get<Assessment>(`${base}/runs/${encodeURIComponent(id)}`, { auth: true }),
-  list: (dataset: string, page = 1, pool?: Pool) =>
-    apiClient.get<{ rows: FieldObservation[]; total: number; page: number; page_size: number }>(
-      `${base}/datasets/${encodeURIComponent(dataset)}/observations?page=${page}${pool ? `&pool=${pool}` : ""}`,
+  run: (id: string) =>
+    apiClient.get<FieldPredictionRun>(`${base}/runs/${encodeURIComponent(id)}`, { auth: true }),
+  list: (dataset: string, page = 1, pool?: Pool, search?: string) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (pool) params.set("pool", pool);
+    if (search?.trim()) params.set("q", search.trim());
+    return apiClient.get<{
+      rows: FieldObservation[];
+      total: number;
+      records_total?: number;
+      records_filtered?: number;
+      page: number;
+      page_size: number;
+    }>(
+      `${base}/datasets/${encodeURIComponent(dataset)}/observations?${params.toString()}`,
       { auth: true },
-    ),
+    );
+  },
   add: (dataset: string, record: Record<string, unknown>) =>
     apiClient.post(
       `${base}/datasets/${encodeURIComponent(dataset)}/observations`,
@@ -154,6 +179,12 @@ export const fieldApi = {
   prediction: (dataset: string, id: string, payload: Record<string, unknown>) =>
     apiClient.post(
       `${base}/datasets/${encodeURIComponent(dataset)}/observations/${encodeURIComponent(id)}/predictions`,
+      payload,
+      { auth: true },
+    ),
+  extractPredictions: (dataset: string, payload: Record<string, unknown>) =>
+    apiClient.post<{ run: FieldPredictionRun; total_observations: number; batch_count: number }>(
+      `${base}/datasets/${encodeURIComponent(dataset)}/field-predictions`,
       payload,
       { auth: true },
     ),

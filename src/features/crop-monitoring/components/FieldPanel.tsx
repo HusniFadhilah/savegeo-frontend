@@ -27,7 +27,7 @@ export default function FieldPanel({ commodities }: Props) {
   const t = useI18nStore((state) => state.t);
   const aoi = useAoiStore((s) => s.aoi);
   const setAoi = useAoiStore((s) => s.setAoi);
-  const { fields, selectedField, loading, loadFields, selectField, saveField, clearSelection } =
+  const { fields, selectedField, loading, loadFields, offset, hasMore, error, selectField, saveField, clearSelection } =
     useFieldStore();
 
   const [activeTab, setActiveTab] = useState<TabKey>("existing");
@@ -45,17 +45,6 @@ export default function FieldPanel({ commodities }: Props) {
   useEffect(() => {
     if (!commodity && commodities.length) setCommodity(commodities[0].key);
   }, [commodities, commodity]);
-
-  function handleDrawChange(feature: AoiFeature | null) {
-    if (selectedField) clearSelection();
-    if (!feature) {
-      setAoi(null);
-      return;
-    }
-    const bounds = boundsFromGeoJSON(feature);
-    const area = areaKm2(feature, bounds);
-    setAoi({ source: "drawn", name: "Poligon Baru", areaKm2: area, feature, bounds });
-  }
 
   function handleUploadApply(feature: AoiFeature, fileName: string) {
     if (selectedField) clearSelection();
@@ -138,6 +127,15 @@ export default function FieldPanel({ commodities }: Props) {
 
         {activeTab === "existing" && (
           <div className="mb-3">
+            {error && <div role="alert" className="alert alert-danger">{t("location.failed")}</div>}
+            <div className="d-flex gap-2 mb-2">
+              <button type="button" className="btn btn-sm btn-outline-secondary" aria-label={t("common.previous")} title={t("common.previous")} disabled={loading || offset === 0} onClick={() => void loadFields(Math.max(0, offset - 100))}>
+                <i className="bi bi-chevron-left" aria-hidden="true" />
+              </button>
+              <button type="button" className="btn btn-sm btn-outline-secondary" disabled={loading || !hasMore} onClick={() => void loadFields(offset + 100)}>
+                {t("common.loadMore")} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+              </button>
+            </div>
             {loading && <div className="text-muted small">{t("crop.field.loading")}</div>}
             {!loading && fields.length === 0 && (
               <div className="alert alert-secondary py-2 small mb-0">

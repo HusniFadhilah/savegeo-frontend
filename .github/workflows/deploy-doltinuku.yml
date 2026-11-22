@@ -1,8 +1,7 @@
 name: Frontend Doltinuku Deployment
 
 on:
-  push:
-    branches: [main]
+  # Beta deployment is manual. Production LEN releases must not deploy here.
   workflow_dispatch:
 
 # Least privilege by default; jobs that need more declare it explicitly.
@@ -24,8 +23,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -43,7 +45,7 @@ jobs:
           npm audit --audit-level=high
           npm run build
           node scripts/validate-build-metadata.mjs dist/build-metadata.json --expected-environment beta
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: savegeo-frontend-dist
           path: dist/
@@ -54,10 +56,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Scan working tree for secrets
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan Git history for secrets
         env:
-          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
+          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
         run: |
           set -euo pipefail
           pulled=false
@@ -87,11 +92,14 @@ jobs:
       DOLTINUKU_PASSWORD: ${{ secrets.SFTP_STAGING_PASSWORD }}
       DOLTINUKU_SSH_PORT: ${{ secrets.SFTP_STAGING_PORT }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: savegeo-frontend-dist
           path: dist/
@@ -147,7 +155,7 @@ jobs:
       - name: Record beta deployment
         run: node scripts/write-deployment-record.mjs dist/build-metadata.json frontend-beta-deployment-record.json beta
       - name: Upload beta deployment record
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: savegeo-frontend-beta-deployment-record
           path: frontend-beta-deployment-record.json

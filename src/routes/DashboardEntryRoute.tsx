@@ -10,7 +10,8 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 /** Role-aware entry point for the shared /dashboard link. */
 export default function DashboardEntryRoute() {
   const isAdminAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const adminRole = useAuthStore((state) => state.user?.role);
+  const adminAccount = useAuthStore((state) => state.user);
+  const adminRole = adminAccount?.role;
   const isUserAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const isAdminLoading = useAuthStore((state) => state.isLoading);
   const isUserLoading = useUserAuthStore((state) => state.isLoading);
@@ -19,7 +20,9 @@ export default function DashboardEntryRoute() {
   const featureError = useViewerFeatures((state) => state.error);
   const loadFeatures = useViewerFeatures((state) => state.load);
   const t = useI18nStore((state) => state.t);
-  const isViewerPrincipal = isUserAuthenticated || isViewerRole(adminRole);
+  const isViewerPrincipal = isAdminAuthenticated
+    ? isViewerRole(adminAccount)
+    : isUserAuthenticated;
 
   useEffect(() => {
     if (!isAdminLoading && !isUserLoading && isViewerPrincipal && features === null) void loadFeatures();
@@ -46,6 +49,6 @@ export default function DashboardEntryRoute() {
   // regular application dashboard and never enter the admin dashboard loop.
   const destination = isViewerPrincipal
     ? getViewerLandingPath(features)
-    : getDashboardEntryPath({ isAdminAuthenticated, isUserAuthenticated, adminRole });
+    : getDashboardEntryPath({ isAdminAuthenticated, isUserAuthenticated, adminRole, adminIsViewer: adminAccount?.is_viewer });
   return <Navigate to={destination} replace />;
 }

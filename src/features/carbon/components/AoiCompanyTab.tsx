@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18nStore } from "@/hooks/useI18nStore";
-import { listCompanies, getCompanyGeojson } from "@/features/carbon/api";
+import { listCompanies, listCompanyProvinces, getCompanyGeojson } from "@/features/carbon/api";
 import type { CompanyBoundary } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
 import { INDUSTRY_LABEL as TYPE_LABEL } from "@/types/api";
@@ -18,6 +18,9 @@ interface Props {
  */
 export default function AoiCompanyTab({ onApply }: Props) {
   const t = useI18nStore((s) => s.t);
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [companies, setCompanies] = useState<CompanyBoundary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,40 +31,33 @@ export default function AoiCompanyTab({ onApply }: Props) {
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    listCompanyProvinces().then(res => { if (active) setProvinces(res.provinces); })
+      .catch(() => { if (active) setError(t("carbon.aoiCompany.err.loadFailed")); });
+    return () => { active = false; };
+  }, [t]);
+
+  useEffect(() => { setOffset(0); setSelectedId(null); }, [search, typeFilter, provinceFilter]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listCompanies()
-      .then((res) => {
-        if (!cancelled) setCompanies(res.companies || []);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : t("carbon.aoiCompany.err.loadFailed"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const provinces = useMemo(
-    () => [...new Set(companies.map((c) => c.province).filter((p): p is string => Boolean(p)))].sort(),
-    [companies],
-  );
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return companies.filter(
-      (c) =>
-        (!typeFilter || c.industry_type === typeFilter) &&
-        (provinceFilter.length === 0 || (c.province != null && provinceFilter.includes(c.province))) &&
-        (!q || c.name.toLowerCase().includes(q) || (c.company_name || "").toLowerCase().includes(q)),
-    );
-  }, [companies, search, typeFilter, provinceFilter]);
+    setError(null);
+    const timer = setTimeout(() => {
+      listCompanies({ search, industryType: typeFilter, provinces: provinceFilter, offset })
+        .then(res => {
+          if (cancelled) return;
+          setCompanies(res.companies);
+          setHasMore(res.has_more);
+        })
+        .catch(err => {
+          if (!cancelled) setError(err instanceof ApiError ? err.message : t("carbon.aoiCompany.err.loadFailed"));
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [search, typeFilter, provinceFilter, offset, t]);
+  const filtered = companies;
 
   const selected = companies.find((c) => c.id === selectedId) || null;
 
@@ -184,6 +180,14 @@ export default function AoiCompanyTab({ onApply }: Props) {
         </div>
       )}
 
+      <div className="d-flex gap-2 mt-2">
+        <button type="button" className="btn btn-sm btn-outline-secondary" aria-label={t("common.previous")} title={t("common.previous")} disabled={offset === 0 || loading} onClick={() => setOffset(n => Math.max(0, n - 100))}>
+          <i className="bi bi-chevron-left" aria-hidden="true" />
+        </button>
+        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={!hasMore || loading} onClick={() => setOffset(n => n + 100)}>
+          {t("common.loadMore")} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+        </button>
+      </div>
       {selected && (
         <button className="btn btn-success mt-3" onClick={handleUseAsAoi} disabled={applying}>
           {applying ? (

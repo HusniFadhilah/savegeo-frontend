@@ -5,6 +5,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUiStore, type DashboardModule } from "@/hooks/useUiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { getDashboardModulePath } from "@/routes/dashboardModuleRoutes";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 
 type StepId = "step1" | "step2" | "step3" | "step4" | "stepTips";
 type NoteTone = "info" | "warn" | "success" | "danger";
@@ -288,7 +289,7 @@ const MODEL_DOCS = [
 export default function GuideModule() {
   const t = useI18nStore((state) => state.t);
   const setActiveModule = useUiStore((s) => s.setActiveModule);
-  const isViewer = useAuthStore((s) => isViewerRole(s.user?.role));
+  const isViewer = useAuthStore((s) => isViewerRole(s.user));
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<StepId>("step1");
   const toggle = (id: StepId) => setOpenId((cur) => (cur === id ? ("" as StepId) : id));
@@ -983,12 +984,8 @@ export default function GuideModule() {
                     <td>{dataset.accuracy}</td>
                     <td>
                       <div className="guide-doc-links">
-                        <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">
-                          Dataset
-                        </a>
-                        <a href={dataset.paperUrl} target="_blank" rel="noreferrer">
-                          Paper/Dok.
-                        </a>
+                        {safeHttpUrl(dataset.sourceUrl) && <a href={safeHttpUrl(dataset.sourceUrl)} target="_blank" rel="noopener noreferrer">Dataset</a>}
+                        {safeHttpUrl(dataset.paperUrl) && <a href={safeHttpUrl(dataset.paperUrl)} target="_blank" rel="noopener noreferrer">Paper/Dok.</a>}
                       </div>
                     </td>
                   </tr>

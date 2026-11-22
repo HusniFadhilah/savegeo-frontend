@@ -10,7 +10,8 @@ import MapHeightResizeHandle from "@/components/map/MapHeightResizeHandle";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import { env } from "@/config/env";
 import { useI18nStore } from "@/hooks/useI18nStore";
-import { formatDate, formatNumber, translate } from "@/hooks/useI18nStore";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
+import { formatDate, formatNumber } from "@/hooks/useI18nStore";
 import { ApiError, apiClient } from "@/services/apiClient";
 import { fetchCities, fetchDistricts, fetchProvinces, fetchVillages } from "@/services/analysisService";
 import {
@@ -1230,12 +1231,13 @@ export function KarhutlaDetailPage() {
       setEventLookup({ slug, status: eventQuery.isPending ? "loading" : "unavailable" });
     }
   }, [slug, eventQuery.data, eventQuery.isPending]);
+  const eventRegionSlug = event?.slug;
   useEffect(() => {
-    if (!event) return undefined;
+    if (!eventRegionSlug) return undefined;
     let cancelled = false;
     setRegionOptionsLoading(true);
     setRegionOptionsError(null);
-    fetchProvinces(wildfireEventIsland(event.slug))
+    fetchProvinces(wildfireEventIsland(eventRegionSlug))
       .then((options) => {
         if (cancelled) return;
         const allowedCodes = new Set(eventProvinceCodesKey.split(",").filter(Boolean));
@@ -1248,7 +1250,7 @@ export function KarhutlaDetailPage() {
         if (!cancelled) setRegionOptionsLoading(false);
       });
     return () => { cancelled = true; };
-  }, [event?.slug, eventProvinceCodesKey]);
+  }, [eventRegionSlug, eventProvinceCodesKey]);
   useEffect(() => {
     if (!query.province || query.provinceCode) return;
     const option = matchRegionOption(provinceOptions, query.province);
@@ -1949,7 +1951,9 @@ export function KarhutlaDetailPage() {
               <ul>
                 {event.official_reports.map((report) => (
                   <li key={report.url + report.event_date}>
-                    <a href={report.url} target="_blank" rel="noopener noreferrer">{report.title}</a>
+                    {safeHttpUrl(report.url) ? (
+                      <a href={safeHttpUrl(report.url)} target="_blank" rel="noopener noreferrer">{report.title}</a>
+                    ) : report.title}
                     <small> · {report.event_date} · {report.location}</small>
                   </li>
                 ))}

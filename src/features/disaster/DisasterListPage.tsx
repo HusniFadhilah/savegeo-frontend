@@ -10,6 +10,7 @@ import IslandThumbnail from "./IslandThumbnail";
 import { KarhutlaOverviewCard, adaptLegacyEvent } from "@/features/karhutla/components";
 import { FALLBACK_WILDFIRE_EVENTS } from "@/features/karhutla/data";
 import { isKarhutlaDisasterType } from "./types";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 import {
   EVENT_DISASTER_TYPE_LABELS,
   EVENT_DISASTER_TYPE_OPTIONS,
@@ -58,13 +59,15 @@ function activeFilterCount(filters: DisasterEventListParams): number {
 
 function resolveThumbnailUrl(thumbnail: string | null | undefined): string | null {
   if (!thumbnail) return null;
-  if (/^https?:\/\//i.test(thumbnail) || thumbnail.startsWith("data:")) return thumbnail;
+  const remoteUrl = safeHttpUrl(thumbnail);
+  if (remoteUrl) return remoteUrl;
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(thumbnail) && thumbnail.length <= 1_000_000) return thumbnail;
   const backendBaseUrl = env.apiBaseUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
-  if (thumbnail.startsWith("/")) {
+  if (thumbnail.startsWith("/") && !thumbnail.startsWith("//") && !thumbnail.includes("\\") && !/\p{Cc}/u.test(thumbnail)) {
     const normalizedPath = `/${thumbnail.replace(/^\/+/, "")}`;
     return `${backendBaseUrl}${normalizedPath}` || normalizedPath;
   }
-  return thumbnail.replace(/([^:]\/)\/{2,}/g, "$1");
+  return null;
 }
 
 /**

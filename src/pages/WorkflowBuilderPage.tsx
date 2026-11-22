@@ -238,7 +238,7 @@ export default function WorkflowBuilderPage() {
       const next = await executeWorkflow(workflow, "auto", setRun, abortRef.current.signal);
       setRun(next);
     } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : "NODE_EXECUTION_FAILED");
+      setError(reason instanceof Error && reason.message === "workflow.executionUnavailable" ? t(reason.message) : reason instanceof Error ? reason.message : "NODE_EXECUTION_FAILED");
     } finally {
       setRunning(false);
     }
@@ -312,7 +312,8 @@ export default function WorkflowBuilderPage() {
             <button
               className="btn btn-success btn-sm"
               onClick={() => void runWorkflow()}
-              disabled={running || !workflow.nodes.length}
+              disabled
+              title={t("workflow.executionUnavailable")}
             >
               <i className="bi bi-play-fill me-1" /> {running ? "Running…" : t("workflow.run")}
             </button>
@@ -323,6 +324,7 @@ export default function WorkflowBuilderPage() {
             )}
           </div>
         </header>
+        <p className="text-muted small mt-2" role="status">{t("workflow.executionUnavailable")}</p>
         {(notice || error) && (
           <div
             className={`workflow-alert ${error ? "is-error" : "is-success"}`}

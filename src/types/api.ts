@@ -9,7 +9,10 @@ export interface HealthStatus {
   status: string;
   ee_initialized: boolean;
   database_connected?: boolean;
+  active_model_catalog_available?: boolean;
+  model_lifecycle_schema_current?: boolean;
   active_model?: string | null;
+  active_models?: number;
 }
 
 export interface RegionOption {
@@ -18,6 +21,8 @@ export interface RegionOption {
 }
 
 export interface AdminUser {
+  is_superuser?: boolean;
+  is_viewer?: boolean;
   mfa_enabled?: boolean;
   full_name?: string | null;
   id?: number;

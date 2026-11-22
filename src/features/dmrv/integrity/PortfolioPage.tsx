@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import DmrvPageHeader from "../DmrvPageHeader";
-import { getPortfolio, saveBlob } from "./api";
+import { getPortfolio, getPortfolioDashboard, saveBlob, type PortfolioDashboard } from "./api";
 import { errorMessage, number, useCopy } from "./helpers";
 import type { Portfolio } from "./types";
 import "./integrity.css";
@@ -20,18 +20,31 @@ export default function PortfolioPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
+  const [year, setYear] = useState("");
+  const [dashboard, setDashboard] = useState<PortfolioDashboard | null>(null);
+  const [dashboardError, setDashboardError] = useState("");
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    void getPortfolio(search, offset)
-      .then((result) => {
-        if (active) setData(result);
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setError(errorMessage(cause));
+    setDashboardError("");
+    void Promise.allSettled([
+      getPortfolio(search, offset),
+      getPortfolioDashboard(year ? Number(year) : undefined),
+    ])
+      .then(([portfolioResult, dashboardResult]) => {
+        if (!active) return;
+        if (portfolioResult.status === "fulfilled") {
+          setData(portfolioResult.value);
+        } else {
+          setError(errorMessage(portfolioResult.reason));
           setData(null);
+        }
+        if (dashboardResult.status === "fulfilled") {
+          setDashboard(dashboardResult.value);
+        } else {
+          setDashboard(null);
+          setDashboardError(errorMessage(dashboardResult.reason));
         }
       })
       .finally(() => {
@@ -40,7 +53,7 @@ export default function PortfolioPage() {
     return () => {
       active = false;
     };
-  }, [search, offset, retry]);
+  }, [search, offset, retry, year]);
   function submit(event: FormEvent) {
     event.preventDefault();
     setOffset(0);
@@ -128,6 +141,13 @@ export default function PortfolioPage() {
                 {c("Cari", "Search")}
               </button>
             </form>
+            <label className="d-flex align-items-center gap-2">
+              <span>{c("Periode", "Period")}</span>
+              <select className="form-select" value={year} onChange={(event) => setYear(event.target.value)}>
+                <option value="">{c("Semua tahun", "All years")}</option>
+                {[2026, 2025, 2024, 2023].map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
             <button
               type="button"
               className="dmrv-reference-link"
@@ -144,6 +164,79 @@ export default function PortfolioPage() {
               "Portfolio visibility follows project membership. Scores reflect internal evidence readiness. Risk and deadline totals cover the displayed page.",
             )}
           </p>
+          {dashboard ? (
+            <div className="dmrv-overview-grid mb-4" aria-label={c("Ringkasan lintas proyek", "Cross-project summary")}>
+              {[
+                [c("Pekerjaan analisis", "Analysis jobs"), dashboard.summary.job_count, "bi-cpu"],
+                [c("Periode monitoring", "Monitoring periods"), dashboard.summary.period_count, "bi-calendar3"],
+                [c("Laporan dan paket bukti", "Reports and evidence packages"), dashboard.summary.report_count, "bi-file-earmark-check"],
+                [c("Pengajuan", "Submissions"), dashboard.summary.submission_count, "bi-send-check"],
+                [c("Risiko tercatat", "Recorded risks"), dashboard.summary.risk_count, "bi-shield-exclamation"],
+              ].map(([label, value, icon]) => (
+                <div className="dmrv-overview-item" key={String(label)}>
+                  <i className={`bi ${String(icon)}`} aria-hidden="true" />
+                  <span>{label}</span><strong>{value}</strong>
+                </div>
+              ))}
+              {dashboard.recent_jobs.length ? (
+                <div className="dmrv-overview-item dmrv-overview-wide">
+                  <span>{c("Pekerjaan terbaru", "Recent jobs")}</span>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {dashboard.recent_jobs.slice(0, 6).map((job) => {
+                      const project = dashboard.projects.find((item) => item.id === job.project_id);
+                      return <Link className="integrity-gap" key={job.id} to={`/dmrv/projects/${job.project_id}?tab=analysis`}>
+                        {project?.name ?? job.project_id} · {job.kind.replace("analysis.", "")} · {job.status}
+                      </Link>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {dashboard.recent_periods.length ? (
+                <div className="dmrv-overview-item dmrv-overview-wide">
+                  <span>{c("Periode monitoring terbaru", "Recent monitoring periods")}</span>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {dashboard.recent_periods.slice(0, 6).map((period) => {
+                      const project = dashboard.projects.find((item) => item.id === period.project_id);
+                      return <Link className="integrity-gap" key={period.id} to={`/dmrv/projects/${period.project_id}`}>
+                        {project?.name ?? period.project_id} · {period.name} · {period.start_date} - {period.end_date} · {period.status}
+                      </Link>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {dashboard.recent_reports.length ? (
+                <div className="dmrv-overview-item dmrv-overview-wide">
+                  <span>{c("Laporan terbaru", "Recent reports")}</span>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {dashboard.recent_reports.slice(0, 6).map((report) => {
+                      const project = dashboard.projects.find((item) => item.id === report.project_id);
+                      return <Link className="integrity-gap" key={report.id} to={`/dmrv/projects/${report.project_id}/integrity`}>
+                        {project?.name ?? report.project_id} · {report.readiness}
+                      </Link>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {dashboard.recent_risks.length ? (
+                <div className="dmrv-overview-item dmrv-overview-wide">
+                  <span>{c("Risiko terbaru", "Recent risks")}</span>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {dashboard.recent_risks.slice(0, 6).map((risk) => {
+                      const project = dashboard.projects.find((item) => item.id === risk.project_id);
+                      return <Link className="integrity-gap" key={risk.id} to={`/dmrv/projects/${risk.project_id}/integrity`}>
+                        {project?.name ?? risk.project_id} · {risk.title} · {risk.status}
+                      </Link>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {dashboardError ? (
+            <p className="integrity-note" role="status">
+              {c("Ringkasan lintas proyek sementara tidak tersedia.", "Cross-project summary is temporarily unavailable.")}
+            </p>
+          ) : null}
           {error ? (
             <div role="alert" className="alert alert-danger">
               {error}{" "}

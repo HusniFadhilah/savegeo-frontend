@@ -34,11 +34,11 @@ export interface UsageSummary {
 }
 const auth = { auth: "app" } as const;
 const base = (projectId: string) => `/dmrv/projects/${encodeURIComponent(projectId)}/analysis-runs`;
-export const listAnalysisRuns = (projectId: string, periodId = "") =>
-  apiClient.get<AnalysisRun[]>(
-    `${base(projectId)}${periodId ? `?monitoring_period_id=${encodeURIComponent(periodId)}` : ""}`,
-    auth,
-  );
+export const listAnalysisRuns = (projectId: string, periodId = "", limit = 20, offset = 0) => {
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (periodId) query.set("monitoring_period_id", periodId);
+  return apiClient.get<AnalysisRun[]>(`${base(projectId)}?${query}`, auth);
+};
 export const createAnalysisRun = (projectId: string, request: AnalysisRequest, key: string) =>
   apiClient.post<DmrvJob>(base(projectId), request, {
     ...auth,

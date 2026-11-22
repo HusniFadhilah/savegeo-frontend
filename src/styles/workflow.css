@@ -83,3 +83,51 @@ html[data-theme="dark"] .workflow-page { background: #0b1220; color: #e5e7eb; } 
 html[data-theme="dark"] .workflow-header, html[data-theme="dark"] .plugin-hero { border-color: #334155; background: linear-gradient(135deg, #111827 0%, #14251f 100%); } html[data-theme="dark"] .workflow-eyebrow { background: rgba(23,32,51,.8); border-color: #285c40; } html[data-theme="dark"] .canvas-toolbar > span:first-child, html[data-theme="dark"] .workflow-inspector > .panel-heading { color: #d4e3d8; } html[data-theme="dark"] .canvas-toolbar > span:nth-child(2) { background: #102d22; } html[data-theme="dark"] .plugin-hero h1, html[data-theme="dark"] .plugin-stat strong, html[data-theme="dark"] .plugin-toolbar-copy strong { color: #e5f1e8; } html[data-theme="dark"] .plugin-hero p, html[data-theme="dark"] .plugin-back-link, html[data-theme="dark"] .plugin-toolbar-copy span { color: #a8b9ad; } html[data-theme="dark"] .plugin-registry-status, html[data-theme="dark"] .plugin-stat, html[data-theme="dark"] .plugin-search, html[data-theme="dark"] .plugin-filter, html[data-theme="dark"] .plugin-empty { background: #111827; border-color: #334155; color: #b8c4d2; } html[data-theme="dark"] .plugin-search input, html[data-theme="dark"] .plugin-filter { color: #e5e7eb; } html[data-theme="dark"] .plugin-empty strong { color: #c8dfcf; }
 @media (max-width: 760px) { .plugin-hero { display: block; padding: 22px 20px; }.plugin-hero-aside { flex-direction: row; align-items: center; margin-top: 18px; }.plugin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }.plugin-toolbar { display: block; }.plugin-toolbar-controls { margin-top: 12px; }.plugin-search { width: 100%; }.plugin-filter { flex: 0 0 155px; } }
 @media (max-width: 480px) { .workflow-header { padding: 20px 17px; }.workflow-title-input { font-size: 1.55rem; }.plugin-stats { gap: 8px; }.plugin-stat { padding: 11px 9px; }.plugin-stat-icon { flex-basis: 31px; width: 31px; height: 31px; }.plugin-stat strong { font-size: 1rem; }.plugin-stat small { font-size: .64rem; }.plugin-toolbar-controls { display: grid; grid-template-columns: 1fr; }.plugin-filter { width: 100%; }.plugin-hero h1 { font-size: 1.55rem; } }
+
+/* Match the analysis-page hero while keeping the workflow heading legible. */
+.workflow-header {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(248, 253, 249, 0.99) 0%,
+      rgba(248, 253, 249, 0.96) 38%,
+      rgba(238, 248, 241, 0.82) 62%,
+      rgba(225, 241, 231, 0.58) 100%
+    ),
+    url("/images/carbon-forest-loss.jpg") right center / cover no-repeat;
+}
+
+.workflow-actions > a.btn-light,
+.workflow-actions > label.btn-light {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.workflow-actions > a.btn-light > i,
+.workflow-actions > label.btn-light > i {
+  margin: 0 !important;
+  line-height: 1;
+}
+
+.workflow-actions > label.btn-light {
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .workflow-header {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(15, 23, 42, 0.99) 0%,
+      rgba(15, 23, 42, 0.95) 38%,
+      rgba(15, 35, 29, 0.86) 64%,
+      rgba(15, 40, 29, 0.7) 100%
+    ),
+    url("/images/carbon-forest-loss.jpg") right center / cover no-repeat;
+}

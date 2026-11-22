@@ -7,6 +7,7 @@ import { env } from "@/config/env";
 import { plainTextContent } from "@/lib/leafletText";
 import { fetchWildfireCamsAggregate, fetchWildfireCamsArchive } from "@/features/disaster/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { safeHttpUrl } from "@/utils/safeHttpUrl";
 import type { AoiFeature } from "@/types/map";
 import type { CamsAggregateSummary, CamsArchive, CamsAreaAggregate, CamsFrame, CamsGridAggregate, CamsSummary } from "./types";
 import CamsPointProbe from "./CamsPointProbe";
@@ -316,7 +317,11 @@ export default function CamsArchiveMap({ slug, onSelectionChange }: {
       <div className="cams-archive-downloads">
         <button type="button" onClick={exportCsv}><i className="bi bi-download" aria-hidden="true" /> {t("wildfire.cams.downloadCsv")}</button>
         <a href={`${apiPrefix}/download/${layerId}/${frame.id}.tif`}>{t("wildfire.cams.downloadRaster")} ({layer.source_unit})</a>
-        <a href={frame.provenance.source_url} target="_blank" rel="noreferrer">{t("wildfire.cams.openCatalog")}</a>
+        {safeHttpUrl(frame.provenance.source_url) && (
+          <a href={safeHttpUrl(frame.provenance.source_url)} target="_blank" rel="noopener noreferrer">
+            {t("wildfire.cams.openCatalog")}
+          </a>
+        )}
       </div>
       <small>{t("wildfire.cams.archiveUpdated")}: {date(archive.updated_at)} UTC · CAMS / ECMWF, CC-BY 4.0</small>
     </>}

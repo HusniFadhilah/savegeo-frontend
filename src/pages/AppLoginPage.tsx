@@ -117,9 +117,7 @@ export default function AppLoginPage() {
   const adminAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userLoading = useUserAuthStore((state) => state.isLoading);
   const adminLoading = useAuthStore((state) => state.isLoading);
-  // All authenticated accounts enter the main analysis workspace. Keeping a
-  // single landing route avoids role-dependent redirects and makes login
-  // behavior consistent after session expiry and deep links.
+  // Start every authenticated session in the main analysis workspace.
   const destination = "/carbon-estimation";
 
   useEffect(() => {

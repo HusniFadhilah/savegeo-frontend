@@ -109,7 +109,7 @@ export default function FieldObservationForm({
     </label>
   );
   return (
-    <details className="border rounded p-3 mb-3">
+    <details className="field-panel-accordion">
       <summary className="fw-semibold">Tambah pengukuran plot</summary>
       <form className="mt-3" onSubmit={(event) => void submit(event)}>
         <fieldset disabled={busy}>
@@ -278,7 +278,7 @@ export default function FieldObservationForm({
                       mencakup seluruh kedalaman target.
                     </p>
                     {layers.map((id, i) => (
-                      <div className="border rounded p-2 mb-2" key={id}>
+                      <div className="field-soil-layer" key={id}>
                         <strong>Lapisan {i + 1}</strong>
                         <div className="row g-2">
                           {numeric(`top_${id}`, "Atas (cm)", 0)}

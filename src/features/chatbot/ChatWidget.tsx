@@ -31,6 +31,9 @@ export default function ChatWidget() {
         <SessionSidebar
           open={chat.sessionPanelOpen}
           sessions={chat.sessions}
+          error={chat.sessionError}
+          onRetry={() => void chat.refetchSessions()}
+          retryLabel={chat.historyRetry}
           search={chat.sessionSearch}
           onSearchChange={chat.setSessionSearch}
           activeSessionId={chat.sessionId}

@@ -170,7 +170,7 @@ export default function ParentFallbackTileLayer({
       layer.off();
       if (map.hasLayer(layer)) map.removeLayer(layer);
     };
-  }, [attribution, bounds, fallbackLevels, map, maxNativeZoom, maxZoom, onStatus, opacity, pane, url]);
+  }, [attribution, bounds, className, fallbackLevels, map, maxNativeZoom, maxZoom, onStatus, opacity, pane, url]);
 
   return null;
 }

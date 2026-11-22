@@ -1,17 +1,23 @@
 .dmrv-page {
+  --dmrv-content-padding: clamp(18px, 1.8vw, 24px);
   width: min(100%, 1480px);
   margin: 0 auto;
-  padding: 12px clamp(14px, 2vw, 28px) 36px;
+  padding: 16px clamp(16px, 2vw, 28px) 36px;
 }
 
-/* Keep dMRV content comfortably inset even when shared analysis-page styles load later. */
+/* Keep page gutters consistent across the project, portfolio, and integrity views. */
 .analysis-page.dmrv-page {
-  padding-inline: clamp(22px, 2.1vw, 34px);
+  padding-inline: clamp(16px, 2vw, 28px);
+}
+
+.dmrv-page .card.card-body,
+.dmrv-page .card > .card-body {
+  padding: var(--dmrv-content-padding);
 }
 
 .dmrv-breadcrumb {
   --bs-breadcrumb-divider: "›";
-  margin: 0 0 12px;
+  margin: 10px 0 12px;
   font-size: 0.78rem;
   font-weight: 650;
 }
@@ -36,15 +42,14 @@
 
 .analysis-hero-dmrv {
   --analysis-hero-bg: #f2f9f3;
-  --analysis-hero-image:
-    radial-gradient(ellipse at 78% 48%, rgba(39, 123, 71, 0.16) 0 1px, transparent 1.5px 32px),
-    repeating-radial-gradient(ellipse at 78% 48%, rgba(39, 123, 71, 0.12) 0 1px, transparent 1.5px 22px);
+  --analysis-hero-image: url("/images/carbon-forest-loss.jpg");
   --analysis-hero-overlay: linear-gradient(
     100deg,
     rgba(245, 252, 247, 1) 0%,
-    rgba(245, 252, 247, 0.98) 37%,
-    rgba(239, 249, 242, 0.87) 62%,
-    rgba(232, 245, 236, 0.58) 100%
+    rgba(245, 252, 247, 0.98) 34%,
+    rgba(239, 249, 242, 0.88) 55%,
+    rgba(232, 245, 236, 0.64) 74%,
+    rgba(232, 245, 236, 0.28) 100%
   );
   grid-template-columns: minmax(0, 1fr) minmax(390px, 500px);
   min-height: 156px;
@@ -96,7 +101,7 @@
 
 .dmrv-reference-card {
   margin: 0 0 22px;
-  padding: clamp(18px, 2.3vw, 28px);
+  padding: var(--dmrv-content-padding);
   background:
     radial-gradient(ellipse at 95% 5%, rgba(66, 145, 86, 0.1), transparent 36%),
     linear-gradient(125deg, #fff 0%, #f8fcf9 62%, #eff8f1 100%);
@@ -215,7 +220,6 @@
   justify-content: space-between;
   gap: 12px;
   margin: 22px 0 12px;
-  padding-right: 76px;
 }
 
 .dmrv-example-action {
@@ -232,7 +236,7 @@
 
 .dmrv-panel {
   height: 100%;
-  padding: clamp(16px, 1.8vw, 22px);
+  padding: var(--dmrv-content-padding);
 }
 
 .dmrv-panel-title {
@@ -416,7 +420,12 @@
 
 @media (max-width: 640px) {
   .analysis-page.dmrv-page {
-    padding: 10px 12px 26px;
+    padding: 12px 12px 26px;
+  }
+
+  .dmrv-page .card.card-body,
+  .dmrv-page .card > .card-body {
+    padding: 16px;
   }
 
   .analysis-hero-dmrv .analysis-hero-status {

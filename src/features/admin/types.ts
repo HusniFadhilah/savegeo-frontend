@@ -53,11 +53,36 @@ export interface MlModel {
   is_active: boolean;
   is_default: boolean;
   is_legacy?: boolean;
+  lifecycle_state: "experimental" | "training" | "evaluated" | "review_pending" | "approved" | "active" | "rejected" | "archived" | "legacy_unmigrated";
+  approved_by?: number | null;
+  approved_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ModelEvaluationResult {
+  evaluation_id: number;
+  artifact_sha256: string;
+  dataset_sha256: string;
+  manifest: Record<string, unknown>;
+  metrics: {
+    metric_type: "regression" | "classification";
+    sample_count: number;
+    independent_group_count: number;
+    rmse?: number;
+    mae?: number;
+    bias_prediction_minus_observed?: number;
+    r2?: number | null;
+    accuracy?: number;
+    balanced_accuracy?: number;
+    class_labels?: number[];
+    confusion_matrix?: number[][];
+  };
+  evaluated_at: string;
 }
 
 export interface AdminConfigItem {
   key: string;
+  label?: string | null;
   /** Present for non-secret keys; omitted (not `false`) by the backend for secret keys - see `is_secret` below. */
   raw_value?: string | null;
   value_type: string;
@@ -119,6 +144,12 @@ export interface CompanyBoundaryFull {
 }
 
 export interface AdminUserRow {
+  is_superuser?: boolean;
+  is_viewer?: boolean;
+  mfa_enabled?: boolean;
+  mfa_required?: boolean | null;
+  mfa_required_effective?: boolean;
+  mfa_policy_locked?: boolean;
   full_name?: string | null;
   id: number;
   username: string;
@@ -171,6 +202,7 @@ export const CAT_LABELS: Record<string, string> = {
   analysis: "Analisis",
   year: "Rentang Tahun",
   carbon: "Carbon & Visualisasi",
+  carbon_maps: "Peta Densitas Karbon",
   app: "Aplikasi",
   maps: "Peta & Basemap",
   ai: "AI Controller",
@@ -180,6 +212,7 @@ export const CAT_COLORS: Record<string, string> = {
   analysis: "badge-blue",
   year: "badge-amber",
   carbon: "badge-green",
+  carbon_maps: "badge-green",
   app: "badge-gray",
   maps: "badge-green",
   ai: "badge-purple",

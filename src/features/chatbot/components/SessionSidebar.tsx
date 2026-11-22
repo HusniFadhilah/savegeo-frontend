@@ -4,6 +4,9 @@ import type { ChatSession } from "@/types/api";
 interface Props {
   open: boolean;
   sessions: ChatSession[];
+  error?: string | null;
+  onRetry?: () => void;
+  retryLabel?: string;
   search: string;
   onSearchChange: (q: string) => void;
   activeSessionId: number | null;
@@ -107,6 +110,9 @@ function SessionItem({
 export default function SessionSidebar({
   open,
   sessions,
+  error,
+  onRetry,
+  retryLabel = "Retry",
   search,
   onSearchChange,
   activeSessionId,
@@ -132,7 +138,8 @@ export default function SessionSidebar({
         />
       </div>
       <div id="sgc-session-list">
-        {sessions.length === 0 && <div className="sgc-session-empty">Belum ada percakapan tersimpan.</div>}
+        {error && <div className="sgc-session-empty" role="alert">{error}{onRetry && <button type="button" onClick={onRetry}>{retryLabel}</button>}</div>}
+        {!error && sessions.length === 0 && <div className="sgc-session-empty">Belum ada percakapan tersimpan.</div>}
         {sessions.length > 0 && filtered.length === 0 && (
           <div className="sgc-session-empty">Tidak ada percakapan yang cocok.</div>
         )}

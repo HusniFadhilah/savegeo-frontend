@@ -6,6 +6,8 @@ import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { renderRasterPreview } from "./rasterPreview";
 import type { GreenRankingResult } from "@/features/carbon/extendedTypes";
+import { env } from "@/config/env";
+import { formatApiErrorMessage } from "@/services/apiClient";
 
 export interface AnalysisResultsBundle {
   vegetation?: VegetationResult | null;
@@ -38,6 +40,26 @@ function triggerDownload(blob: Blob, filename: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+export async function downloadStoredAnalysisReport(jobId: string, aoiName: string) {
+  const response = await fetch(
+    `${env.apiBaseUrl}/reports/analysis-jobs/${encodeURIComponent(jobId)}/executive-summary`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!response.ok) {
+    const raw = await response.text().catch(() => "");
+    let payload: unknown = raw;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      // Keep the plain response body when the API returns a non-JSON error.
+    }
+    throw new Error(formatApiErrorMessage(payload, response.status));
+  }
+  const blob = await response.blob();
+  const safeAoi = aoiName.replace(/[^\p{L}\p{N}_-]/gu, "_").slice(0, 60) || "area";
+  triggerDownload(blob, `savegeo_ringkasan_job_${safeAoi}_${jobId.slice(0, 8)}.docx`);
 }
 
 /** Ported from `downloadStatistics()` in main.js: raw JSON dump of results. */

@@ -49,7 +49,6 @@ function classLegend(classes: LcYearResult["classes"] | undefined): MapLegendEnt
 
 interface Props {
   aoi: AoiFeature | null;
-  onAoiChange: (f: AoiFeature | null) => void;
   dataset: LcDataset;
   yearA: number | null;
   yearB: number | null;
@@ -75,7 +74,6 @@ interface Props {
  */
 export default function BeforeAfterMaps({
   aoi,
-  onAoiChange,
   dataset,
   yearA,
   yearB,

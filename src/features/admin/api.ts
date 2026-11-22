@@ -4,6 +4,7 @@ import type {
   GeeCredential,
   ArcgisStatusInfo,
   MlModel,
+  ModelEvaluationResult,
   AdminConfigCategories,
   KeyPoolStatus,
   OllamaCatalog,
@@ -104,8 +105,7 @@ export const uploadModel = (payload: {
   model_type: string;
   algorithm: string;
   version: string;
-  set_default: boolean;
-  metrics?: string;
+  featureNames: string[];
 }) => {
   const fd = new FormData();
   fd.append("file", payload.file);
@@ -114,16 +114,51 @@ export const uploadModel = (payload: {
   fd.append("model_type", payload.model_type);
   fd.append("algorithm", payload.algorithm);
   fd.append("version", payload.version);
-  fd.append("set_default", payload.set_default ? "true" : "false");
-  if (payload.metrics) fd.append("metrics", payload.metrics);
+  fd.append("feature_names", JSON.stringify(payload.featureNames));
+  fd.append("set_default", "false");
   return apiClient.upload<{ message: string; model: MlModel }>("/admin/models/upload", fd, { auth: true });
 };
 
+export const evaluateModel = (id: number, payload: {
+  file: File;
+  datasetName: string;
+  targetColumn: string;
+  targetUnit: string;
+  groupColumn: string;
+  trainingGroups: string[];
+  splitMethod: string;
+  datasetSource?: string;
+}) => {
+  const fd = new FormData();
+  fd.append("file", payload.file);
+  fd.append("dataset_name", payload.datasetName);
+  fd.append("target_column", payload.targetColumn);
+  fd.append("target_unit", payload.targetUnit);
+  fd.append("group_column", payload.groupColumn);
+  fd.append("training_groups_json", JSON.stringify(payload.trainingGroups));
+  fd.append("split_method", payload.splitMethod);
+  if (payload.datasetSource) fd.append("dataset_source", payload.datasetSource);
+  return apiClient.upload<ModelEvaluationResult>(`/admin/models/${id}/evaluations`, fd, { auth: true });
+};
+
+export const getModelLifecycle = (id: number) =>
+  apiClient.get<{
+    model: MlModel;
+    evaluations: Array<{ id: number; dataset_name: string; dataset_sha256: string; artifact_sha256: string; dataset_source?: string | null; manifest: Record<string, unknown>; metrics: ModelEvaluationResult["metrics"]; evaluated_by?: number | null; created_at: string }>;
+    reviews: Array<{ id: number; evaluation_id: number; artifact_sha256: string; decision: string; reason: string; reviewer_id?: number | null; created_at: string }>;
+  }>(`/admin/models/${id}/lifecycle`, { auth: true });
+
+export const requestModelReview = (id: number) =>
+  apiClient.post<{ message: string; lifecycle_state: string }>(`/admin/models/${id}/request-review`, undefined, { auth: true });
+
+export const reviewModel = (id: number, decision: "approved" | "rejected", reason: string) =>
+  apiClient.post<{ message: string; model: MlModel }>(`/admin/models/${id}/review`, { decision, reason }, { auth: true });
+
+export const activateModel = (id: number) =>
+  apiClient.post<{ message: string; model: MlModel }>(`/admin/models/${id}/activate`, undefined, { auth: true });
+
 export const setDefaultModel = (id: number) =>
   apiClient.post<{ message: string }>(`/admin/models/${id}/set-default`, undefined, { auth: true });
-
-export const toggleModelActive = (id: number, isActive: boolean) =>
-  apiClient.put<{ message: string; model: MlModel }>(`/admin/models/${id}`, { is_active: !isActive }, { auth: true });
 
 export const deleteModel = (id: number) =>
   apiClient.delete<{ message: string }>(`/admin/models/${id}`, { auth: true });
@@ -168,6 +203,62 @@ export const getCarbonCalibrationDataset = (datasetId: string) =>
 
 export const createCarbonCalibrationDataset = (payload: Record<string, unknown>) =>
   apiClient.post<CarbonCalibrationDataset>("/admin/carbon-calibration/datasets", payload, { auth: true });
+
+export const createUndipCarbonReferenceDataset = () =>
+  createCarbonCalibrationDataset({
+    dataset_id: "undip_carbon_reference_2026",
+    name: "UNDIP Carbon Stock Reference 2026",
+    site: "Multi-campus Universitas Diponegoro",
+    location: "Pekalongan, Batang, Teluk Awur, Rembang, Tembalang, KHDTK, Pleburan",
+    crs: "EPSG:4326",
+    survey_year: 2026,
+    ecosystem: "mixed_campus_landscapes",
+    species: [],
+    sampling_design: "purposive_multi_site",
+    plot_count: 0,
+    plot_size_m: [],
+    sample_area_ha: 0,
+    mapped_area_ha: 320.39,
+    target_pools: ["aboveground_biomass_carbon", "soil_organic_carbon"],
+    carbon_fraction: 0.47,
+    field_reference_type: "source_report_and_workbooks_requires_qa",
+    access: "restricted",
+    status: "draft",
+    soil_depth_cm: [0, 30],
+    source_reference_only: true,
+    source_references: [
+      {
+        label: "Laporan capaian carbon offset UNDIP 2026 (PDF)",
+        url: "https://drive.google.com/file/d/1yjT3k2Prt6zBr4536Eqz6oDfN1EZrNc9/view",
+      },
+      {
+        label: "Data Survei Carbon.xlsx",
+        url: "https://docs.google.com/spreadsheets/d/1Woq1AfB-qsEezr-6kmPhQv25beisfiv_/edit?gid=1711374899#gid=1711374899",
+      },
+      {
+        label: "2026 OLAH DATA CARBON (REVISI).xlsx",
+        url: "https://docs.google.com/spreadsheets/d/1ml2cFL62vuyLocQQ8HelvcZ-c50DRNNh/edit?rtpof=true",
+      },
+    ],
+    reported_2026_summary: {
+      vegetation_area_ha_pdf: 320.39,
+      agb_ton_c_workbook: 23712.345478627954,
+      agb_ton_c_pdf_table: 23712.35,
+      agb_ton_c_pdf_narrative: 23721.25,
+      soc_ton_c_workbook: 1623742.6671532108,
+      soc_ton_c_pdf_table: 1729329.77,
+      soc_ton_c_pdf_narrative: 1139921.61,
+      soc_difference_ton_c: 105587.10284678917,
+      summary_use: "context_only_not_training_labels",
+    },
+    calibration_readiness: {
+      plot_observations_imported: false,
+      plot_area_confirmed: false,
+      coordinate_review_required: true,
+      soc_totals_reconciled: false,
+      unsupported_pools: ["belowground_biomass_carbon", "litter_carbon", "deadwood_carbon"],
+    },
+  });
 
 export const uploadCarbonCalibrationFile = (datasetId: string, file: File) => {
   const form = new FormData();
@@ -222,17 +313,19 @@ export const saveViewerFeatureSettings = (enabledFeatures: string[]) =>
   }, { auth: true });
 
 export const createAdminUser = (payload: {
+  is_superuser?: boolean;
   full_name?: string | null;
   username: string;
   password: string;
   email?: string | null;
   role_id?: number | null;
   is_active?: boolean;
+  mfa_required?: boolean;
 }) => apiClient.post<{ message: string; user: AdminUserRow }>("/admin/users", payload, { auth: true });
 
 export const updateAdminUser = (
   id: number,
-  payload: { full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; new_password?: string },
+  payload: { is_superuser?: boolean; full_name?: string | null; email?: string | null; is_active?: boolean; role_id?: number | null; mfa_required?: boolean; new_password?: string },
 ) => apiClient.put<{ message: string; user: AdminUserRow }>(`/admin/users/${id}`, payload, { auth: true });
 
 export const deleteAdminUser = (id: number) =>
