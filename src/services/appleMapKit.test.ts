@@ -34,10 +34,13 @@ describe("mapRectForView", () => {
 
 describe("withOptionalAppleBasemaps", () => {
   it("adds Apple basemaps only when the backend issues a token", async () => {
-    get.mockResolvedValueOnce({ token: "t", expires_at: Date.now() / 1000 + 1800 });
+    get
+      .mockResolvedValueOnce({ available: true })
+      .mockResolvedValueOnce({ token: "t", expires_at: Date.now() / 1000 + 1800 });
     const { withOptionalAppleBasemaps } = await freshModule();
     const result = await withOptionalAppleBasemaps([base]);
-    expect(get).toHaveBeenCalledWith("/maps/apple-mapkit/token");
+    expect(get).toHaveBeenNthCalledWith(1, "/maps/apple-mapkit/status");
+    expect(get).toHaveBeenNthCalledWith(2, "/maps/apple-mapkit/token");
     expect(result.map((item) => item.id)).toEqual(["satellite", "apple-satellite", "apple-hybrid"]);
     expect(result.filter((item) => item.renderer === "mapkit").map((item) => item.mapkitType)).toEqual(["satellite", "hybrid"]);
   });

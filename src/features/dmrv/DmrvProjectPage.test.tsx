@@ -71,7 +71,7 @@ describe("DmrvProjectPage", () => {
 
   it.each([
     ["project_owner", true, true],
-    ["analyst", true, false],
+      ["analyst", true, true],
     ["field_operator", false, true],
     ["reviewer", false, false],
     ["verifier", false, false],
