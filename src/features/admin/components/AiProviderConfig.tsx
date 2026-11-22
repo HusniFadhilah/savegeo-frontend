@@ -3,6 +3,7 @@ import { getOllamaModels, getOpenRouterModels } from "../api";
 import { AI_PROVIDERS } from "../types";
 import type { AdminConfigItem, OllamaCatalog, OpenRouterModelInfo } from "../types";
 import SearchableSelect, { type SearchableOption } from "./SearchableSelect";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   items: AdminConfigItem[];
@@ -23,6 +24,7 @@ const GROUP_ORDER = [
  * special cases + `_initORPicker`, minus Tom Select (see SearchableSelect.tsx).
  */
 export default function AiProviderConfig({ items, values, onChange, providerStatus }: Props) {
+  const t = useI18nStore((state) => state.t);
   const providerItem = items.find((i) => i.key === "ai.provider");
   const currentProvider = values["ai.provider"] ?? providerItem?.raw_value ?? "anthropic";
 
@@ -177,6 +179,51 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                 )}
               </div>
               <span className="cfg-type" />
+            </div>
+          );
+        }
+
+        if (item.key === "ai.daily_budget_usd") {
+          return (
+            <div className="cfg-row" key={item.key}>
+              <span className="cfg-key" title={item.key}>{t("admin.ai.dailyBudget.label")}</span>
+              <div className="cfg-val">
+                <input
+                  type="number"
+                  min="0"
+                  max="2000"
+                  step="0.01"
+                  value={values[item.key] ?? item.raw_value ?? "0"}
+                  onChange={(e) => onChange(item.key, e.target.value)}
+                  aria-label={t("admin.ai.dailyBudget.label")}
+                />
+                <small className="text-muted d-block mt-1">
+                  {t("admin.ai.dailyBudget.hint")}
+                </small>
+              </div>
+              <span className="cfg-type">{t("admin.ai.dailyBudget.unit")}</span>
+            </div>
+          );
+        }
+
+        if (item.key === "ai.model_pricing_json") {
+          return (
+            <div className="cfg-row" key={item.key}>
+              <span className="cfg-key" title={item.key}>{t("admin.ai.modelPricing.label")}</span>
+              <div className="cfg-val">
+                <textarea
+                  rows={5}
+                  spellCheck={false}
+                  value={values[item.key] ?? item.raw_value ?? "{}"}
+                  onChange={(e) => onChange(item.key, e.target.value)}
+                  aria-label={t("admin.ai.modelPricing.label")}
+                  placeholder={'{"openai:gpt-4o":{"input_per_million_usd":2.5,"output_per_million_usd":10}}'}
+                />
+                <small className="text-muted d-block mt-1">
+                  {t("admin.ai.modelPricing.hint")}
+                </small>
+              </div>
+              <span className="cfg-type">JSON</span>
             </div>
           );
         }

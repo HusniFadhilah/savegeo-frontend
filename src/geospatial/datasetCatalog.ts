@@ -12,18 +12,36 @@ export interface DatasetCatalogFilters {
   search?: string;
 }
 
-function query(filters: DatasetCatalogFilters = {}) {
+function query(filters: DatasetCatalogFilters = {}, page?: number, pageSize?: number) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => { if (value !== undefined) params.set(key, Array.isArray(value) ? value.join(",") : String(value)); });
+  if (page !== undefined && pageSize !== undefined) {
+    params.set("page", String(page));
+    params.set("page_size", String(pageSize));
+  }
   return params.toString() ? `?${params}` : "";
 }
+
+const DATASET_PAGE_SIZE = 100;
+const MAX_DATASET_PAGES = 100;
 
 export async function listCloudDatasets(filters?: DatasetCatalogFilters): Promise<CloudDatasetReference[]> {
   const key = await cacheKey("catalog", "1", JSON.stringify(filters ?? {}));
   const cached = await getCached<CloudDatasetReference[]>(key);
   if (cached) return cached.map(validateDatasetReference);
-  const result = await apiClient.get<{ datasets: CloudDatasetReference[] }>(`/geospatial/datasets${query(filters)}`, { auth: "app" });
-  const datasets = (result.datasets ?? []).map(validateDatasetReference);
+  const datasets: CloudDatasetReference[] = [];
+  let total = Number.POSITIVE_INFINITY;
+  for (let page = 1; page <= MAX_DATASET_PAGES && datasets.length < total; page += 1) {
+    const result = await apiClient.get<{ datasets: CloudDatasetReference[]; count: number }>(
+      `/geospatial/datasets${query(filters, page, DATASET_PAGE_SIZE)}`,
+      { auth: "app" },
+    );
+    const entries = (result.datasets ?? []).map(validateDatasetReference);
+    datasets.push(...entries);
+    total = Number.isFinite(result.count) ? Math.max(0, result.count) : datasets.length;
+    if (entries.length === 0) break;
+  }
+  if (datasets.length < total) throw new Error("dataset.catalogTooLarge");
   await setCached(key, datasets.filter((dataset) => dataset.access === "public"));
   return datasets;
 }
