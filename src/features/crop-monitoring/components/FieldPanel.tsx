@@ -10,6 +10,7 @@ import CropPanelAccordion from "./CropPanelAccordion";
 import type { AoiState } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
 import type { Commodity, Field } from "../types";
+import { localizeCropLabel, localizeCropMessage } from "../utils";
 
 interface Props {
   commodities: Commodity[];
@@ -94,7 +95,7 @@ export default function FieldPanel({ commodities }: Props) {
         });
       }
     } catch (err) {
-      setSaveError(err instanceof ApiError ? (err.payload as { detail?: string })?.detail ?? err.message : t("crop.field.saveFailed"));
+      setSaveError(err instanceof ApiError ? localizeCropMessage((err.payload as { detail?: string })?.detail ?? err.message, t) ?? err.message : t("crop.field.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -153,7 +154,7 @@ export default function FieldPanel({ commodities }: Props) {
                   >
                     <div className="d-flex justify-content-between align-items-center">
                       <strong>{f.name}</strong>
-                      <span className="badge bg-secondary">{f.commodity}</span>
+              <span className="badge bg-secondary">{localizeCropLabel(f.commodity, t)}</span>
                     </div>
                     <small className={selectedField?.id === f.id ? "" : "text-muted"}>
                       {f.area_ha.toFixed(2)} ha
@@ -181,7 +182,7 @@ export default function FieldPanel({ commodities }: Props) {
         {aoi && (
           <div className="alert alert-success mt-3 mb-0 py-2">
             <i className="bi bi-check-circle-fill me-1" />
-            AOI: <strong>{aoi.name}</strong>
+              {t("crop.field.aoiLabel")}: <strong>{aoi.name}</strong>
             {aoi.areaKm2 != null && <> &middot; {(aoi.areaKm2 * 100).toFixed(2)} ha</>}
           </div>
         )}
@@ -192,7 +193,7 @@ export default function FieldPanel({ commodities }: Props) {
             <input
               type="text"
               className="form-control form-control-sm mb-2"
-              placeholder="Nama lahan (mis. Sawah Blok A)"
+              placeholder={t("crop.field.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -204,7 +205,7 @@ export default function FieldPanel({ commodities }: Props) {
               {commodities.length === 0 && <option value="">{t("crop.field.loadingCommodity")}</option>}
               {commodities.map((c) => (
                 <option key={c.key} value={c.key}>
-                  {c.label}
+                  {localizeCropLabel(c.label, t)}
                 </option>
               ))}
             </select>
@@ -227,7 +228,7 @@ export default function FieldPanel({ commodities }: Props) {
           <div className="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
             <div>
               <i className="bi bi-check2-square me-1 text-success" />
-              Lahan aktif: <strong>{selectedField.name}</strong>
+              {t("crop.field.activeLabel")}: <strong>{selectedField.name}</strong>
             </div>
             <button
               type="button"
@@ -237,7 +238,7 @@ export default function FieldPanel({ commodities }: Props) {
                 setAoi(null);
               }}
             >
-              Ganti
+              {t("crop.field.change")}
             </button>
           </div>
         )}
@@ -246,7 +247,7 @@ export default function FieldPanel({ commodities }: Props) {
         open={aoiModalOpen}
         id="cropFieldAoiModalMap"
         title={t("crop.field.aoiModalTitle")}
-        description="Pilih wilayah, koordinat, gambar polygon/rectangle, unggah file, atau gunakan batas perusahaan."
+        description={t("crop.field.aoiModalDescription")}
         aoi={aoi}
         onAoiChange={handleModalAoiChange}
         onClose={() => setAoiModalOpen(false)}

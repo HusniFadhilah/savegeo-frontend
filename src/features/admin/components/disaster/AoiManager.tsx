@@ -7,6 +7,7 @@ import type { AoiFeature } from "@/types/map";
 import { createDisasterAoi } from "../../api";
 import type { DisasterAoi } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 const ALLOWED_AOI_EXTENSIONS = [".geojson", ".json", ".kml", ".gpx", ".zip"];
 const MAX_AOI_FILE_BYTES = 50 * 1024 * 1024;
@@ -60,6 +61,8 @@ interface Props {
  * geo_utils, never client-side).
  */
 export default function AoiManager({ eventId, aoi, onSaved }: Props) {
+  const t = useI18nStore((state) => state.t);
+  const sourceLabel = (value: string) => ({ draw: t("admin.disaster.sourceDraw"), upload_geojson: t("admin.disaster.sourceGeoJson"), upload_shp: t("admin.disaster.sourceShapefile"), upload_kml: t("admin.disaster.sourceKml") }[value] ?? value);
   const { notify } = useAdmin();
   const mapRef = useRef<LeafletMap | null>(null);
   const groupRef = useRef<FeatureGroup | null>(null);
@@ -79,11 +82,11 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
     if (!f) return;
     const ext = getExtension(f.name);
     if (!ALLOWED_AOI_EXTENSIONS.includes(ext)) {
-      setError(`Format AOI tidak didukung. Gunakan ${ALLOWED_AOI_EXTENSIONS.join(", ")}`);
+      setError(t("admin.disaster.aoiUnsupported", { extensions: ALLOWED_AOI_EXTENSIONS.join(", ") }));
       return;
     }
     if (f.size > MAX_AOI_FILE_BYTES) {
-      setError("File AOI terlalu besar (maks 50 MB)");
+      setError(t("admin.disaster.aoiTooLarge"));
       return;
     }
     try {
@@ -103,7 +106,7 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
       }
       const feat = toAoiFeature(parsed);
       if (!feat) {
-        setError("File AOI tidak memiliki Polygon/MultiPolygon yang valid");
+        setError(t("admin.disaster.aoiInvalid"));
         return;
       }
       setError(null);
@@ -113,15 +116,15 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
         setAoiOnMap(mapRef.current, groupRef.current, feat);
       }
     } catch (err) {
-      setError(`Gagal membaca file AOI: ${err instanceof Error ? err.message : "format tidak valid"}`);
+      setError(t("admin.disaster.aoiReadFailed", { error: err instanceof Error ? err.message : t("admin.disaster.aoiFormatInvalid") }));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, []);
+  }, [t]);
 
   const handleSave = async () => {
     if (!feature) {
-      setError("Gambar AOI di peta atau unggah file GeoJSON terlebih dahulu");
+      setError(t("admin.disaster.aoiDrawOrUpload"));
       return;
     }
     setSaving(true);
@@ -131,10 +134,10 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
         geojson: feature as unknown as Record<string, unknown>,
         source,
       });
-      notify("AOI tersimpan", "s");
+      notify(t("admin.disaster.aoiSaved"), "s");
       onSaved(saved);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan AOI";
+      const msg = err instanceof Error ? err.message : t("admin.disaster.saveAoiFailed");
       setError(msg);
       notify(msg, "e");
     } finally {
@@ -145,12 +148,12 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Area of Interest (AOI)</span>
+        <span>{t("admin.disaster.areaOfInterest")}</span>
       </div>
       <div className="card-body-custom">
         <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button type="button" className="btn-sm" onClick={() => fileInputRef.current?.click()}>
-            <i className="bi bi-upload" /> Unggah AOI
+            <i className="bi bi-upload" /> {t("admin.disaster.uploadAoi")}
           </button>
           <input
             ref={fileInputRef}
@@ -160,10 +163,10 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
             onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
           <button type="button" className="btn-sm primary" disabled={saving || !feature} onClick={handleSave}>
-            <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan AOI"}
+            <i className="bi bi-save" /> {saving ? t("admin.disaster.saving") : t("admin.disaster.saveAoi")}
           </button>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Gambar di peta, atau unggah .geojson/.json/.kml/.gpx/.zip shapefile
+            {t("admin.disaster.drawOrUploadAoi")}
           </span>
         </div>
         {error && <div className="alert alert-danger py-1 px-2 small">{error}</div>}
@@ -186,25 +189,25 @@ export default function AoiManager({ eventId, aoi, onSaved }: Props) {
               <div className="stat-val">
                 {aoi.area_ha != null ? aoi.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 }) : "—"}
               </div>
-              <div className="stat-label">Luas (ha)</div>
+              <div className="stat-label">{t("admin.disaster.aoiArea")}</div>
             </div>
             <div className="stat-card">
               <div className="stat-val" style={{ fontSize: 13 }}>
                 {aoi.centroid ? `${aoi.centroid.lat.toFixed(4)}, ${aoi.centroid.lng.toFixed(4)}` : "—"}
               </div>
-              <div className="stat-label">Centroid</div>
+              <div className="stat-label">{t("admin.disaster.centroid")}</div>
             </div>
             <div className="stat-card">
               <div className="stat-val" style={{ fontSize: 11 }}>
                 {aoi.bbox ? aoi.bbox.map((n) => n.toFixed(2)).join(", ") : "—"}
               </div>
-              <div className="stat-label">Bbox</div>
+              <div className="stat-label">{t("admin.disaster.bbox")}</div>
             </div>
             <div className="stat-card">
               <div className="stat-val" style={{ fontSize: 13 }}>
-                {aoi.source}
+                {sourceLabel(aoi.source)}
               </div>
-              <div className="stat-label">Sumber</div>
+              <div className="stat-label">{t("admin.disaster.aoiSource")}</div>
             </div>
           </div>
         )}

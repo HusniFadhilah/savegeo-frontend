@@ -2,13 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import TablePagination from "@/components/ui/TablePagination";
 import InfoTip from "@/components/ui/InfoTip";
 import { AdminTableNumberCell, AdminTableNumberHeader } from "./AdminTableNumber";
+import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 import {
   downloadJson,
   FIELD_CSV_HEADER,
   FIELD_POOLS,
-  FIELD_REFERENCE_LABELS,
-  FIELD_EXCLUSION_LABELS,
-  fieldPoolLabel,
   fieldApi,
   type Assessment,
   type CsvPreview,
@@ -20,23 +18,31 @@ import {
 import FieldObservationForm from "./FieldObservationForm";
 import FieldValidationPlot from "./FieldValidationPlot";
 
-const fmt = (n?: number | null) =>
-  n == null ? "—" : n.toLocaleString("id-ID", { maximumFractionDigits: 3 });
-function MetricRow({ label, metric, index }: { label: string; metric?: Metric; index: number }) {
+const fmt = (n: number | null | undefined, language: "id" | "en") =>
+  n == null ? "—" : formatNumber(n, language, { maximumFractionDigits: 3 });
+function MetricRow({ label, metric, index, language }: { label: string; metric?: Metric; index: number; language: "id" | "en" }) {
   return (
     <tr>
       <AdminTableNumberCell index={index} />
       <td title={metric?.reason}>{label}</td>
       <td>{metric?.n_plots ?? "—"}</td>
-      <td>{fmt(metric?.rmse)}</td>
-      <td>{fmt(metric?.mae)}</td>
-      <td>{fmt(metric?.bias)}</td>
-      <td>{fmt(metric?.r2)}</td>
+      <td>{fmt(metric?.rmse, language)}</td>
+      <td>{fmt(metric?.mae, language)}</td>
+      <td>{fmt(metric?.bias, language)}</td>
+      <td>{fmt(metric?.r2, language)}</td>
     </tr>
   );
 }
 
 export default function FieldCalibrationPanel({ datasetId }: { datasetId: string }) {
+  const { t, language } = useI18nStore();
+  const poolLabel = (value: string) => {
+    const pool = value.includes("aboveground") || value === "agb" ? "agb"
+      : value.includes("belowground") || value === "bgb" ? "bgb"
+        : value.includes("soil_organic") || value === "soc" ? "soc"
+          : value.includes("litter") ? "litter" : value.includes("deadwood") ? "deadwood" : null;
+    return pool ? t(`admin.fieldCalibration.pool.${pool}`) : value;
+  };
   const [rows, setRows] = useState<FieldObservation[]>([]);
   const [total, setTotal] = useState(0);
   const [recordsTotal, setRecordsTotal] = useState(0);
@@ -257,25 +263,25 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     URL.revokeObjectURL(url);
   }
   return (
-    <section className="field-calibration-panel" aria-label="Data lapangan dan kalibrasi per pool">
+    <section className="field-calibration-panel" aria-label={t("admin.fieldCalibration.panelAria")}>
       <header className="field-calibration-panel__header">
         <div className="field-calibration-panel__title">
           <span className="field-calibration-panel__icon"><i className="bi bi-clipboard-data" aria-hidden="true" /></span>
           <div>
-            <h3>Data lapangan dan kalibrasi karbon</h3>
-            <span>{inventory?.total_records ?? recordsTotal} pengukuran <span aria-hidden="true">·</span> 5 pool <span aria-hidden="true">·</span> Mg C/ha <span aria-hidden="true">·</span> WGS84</span>
+            <h3>{t("admin.fieldCalibration.panelTitle")}</h3>
+            <span>{t("admin.fieldCalibration.inventorySummary", { records: formatNumber(inventory?.total_records ?? recordsTotal, language) })}</span>
           </div>
-          <InfoTip label="Panduan data lapangan dan kalibrasi" content="Pisahkan plot kalibrasi dan validasi sejak awal. Persamaan allometri, rasio akar:tajuk, metode laboratorium, sumber, luas, dan tanggal pengukuran perlu dicatat per pengamatan. Ringkasan mencakup seluruh kunjungan. Kalibrasi memerlukan minimal tiga plot; statistik validasi terpisah memerlukan minimal dua plot lain. Evaluasi menyaring kesesuaian tahun, dukungan spasial, dan kedalaman SOC." />
+          <InfoTip label={t("admin.fieldCalibration.guideTitle")} content={t("admin.fieldCalibration.guideText")} />
         </div>
         <button type="button" className="btn btn-light field-calibration-panel__template" onClick={template}>
-          <i className="bi bi-download" aria-hidden="true" /> Unduh template CSV
+          <i className="bi bi-download" aria-hidden="true" /> {t("admin.fieldCalibration.downloadTemplate")}
         </button>
       </header>
       <div className="field-calibration-panel__body">
       <div
         className="field-pool-filters"
         role="group"
-        aria-label="Filter data berdasarkan pool"
+        aria-label={t("admin.fieldCalibration.poolFilter")}
       >
         <button
           type="button"
@@ -286,9 +292,9 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             setPage(1);
           }}
         >
-          <strong>Semua pool</strong><small>{inventory?.total_records ?? recordsTotal} pengukuran</small>
+          <strong>{t("admin.fieldCalibration.allPools")}</strong><small>{t("admin.fieldCalibration.measurementCount", { count: formatNumber(inventory?.total_records ?? recordsTotal, language) })}</small>
         </button>
-        {FIELD_POOLS.map(({ value, label }) => (
+        {FIELD_POOLS.map(({ value }) => (
           <button
             type="button"
             key={value}
@@ -300,24 +306,27 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             }}
           >
             <strong className="d-block">
-              {label} · {inventory?.pools[value].records ?? "—"}
+              {poolLabel(value)} · {inventory?.pools[value].records ?? "—"}
             </strong>
             <small>
               {inventory
-                ? `${inventory.pools[value].calibration_plots} plot kalibrasi · ${inventory.pools[value].validation_plots} plot validasi`
-                : "Memuat ringkasan…"}
+                ? t("admin.fieldCalibration.plotCounts", {
+                    calibration: formatNumber(inventory.pools[value].calibration_plots, language),
+                    validation: formatNumber(inventory.pools[value].validation_plots, language),
+                  })
+                : t("admin.fieldCalibration.loadingSummary")}
             </small>
           </button>
         ))}
       </div>
       <FieldObservationForm datasetId={datasetId} onSaved={changed} />
       <details className="field-panel-accordion">
-        <summary className="fw-semibold">Impor CSV · pratinjau sebelum menyimpan</summary>
+        <summary className="fw-semibold">{t("admin.fieldCalibration.csvImportTitle")}</summary>
         <div className="d-flex gap-2 flex-wrap mt-3">
           <input
             type="file"
             accept=".csv"
-            aria-label="Berkas pengukuran lapangan CSV"
+            aria-label={t("admin.fieldCalibration.csvFile")}
             disabled={busy}
             onChange={(e) => {
               setFile(e.target.files?.[0] ?? null);
@@ -330,7 +339,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             disabled={busy || !file}
             onClick={() => void csv(true)}
           >
-            Periksa CSV
+            {t("admin.fieldCalibration.checkCsv")}
           </button>
           <button
             className="btn btn-primary btn-sm"
@@ -338,25 +347,22 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             disabled={busy || !preview?.valid}
             onClick={() => void csv(false)}
           >
-            Simpan seluruh baris
+            {t("admin.fieldCalibration.saveAllRows")}
           </button>
         </div>
         <p className="small text-muted mt-2">
-          Nilai karbon dan biomassa kering dibedakan oleh kolom quantity. Prediksi opsional dapat
-          ditambahkan kemudian. soil_layers_json dapat memuat lapisan SOC; fraksi kasar memakai
-          persen volume dan BD tanah halus. Maksimum 2.000 baris / 5 MB; jika satu baris salah,
-          seluruh impor dibatalkan.
+          {t("admin.fieldCalibration.csvHelp")}
         </p>
         {preview && (
           <>
             <p>
-              {preview.preview.length} baris valid; {preview.errors.length} kesalahan.
+              {t("admin.fieldCalibration.previewSummary", { valid: preview.preview.length, errors: preview.errors.length })}
             </p>
             {preview.errors.length > 0 && (
               <ul className="text-danger">
                 {preview.errors.slice(0, 15).map((row) => (
                   <li key={row.row}>
-                    Baris {row.row}: {row.message}
+                    {t("admin.fieldCalibration.csvRowError", { row: row.row, message: row.message })}
                   </li>
                 ))}
               </ul>
@@ -366,11 +372,11 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 <thead>
                   <tr>
                     <AdminTableNumberHeader />
-                    <th>Plot</th>
-                    <th>Pool</th>
-                    <th>Peran</th>
+                    <th>{t("admin.fieldObservation.plotId")}</th>
+                    <th>{t("admin.fieldObservation.pool")}</th>
+                    <th>{t("admin.fieldObservation.plotRole")}</th>
                     <th>Mg C/ha</th>
-                    <th>Catatan</th>
+                    <th>{t("admin.fieldCalibration.notes")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,8 +385,8 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                       <AdminTableNumberCell index={i} />
                       <td>{row.plot_id}</td>
                       <td>{row.pool.toUpperCase()}</td>
-                      <td>{row.role}</td>
-                      <td>{fmt(row.observed_mg_c_ha)}</td>
+                      <td>{row.role === "calibration" ? t("admin.fieldObservation.calibration") : t("admin.fieldObservation.independentValidation")}</td>
+                      <td>{fmt(row.observed_mg_c_ha, language)}</td>
                       <td>{row.warnings.join(" ")}</td>
                     </tr>
                   ))}
@@ -395,12 +401,12 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           <thead>
             <tr>
               <AdminTableNumberHeader />
-              <th>Plot / tanggal</th>
-              <th>Pool / kedalaman</th>
-              <th>Peran</th>
-              <th>Karbon (Mg C/ha)</th>
-              <th>Referensi</th>
-              <th>Sumber prediksi</th>
+              <th>{t("admin.fieldCalibration.plotDate")}</th>
+              <th>{t("admin.fieldCalibration.poolDepth")}</th>
+              <th>{t("admin.fieldObservation.plotRole")}</th>
+              <th>{t("admin.fieldCalibration.carbonMg")}</th>
+              <th>{t("admin.fieldCalibration.reference")}</th>
+              <th>{t("admin.fieldCalibration.predictionSource")}</th>
             </tr>
           </thead>
           <tbody>
@@ -419,13 +425,13 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                     </small>
                   )}
                 </td>
-                <td>{row.role === "calibration" ? "Kalibrasi" : "Validasi"}</td>
-                <td>{fmt(row.observed_mg_c_ha)}</td>
+                <td>{row.role === "calibration" ? t("admin.fieldObservation.calibration") : t("admin.fieldObservation.independentValidation")}</td>
+                <td>{fmt(row.observed_mg_c_ha, language)}</td>
                 <td>
-                  {FIELD_REFERENCE_LABELS[row.raw.reference_type] ?? row.raw.reference_type}
+                  {t(`admin.fieldObservation.reference.${row.raw.reference_type}`)}
                   <small className="d-block text-muted">{row.raw.source}</small>
                 </td>
-                <td>{row.predictions.map((p) => p.source).join(", ") || "Belum dipasangkan"}</td>
+                <td>{row.predictions.map((p) => p.source).join(", ") || t("admin.fieldCalibration.noPredictionPaired")}</td>
               </tr>
             ))}
           </tbody>
@@ -438,38 +444,38 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
         recordsFiltered={total}
         pageSize={100}
         search={search}
-        searchPlaceholder="Cari plot, pool, referensi, sumber"
+        searchPlaceholder={t("admin.fieldCalibration.searchPlaceholder")}
         onSearchChange={(value) => { setSearch(value); setPage(1); }}
         onPrev={() => setPage((current) => Math.max(1, current - 1))}
         onNext={() => setPage((current) => Math.min(Math.max(1, Math.ceil(total / 100)), current + 1))}
       />
       {loadingRows && (
         <p role="status" className="text-muted">
-          Memuat pengukuran…
+          {t("admin.fieldCalibration.loadingMeasurements")}
         </p>
       )}
       {!loadingRows && !rows.length && (
         <p className="field-calibration-empty">
-          {search ? "Tidak ada pengukuran yang cocok dengan pencarian." : "Belum ada pengukuran pada filter ini. Berkas survei lama tetap tersedia di bagian sumber dataset."}
+          {search ? t("admin.fieldCalibration.noSearchMatch") : t("admin.fieldCalibration.noMeasurements")}
         </p>
       )}
       <details className="field-panel-accordion">
-        <summary className="fw-semibold">Ekstrak prediksi dari model GEE yang disetujui</summary>
+        <summary className="fw-semibold">{t("admin.fieldCalibration.extractTitle")}</summary>
         <form className="mt-3" onSubmit={(event) => void extractPredictions(event)}>
           <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
             <div className="row g-2">
               <label className="col-md-3 form-label">
-                Pool
+                {t("admin.fieldObservation.pool")}
                 <select
                   className="form-select"
                   value={autoPool}
                   onChange={(event) => setAutoPool(event.target.value as Pool)}
                 >
-                  {FIELD_POOLS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  {FIELD_POOLS.map((item) => <option key={item.value} value={item.value}>{poolLabel(item.value)}</option>)}
                 </select>
               </label>
               <label className="col-md-3 form-label">
-                Tahun prediksi
+                {t("admin.fieldCalibration.predictionYear")}
                 <input
                   name="year"
                   type="number"
@@ -482,7 +488,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 />
               </label>
               <label className="col-md-3 form-label">
-                Offset batch
+                {t("admin.fieldCalibration.batchOffset")}
                 <input
                   name="offset"
                   type="number"
@@ -495,7 +501,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 />
               </label>
               <label className="col-md-3 form-label">
-                Plot per batch
+                {t("admin.fieldCalibration.plotsPerBatch")}
                 <select name="limit" className="form-select" defaultValue="250">
                   <option value="50">50</option>
                   <option value="100">100</option>
@@ -504,44 +510,38 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 </select>
               </label>
               <label className="col-md-3 form-label">
-                Selisih tahun survei maksimum
+                {t("admin.fieldCalibration.maxSurveyYearGap")}
                 <input name="year_gap" type="number" min={0} max={5} step={1} defaultValue={0} className="form-control" />
               </label>
               {autoPool === "soc" && (
                 <>
                   <label className="col-md-3 form-label">
-                    Kedalaman SOC atas (cm)
+                    {t("admin.fieldObservation.targetDepthTop")}
                     <input name="soc_top" type="number" min={0} step="any" required className="form-control" />
                   </label>
                   <label className="col-md-3 form-label">
-                    Kedalaman SOC bawah (cm)
+                    {t("admin.fieldObservation.targetDepthBottom")}
                     <input name="soc_bottom" type="number" min={0.001} step="any" required className="form-control" />
                   </label>
                 </>
               )}
             </div>
             <p className="small text-muted mt-2 mb-2">
-              Sistem memilih model GEE aktif dengan evaluasi dan persetujuan independen yang cocok untuk pool ini.
-              Jalankan batch berikutnya dengan offset bertambah sesuai jumlah plot per batch. Geometri plot tersimpan
-              dipakai bila tersedia; selain itu digunakan lingkaran dengan luas setara dari titik koordinat dan luas plot.
-              Hasil tersimpan sebagai snapshot prediksi berversi dan tidak menimpa snapshot sebelumnya. Setelah ekstraksi,
-              pasangan dievaluasi otomatis terhadap plot kalibrasi dan validasi; SOC hanya dibandingkan pada kedalaman
-              yang Anda isi dan plot tanpa pasangan cocok tetap dilaporkan sebagai pengecualian. Evaluasi otomatis tidak
-              membuat kandidat kalibrasi; gunakan evaluasi manual setelah seluruh batch tersedia untuk membuat kandidat.
+              {t("admin.fieldCalibration.extractHelp")}
             </p>
             <button type="submit" className="btn btn-outline-success" disabled={busy}>
-              {busy ? "Mengekstrak dari Earth Engine…" : "Ekstrak prediksi batch"}
+              {busy ? t("admin.fieldCalibration.extracting") : t("admin.fieldCalibration.extractBatch")}
             </button>
           </fieldset>
         </form>
       </details>
       <details className="field-panel-accordion">
-        <summary className="fw-semibold">Pasangkan prediksi model / raster</summary>
+        <summary className="fw-semibold">{t("admin.fieldCalibration.pairPredictionTitle")}</summary>
         <form className="mt-3" onSubmit={(event) => void addPrediction(event)}>
           <fieldset disabled={busy || !rows.length}>
             <div className="row g-2">
               <label className="col-md-6 form-label">
-                Pengukuran (halaman aktif)
+                {t("admin.fieldCalibration.measurementActivePage")}
                 <select name="observation" className="form-select" required>
                   {rows.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -551,22 +551,22 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 </select>
               </label>
               <label className="col-md-6 form-label">
-                ID model/dataset, versi dan periode
+                {t("admin.fieldCalibration.modelVersionPeriod")}
                 <input
                   name="source"
                   className="form-control"
                   minLength={3}
                   maxLength={255}
                   required
-                  placeholder="model_v1_2025"
+                  placeholder={t("admin.fieldCalibration.modelIdPlaceholder")}
                 />
               </label>
               {[
-                ["year", "Tahun prediksi", 1900, 2100],
-                ["value", "Prediksi karbon (Mg C/ha)", 0, undefined],
-                ["scale", "Resolusi sumber (m)", 0.001, undefined],
-                ["top", "SOC: kedalaman atas (cm)", 0, undefined],
-                ["bottom", "SOC: kedalaman bawah (cm)", 0.001, undefined],
+                ["year", t("admin.fieldCalibration.predictionYear"), 1900, 2100],
+                ["value", t("admin.fieldCalibration.predictedCarbonMg"), 0, undefined],
+                ["scale", t("admin.fieldCalibration.sourceResolution"), 0.001, undefined],
+                ["top", t("admin.fieldCalibration.socDepthTop"), 0, undefined],
+                ["bottom", t("admin.fieldCalibration.socDepthBottom"), 0.001, undefined],
               ].map(([name, label, min, max]) => (
                 <label key={String(name)} className="col-md-4 form-label">
                   {label}
@@ -582,31 +582,29 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 </label>
               ))}
               <label className="col-md-4 form-label">
-                Dukungan spasial
+                {t("admin.fieldCalibration.spatialSupport")}
                 <select name="support" className="form-select">
-                  <option value="plot_mean">Rerata raster dalam plot</option>
-                  <option value="point_pixel">Satu piksel pada titik</option>
+                  <option value="plot_mean">{t("admin.fieldCalibration.plotRasterMean")}</option>
+                  <option value="point_pixel">{t("admin.fieldCalibration.pointPixel")}</option>
                 </select>
               </label>
             </div>
             <p className="small text-muted mt-2">
-              Masukkan densitas numerik raster asli, bukan nilai RGB atau total stok. Satu ID sumber
-              harus mewakili versi, periode, dan metode sampling yang konsisten. Prediksi tidak
-              menggantikan hasil pengukuran.
+              {t("admin.fieldCalibration.pairPredictionHelp")}
             </p>
             <button type="submit" className="btn btn-outline-primary">
-              Simpan pasangan prediksi
+              {t("admin.fieldCalibration.savePredictionPair")}
             </button>
           </fieldset>
         </form>
       </details>
       <details className="field-panel-accordion">
-        <summary className="fw-semibold">Validasi dan kalibrasi model</summary>
+        <summary className="fw-semibold">{t("admin.fieldCalibration.evaluateTitle")}</summary>
         <form className="mt-3" onSubmit={(event) => void evaluate(event)}>
           <fieldset disabled={busy || !(inventory?.total_records ?? total)}>
             <div className="row g-3">
               <label className="col-md-3 form-label">
-                Pool
+                {t("admin.fieldObservation.pool")}
                 <select
                   className="form-select"
                   value={pool}
@@ -615,12 +613,12 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                   <option value="agb">AGB</option>
                   <option value="bgb">BGB</option>
                   <option value="soc">SOC</option>
-                  <option value="litter">Litter / serasah</option>
-                  <option value="deadwood">Deadwood / kayu mati</option>
+                  <option value="litter">{poolLabel("litter")}</option>
+                  <option value="deadwood">{poolLabel("deadwood")}</option>
                 </select>
               </label>
               <label className="col-md-6 form-label">
-                ID sumber prediksi
+                {t("admin.fieldCalibration.predictionSourceId")}
                 <input
                   name="source"
                   list="field-prediction-sources"
@@ -641,7 +639,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                 </datalist>
               </label>
               <label className="col-md-3 form-label">
-                Selisih tahun maksimum
+                {t("admin.fieldCalibration.maxYearGap")}
                 <input
                   name="gap"
                   type="number"
@@ -656,7 +654,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               {pool === "soc" && (
                 <>
                   <label className="col-md-3 form-label">
-                    SOC atas (cm)
+                    {t("admin.fieldCalibration.socDepthTop")}
                     <input
                       name="top"
                       type="number"
@@ -667,7 +665,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
                     />
                   </label>
                   <label className="col-md-3 form-label">
-                    SOC bawah (cm)
+                    {t("admin.fieldCalibration.socDepthBottom")}
                     <input
                       name="bottom"
                       type="number"
@@ -683,11 +681,11 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             <label className="form-check mt-3">
               <input name="point" className="form-check-input" type="checkbox" />
               <span className="form-check-label">
-                Izinkan pasangan satu piksel titik (dukungan berbeda dari rerata plot)
+                {t("admin.fieldCalibration.allowPointPixel")}
               </span>
             </label>
             <button className="btn btn-primary mt-3" type="submit">
-              {busy ? "Menghitung…" : "Hitung evaluasi dan kandidat kalibrasi"}
+              {busy ? t("admin.fieldCalibration.calculating") : t("admin.fieldCalibration.runEvaluation")}
             </button>
           </fieldset>
         </form>
@@ -704,7 +702,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
       )}
       {history.length > 0 && (
         <label className="form-label mt-3 d-block">
-          Buka hasil evaluasi tersimpan (20 terbaru)
+          {t("admin.fieldCalibration.openSavedAssessments")}
           <select
             className="form-select"
             disabled={busy}
@@ -722,11 +720,11 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               }
             }}
           >
-            <option value="">Pilih evaluasi…</option>
+            <option value="">{t("admin.fieldCalibration.selectAssessment")}</option>
             {history.map((item) => (
               <option key={item.id} value={item.id}>
-                {fieldPoolLabel(item.target_pool)} ·{" "}
-                {new Date(item.created_at).toLocaleString("id-ID")} · {item.status}
+                {poolLabel(item.target_pool)} ·{" "}
+                {new Date(item.created_at).toLocaleString(language === "en" ? "en-US" : "id-ID")} · {item.status}
               </option>
             ))}
           </select>
@@ -736,28 +734,30 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
         <div className="field-assessment-card">
           <div className="d-flex gap-3 flex-wrap justify-content-between">
             <h4 className="h6">
-              Hasil evaluasi ·{" "}
-              {fieldPoolLabel(
+              {t("admin.fieldCalibration.assessmentResult")} ·{" "}
+              {poolLabel(
                 assessment.metrics.configuration?.pool ?? assessment.target_pool ?? "",
               )}{" "}
-              · {assessment.metrics.status === "computed" ? "Dihitung" : "Belum dapat dihitung"}
+              · {assessment.metrics.status === "computed" ? t("admin.fieldCalibration.computed") : t("admin.fieldCalibration.couldNotCompute")}
             </h4>
             <button
               className="btn btn-outline-secondary btn-sm"
               type="button"
               onClick={() => downloadJson(assessment, `field-assessment-${assessment.id}.json`)}
             >
-              Unduh laporan JSON
+              {t("admin.fieldCalibration.downloadJson")}
             </button>
           </div>
           <p>
-            {assessment.metrics.calibration_plots} plot kalibrasi ·{" "}
-            {assessment.metrics.validation_plots} plot validasi terpisah ·{" "}
-            {assessment.metrics.excluded.length} pengukuran dikecualikan
+            {t("admin.fieldCalibration.assessmentCounts", {
+              calibration: formatNumber(assessment.metrics.calibration_plots, language),
+              validation: formatNumber(assessment.metrics.validation_plots, language),
+              excluded: formatNumber(assessment.metrics.excluded.length, language),
+            })}
           </p>
           {assessment.metrics.configuration && (
             <p className="small text-muted">
-              Sumber prediksi: {assessment.metrics.configuration.prediction_source}
+              {t("admin.fieldCalibration.predictionSource")}: {assessment.metrics.configuration.prediction_source}
             </p>
           )}
           <div className="field-calibration-table-wrap">
@@ -765,49 +765,53 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               <thead>
                 <tr>
                   <AdminTableNumberHeader />
-                  <th>Evaluasi</th>
-                  <th>Plot</th>
+                  <th>{t("admin.fieldCalibration.evaluation")}</th>
+                  <th>{t("admin.fieldCalibration.plotCount")}</th>
                   <th>RMSE</th>
                   <th>MAE</th>
-                  <th>Bias</th>
+                  <th>{t("admin.fieldCalibration.bias")}</th>
                   <th>R²</th>
                 </tr>
               </thead>
               <tbody>
                 <MetricRow
                   index={0}
-                  label="Baseline pada kalibrasi"
+                  label={t("admin.fieldCalibration.baselineCalibration")}
                   metric={assessment.metrics.baseline_calibration}
+                  language={language}
                 />
                 <MetricRow
                   index={1}
-                  label="Kalibrasi: leave-one-plot-out"
+                  label={t("admin.fieldCalibration.crossValidation")}
                   metric={assessment.metrics.cross_validation}
+                  language={language}
                 />
                 <MetricRow
                   index={2}
-                  label="Baseline: validasi terpisah"
+                  label={t("admin.fieldCalibration.baselineValidation")}
                   metric={assessment.metrics.baseline_validation}
+                  language={language}
                 />
                 <MetricRow
                   index={3}
-                  label="Hasil kalibrasi: validasi terpisah"
+                  label={t("admin.fieldCalibration.calibratedValidation")}
                   metric={assessment.metrics.calibrated_validation}
+                  language={language}
                 />
               </tbody>
             </table>
           </div>
           <p className="small">
-            Galat dalam Mg C/ha; R² tanpa satuan. Tanda — berarti belum dapat dihitung.
+            {t("admin.fieldCalibration.metricNote")}
           </p>
           {assessment.metrics.artifact && (
             <p>
-              Kandidat: C terkalibrasi ={" "}
+              {t("admin.fieldCalibration.candidateEquation")} C ={" "}
               {assessment.metrics.artifact.clip_min === 0 ? "maks(0, " : ""}
-              {fmt(assessment.metrics.artifact.intercept)} +{" "}
-              {fmt(assessment.metrics.artifact.slope)} × prediksi sumber
+              {fmt(assessment.metrics.artifact.intercept, language)} +{" "}
+              {fmt(assessment.metrics.artifact.slope, language)} × {t("admin.fieldCalibration.sourcePrediction")}
               {assessment.metrics.artifact.clip_min === 0 ? ")" : ""}. Disimpan sebagai model
-              eksperimental lokal; belum diaktifkan.
+              {t("admin.fieldCalibration.experimentalNotActive")}
             </p>
           )}
           <p className="small text-muted">{assessment.metrics.method_note}</p>
@@ -831,11 +835,11 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
           </ul>
           {assessment.metrics.excluded.length > 0 && (
             <details>
-              <summary>Alasan pasangan tidak digunakan</summary>
+              <summary>{t("admin.fieldCalibration.excludedReasons")}</summary>
               <ul>
                 {assessment.metrics.excluded.map((r) => (
                   <li key={r.id}>
-                    {r.plot_id}: {FIELD_EXCLUSION_LABELS[r.reason] ?? r.reason}
+                    {r.plot_id}: {t(`admin.fieldCalibration.exclusion.${r.reason}`)}
                   </li>
                 ))}
               </ul>

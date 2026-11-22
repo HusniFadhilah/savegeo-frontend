@@ -9,6 +9,7 @@ import {
 } from "chart.js";
 import type { LcClassInfo, TransitionData } from "../types";
 import { translateLulcClass } from "../utils";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -20,7 +21,8 @@ interface Props {
 
 /** Horizontal net-change bar chart, ported from LCChange._renderNetChange (Plotly -> chart.js). */
 export default function NetChangeChart({ clsA, clsB, trans }: Props) {
-  if (!trans) return <p className="text-muted small">Matriks transisi piksel diperlukan untuk menghitung perubahan pada area valid bersama.</p>;
+  const { t, language } = useI18nStore();
+  if (!trans) return <p className="text-muted small">{t("lc.netChange.requiresTransition")}</p>;
   const all = [...new Set([...Object.keys(clsA), ...Object.keys(clsB)])];
   const rows = all
     .map((cls) => ({
@@ -29,13 +31,13 @@ export default function NetChangeChart({ clsA, clsB, trans }: Props) {
     }))
     .sort((a, b) => a.change - b.change);
 
-  if (!rows.length) return <p className="text-muted small">Tidak ada data.</p>;
+  if (!rows.length) return <p className="text-muted small">{t("lc.netChange.noData")}</p>;
 
   const data = {
     labels: rows.map((r) => translateLulcClass(r.cls)),
     datasets: [
       {
-        label: "Perubahan Luas (ha)",
+        label: t("lc.netChange.areaChange"),
         data: rows.map((r) => Number(r.change.toFixed(1))),
         backgroundColor: rows.map((r) =>
           r.change > 0.5 ? "rgba(39,174,96,0.82)" : r.change < -0.5 ? "rgba(192,57,43,0.82)" : "rgba(149,165,166,0.65)",
@@ -47,8 +49,8 @@ export default function NetChangeChart({ clsA, clsB, trans }: Props) {
   return (
     <div>
       <p className="text-muted mb-2" style={{ fontSize: ".8rem" }}>
-        <i className="fas fa-info-circle" /> <span className="text-success">Hijau = bertambah</span> ·{" "}
-        <span className="text-danger">Merah = berkurang</span> (nilai riil dari backend)
+        <i className="fas fa-info-circle" /> <span className="text-success">{t("lc.netChange.increaseColor")}</span> ·{" "}
+        <span className="text-danger">{t("lc.netChange.decreaseColor")}</span> ({t("lc.netChange.backendValues")})
       </p>
       <div style={{ height: Math.max(280, rows.length * 32) }}>
         <Bar
@@ -66,7 +68,7 @@ export default function NetChangeChart({ clsA, clsB, trans }: Props) {
               },
             },
             scales: {
-              x: { title: { display: true, text: "Perubahan Luas (ha)" } },
+                  x: { title: { display: true, text: t("lc.netChange.areaChange") } },
             },
           }}
         />

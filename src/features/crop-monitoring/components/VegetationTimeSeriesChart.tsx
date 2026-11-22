@@ -8,6 +8,7 @@ import { runCropMonitoring } from "../api";
 import { fmtNum } from "../utils";
 import type { CropMonitoringPeriodInput, TimeseriesResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { localizeCropMessage } from "../utils";
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend);
 
@@ -45,7 +46,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
       });
       onResult(newIndex, res.sub_analyses.timeseries ?? { available: false });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("crop.timeseries.reloadFailed"));
+      setError(err instanceof ApiError ? localizeCropMessage(err.message, t) ?? err.message : t("crop.timeseries.reloadFailed"));
     } finally {
       setRunning(false);
     }
@@ -103,7 +104,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
               {TREND_LABEL[timeseries.trend] ? t(TREND_LABEL[timeseries.trend]) : timeseries.trend}
             </span>
             {timeseries.last_image_date && (
-              <span className="text-muted"> · citra terakhir {timeseries.last_image_date}</span>
+              <span className="text-muted"> · {t("crop.lastImage")} {timeseries.last_image_date}</span>
             )}
           </div>
           <div style={{ height: 300 }}>
@@ -127,7 +128,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                  x: { title: { display: true, text: "Periode" } },
+                  x: { title: { display: true, text: t("crop.period.label") } },
                   y: { title: { display: true, text: timeseries.index } },
                 },
               }}
@@ -135,7 +136,7 @@ export default function VegetationTimeSeriesChart({ fieldId, period, timeseries,
           </div>
           {timeseries.anomaly_periods.length > 0 && (
             <small className="text-muted d-block mt-2">
-              Periode anomali: {timeseries.anomaly_periods.join(", ")}
+              {t("crop.timeseries.anomalyPeriods")}: {timeseries.anomaly_periods.join(", ")}
             </small>
           )}
         </>

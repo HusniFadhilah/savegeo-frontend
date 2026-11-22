@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { fieldApi, type Pool } from "./carbonFieldApi";
 import DetritusSampleFields from "./DetritusSampleFields";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 export default function FieldObservationForm({
   datasetId,
@@ -9,6 +10,7 @@ export default function FieldObservationForm({
   datasetId: string;
   onSaved: () => void;
 }) {
+  const t = useI18nStore((state) => state.t);
   const [pool, setPool] = useState<Pool>("agb");
   const [layerMode, setLayerMode] = useState(false);
   const [layers, setLayers] = useState([0]);
@@ -25,7 +27,10 @@ export default function FieldObservationForm({
     const str = (name: string) => String(data.get(name) ?? "");
     const number = (name: string) => {
       const value = str(name);
-      if (!value.trim() || !Number.isFinite(Number(value))) throw new Error(`Isi angka ${name}.`);
+      if (!value.trim() || !Number.isFinite(Number(value)))
+        throw new Error(t("admin.fieldObservation.numericRequired", {
+          field: t(`admin.fieldObservation.field.${name.replace(/_\d+$/, "")}`),
+        }));
       return Number(value);
     };
     setBusy(true);
@@ -85,11 +90,9 @@ export default function FieldObservationForm({
       if (!derivedSample && (pool !== "soc" || !layerMode)) record.value = number("value");
       await fieldApi.add(datasetId, record);
       onSaved();
-      setNotice(
-        `Pengukuran ${str("plot_id")} tersimpan. Ganti ID plot atau tanggal untuk pengukuran berikutnya.`,
-      );
+      setNotice(t("admin.fieldObservation.saved", { plot: str("plot_id") }));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Pengukuran gagal disimpan.");
+      setError(reason instanceof Error ? reason.message : t("admin.fieldObservation.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -110,12 +113,12 @@ export default function FieldObservationForm({
   );
   return (
     <details className="field-panel-accordion">
-      <summary className="fw-semibold">Tambah pengukuran plot</summary>
+      <summary className="fw-semibold">{t("admin.fieldObservation.addTitle")}</summary>
       <form className="mt-3" onSubmit={(event) => void submit(event)}>
         <fieldset disabled={busy}>
           <div className="row g-3">
             <label className="col-md-4 form-label">
-              Pool
+              {t("admin.fieldObservation.pool")}
               <select
                 value={pool}
                 className="form-select"
@@ -130,16 +133,16 @@ export default function FieldObservationForm({
                 <option value="agb">AGB</option>
                 <option value="bgb">BGB</option>
                 <option value="soc">SOC</option>
-                <option value="litter">Litter / serasah</option>
-                <option value="deadwood">Deadwood / kayu mati</option>
+                <option value="litter">{t("admin.fieldCalibration.pool.litter")}</option>
+                <option value="deadwood">{t("admin.fieldCalibration.pool.deadwood")}</option>
               </select>
             </label>
             <label className="col-md-4 form-label">
-              ID plot
+              {t("admin.fieldObservation.plotId")}
               <input name="plot_id" className="form-control" maxLength={64} required />
             </label>
             <label className="col-md-4 form-label">
-              Tanggal pengukuran
+              {t("admin.fieldObservation.surveyDate")}
               <input
                 name="survey_date"
                 type="date"
@@ -149,46 +152,46 @@ export default function FieldObservationForm({
               />
             </label>
             <label className="col-md-4 form-label">
-              Peran plot
+              {t("admin.fieldObservation.plotRole")}
               <select name="role" className="form-select">
-                <option value="calibration">Kalibrasi</option>
-                <option value="validation">Validasi terpisah</option>
+                <option value="calibration">{t("admin.fieldObservation.calibration")}</option>
+                <option value="validation">{t("admin.fieldObservation.independentValidation")}</option>
               </select>
             </label>
-            {numeric("latitude", "Latitude (WGS84)", -90, 90)}
-            {numeric("longitude", "Longitude (WGS84)", -180, 180)}
-            {numeric("area", "Luas plot terukur (m²)", 0.0001)}
+            {numeric("latitude", t("admin.fieldObservation.latitude"), -90, 90)}
+            {numeric("longitude", t("admin.fieldObservation.longitude"), -180, 180)}
+            {numeric("area", t("admin.fieldObservation.measuredPlotArea"), 0.0001)}
             {(pool === "litter" || pool === "deadwood") && (
               <label className="col-md-4 form-label">
-                Cara input
+                {t("admin.fieldObservation.inputMethod")}
                 <select
                   className="form-select"
                   value={detritusMode}
                   onChange={(e) => setDetritusMode(e.target.value)}
                 >
-                  <option value="reported">Nilai stok / biomassa yang sudah dihitung</option>
+                  <option value="reported">{t("admin.fieldObservation.reportedValue")}</option>
                   <option value="sample">
-                    {pool === "litter" ? "Sampel basah dan kering" : "Volume dan kerapatan kayu"}
+                    {pool === "litter" ? t("admin.fieldObservation.wetDrySample") : t("admin.fieldObservation.volumeDensitySample")}
                   </option>
                 </select>
               </label>
             )}
             {pool !== "soc" && (
               <label className="col-md-4 form-label">
-                Jenis referensi
+                {t("admin.fieldObservation.referenceType")}
                 <select name="reference_type" className="form-select">
-                  <option value="field_measurement">Pengukuran lapangan langsung</option>
-                  <option value="laboratory">Pengukuran laboratorium</option>
-                  <option value="allometry">Allometri terdokumentasi</option>
+                  <option value="field_measurement">{t("admin.fieldObservation.reference.field")}</option>
+                  <option value="laboratory">{t("admin.fieldObservation.reference.lab")}</option>
+                  <option value="allometry">{t("admin.fieldObservation.reference.allometry")}</option>
                   {pool === "bgb" && (
-                    <option value="root_shoot_ratio">Turunan rasio akar:tajuk</option>
+                    <option value="root_shoot_ratio">{t("admin.fieldObservation.reference.rootShoot")}</option>
                   )}
                 </select>
               </label>
             )}
             {!derivedSample && (
               <label className="col-md-4 form-label">
-                Satuan hasil
+                {t("admin.fieldObservation.resultUnit")}
                 <select name="unit" className="form-select">
                   <option value="Mg/ha">Mg/ha</option>
                   <option value="kg/plot">kg/plot</option>
@@ -199,7 +202,7 @@ export default function FieldObservationForm({
               <>
                 {!derivedSample && (
                   <label className="col-md-4 form-label">
-                    Besaran
+                    {t("admin.fieldObservation.quantity")}
                     <select
                       name="quantity"
                       className="form-select"
@@ -208,14 +211,14 @@ export default function FieldObservationForm({
                         setQuantity(event.target.value as "carbon" | "dry_biomass")
                       }
                     >
-                      <option value="carbon">Karbon</option>
-                      <option value="dry_biomass">Biomassa kering</option>
+                      <option value="carbon">{t("admin.fieldObservation.carbon")}</option>
+                      <option value="dry_biomass">{t("admin.fieldObservation.dryBiomass")}</option>
                     </select>
                   </label>
                 )}
                 {(derivedSample || quantity === "dry_biomass") && (
                   <label className="col-md-4 form-label">
-                    Fraksi karbon (wajib untuk biomassa)
+                    {t("admin.fieldObservation.carbonFraction")}
                     <input
                       name="fraction"
                       type="number"
@@ -231,12 +234,12 @@ export default function FieldObservationForm({
             )}
             {!derivedSample &&
               (pool !== "soc" || !layerMode) &&
-              numeric("value", "Nilai hasil sesuai satuan", 0)}
+              numeric("value", t("admin.fieldObservation.resultValue"), 0)}
             {derivedSample && (pool === "litter" || pool === "deadwood") && (
               <DetritusSampleFields key={pool} pool={pool} />
             )}
             <label className="col-md-6 form-label">
-              Metode / persamaan / uji laboratorium
+              {t("admin.fieldObservation.method")}
               <input
                 name="method"
                 className="form-control"
@@ -246,7 +249,7 @@ export default function FieldObservationForm({
               />
             </label>
             <label className="col-md-6 form-label">
-              Sumber / laporan / kode hasil laboratorium
+              {t("admin.fieldObservation.source")}
               <input
                 name="source"
                 className="form-control"
@@ -257,35 +260,33 @@ export default function FieldObservationForm({
             </label>
             {pool === "soc" && (
               <>
-                {numeric("top", "Kedalaman target atas (cm)", 0)}
-                {numeric("bottom", "Kedalaman target bawah (cm)", 0.01, 1000)}
+                {numeric("top", t("admin.fieldObservation.targetDepthTop"), 0)}
+                {numeric("bottom", t("admin.fieldObservation.targetDepthBottom"), 0.01, 1000)}
                 <label className="col-md-4 form-label">
-                  Input SOC
+                  {t("admin.fieldObservation.socInput")}
                   <select
                     className="form-select"
                     value={layerMode ? "layers" : "stock"}
                     onChange={(e) => setLayerMode(e.target.value === "layers")}
                   >
-                    <option value="stock">Stok dari laporan laboratorium</option>
-                    <option value="layers">Hitung dari lapisan tanah</option>
+                    <option value="stock">{t("admin.fieldObservation.socStockFromReport")}</option>
+                    <option value="layers">{t("admin.fieldObservation.socCalculateLayers")}</option>
                   </select>
                 </label>
                 {layerMode && (
                   <div className="col-12">
                     <p className="small text-muted">
-                      BD memakai massa tanah halus per volume tanah halus (tanpa fragmen kasar).
-                      Fragmen kasar diisi sebagai persen volume. Lapisan harus berurutan dan
-                      mencakup seluruh kedalaman target.
+                      {t("admin.fieldObservation.soilLayerHint")}
                     </p>
                     {layers.map((id, i) => (
                       <div className="field-soil-layer" key={id}>
-                        <strong>Lapisan {i + 1}</strong>
+                        <strong>{t("admin.fieldObservation.layer", { index: i + 1 })}</strong>
                         <div className="row g-2">
-                          {numeric(`top_${id}`, "Atas (cm)", 0)}
-                          {numeric(`bottom_${id}`, "Bawah (cm)", 0.01, 1000)}
-                          {numeric(`carbon_${id}`, "C organik (g/kg)", 0, 1000)}
-                          {numeric(`density_${id}`, "Bulk density (g/cm³)", 0.001, 3)}
-                          {numeric(`coarse_${id}`, "Fragmen kasar (% volume)", 0, 99.99)}
+                          {numeric(`top_${id}`, t("admin.fieldObservation.topCm"), 0)}
+                          {numeric(`bottom_${id}`, t("admin.fieldObservation.bottomCm"), 0.01, 1000)}
+                          {numeric(`carbon_${id}`, t("admin.fieldObservation.organicCarbon"), 0, 1000)}
+                          {numeric(`density_${id}`, t("admin.fieldObservation.bulkDensity"), 0.001, 3)}
+                          {numeric(`coarse_${id}`, t("admin.fieldObservation.coarseFragments"), 0, 99.99)}
                         </div>
                         {layers.length > 1 && (
                           <button
@@ -293,7 +294,7 @@ export default function FieldObservationForm({
                             className="btn btn-sm btn-outline-danger mt-2"
                             onClick={() => setLayers(layers.filter((key) => key !== id))}
                           >
-                            Hapus lapisan {i + 1}
+                            {t("admin.fieldObservation.removeLayer", { index: i + 1 })}
                           </button>
                         )}
                       </div>
@@ -304,7 +305,7 @@ export default function FieldObservationForm({
                       disabled={layers.length >= 30}
                       onClick={() => setLayers([...layers, Math.max(...layers) + 1])}
                     >
-                      Tambah lapisan
+                      {t("admin.fieldObservation.addLayer")}
                     </button>
                   </div>
                 )}
@@ -312,11 +313,10 @@ export default function FieldObservationForm({
             )}
           </div>
           <p className="small text-muted mt-3">
-            Pengukuran disimpan sebagai Mg C/ha. Tanggal baru menambah kunjungan; data lama tidak
-            ditimpa. Plot validasi tidak boleh dipakai untuk kalibrasi pool yang sama.
+            {t("admin.fieldObservation.saveNote")}
           </p>
           <button className="btn btn-primary" type="submit">
-            {busy ? "Menyimpan…" : "Simpan pengukuran"}
+            {busy ? t("admin.fieldObservation.saving") : t("admin.fieldObservation.save")}
           </button>
         </fieldset>
         {notice && (

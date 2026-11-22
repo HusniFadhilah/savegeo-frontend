@@ -1,6 +1,7 @@
 import type { LcClassInfo, LcDataset, TransitionData } from "../types";
 import { colorForClass, fmtHa, translateLulcClass } from "../utils";
 import type { LcYearResult } from "../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   trans: TransitionData;
@@ -54,6 +55,7 @@ function makeRows(
 
 /** Ports LCChange._renderSummaryTable: gain/loss class breakdown + biggest single transition insight. */
 export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) {
+  const t = useI18nStore((state) => state.t);
   const { gains, losses, matrix, allClasses } = trans;
   const totalAreaA = trans.totalAreaHa ?? (Object.values(clsA).reduce((s, c) => s + Number(c.area || 0), 0) || 1);
 
@@ -72,18 +74,18 @@ export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) 
 
   return (
     <div>
-      <p className="small text-muted">Perolehan dan kehilangan bruto dari piksel yang berubah; persentase terhadap area valid bersama.</p>
+      <p className="small text-muted">{t("lc.summary.description")}</p>
       <div className="row">
         <div className="col-md-6">
           <h6 className="text-success mb-2">
-            <i className="fas fa-arrow-up" /> Kelas Bertambah
+            <i className="fas fa-arrow-up" /> {t("lc.summary.gains")}
           </h6>
           <div className="table-responsive">
             <table className="table table-sm table-hover mb-0">
               <thead className="table-success">
                 <tr>
-                  <th>Kelas</th>
-                  <th>Perubahan</th>
+                  <th>{t("lc.summary.class")}</th>
+                  <th>{t("lc.summary.change")}</th>
                   <th>% Total</th>
                 </tr>
               </thead>
@@ -93,14 +95,14 @@ export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) 
         </div>
         <div className="col-md-6">
           <h6 className="text-danger mb-2">
-            <i className="fas fa-arrow-down" /> Kelas Berkurang
+            <i className="fas fa-arrow-down" /> {t("lc.summary.losses")}
           </h6>
           <div className="table-responsive">
             <table className="table table-sm table-hover mb-0">
               <thead className="table-danger">
                 <tr>
-                  <th>Kelas</th>
-                  <th>Perubahan</th>
+                  <th>{t("lc.summary.class")}</th>
+                  <th>{t("lc.summary.change")}</th>
                   <th>% Total</th>
                 </tr>
               </thead>
@@ -111,7 +113,7 @@ export default function SummaryPanel({ trans, clsA, dataset, yearData }: Props) 
       </div>
       {bigVal > 0.5 && (
         <div className="alert alert-secondary mt-3 py-2" style={{ fontSize: ".85rem" }}>
-          <i className="fas fa-lightbulb text-warning" /> <strong>Transisi terbesar (estimasi):</strong>{" "}
+          <i className="fas fa-lightbulb text-warning" /> <strong>{t("lc.summary.largestTransition")}</strong>{" "}
           {translateLulcClass(bigFrom)} → {translateLulcClass(bigTo)}: <strong>{fmtHa(bigVal)} ha</strong>
         </div>
       )}

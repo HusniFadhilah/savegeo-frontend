@@ -5,6 +5,7 @@ import { updateField } from "../api";
 import { ApiError } from "@/services/apiClient";
 import CropPanelAccordion from "./CropPanelAccordion";
 import type { Commodity, Field, UpdateFieldPayload } from "../types";
+import { localizeCropLabel, localizeCropMessage } from "../utils";
 
 interface Props {
   commodities: Commodity[];
@@ -31,7 +32,7 @@ export default function CropInfoPanel({ commodities, field }: Props) {
       await updateField(field.id, partial);
       await setSelectedField(field.id);
     } catch (err) {
-      setError(err instanceof ApiError ? (err.payload as { detail?: string })?.detail ?? err.message : t("crop.field.updateFailed"));
+      setError(err instanceof ApiError ? localizeCropMessage((err.payload as { detail?: string })?.detail ?? err.message, t) ?? err.message : t("crop.field.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -61,7 +62,7 @@ export default function CropInfoPanel({ commodities, field }: Props) {
               >
                 {commodities.map((c) => (
                   <option key={c.key} value={c.key}>
-                    {c.label}
+                    {localizeCropLabel(c.label, t)}
                   </option>
                 ))}
               </select>

@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { createAnalysisRun, listDisasterModels, runAnalysis } from "../../api";
 import type { AnalysisRunWithResult, DisasterAoi, DisasterModelRegistryEntry, SatelliteImagery } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
-const RUN_STATUS_LABEL: Record<string, string> = {
-  queued: "Queued",
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
-  review_required: "Review Required",
-  published: "Published",
-  stale: "Stale - perlu dihitung ulang",
+const RUN_STATUS_KEYS: Record<string, string> = {
+  queued: "admin.disaster.queuedStatus",
+  processing: "admin.disaster.processingStatus",
+  completed: "admin.disaster.completedStatus",
+  failed: "admin.disaster.failedStatus",
+  review_required: "admin.disaster.reviewRequiredStatus",
+  published: "admin.disaster.published",
+  stale: "admin.disaster.staleStatus",
 };
 const RUN_STATUS_BADGE: Record<string, string> = {
   queued: "badge-gray",
@@ -30,8 +31,8 @@ interface Props {
   onChanged: () => void;
 }
 
-function imageryLabel(img: SatelliteImagery): string {
-  return `${img.satellite} — ${img.acquisition_date}${img.is_primary ? " (Utama)" : ""}`;
+function imageryLabel(img: SatelliteImagery, t: (key: string) => string): string {
+  return `${img.satellite} — ${img.acquisition_date}${img.is_primary ? ` (${t("admin.disaster.primary")})` : ""}`;
 }
 
 /**
@@ -41,6 +42,7 @@ function imageryLabel(img: SatelliteImagery): string {
  * that disabled models never show a runnable control anywhere.
  */
 export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged }: Props) {
+  const t = useI18nStore((state) => state.t);
   const { notify } = useAdmin();
   const [models, setModels] = useState<DisasterModelRegistryEntry[]>([]);
   const [loadingModels, setLoadingModels] = useState(true);
@@ -62,7 +64,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
         if (!cancelled) setModels(res.models);
       })
       .catch((err) => {
-        if (!cancelled) setModelsError(err instanceof Error ? err.message : "Gagal memuat daftar model");
+        if (!cancelled) setModelsError(err instanceof Error ? err.message : t("admin.disaster.loadModelsFailed"));
       })
       .finally(() => {
         if (!cancelled) setLoadingModels(false);
@@ -70,7 +72,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, t]);
 
   const runsByModel = new Map<string, AnalysisRunWithResult[]>();
   for (const r of runs) {
@@ -90,17 +92,17 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
 
   const handleCreateRun = async (model: DisasterModelRegistryEntry) => {
     if (!aoi) {
-      setConfigError("AOI belum dikonfigurasi untuk kejadian ini");
+      setConfigError(t("admin.disaster.aoiNotConfigured"));
       return;
     }
     const needsPre = model.input_type.includes("pre_imagery");
     const needsPost = model.input_type.includes("post_imagery");
     if (needsPre && !preImageryId) {
-      setConfigError("Pilih citra pra-bencana");
+      setConfigError(t("admin.disaster.choosePreImagery"));
       return;
     }
     if (needsPost && !postImageryId) {
-      setConfigError("Pilih citra pasca-bencana");
+      setConfigError(t("admin.disaster.choosePostImagery"));
       return;
     }
     setCreating(true);
@@ -110,16 +112,16 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
       if (parametersText.trim()) {
         try {
           const parsed = JSON.parse(parametersText);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("JSON harus berupa object");
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(t("admin.disaster.jsonObject"));
           parameters = parsed as Record<string, unknown>;
         } catch (error) {
-          setConfigError(`Parameter JSON tidak valid: ${error instanceof Error ? error.message : "format salah"}`);
+          setConfigError(t("admin.disaster.invalidJson", { error: error instanceof Error ? error.message : t("admin.disaster.jsonFormat") }));
           setCreating(false);
           return;
         }
       }
       if (["building_exposure", "road_exposure", "building_change"].includes(model.category) && !parameters) {
-        setConfigError("Model exposure memerlukan parameter dataset dan geometri hazard dalam JSON");
+        setConfigError(t("admin.disaster.exposureParamsRequired"));
         setCreating(false);
         return;
       }
@@ -130,11 +132,11 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
         post_imagery_id: postImageryId ? Number(postImageryId) : undefined,
         parameters,
       });
-      notify("Analisis dikonfigurasi", "s");
+      notify(t("admin.disaster.analysisConfigured"), "s");
       setOpenConfigModelId(null);
       onChanged();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal mengkonfigurasi analisis";
+      const msg = err instanceof Error ? err.message : t("admin.disaster.configureFailed");
       setConfigError(msg);
       notify(msg, "e");
     } finally {
@@ -146,9 +148,9 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
     setBusyRunId(runId);
     try {
       const outcome = await runAnalysis(runId);
-      notify(outcome.run.status === "review_required" ? "Analisis selesai; hasil memerlukan peninjauan kualitas" : "Analisis selesai dijalankan", "s");
+      notify(outcome.run.status === "review_required" ? t("admin.disaster.analysisCompleteReview") : t("admin.disaster.analysisComplete"), "s");
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal menjalankan analisis", "e");
+      notify(err instanceof Error ? err.message : t("admin.disaster.runFailed"), "e");
     } finally {
       setBusyRunId(null);
       onChanged();
@@ -158,17 +160,17 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Manajemen Analisis</span>
+        <span>{t("admin.disaster.analysisManagement")}</span>
       </div>
       <div className="card-body-custom">
         {!aoi && (
           <div className="alert alert-danger py-1 px-2 small" style={{ marginBottom: "0.75rem" }}>
-            AOI belum dikonfigurasi. Buka tab AOI terlebih dahulu untuk menjalankan analisis.
+            {t("admin.disaster.aoiRequired")}
           </div>
         )}
-        {loadingModels && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Memuat daftar model...</div>}
+        {loadingModels && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>{t("admin.disaster.modelLoadProgress")}</div>}
         {modelsError && <div className="alert alert-danger py-1 px-2 small">{modelsError}</div>}
-        {busyRunId !== null && <div className="alert alert-info" role="status"><span className="spinner-border spinner-border-sm me-2" />Memproses analisis #{busyRunId}: membaca model, menyelaraskan grid dan menghitung statistik. Hasil tampil setelah seluruh pemeriksaan berhasil.</div>}
+        {busyRunId !== null && <div className="alert alert-info" role="status"><span className="spinner-border spinner-border-sm me-2" />{t("admin.disaster.processingAnalysis")}{busyRunId}{t("admin.disaster.processingAnalysisEnd")}</div>}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {!loadingModels &&
@@ -190,20 +192,20 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>
-                          {model.user_label}{model.recommended && " · Direkomendasikan untuk input tersedia"}{" "}
+                          {model.user_label}{model.recommended && ` · ${t("admin.disaster.recommended")}`}{" "}
                           <span style={{ fontWeight: 400, fontSize: 11, color: "var(--text-muted)" }}>({model.backend_label})</span>
                         </div>
                         <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{model.description} {model.reliability} {model.availability_reason}</div>
                         <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
                           <span className="badge-label">{model.category}</span>
                           {model.capability_status && <span className={`stat-badge ${model.capability_status === "indicator_only" ? "badge-amber" : "badge-gray"}`}>{model.capability_status}</span>}
-                          {model.damage_model === false && <span className="stat-badge badge-amber">Indikator, bukan model kerusakan</span>}
-                          {!model.enabled && <span className="stat-badge badge-gray">Tidak tersedia</span>}
+                          {model.damage_model === false && <span className="stat-badge badge-amber">{t("admin.disaster.indicatorNotDamage")}</span>}
+                          {!model.enabled && <span className="stat-badge badge-gray">{t("admin.disaster.notAvailable")}</span>}
                         </div>
                       </div>
                       {model.enabled && (
                         <button type="button" className="btn-sm" disabled={!aoi || model.configured === false || model.inputs_ready === false} onClick={() => openConfig(model.model_id)}>
-                          <i className="bi bi-plus-lg" /> Konfigurasi Analisis Baru
+                          <i className="bi bi-plus-lg" /> {t("admin.disaster.newAnalysisConfig")}
                         </button>
                       )}
                     </div>
@@ -213,12 +215,12 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                         <div className="two-col" style={{ marginBottom: "0.5rem" }}>
                           {model.input_type.includes("pre_imagery") && (
                             <div className="form-field">
-                              <label className="form-label">Citra Pra-bencana *</label>
+                              <label className="form-label">{t("admin.disaster.preEventImagery")}</label>
                               <select className="form-input" value={preImageryId} onChange={(e) => setPreImageryId(e.target.value)}>
-                                <option value="">— pilih —</option>
+                                <option value="">{t("admin.disaster.choose")}</option>
                                 {imagery.pre.map((img) => (
                                   <option key={img.id} value={img.id}>
-                                    {imageryLabel(img)}
+                                    {imageryLabel(img, t)}
                                   </option>
                                 ))}
                               </select>
@@ -226,12 +228,12 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                           )}
                           {model.input_type.includes("post_imagery") && (
                             <div className="form-field">
-                              <label className="form-label">Citra Pasca-bencana *</label>
+                              <label className="form-label">{t("admin.disaster.postEventImagery")}</label>
                               <select className="form-input" value={postImageryId} onChange={(e) => setPostImageryId(e.target.value)}>
-                                <option value="">— pilih —</option>
+                                <option value="">{t("admin.disaster.choose")}</option>
                                 {imagery.post.map((img) => (
                                   <option key={img.id} value={img.id}>
-                                    {imageryLabel(img)}
+                                    {imageryLabel(img, t)}
                                   </option>
                                 ))}
                               </select>
@@ -240,18 +242,18 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                         </div>
                         {["building_exposure", "road_exposure", "landcover_impact", "building_change"].includes(model.category) && (
                           <div className="form-field" style={{ marginBottom: "0.5rem" }}>
-                            <label className="form-label">Parameter dataset / hazard (JSON)</label>
+                            <label className="form-label">{t("admin.disaster.hazardParams")}</label>
                             <textarea className="form-input" rows={4} value={parametersText} onChange={(e) => setParametersText(e.target.value)} placeholder={'{"source_dataset":"...","source_date":"YYYY-MM-DD","source_kind":"official","hazard_geojson":{...},"exposure_features":{...}}'} />
-                            <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>Tidak ada fallback statis; dataset dan tanggal sumber wajib dicatat untuk provenance.</div>
+                            <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{t("admin.disaster.noFallback")}</div>
                           </div>
                         )}
                         {configError && <div className="alert alert-danger py-1 px-2 small">{configError}</div>}
                         <div style={{ display: "flex", gap: 6 }}>
                           <button type="button" className="btn-sm primary" disabled={creating} onClick={() => handleCreateRun(model)}>
-                            {creating ? "Menyimpan..." : "Simpan Konfigurasi"}
+                            {creating ? t("admin.disaster.saving") : t("admin.disaster.saveConfiguration")}
                           </button>
                           <button type="button" className="btn-sm" onClick={() => setOpenConfigModelId(null)}>
-                            Batal
+                            {t("admin.disaster.cancel")}
                           </button>
                         </div>
                       </div>
@@ -266,13 +268,13 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <span className={`stat-badge ${RUN_STATUS_BADGE[run.status] || "badge-gray"}`}>
-                                {RUN_STATUS_LABEL[run.status] || run.status}
+                                {RUN_STATUS_KEYS[run.status] ? t(RUN_STATUS_KEYS[run.status]) : run.status}
                               </span>
                               <span style={{ color: "var(--text-muted)" }}>
-                                Proses #{run.id} • dibuat {run.created_at ? new Date(run.created_at).toLocaleString("id-ID") : "—"}
+                                {t("admin.disaster.process")}{run.id} • {t("admin.disaster.created")} {run.created_at ? new Date(run.created_at).toLocaleString("id-ID") : "—"}
                               </span>
-                              {result?.is_published && <span className="stat-badge badge-purple">Published</span>}
-                              {result?.validation_status === "indicator_only" && <span className="stat-badge badge-amber">Hanya indikator</span>}
+                              {result?.is_published && <span className="stat-badge badge-purple">{t("admin.disaster.published")}</span>}
+                              {result?.validation_status === "indicator_only" && <span className="stat-badge badge-amber">{t("admin.disaster.indicatorOnly")}</span>}
                               {run.error_message && <span style={{ color: "#b91c1c" }}>{run.error_message}</span>}
                             </div>
                             <button
@@ -282,7 +284,7 @@ export default function AnalysisManager({ eventId, aoi, imagery, runs, onChanged
                               disabled={busyRunId === run.id || run.status === "processing"}
                               onClick={() => handleRun(run.id)}
                             >
-                              {busyRunId === run.id ? "Menjalankan..." : run.status === "failed" ? "Jalankan ulang" : "Jalankan"}
+                              {busyRunId === run.id ? t("admin.disaster.operationLoading") : run.status === "failed" ? t("admin.disaster.runAgainButton") : t("admin.disaster.runButton")}
                             </button>
                           </div>
                         ))}

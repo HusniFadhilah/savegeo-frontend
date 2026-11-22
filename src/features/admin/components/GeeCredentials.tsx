@@ -14,10 +14,14 @@ import { useAdmin } from "../AdminContext";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePagination from "@/components/ui/TablePagination";
 import BulkTableToolbar from "./BulkTableToolbar";
+import { localeFor, useI18nStore } from "@/hooks/useI18nStore";
 
 const MAX_FILE_BYTES = 1 * 1024 * 1024; // 1 MB — service-account JSON keys are tiny
 
 export default function GeeCredentials() {
+  const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
+  const locale = localeFor(language);
   const { notify, refreshHealth } = useAdmin();
   const {
     rows,
@@ -50,8 +54,8 @@ export default function GeeCredentials() {
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const validateFile = (f: File): string | null => {
-    if (!f.name.toLowerCase().endsWith(".json")) return "File harus berformat .json";
-    if (f.size > MAX_FILE_BYTES) return "Ukuran file terlalu besar (maks 1 MB)";
+    if (!f.name.toLowerCase().endsWith(".json")) return t("admin.gee.fileJsonOnly");
+    if (f.size > MAX_FILE_BYTES) return t("admin.gee.fileTooLarge");
     return null;
   };
 
@@ -68,7 +72,7 @@ export default function GeeCredentials() {
 
   const handleUpload = async () => {
     if (!file) {
-      setFormError("Pilih file JSON terlebih dahulu");
+      setFormError(t("admin.gee.chooseFileFirst"));
       return;
     }
     setUploading(true);
@@ -77,8 +81,8 @@ export default function GeeCredentials() {
       const result = await uploadGeeCredential(file, label, notes, activateOnUpload);
       notify(
         result.activation_error
-          ? `Kredensial tersimpan; aktivasi gagal (${result.activation_error}). Kredensial aktif sebelumnya dipertahankan.`
-          : "Kredensial berhasil diunggah",
+          ? t("admin.gee.savedActivationFailed", { error: result.activation_error })
+          : t("admin.gee.uploaded"),
         result.activation_error ? "e" : "s",
       );
       setFormOpen(false);
@@ -89,7 +93,7 @@ export default function GeeCredentials() {
       await reload();
       refreshHealth();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal mengunggah kredensial";
+      const msg = err instanceof Error ? err.message : t("admin.gee.uploadFailed");
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -101,25 +105,25 @@ export default function GeeCredentials() {
     setBusyId(id);
     try {
       await activateGeeCredential(id);
-      notify("Credential diaktifkan, EE diinisialisasi ulang", "s");
+      notify(t("admin.gee.activated"), "s");
       await reload();
       refreshHealth();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal mengaktifkan kredensial", "e");
+      notify(err instanceof Error ? err.message : t("admin.gee.activateFailed"), "e");
     } finally {
       setBusyId(null);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus kredensial ini?")) return;
+    if (!confirm(t("admin.gee.deleteConfirm"))) return;
     setBusyId(id);
     try {
       await deleteGeeCredential(id);
-      notify("Credential dihapus", "s");
+      notify(t("admin.gee.deleted"), "s");
       await reload();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal menghapus kredensial", "e");
+      notify(err instanceof Error ? err.message : t("admin.gee.deleteFailed"), "e");
     } finally {
       setBusyId(null);
     }
@@ -132,12 +136,12 @@ export default function GeeCredentials() {
       const result = await probeGeeCredential(id);
       notify(
         result.ok
-          ? "Koneksi Earth Engine berhasil diperiksa"
-          : `Pemeriksaan koneksi gagal (${result.code})`,
+          ? t("admin.gee.connectionChecked")
+          : t("admin.gee.connectionFailed", { code: result.code }),
         result.ok ? "s" : "e",
       );
     } catch (cause) {
-      notify(cause instanceof Error ? cause.message : "Pemeriksaan koneksi gagal", "e");
+      notify(cause instanceof Error ? cause.message : t("admin.gee.probeFailedMessage"), "e");
     } finally {
       await reload();
       setBusyId(null);
@@ -160,7 +164,7 @@ export default function GeeCredentials() {
   const handleBulkDelete = async () => {
     if (
       !selectedIds.length ||
-      !confirm(`Hapus ${selectedIds.length} credential nonaktif terpilih?`)
+      !confirm(t("admin.gee.bulkDeleteConfirm", { count: selectedIds.length }))
     )
       return;
     setBulkBusy(true);
@@ -169,8 +173,8 @@ export default function GeeCredentials() {
     setSelectedIds([]);
     notify(
       failed
-        ? `${results.length - failed} credential dihapus, ${failed} gagal`
-        : `${results.length} credential dihapus`,
+        ? t("admin.gee.bulkDeletedPartial", { success: results.length - failed, failed })
+        : t("admin.gee.bulkDeleted", { count: results.length }),
       failed ? "e" : "s",
     );
     await reload();
@@ -180,35 +184,35 @@ export default function GeeCredentials() {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Kredensial akun layanan</span>
+        <span>{t("admin.gee.title")}</span>
         <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-          <i className="bi bi-plus-lg" /> Unggah kredensial
+          <i className="bi bi-plus-lg" /> {t("admin.gee.uploadCredentials")}
         </button>
       </div>
       <div className="card-body-custom">
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="two-col" style={{ marginBottom: "0.75rem" }}>
             <div className="form-field">
-              <label className="form-label">Label / nama deskriptif</label>
+              <label className="form-label">{t("admin.gee.label")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: Akun layanan produksi 2025"
+                placeholder={t("admin.gee.labelPlaceholder")}
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Catatan (opsional)</label>
+              <label className="form-label">{t("admin.gee.note")}</label>
               <input
                 className="form-input"
-                placeholder="Digunakan untuk produksi"
+                placeholder={t("admin.gee.notePlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
           <div className="form-field">
-            <label className="form-label">File JSON akun layanan</label>
+            <label className="form-label">{t("admin.gee.jsonFile")}</label>
             <div
               className={`upload-zone ${dragOver ? "dragover" : ""}`}
               onClick={() => fileInputRef.current?.click()}
@@ -228,7 +232,7 @@ export default function GeeCredentials() {
                 style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }}
               />
               <div style={{ fontSize: 12, color: "#64748b" }}>
-                Pilih atau seret dan letakkan file <strong>.json</strong> akun layanan di sini
+                {t("admin.gee.dropFile")} <strong>.json</strong> {t("admin.gee.serviceAccountHere")}
               </div>
               {file && (
                 <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>✓ {file.name}</div>
@@ -250,7 +254,7 @@ export default function GeeCredentials() {
               onChange={(e) => setActivateOnUpload(e.target.checked)}
             />
             <label htmlFor="gee-activate" style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Aktifkan setelah unggah
+              {t("admin.gee.activateAfterUpload")}
             </label>
           </div>
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
@@ -261,10 +265,10 @@ export default function GeeCredentials() {
               disabled={uploading}
               onClick={handleUpload}
             >
-              <i className="bi bi-upload" /> {uploading ? "Mengunggah..." : "Unggah"}
+              <i className="bi bi-upload" /> {uploading ? t("admin.gee.uploading") : t("admin.gee.upload")}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
-              Batal
+              {t("admin.gee.cancel")}
             </button>
           </div>
         </div>
@@ -276,7 +280,7 @@ export default function GeeCredentials() {
             disabled={bulkBusy}
             onClick={handleBulkDelete}
           >
-            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+            <i className="bi bi-trash" /> {bulkBusy ? t("admin.gee.removing") : t("admin.gee.removeSelected")}
           </button>
         </BulkTableToolbar>
 
@@ -298,18 +302,18 @@ export default function GeeCredentials() {
                   <input
                     className="admin-table-check"
                     type="checkbox"
-                    aria-label="Pilih semua credential nonaktif di halaman"
+                    aria-label={t("admin.gee.checkAllInactive")}
                     checked={allPageSelected}
                     onChange={toggleAllPage}
                   />
                 </th>
                 <AdminTableNumberHeader />
-                <th>Label</th>
-                <th>Project ID</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Tanggal unggah</th>
-                <th>Aksi</th>
+                <th>{t("admin.gee.labelColumn")}</th>
+                <th>{t("admin.gee.projectId")}</th>
+                <th>{t("admin.gee.email")}</th>
+                <th>{t("admin.gee.status")}</th>
+                <th>{t("admin.gee.uploadDate")}</th>
+                <th>{t("admin.gee.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -319,7 +323,7 @@ export default function GeeCredentials() {
                     colSpan={8}
                     style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}
                   >
-                    Memuat...
+                    {t("admin.gee.loading")}
                   </td>
                 </tr>
               )}
@@ -343,7 +347,7 @@ export default function GeeCredentials() {
                     colSpan={8}
                     style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}
                   >
-                    Belum ada kredensial. Unggah file JSON akun layanan.
+                    {t("admin.gee.noCredentials")}
                   </td>
                 </tr>
               )}
@@ -355,7 +359,7 @@ export default function GeeCredentials() {
                       <input
                         className="admin-table-check"
                         type="checkbox"
-                        aria-label={`Pilih credential ${c.label}`}
+                        aria-label={`${t("admin.gee.selectCredential")} ${c.label}`}
                         checked={selectedIds.includes(c.id)}
                         disabled={c.is_active}
                         onChange={() => toggleSelected(c.id)}
@@ -371,32 +375,32 @@ export default function GeeCredentials() {
                     </td>
                     <td>
                       <span className={`stat-badge ${c.is_active ? "badge-green" : "badge-gray"}`}>
-                        {c.is_active ? "Aktif" : "Nonaktif"}
+                        {c.is_active ? t("admin.enabled") : t("admin.gee.inactive")}
                       </span>
                       <div
                         className="small mt-1"
                         title={
                           c.last_checked_at
-                            ? new Date(c.last_checked_at).toLocaleString("id-ID")
+                            ? new Date(c.last_checked_at).toLocaleString(locale)
                             : undefined
                         }
                       >
                         {c.last_check_status === "ok" ? (
                           <span className="text-success">
                             <i className="bi bi-check-circle me-1" aria-hidden="true" />
-                            Terhubung
+                            {t("admin.gee.connected")}
                           </span>
                         ) : c.last_check_status === "failed" ? (
                           <span className="text-danger">
-                            {c.last_check_code || "Pemeriksaan gagal"}
+                            {c.last_check_code || t("admin.gee.probeFailed")}
                           </span>
                         ) : (
-                          <span className="text-body-secondary">Belum diperiksa</span>
+                          <span className="text-body-secondary">{t("admin.gee.notChecked")}</span>
                         )}
                       </div>
                     </td>
                     <td style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      {c.uploaded_at ? new Date(c.uploaded_at).toLocaleDateString("id-ID") : "—"}
+                      {c.uploaded_at ? new Date(c.uploaded_at).toLocaleDateString(locale) : "—"}
                     </td>
                     <td>
                       <button
@@ -404,10 +408,10 @@ export default function GeeCredentials() {
                         className="btn-sm"
                         disabled={busyId !== null || bulkBusy || uploading}
                         onClick={() => void handleProbe(c.id)}
-                        aria-label={`Periksa koneksi ${c.label}`}
+                        aria-label={`${t("admin.gee.checkConnection")} ${c.label}`}
                       >
                         <i className="bi bi-plug me-1" aria-hidden="true" />
-                        Periksa
+                        {t("admin.gee.check")}
                       </button>
                       {!c.is_active ? (
                         <>
@@ -417,7 +421,7 @@ export default function GeeCredentials() {
                             disabled={busyId === c.id || bulkBusy}
                             onClick={() => handleActivate(c.id)}
                           >
-                            Aktifkan
+                            {t("admin.gee.activate")}
                           </button>
                           <button
                             type="button"
@@ -426,11 +430,11 @@ export default function GeeCredentials() {
                             disabled={busyId === c.id || bulkBusy}
                             onClick={() => handleDelete(c.id)}
                           >
-                            Hapus
+                            {t("admin.delete")}
                           </button>
                         </>
                       ) : (
-                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Aktif</span>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{t("admin.enabled")}</span>
                       )}
                     </td>
                   </tr>
@@ -448,7 +452,7 @@ export default function GeeCredentials() {
           onSearchChange={setSearch}
           onPrev={prevPage}
           onNext={nextPage}
-          searchPlaceholder="Cari label, project ID, email..."
+          searchPlaceholder={t("admin.gee.search")}
         />
       </div>
     </div>

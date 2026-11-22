@@ -1,5 +1,5 @@
 import CropPanelAccordion from "./CropPanelAccordion";
-import { fmtNum, fmtPct, styleFor, ANOMALY_CATEGORY_STYLE } from "../utils";
+import { fmtNum, fmtPct, styleFor, ANOMALY_CATEGORY_STYLE, localizeCropLabel, localizeCropReason } from "../utils";
 import type { AnomalyResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -15,7 +15,7 @@ export default function CropAnomalyMap({ anomaly }: Props) {
     <CropPanelAccordion title={t("crop.card.anomalyTitle")} icon="bi-exclamation-diamond-fill">
       {!anomaly.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{anomaly.reason ? `: ${anomaly.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(anomaly.reason, t) ? `: ${localizeCropReason(anomaly.reason, t)}` : "."}
         </div>
       ) : (
         <div className="row g-2 text-center">
@@ -41,15 +41,15 @@ export default function CropAnomalyMap({ anomaly }: Props) {
           <div className="col-6 col-md-3">
             <div className="text-muted small">{t("crop.category")}</div>
             <span className={`fw-bold ${styleFor(ANOMALY_CATEGORY_STYLE, anomaly.category).className}`}>
-              {styleFor(ANOMALY_CATEGORY_STYLE, anomaly.category).emoji} {styleFor(ANOMALY_CATEGORY_STYLE, anomaly.category).label}
+              {styleFor(ANOMALY_CATEGORY_STYLE, anomaly.category).emoji} {localizeCropLabel(styleFor(ANOMALY_CATEGORY_STYLE, anomaly.category).label, t)}
             </span>
           </div>
         </div>
       )}
       {anomaly.available && (
         <small className="text-muted d-block mt-2">
-          Baseline dari {anomaly.historical_years_used} tahun sebelumnya
-          {anomaly.tile_url ? " · lihat layer peta \"Anomali\" di panel Peta Hasil di bawah." : ""}
+          {t("crop.anomaly.baseline", { years: anomaly.historical_years_used })}
+          {anomaly.tile_url ? ` · ${t("crop.map.layerHint", { layer: t("crop.map.anomaly") })}` : ""}
         </small>
       )}
     </CropPanelAccordion>

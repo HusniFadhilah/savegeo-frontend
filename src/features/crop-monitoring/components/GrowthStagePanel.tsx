@@ -1,5 +1,5 @@
 import CropPanelAccordion from "./CropPanelAccordion";
-import { CONFIDENCE_LABEL, GROWTH_STAGE_LABEL } from "../utils";
+import { CONFIDENCE_LABEL, GROWTH_STAGE_LABEL, localizeCropLabel, localizeCropReason, localizeGrowthStage } from "../utils";
 import type { Commodity, GrowthStageResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -17,22 +17,22 @@ export default function GrowthStagePanel({ growthStage, commodity }: Props) {
     <CropPanelAccordion title={t("crop.card.growthTitle")} icon="bi-flower2">
       {!growthStage.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{growthStage.reason ? `: ${growthStage.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(growthStage.reason, t) ? `: ${localizeCropReason(growthStage.reason, t)}` : "."}
         </div>
       ) : (
         <>
           <div className="row g-2 mb-3">
             <div className="col-6 col-md-3">
               <div className="text-muted small">{t("crop.currentStage")}</div>
-              <div className="fw-bold">{GROWTH_STAGE_LABEL[growthStage.stage_key] ?? growthStage.stage}</div>
+              <div className="fw-bold">{localizeGrowthStage(growthStage.stage_key, GROWTH_STAGE_LABEL[growthStage.stage_key] ?? growthStage.stage, t)}</div>
             </div>
             <div className="col-6 col-md-3">
               <div className="text-muted small">{t("crop.cropAge")}</div>
-              <div className="fw-bold">{growthStage.crop_age_days} hari</div>
+              <div className="fw-bold">{growthStage.crop_age_days} {t("crop.days")}</div>
             </div>
             <div className="col-6 col-md-3">
               <div className="text-muted small">{t("crop.confidence")}</div>
-              <div className="fw-bold">{CONFIDENCE_LABEL[growthStage.confidence] ?? growthStage.confidence}</div>
+              <div className="fw-bold">{["high", "medium", "low"].includes(growthStage.confidence) ? t(`crop.confidence.${growthStage.confidence}`) : localizeCropLabel(CONFIDENCE_LABEL[growthStage.confidence] ?? growthStage.confidence, t)}</div>
             </div>
             <div className="col-6 col-md-3">
               <div className="text-muted small">{t("crop.estimatedHarvest")}</div>
@@ -52,7 +52,7 @@ export default function GrowthStagePanel({ growthStage, commodity }: Props) {
                 </div>
               </div>
               <small className="text-muted d-block mt-1">
-                {growthStage.crop_age_days} / {commodity.estimated_duration_days} hari siklus {commodity.label}
+                {t("crop.growth.cycleProgress", { age: growthStage.crop_age_days, duration: commodity.estimated_duration_days, commodity: localizeCropLabel(commodity.label, t) })}
               </small>
             </>
           )}

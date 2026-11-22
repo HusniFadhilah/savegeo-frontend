@@ -17,7 +17,7 @@ interface Props {
 }
 
 const SUB_ANALYSIS_OPTIONS: { key: SubAnalysisKey; labelKey: string; extra?: boolean }[] = [
-  { key: "landcover", labelKey: "Land cover · Dynamic World" },
+  { key: "landcover", labelKey: "crop.sub.landcover" },
   { key: "health", labelKey: "crop.sub.health" },
   { key: "timeseries", labelKey: "crop.sub.timeseries" },
   { key: "anomaly", labelKey: "crop.sub.anomaly" },
@@ -61,10 +61,10 @@ export default function DataSourceTogglesPanel({
   return (
     <CropPanelAccordion title={t("crop.sources.title")} icon="bi-sliders">
         <div className="d-flex gap-2 mb-2">
-          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => onSubAnalysesChange([...DEFAULT_SUB_ANALYSES])}>Cepat</button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => onSubAnalysesChange([...FULL_SUB_ANALYSES])}>Lengkap</button>
+          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => onSubAnalysesChange([...DEFAULT_SUB_ANALYSES])}>{t("crop.sources.quick")}</button>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => onSubAnalysesChange([...FULL_SUB_ANALYSES])}>{t("crop.sources.full")}</button>
         </div>
-        <p className="small text-muted">Cepat: land cover, kesehatan vegetasi, dan fase tumbuh. Analisis riwayat, cuaca, dan produktivitas dapat dipilih jika diperlukan; pemrosesannya lebih lama.</p>
+        <p className="small text-muted">{t("crop.sources.quickDescription")}</p>
         <label className="form-label">{t("crop.sources.imagery")}</label>
         <div className="form-check">
           <input
@@ -113,16 +113,16 @@ export default function DataSourceTogglesPanel({
               onChange={(e) => toggleSub(opt.key, e.target.checked)}
             />
             <label className="form-check-label small" htmlFor={`cmSub_${opt.key}`}>
-              {opt.key === "landcover" ? opt.labelKey : t(opt.labelKey)}
+              {t(opt.labelKey)}
             </label>
           </div>
         ))}
         <div className="cm-modis-source-option">
           <div className="form-check">
             <input id="cmModisProductivity" className="form-check-input" type="checkbox" checked={modisProductivityEnabled} onChange={(event) => onModisProductivityChange(event.target.checked)} />
-            <label className="form-check-label small" htmlFor="cmModisProductivity">MODIS NPP / GPP · produktivitas tahunan</label>
+            <label className="form-check-label small" htmlFor="cmModisProductivity">{t("crop.modis.optionLabel")}</label>
           </div>
-          <small>Analisis tambahan MOD17A3HGF · resolusi 500 m.</small>
+          <small>{t("crop.modis.optionDescription")}</small>
         </div>
     </CropPanelAccordion>
   );

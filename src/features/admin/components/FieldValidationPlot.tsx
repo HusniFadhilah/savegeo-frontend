@@ -1,4 +1,5 @@
 import type { Metric } from "./carbonFieldApi";
+import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 
 export default function FieldValidationPlot({
   baseline,
@@ -9,9 +10,10 @@ export default function FieldValidationPlot({
   corrected?: Metric;
   independent: boolean;
 }) {
+  const { t, language } = useI18nStore();
   const series = [
-    { label: "Sebelum kalibrasi", color: "#2482c5", rows: baseline.rows ?? [] },
-    { label: "Setelah kalibrasi", color: "#26924c", rows: corrected?.rows ?? [] },
+    { label: t("admin.fieldCalibration.beforeCalibration"), color: "#2482c5", rows: baseline.rows ?? [] },
+    { label: t("admin.fieldCalibration.afterCalibration"), color: "#26924c", rows: corrected?.rows ?? [] },
   ];
   const values = series
     .flatMap((group) => group.rows)
@@ -28,15 +30,15 @@ export default function FieldValidationPlot({
       <figcaption className="fw-semibold">
         Referensi lapangan dan prediksi ·{" "}
         {independent
-          ? "plot validasi terpisah"
+          ? t("admin.fieldCalibration.independentValidationPlot")
           : corrected?.status === "computed"
-            ? "leave-one-plot-out"
-            : "data kalibrasi"}
+            ? t("admin.fieldCalibration.leaveOnePlotOut")
+            : t("admin.fieldCalibration.calibrationData")}
       </figcaption>
       <svg
         viewBox="0 0 480 290"
         role="img"
-        aria-label="Diagram sebar densitas karbon lapangan versus prediksi, sebelum dan setelah kalibrasi"
+        aria-label={t("admin.fieldCalibration.plotAria")}
         style={{ width: "100%", maxHeight: 320 }}
       >
         <line x1={64} y1={38} x2={64} y2={228} stroke="currentColor" />
@@ -52,7 +54,7 @@ export default function FieldValidationPlot({
         />
         {[0, 1, 2, 3, 4].map((i) => {
           const value = lower + ((bound - lower) * i) / 4;
-          const label = value.toLocaleString("id-ID", { maximumSignificantDigits: 3 });
+          const label = formatNumber(value, language, { maximumSignificantDigits: 3 });
           return (
             <g key={i} fill="currentColor" fontSize={10}>
               <text x={x(value)} y={245} textAnchor="middle">
@@ -79,15 +81,15 @@ export default function FieldValidationPlot({
                   opacity={0.8}
                 >
                   <title>
-                    {row.plot_id}: lapangan {row.observed.toFixed(3)}; prediksi{" "}
-                    {row.predicted.toFixed(3)} Mg C/ha · {group.label}
+                    {row.plot_id}: {t("admin.fieldCalibration.fieldObserved")} {formatNumber(row.observed, language, { maximumFractionDigits: 3 })}; {t("admin.fieldCalibration.predicted")}{" "}
+                    {formatNumber(row.predicted, language, { maximumFractionDigits: 3 })} Mg C/ha · {group.label}
                   </title>
                 </circle>
               ))}
           </g>
         ))}
         <text x={244} y={274} textAnchor="middle" fill="currentColor" fontSize={12}>
-          Lapangan (Mg C/ha)
+          {t("admin.fieldCalibration.fieldObserved")} (Mg C/ha)
         </text>
         <text
           x={16}
@@ -97,7 +99,7 @@ export default function FieldValidationPlot({
           fill="currentColor"
           fontSize={12}
         >
-          Prediksi (Mg C/ha)
+          {t("admin.fieldCalibration.predicted")} (Mg C/ha)
         </text>
       </svg>
       <div className="d-flex gap-3 flex-wrap small">
@@ -117,16 +119,16 @@ export default function FieldValidationPlot({
               {group.label}
             </span>
           ))}
-        <span>Garis putus-putus: prediksi = lapangan</span>
+        <span>{t("admin.fieldCalibration.identityLine")}</span>
       </div>
       <p className="small text-muted mt-2 mb-0">
         {independent
-          ? "Plot pada grafik tidak dipakai untuk menghitung koefisien kalibrasi."
+          ? t("admin.fieldCalibration.validationNotUsed")
           : corrected?.status === "computed"
-            ? "Belum tersedia validasi terpisah. Prediksi kalibrasi pada grafik dihitung ketika setiap plot dikeluarkan dari pelatihan."
-            : "Kalibrasi belum dapat dihitung. Grafik menampilkan prediksi awal; tambahkan plot kalibrasi yang memenuhi syarat."}
+            ? t("admin.fieldCalibration.noIndependentValidation")
+            : t("admin.fieldCalibration.calibrationUnavailable")}
         {limited &&
-          " Grafik diringkas hingga 1.000 titik per seri; statistik dan unduhan JSON tetap mencakup seluruh plot."}
+          ` ${t("admin.fieldCalibration.plotLimited")}`}
       </p>
     </figure>
   );

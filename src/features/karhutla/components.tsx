@@ -71,12 +71,12 @@ function matchRegionOption(options: RegionOption[], name: string): RegionOption 
 }
 
 function LanguageToggle() {
-  const { language, setLanguage } = useI18nStore();
+  const { language, setLanguage, t } = useI18nStore();
   return (
     <button
       type="button"
       className="wildfire-language-toggle"
-      aria-label="Switch language"
+      aria-label={t("home.language")}
       onClick={() => setLanguage(language === "id" ? "en" : "id")}
     >
       {language.toUpperCase()}
@@ -407,10 +407,11 @@ function OverviewValueSkeleton({ label, loadingLabel }: { label: string; loading
 }
 
 function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
+  const { t, language } = useI18nStore();
   const navigate = useNavigate();
   const mapShellRef = useRef<HTMLDivElement>(null);
   return (
-    <div ref={mapShellRef} className="wildfire-summary-map" aria-label="Peta ringkasan kejadian karhutla">
+    <div ref={mapShellRef} className="wildfire-summary-map" aria-label={t("wildfire.summaryMap.label")}>
       <MapContainer
         center={[-1.7, 113.4]}
         zoom={4}
@@ -420,7 +421,7 @@ function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
         doubleClickZoom={false}
         className="savegeo-map"
       >
-        <MapExportControl mapTitle="Ringkasan Karhutla" />
+        <MapExportControl mapTitle={t("wildfire.summaryMap.title")} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap contributors"
@@ -436,7 +437,7 @@ function EventSummaryMap({ events }: { events: WildfireEvent[] }) {
             <Popup>
               <strong>{event.title}</strong>
               <br />
-              {event.hotspot_count.toLocaleString("id-ID")} hotspots
+              {formatNumber(event.hotspot_count, language)} {t("wildfire.stats.hotspots")}
             </Popup>
           </CircleMarker>
         ))}
@@ -457,7 +458,10 @@ export function KarhutlaIndexPage() {
     sort: "latest",
   });
   const catalog = useWildfireEventsQuery(filters);
-  const events = useMemo(() => catalog.data?.events.map(adaptLegacyEvent) ?? [], [catalog.data]);
+  const events = useMemo(
+    () => catalog.data?.events.map((item) => localizeWildfireEvent(adaptLegacyEvent(item), language, t)) ?? [],
+    [catalog.data, language, t],
+  );
   const loading = catalog.isPending;
   const error = catalog.error instanceof ApiError ? catalog.error.message : catalog.error ? t("wildfire.errors.load") : null;
 
@@ -953,11 +957,11 @@ function HotspotMap({
               >
                 <CamsHotspotPopup slug={event.slug} layers={camsProbeLayers} position={[lat, lng]}>
                   <div className="wildfire-popup">
-                    <strong>VIIRS / NASA FIRMS · tersimpan</strong>
+                    <strong>{t("wildfire.popup.viirsStored")}</strong>
                     <dl>
-                      <dt>Acquisition</dt>
+                      <dt>{t("wildfire.popup.acquisition")}</dt>
                       <dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>
-                      <dt>Coordinates</dt>
+                      <dt>{t("wildfire.popup.coordinates")}</dt>
                       <dd>
                         {lat.toFixed(5)}, {lng.toFixed(5)}
                       </dd>
@@ -994,23 +998,23 @@ function HotspotMap({
               >
                 <CamsHotspotPopup slug={event.slug} layers={camsProbeLayers} position={[lat, lng]}>
                   <div className="wildfire-popup">
-                    <strong>{highConfidence ? "High confidence" : "Hotspot"}</strong>
+                    <strong>{highConfidence ? t("wildfire.confidence.high") : t("wildfire.stats.hotspots")}</strong>
                     <dl>
-                      <dt>Acquisition</dt>
+                      <dt>{t("wildfire.popup.acquisition")}</dt>
                       <dd>{feature.properties.acq_datetime_utc ?? feature.properties.acq_date}</dd>
                       {feature.properties.satellite && (
                         <>
-                          <dt>Satellite</dt>
+                          <dt>{t("wildfire.popup.satellite")}</dt>
                           <dd>{feature.properties.satellite}</dd>
                         </>
                       )}
                       {feature.properties.instrument && (
                         <>
-                          <dt>Sensor</dt>
+                          <dt>{t("wildfire.popup.sensor")}</dt>
                           <dd>{feature.properties.instrument}</dd>
                         </>
                       )}
-                      <dt>Coordinates</dt>
+                      <dt>{t("wildfire.popup.coordinates")}</dt>
                       <dd>
                         {lat.toFixed(5)}, {lng.toFixed(5)}
                       </dd>
@@ -1029,30 +1033,29 @@ function HotspotMap({
       </MapView>
       {boundaryFailed && (
         <div className="wildfire-map-notice" role="status">
-          <i className="bi bi-info-circle" /> Batas wilayah sementara tidak tersedia. Hotspot tetap
-          ditampilkan.
+          <i className="bi bi-info-circle" /> {t("wildfire.map.boundaryUnavailable")}
         </div>
       )}
       <div className="wildfire-map-legend">
         <span>
-          <i className="legend-dot legend-high" /> High confidence
+          <i className="legend-dot legend-high" /> {t("wildfire.confidence.high")}
         </span>
         <span>
-          <i className="legend-dot legend-nominal" /> Nominal / low
+          <i className="legend-dot legend-nominal" /> {t("wildfire.confidence.nominalLow")}
         </span>
         {viirsEnabled && (
           <span>
-            <i className="legend-dot legend-viirs" /> VIIRS / DB
+            <i className="legend-dot legend-viirs" /> {t("wildfire.layers.viirsDb")}
           </span>
         )}
         {query.layers.includes("wind") && (
           <span>
-            <i className="legend-wind" /> Arah angin
+            <i className="legend-wind" /> {t("wildfire.wind.direction")}
           </span>
         )}
       </div>
       {camsLayersToRender.length > 0 && (
-        <div className="wildfire-cams-map-legend" aria-label="Legenda layer CAMS">
+        <div className="wildfire-cams-map-legend" aria-label={t("wildfire.cams.legend")}>
           {camsLayersToRender.map(({ archiveId, labelKey, layer, frame }) => (
             <div className="wildfire-cams-map-legend__item" key={archiveId}>
               <strong>{t(labelKey)}</strong>
@@ -1225,12 +1228,12 @@ export function KarhutlaDetailPage() {
 
   useEffect(() => {
     if (eventQuery.data) {
-      setEvent(adaptLegacyEvent(eventQuery.data.event));
+      setEvent(localizeWildfireEvent(adaptLegacyEvent(eventQuery.data.event), language, t));
       setEventLookup({ slug, status: "ready" });
     } else {
       setEventLookup({ slug, status: eventQuery.isPending ? "loading" : "unavailable" });
     }
-  }, [slug, eventQuery.data, eventQuery.isPending]);
+  }, [slug, eventQuery.data, eventQuery.isPending, language, t]);
   const eventRegionSlug = event?.slug;
   useEffect(() => {
     if (!eventRegionSlug) return undefined;
@@ -1440,7 +1443,7 @@ export function KarhutlaDetailPage() {
         to_date: activeDateRange.end,
       });
       const refreshed = await fetchWildfireEvent(slug);
-      setEvent(adaptLegacyEvent(refreshed.event));
+      setEvent(localizeWildfireEvent(adaptLegacyEvent(refreshed.event), language, t));
       setDataRevision((revision) => revision + 1);
     } catch (error: unknown) {
       setSyncError(error instanceof ApiError ? error.message : "Sinkronisasi NASA FIRMS gagal.");
@@ -1616,18 +1619,18 @@ export function KarhutlaDetailPage() {
         </div>
       </div>
       {event.province_codes.length > 0 && (
-        <section className="wildfire-region-workspace" aria-label="Filter wilayah">
+        <section className="wildfire-region-workspace" aria-label={t("wildfire.regionFilter.ariaLabel")}>
           <div className="wildfire-region-filter-panel">
             <div className="wildfire-region-panel-heading">
               <details className="wildfire-region-filter-accordion">
                 <summary>
-                  <h2><i className="bi bi-geo-alt" aria-hidden="true" /> Filter wilayah</h2>
-                  <span>Pilih batas administrasi untuk menyaring peta dan statistik hotspot.</span>
+                  <h2><i className="bi bi-geo-alt" aria-hidden="true" /> {t("wildfire.regionFilter.title")}</h2>
+                  <span>{t("wildfire.regionFilter.hint")}</span>
                   <i className="bi bi-chevron-down wildfire-region-filter-chevron" aria-hidden="true" />
                 </summary>
                 <div className="wildfire-region-filter-grid">
                   <label>
-                    Provinsi
+                    {t("wildfire.regionFilter.province")}
                     <select
                       value={query.provinceCode || provinceOptions.find((option) => option.name === query.province)?.code || ""}
                       disabled={regionOptionsLoading}
@@ -1639,12 +1642,12 @@ export function KarhutlaDetailPage() {
                         });
                       }}
                     >
-                      <option value="">Semua provinsi {wildfireEventRegionLabel(event.slug)}</option>
+                      <option value="">{t("wildfire.regionFilter.allProvinces", { region: wildfireEventRegionLabel(event.slug, language) })}</option>
                       {provinceOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
                     </select>
                   </label>
                   <label>
-                    Kabupaten/kota
+                    {t("wildfire.regionFilter.cityRegency")}
                     <select
                       value={query.cityCode}
                       disabled={!query.provinceCode || cityOptionsLoading}
@@ -1656,12 +1659,12 @@ export function KarhutlaDetailPage() {
                         });
                       }}
                     >
-                      <option value="">{cityOptionsLoading ? "Memuat kabupaten/kota…" : "Semua kabupaten/kota"}</option>
+                      <option value="">{cityOptionsLoading ? t("wildfire.regionFilter.loadingCityRegency") : t("wildfire.regionFilter.allCityRegency")}</option>
                       {cityOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
                     </select>
                   </label>
                   <label>
-                    Kecamatan
+                    {t("wildfire.regionFilter.district")}
                     <select
                       value={query.districtCode}
                       disabled={!query.cityCode || districtOptionsLoading}
@@ -1670,12 +1673,12 @@ export function KarhutlaDetailPage() {
                         updateQuery({ district: option?.name ?? "", districtCode: option?.code ?? "", village: "", villageCode: "", hotspot: "" });
                       }}
                     >
-                      <option value="">{districtOptionsLoading ? "Memuat kecamatan…" : "Semua kecamatan"}</option>
+                      <option value="">{districtOptionsLoading ? t("wildfire.regionFilter.loadingDistrict") : t("wildfire.regionFilter.allDistricts")}</option>
                       {districtOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
                     </select>
                   </label>
                   <label>
-                    Kelurahan/desa
+                    {t("wildfire.regionFilter.village")}
                     <select
                       value={query.villageCode}
                       disabled={!query.districtCode || villageOptionsLoading}
@@ -1684,7 +1687,7 @@ export function KarhutlaDetailPage() {
                         updateQuery({ village: option?.name ?? "", villageCode: option?.code ?? "", hotspot: "" });
                       }}
                     >
-                      <option value="">{villageOptionsLoading ? "Memuat kelurahan/desa…" : "Semua kelurahan/desa"}</option>
+                      <option value="">{villageOptionsLoading ? t("wildfire.regionFilter.loadingVillage") : t("wildfire.regionFilter.allVillages")}</option>
                       {villageOptions.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}
                     </select>
                   </label>
@@ -1700,7 +1703,7 @@ export function KarhutlaDetailPage() {
                 })}
                 disabled={!selectedRegion && !query.province && !query.city && !query.district && !query.village}
               >
-                Hapus filter
+                {t("wildfire.regionFilter.clear")}
               </button>
             </div>
           </div>
@@ -1832,26 +1835,26 @@ export function KarhutlaDetailPage() {
             <div className="wildfire-region-statistics" ref={regionStatisticsRef}>
               <div className="wildfire-region-panel-heading">
                 <div>
-                  <h2>Jumlah hotspot per {({ province: "provinsi", city: "kabupaten/kota", district: "kecamatan", village: "kelurahan/desa" } as const)[regionStatisticsLevel]}</h2>
+                  <h2>{t("wildfire.regionStats.heading", { level: t(`wildfire.regionStats.level.${regionStatisticsLevel}`) })}</h2>
                   <span>
-                    {query.district || query.city || query.province || `Seluruh ${wildfireEventRegionLabel(event.slug)}`} · mengikuti periode, sensor, dan tingkat keyakinan terpilih
+                    {query.district || query.city || query.province || t("wildfire.regionStats.allRegion", { region: wildfireEventRegionLabel(event.slug, language) })} · {t("wildfire.regionStats.scopeHint")}
                   </span>
                 </div>
-                {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">Menghitung…</span>}
+                {regionStatisticsLoading && <span className="wildfire-region-loading" role="status">{t("wildfire.regionStats.calculating")}</span>}
               </div>
               {regionStatisticsNotice ? (
                 <div className="wildfire-region-error" role="alert">{regionStatisticsNotice}</div>
               ) : (
                 <div className="wildfire-region-table-wrap">
                   <table className="wildfire-region-table">
-                    <thead><tr><th>Wilayah</th><th>Jumlah hotspot</th><th>Keyakinan tinggi</th></tr></thead>
+                    <thead><tr><th>{t("wildfire.regionStats.region")}</th><th>{t("wildfire.regionStats.hotspotCount")}</th><th>{t("wildfire.regionStats.highConfidence")}</th></tr></thead>
                     <tbody>
                       {regionStatisticsVisibleFor !== slug ? (
-                        <tr><td colSpan={3}>Statistik wilayah dimuat saat panel ini mendekati tampilan.</td></tr>
+                        <tr><td colSpan={3}>{t("wildfire.regionStats.deferred")}</td></tr>
                       ) : regionStatisticsLoading && regionStatistics.length === 0 ? (
-                        <tr><td colSpan={3}>Memuat statistik batas wilayah…</td></tr>
+                        <tr><td colSpan={3}>{t("wildfire.regionStats.loading")}</td></tr>
                       ) : regionStatistics.length === 0 ? (
-                        <tr><td colSpan={3}>Belum ada data hotspot pada wilayah dan filter ini.</td></tr>
+                        <tr><td colSpan={3}>{t("wildfire.regionStats.empty")}</td></tr>
                       ) : regionStatistics.map((region, index) => (
                         <tr key={`${region.code}:${region.name}:${index}`}>
                           <td>
@@ -1867,7 +1870,7 @@ export function KarhutlaDetailPage() {
                   </table>
                 </div>
               )}
-              <small className="wildfire-region-attribution">Sumber hotspot NASA FIRMS; batas administratif Indonesia. Hotspot adalah deteksi anomali panas, bukan luas area terbakar.</small>
+              <small className="wildfire-region-attribution">{t("wildfire.regionStats.attribution")}</small>
             </div>
           )}
         </main>
@@ -1909,7 +1912,7 @@ export function KarhutlaDetailPage() {
           <section className="wildfire-side-card">
             <h2>{t("wildfire.analysis.title")}</h2>
             {summaryUnavailable ? (
-              <p>Ringkasan tingkat keyakinan tidak tersedia untuk wilayah terpilih.</p>
+              <p>{t("wildfire.regionStats.confidenceUnavailable")}</p>
             ) : (
               <div className="wildfire-confidence-bars">
                 <Bar
@@ -1938,12 +1941,12 @@ export function KarhutlaDetailPage() {
             <div className="wildfire-source-list">
               <div className="wildfire-source-item">
                 <i className="bi bi-fire" aria-hidden="true" />
-                <span><small>Sumber hotspot</small><strong>{event.source}</strong></span>
+                <span><small>{t("wildfire.regionStats.hotspotSource")}</small><strong>{event.source}</strong></span>
               </div>
               {event.boundary_source && (
                 <div className="wildfire-source-item">
                   <i className="bi bi-bounding-box" aria-hidden="true" />
-                  <span><small>Batas administratif</small><strong>{event.boundary_source}</strong></span>
+                  <span><small>{t("wildfire.regionStats.administrativeBoundary")}</small><strong>{event.boundary_source}</strong></span>
                 </div>
               )}
             </div>
@@ -2087,6 +2090,43 @@ export function adaptLegacyEvent(event: Partial<WildfireEvent> | DisasterEventLi
     limitations: (raw.limitations ?? []).map((item) => hideBoundaryProvider(item) ?? item),
     source_ids: raw.source_ids ?? ["nasa-firms"],
   } as WildfireEvent;
+}
+
+/** Translate the curated Papua 2026 seed copy while preserving admin-edited text. */
+function localizeWildfireEvent(
+  event: WildfireEvent,
+  language: "id" | "en",
+  t: (key: string) => string,
+): WildfireEvent {
+  if (language !== "en" || event.slug !== "papua-2026") return event;
+
+  const seededDescription =
+    "Termasuk pemantauan regional sekitar karhutla Nabire pada 19 September 2026 yang dilaporkan BNPB. Batas provinsi layanan masih memakai cakupan sebelum pemekaran 2022.";
+  const seededMethodology =
+    "Deteksi panas disaring dengan gabungan batas provinsi yang sama dengan agregasi GFAS. Pemantauan regional dimulai 8 September 2026.";
+  const seededLimitations = new Map<string, string>([
+    ["Hotspot adalah anomali termal, bukan jumlah kejadian maupun luas terbakar.", "wildfire.event.limitations.hotspots"],
+    ["CAMS aerosol mencakup sumber selain kebakaran; GFAS adalah estimasi emisi grid regional.", "wildfire.event.limitations.camsGfas"],
+    ["Rujukan BNPB adalah contoh kejadian; seluruh hotspot wilayah tidak diatribusikan ke kejadian tersebut.", "wildfire.event.limitations.bnpb"],
+    ["Statistik provinsi Papua memakai dua cakupan arsip sebelum pemekaran 2022, bukan enam provinsi saat ini.", "wildfire.event.limitations.papuaBoundary"],
+  ]);
+  return {
+    ...event,
+    title: event.title === "Karhutla Papua 2026" ? t("wildfire.event.papua.title") : event.title,
+    short_title: event.short_title === "Papua 2026" ? t("wildfire.event.papua.shortTitle") : event.short_title,
+    description: event.description === seededDescription ? t("wildfire.event.papua.description") : event.description,
+    methodology: event.methodology === seededMethodology ? t("wildfire.event.papua.methodology") : event.methodology,
+    provinces: event.provinces.map((province) =>
+      province === "Papua Barat" ? t("wildfire.event.papua.provincePapuaBarat") : province,
+    ),
+    boundary_source: event.boundary_source?.startsWith("Peta Administratif")
+      ? t("wildfire.event.papua.boundarySource")
+      : event.boundary_source,
+    limitations: event.limitations.map((item) => {
+      const key = seededLimitations.get(item);
+      return key ? t(key) : item;
+    }),
+  };
 }
 
 export function useWildfireEventsFallback() {

@@ -19,6 +19,27 @@ type ViewMode = "split" | "swipe";
 
 const AOI_STYLE = { color: "#ef4444", weight: 2, fillOpacity: 0.06 };
 
+function translateQualityNote(note: string, language: string, t: (key: string, params?: Record<string, string | number>) => string) {
+  if (language !== "en") return note;
+  return note
+    .replace(
+      "Classifier dilatih dari label referensi 30 m; akurasi independen 10 m belum tersedia.",
+      t("lc.quality.classifier"),
+    )
+    .replace(
+      "Tiga classifier (gabungan, optik, SAR) dilatih dari sampel referensi 30 m yang sama; akurasi independen belum tersedia.",
+      t("lc.quality.fusion"),
+    )
+    .replace(
+      "Validasi lokal independen belum tersedia.",
+      t("lc.quality.noLocalValidation"),
+    )
+    .replace(
+      /Statistik AOI besar dihitung pada grid (\d+) m; peta tetap memakai resolusi sumber (\d+) m\./g,
+      (_match, scale: string, nativeScale: string) => t("lc.quality.largeAoiGrid", { scale, nativeScale }),
+    );
+}
+
 function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
   const map = useMap();
   useEffect(() => {
@@ -154,7 +175,7 @@ export default function BeforeAfterMaps({
 
   return (
     <div>
-      {[yearA, yearB].map((year) => year != null && yearData[year]?.quality_note ? <p className="alert alert-info py-2 small" key={year}>{year}: {yearData[year].quality_note} · {yearData[year].model_version}</p> : null)}
+      {[yearA, yearB].map((year) => year != null && yearData[year]?.quality_note ? <p className="alert alert-info py-2 small" key={year}>{year}: {translateQualityNote(yearData[year].quality_note!, language, t)} · {yearData[year].model_version}</p> : null)}
       <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
         <p className="text-muted mb-0 me-auto" style={{ fontSize: ".8rem" }}>
           <i className="fas fa-info-circle" /> {view === "split" ? t("lc.left") : t("lc.before")} = {t("lc.startYear")} (
@@ -320,7 +341,7 @@ export default function BeforeAfterMaps({
             clipGeometry={aoi as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null}
           >
             <MapCursorPosition />
-            <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity peta" />
+            <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("lc.mapOpacity")} />
             <MapClickInspector onClick={handleMapClick} />
             {aoi && <GeoJSON key={JSON.stringify(aoi.geometry)} data={aoi as GeoJSON.Feature} style={AOI_STYLE} />}
             <FitToAoi aoi={aoi} />

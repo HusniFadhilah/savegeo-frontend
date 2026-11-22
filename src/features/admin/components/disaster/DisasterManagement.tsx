@@ -116,7 +116,7 @@ export default function DisasterManagement() {
           {detail && <div className="disaster-admin-detail-name">{detail.event.name}</div>}
         </div>
 
-        <nav className="disaster-admin-detail-tabs" aria-label="Tab kejadian bencana">
+        <nav className="disaster-admin-detail-tabs" aria-label={t("admin.disaster.detailTabs")}>
           {DETAIL_TABS.map((tab) => (
             <button
               key={tab.id}

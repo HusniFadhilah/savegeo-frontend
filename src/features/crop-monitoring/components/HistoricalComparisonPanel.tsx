@@ -2,6 +2,7 @@ import CropPanelAccordion from "./CropPanelAccordion";
 import { fmtNum } from "../utils";
 import type { HistoricalComparisonResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { localizeCropMessage } from "../utils";
 
 interface Props {
   historicalComparison: HistoricalComparisonResult;
@@ -19,7 +20,7 @@ export default function HistoricalComparisonPanel({ historicalComparison }: Prop
         <>
           {historicalComparison.narrative && (
             <div className="alert alert-info py-2 mb-3">
-              <i className="bi bi-lightbulb-fill me-1" /> {historicalComparison.narrative}
+              <i className="bi bi-lightbulb-fill me-1" /> {localizeCropMessage(historicalComparison.narrative, t)}
             </div>
           )}
           <div className="table-responsive">

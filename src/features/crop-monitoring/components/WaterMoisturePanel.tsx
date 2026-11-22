@@ -1,5 +1,5 @@
 import CropPanelAccordion from "./CropPanelAccordion";
-import { fmtNum, styleFor, WATER_STRESS_STYLE } from "../utils";
+import { fmtNum, styleFor, WATER_STRESS_STYLE, localizeCropReason } from "../utils";
 import type { WaterMoistureResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -14,7 +14,7 @@ export default function WaterMoisturePanel({ waterMoisture }: Props) {
     <CropPanelAccordion title={t("crop.card.moistureTitle")} icon="bi-droplet-fill">
       {!waterMoisture.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{waterMoisture.reason ? `: ${waterMoisture.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(waterMoisture.reason, t) ? `: ${localizeCropReason(waterMoisture.reason, t)}` : "."}
         </div>
       ) : (
         <>

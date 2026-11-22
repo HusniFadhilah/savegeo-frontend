@@ -290,42 +290,42 @@ export default function CarbonCalibration() {
           <div className="calibration-eyebrow">{t("admin.calibration.scope")}</div>
           <h2>{t("admin.calibration.title")} <span>{t("admin.calibration.projectExamples")}</span></h2>
           <p>{t("admin.calibration.subtitle")}</p>
-          <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> Penyimpanan terkelola</span><span><i className="bi bi-diagram-3" /> Provenans yang dapat direproduksi</span><span><i className="bi bi-lock" /> Dataset terbatas</span></div>
+          <div className="calibration-hero-meta"><span><i className="bi bi-shield-check" /> {t("admin.calibration.managedStorage")}</span><span><i className="bi bi-diagram-3" /> {t("admin.calibration.reproducibleProvenance")}</span><span><i className="bi bi-lock" /> {t("admin.calibration.restrictedDataset")}</span></div>
         </div>
-        <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> Ruang kerja siap</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
+        <div className="calibration-hero-actions"><span className="calibration-live-pill"><span /> {t("admin.calibration.workspaceReady")}</span><button type="button" className="btn btn-primary calibration-create-btn" onClick={() => void createDataset()} disabled={busy}>
           <i className={`bi ${datasets.some((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id) ? "bi-folder2-open" : "bi-plus-lg"}`} /> {datasets.some((dataset) => dataset.dataset_id === DEFAULT_DATASET.dataset_id) ? t("admin.calibration.openDataset") : t("admin.calibration.create")}
         </button></div>
       </div>
-      <div className="calibration-metrics" aria-label="Ringkasan ruang kerja kalibrasi">
-        <div className="calibration-metric"><span className="calibration-metric-icon green"><i className="bi bi-database" /></span><div><small>Dataset</small><strong>{datasets.length}</strong><span>sumber terdaftar</span></div></div>
-        <div className="calibration-metric"><span className="calibration-metric-icon blue"><i className="bi bi-folder2-open" /></span><div><small>File yang ditampilkan</small><strong>{files.length}</strong><span>{selected ? "dataset terpilih" : "pilih dataset"}</span></div></div>
-        <div className="calibration-metric"><span className="calibration-metric-icon amber"><i className="bi bi-geo-alt" /></span><div><small>Plot lapangan</small><strong>{totalPlots}</strong><span>unit independen</span></div></div>
-        <div className="calibration-metric"><span className={`calibration-metric-icon ${statusClass === "is-ready" ? "green" : "purple"}`}><i className="bi bi-activity" /></span><div><small>Status aktif</small><strong className="metric-status">{selectedStatus}</strong><span>{selected ? selected.dataset_id : "tidak ada dataset aktif"}</span></div></div>
+      <div className="calibration-metrics" aria-label={t("admin.calibration.workspaceSummary")}>
+        <div className="calibration-metric"><span className="calibration-metric-icon green"><i className="bi bi-database" /></span><div><small>{t("admin.calibration.datasets")}</small><strong>{datasets.length}</strong><span>{t("admin.calibration.registeredSources")}</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon blue"><i className="bi bi-folder2-open" /></span><div><small>{t("admin.calibration.displayedFiles")}</small><strong>{files.length}</strong><span>{selected ? t("admin.calibration.datasetSelected") : t("admin.calibration.selectDatasetShort")}</span></div></div>
+        <div className="calibration-metric"><span className="calibration-metric-icon amber"><i className="bi bi-geo-alt" /></span><div><small>{t("admin.calibration.fieldPlots")}</small><strong>{totalPlots}</strong><span>{t("admin.calibration.independentUnits")}</span></div></div>
+        <div className="calibration-metric"><span className={`calibration-metric-icon ${statusClass === "is-ready" ? "green" : "purple"}`}><i className="bi bi-activity" /></span><div><small>{t("admin.status")}</small><strong className="metric-status">{selectedStatus}</strong><span>{selected ? selected.dataset_id : t("admin.calibration.noActiveDataset")}</span></div></div>
       </div>
       <div className="calibration-notice">
-        <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>Alur sumber terlindungi</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">SUMBER HANYA BACA</span>
+        <span className="calibration-notice-icon"><i className="bi bi-shield-lock" /></span><div><strong>{t("admin.calibration.protectedWorkflow")}</strong><p>{t("admin.calibration.warning")}</p></div><span className="calibration-notice-tag">{t("admin.calibration.readOnlySources")}</span>
       </div>
       <NewCalibrationDatasetForm onCreated={(dataset) => { setDatasets((current) => [dataset, ...current]); void selectDataset(dataset); }} />
       <div className="admin-card calibration-undip-reference calibration-surface-card">
         <div className="calibration-undip-copy">
           <span className="calibration-undip-icon"><i className="bi bi-building" /></span>
           <div>
-            <h3>Kalibrasi karbon UNDIP</h3>
-            <p>Mulai ruang kerja acuan untuk data multi-kampus 2026. Ringkasan PDF dan spreadsheet disimpan sebagai konteks; label model tetap berasal dari pengamatan plot yang sudah ditinjau.</p>
+            <h3>{t("admin.calibration.undipTitle")}</h3>
+            <p>{t("admin.calibration.undipSummary")}</p>
           </div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => void createUndipDataset()} disabled={busy}>
           <i className={`bi ${datasets.some((dataset) => dataset.dataset_id === UNDIP_DATASET_ID) ? "bi-folder2-open" : "bi-plus-lg"}`} />
-          {datasets.some((dataset) => dataset.dataset_id === UNDIP_DATASET_ID) ? "Buka dataset UNDIP" : "Tambahkan dataset UNDIP"}
+          {datasets.some((dataset) => dataset.dataset_id === UNDIP_DATASET_ID) ? t("admin.calibration.openUndip") : t("admin.calibration.createUndip")}
         </button>
       </div>
       <details className="admin-card calibration-import-wizard calibration-surface-card">
-        <summary className="p-3 fw-semibold">Impor sumber survei pohon · buku kerja dan UAV</summary>
+        <summary className="p-3 fw-semibold">{t("admin.calibration.importTreeSurvey")}</summary>
         <div className="admin-card-head"><div><h3>{t("admin.calibration.importWizard")}</h3><p>{t("admin.calibration.importWizardHint")}</p></div><button type="button" className="btn btn-primary" disabled={busy || !revisedWorkbook} onClick={() => void importSources()}><i className="bi bi-cloud-arrow-up" /> {t("admin.calibration.startImport")}</button></div>
         <div className="calibration-import-fields">
-          <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? "Wajib · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
-          <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? "Opsional · .xlsx"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
-          <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? "Opsional · .tif / .tiff"}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${revisedWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setRevisedWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-file-earmark-spreadsheet" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.revisedWorkbook")}</strong><small>{revisedWorkbook?.name ?? t("admin.calibration.requiredXlsx")}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${previousWorkbook ? "has-file" : ""}`}><input type="file" accept=".xlsx" disabled={busy} onChange={(event) => setPreviousWorkbook(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-clock-history" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.previousWorkbook")}</strong><small>{previousWorkbook?.name ?? t("admin.calibration.optionalXlsx")}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
+          <label className={`calibration-file-drop ${demFile ? "has-file" : ""}`}><input type="file" accept=".tif,.tiff" disabled={busy} onChange={(event) => setDemFile(event.target.files?.[0] ?? null)} /><span className="calibration-file-icon"><i className="bi bi-globe2" /></span><span className="calibration-file-copy"><strong>{t("admin.calibration.dem")}</strong><small>{demFile?.name ?? t("admin.calibration.optionalTiff")}</small></span><i className="bi bi-arrow-up-right calibration-file-arrow" /></label>
         </div>
       </details>
       <div className="calibration-grid">
@@ -337,24 +337,24 @@ export default function CarbonCalibration() {
         <div className="admin-card calibration-detail calibration-surface-card">
           {!selected ? <div className="empty-state"><i className="bi bi-database-gear" /><p>{t("admin.calibration.selectHint")}</p></div> : <>
             <div className="admin-card-head"><div><h3>{selected.name}</h3><span className="stat-badge badge-amber">{selected.access}</span></div><span className="calibration-status">{selected.status}</span></div>
-            <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{selected.manifest.field_reference_type === "pool_specific_field_observations" ? "Sesuai metode tiap pengukuran" : t("admin.calibration.allometric")}</strong></div></div>
+            <div className="calibration-metadata"><div><small>{t("admin.calibration.site")}</small><strong>{String(selected.manifest.site ?? "—")}</strong></div><div><small>CRS</small><strong>{String(selected.manifest.crs ?? "—")}</strong></div><div><small>{t("admin.calibration.plots")}</small><strong>{String(selected.manifest.plot_count ?? "—")} {t("admin.calibration.independent")}</strong></div><div><small>{t("admin.calibration.reference")}</small><strong>{selected.manifest.field_reference_type === "pool_specific_field_observations" ? t("admin.calibration.measurementMethod") : t("admin.calibration.allometric")}</strong></div></div>
             {isUndipReference && <div className="calibration-undip-details">
-              <div className="calibration-undip-details-head"><div><strong>Ringkasan sumber 2026</strong><span>Angka agregat untuk konteks laporan, belum menjadi label kalibrasi.</span></div><span className="badge bg-warning-subtle text-warning-emphasis">Draf · perlu tinjauan</span></div>
-              <div className="field-calibration-table-wrap"><table className="tbl tbl-wide field-calibration-table field-calibration-table--summary"><thead><tr><AdminTableNumberHeader /><th>Komponen</th><th>Workbook revisi</th><th>Tabel PDF</th><th>Narasi PDF</th></tr></thead><tbody>
+              <div className="calibration-undip-details-head"><div><strong>{t("admin.calibration.undipSourceSummary")}</strong><span>{t("admin.calibration.aggregateContext")}</span></div><span className="badge bg-warning-subtle text-warning-emphasis">{t("admin.calibration.draftReview")}</span></div>
+              <div className="field-calibration-table-wrap"><table className="tbl tbl-wide field-calibration-table field-calibration-table--summary"><thead><tr><AdminTableNumberHeader /><th>{t("admin.calibration.component")}</th><th>{t("admin.calibration.revisedWorkbookColumn")}</th><th>{t("admin.calibration.pdfTable")}</th><th>{t("admin.calibration.pdfNarrative")}</th></tr></thead><tbody>
                 <tr><AdminTableNumberCell index={0} /><td>AGB</td><td>23.712,35 ton C</td><td>23.712,35 ton C</td><td>23.721,25 ton C</td></tr>
                 <tr><AdminTableNumberCell index={1} /><td>SOC</td><td>1.623.742,67 ton C</td><td>1.729.329,77 ton C</td><td>1.139.921,61 ton C</td></tr>
               </tbody></table></div>
-              <p className="calibration-undip-warning"><i className="bi bi-exclamation-triangle" /> Angka AGB dan SOC berbeda antarbagian/sumber. Tinjau dan rekonsiliasi sebelum memakai angka agregat; koordinat dan luas plot juga perlu diverifikasi.</p>
-              <div className="calibration-undip-sources"><strong>Berkas sumber</strong>
+              <p className="calibration-undip-warning"><i className="bi bi-exclamation-triangle" /> {t("admin.calibration.undipDiscrepancy")}</p>
+              <div className="calibration-undip-sources"><strong>{t("admin.calibration.sourceFiles")}</strong>
                 <a href="https://drive.google.com/file/d/1yjT3k2Prt6zBr4536Eqz6oDfN1EZrNc9/view" target="_blank" rel="noreferrer">Laporan carbon offset UNDIP 2026 (PDF) <i className="bi bi-box-arrow-up-right" /></a>
                 <a href="https://docs.google.com/spreadsheets/d/1Woq1AfB-qsEezr-6kmPhQv25beisfiv_/edit?gid=1711374899#gid=1711374899" target="_blank" rel="noreferrer">Data Survei Carbon.xlsx <i className="bi bi-box-arrow-up-right" /></a>
                 <a href="https://docs.google.com/spreadsheets/d/1ml2cFL62vuyLocQQ8HelvcZ-c50DRNNh/edit?rtpof=true" target="_blank" rel="noreferrer">2026 OLAH DATA CARBON (REVISI).xlsx <i className="bi bi-box-arrow-up-right" /></a>
               </div>
-              <p className="calibration-undip-limits">Workbook Excel dapat diunggah melalui tombol <b>Tambah file</b> untuk ekstraksi plot AGB. Data SOC perlu dimasukkan sebagai pengamatan tersendiri setelah rekonsiliasi. BGB, litter, dan deadwood tidak tercakup dalam sumber ini.</p>
+              <p className="calibration-undip-limits">{t("admin.calibration.undipWorkbookNote")} <b>{t("admin.calibration.addFiles")}</b> {t("admin.calibration.undipPoolNote")}</p>
             </div>}
             <div className="calibration-actions"><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("validate")}><i className="bi bi-check2-circle" /> {t("admin.calibration.validate")}</button><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => void runAction("extract")}><i className="bi bi-gear" /> {t("admin.calibration.extract")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("spatial")}><i className="bi bi-bounding-box" /> {t("admin.calibration.validateSpatial")}</button><button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={() => void runAction("features")}><i className="bi bi-bezier2" /> {t("admin.calibration.extractFeatures")}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}><i className="bi bi-upload" /> {t("admin.calibration.addFiles")}</button><input ref={fileInput} type="file" multiple hidden accept=".tif,.tiff,.zip,.obj,.csv,.xlsx,.docx,.pdf,.geojson,.json,.shp" onChange={(event) => void uploadFiles(event)} /></div>
             <FieldCalibrationPanel key={selected.dataset_id} datasetId={selected.dataset_id} />
-            <div className="calibration-files-heading"><div><h4>{t("admin.calibration.files")}</h4><p>{filteredFiles.length} berkas</p></div></div>
+            <div className="calibration-files-heading"><div><h4>{t("admin.calibration.files")}</h4><p>{filteredFiles.length} {t("admin.calibration.filesCount")}</p></div></div>
             <div className="field-calibration-table-wrap calibration-file-table"><table className="tbl tbl-wide field-calibration-table field-calibration-table--files"><thead><tr><AdminTableNumberHeader /><th>{t("admin.calibration.source")}</th><th>{t("admin.calibration.kind")}</th><th>{t("admin.calibration.size")}</th><th>SHA-256</th></tr></thead><tbody>{visibleFiles.map((file, index) => <tr key={file.id}><AdminTableNumberCell index={filesPage * filesPageSize + index} /><td>{file.source_name}</td><td>{file.file_kind}</td><td>{formatBytes(file.size_bytes)}</td><td><code title={file.sha256}>{file.sha256.slice(0, 16)}…</code></td></tr>)}</tbody></table></div>
             <TablePagination
               page={filesPage}

@@ -1,5 +1,5 @@
 import CropPanelAccordion from "./CropPanelAccordion";
-import { fmtNum, fmtPct } from "../utils";
+import { fmtNum, fmtPct, localizeCropReason } from "../utils";
 import type { ProductivityZonesResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -17,7 +17,7 @@ export default function ProductivityZonesPanel({ productivityZones }: Props) {
     <CropPanelAccordion title={t("crop.card.productivityTitle")} icon="bi-grid-3x3-gap-fill">
       {!productivityZones.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{productivityZones.reason ? `: ${productivityZones.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(productivityZones.reason, t) ? `: ${localizeCropReason(productivityZones.reason, t)}` : "."}
         </div>
       ) : (
         <>
@@ -56,15 +56,15 @@ export default function ProductivityZonesPanel({ productivityZones }: Props) {
             </table>
           </div>
           <small className="text-muted d-block">
-            Bobot: NDVI {fmtPct((productivityZones.weights.ndvi ?? 0) * 100, 0)}, NDMI{" "}
+            {t("crop.weightLabel")}: NDVI {fmtPct((productivityZones.weights.ndvi ?? 0) * 100, 0)}, NDMI{" "}
             {fmtPct((productivityZones.weights.ndmi ?? 0) * 100, 0)}
             {productivityZones.weights.sentinel1_vv != null && `, Sentinel-1 VV ${fmtPct(productivityZones.weights.sentinel1_vv * 100, 0)}`}
-            {productivityZones.weights.elevation != null && `, Elevasi ${fmtPct(productivityZones.weights.elevation * 100, 0)}`}
+            {productivityZones.weights.elevation != null && `, ${t("crop.elevation")} ${fmtPct(productivityZones.weights.elevation * 100, 0)}`}
             {" · "}
             {productivityZones.seasons_used} {t("crop.seasonsUsed")}
           </small>
           {productivityZones.tile_url && (
-            <small className="text-muted d-block mt-1">Lihat layer peta "Zona Produktivitas" di panel Peta Hasil di bawah.</small>
+            <small className="text-muted d-block mt-1">{t("crop.map.layerHint", { layer: t("crop.map.productivity") })}</small>
           )}
         </>
       )}

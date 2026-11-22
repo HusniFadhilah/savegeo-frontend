@@ -9,6 +9,7 @@ import type { LcDataset, LcHotspot, LcHotspotResponse } from "../types";
 import { analyzeLandCoverHotspots } from "../api";
 import { translateLulcClass } from "../utils";
 import { RESULT_PANE } from "@/config/mapPanes";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   aoi: AoiFeature | null;
@@ -77,6 +78,7 @@ export default function HotspotPanel({
   dwProbabilityThreshold,
   nativeScale = 10,
 }: Props) {
+  const { t, language } = useI18nStore();
   const [minAreaHa, setMinAreaHa] = useState(1);
   const [topN, setTopN] = useState(20);
   const [scaleMultiplier, setScaleMultiplier] = useState(1);
@@ -119,7 +121,7 @@ export default function HotspotPanel({
       setResult(res);
     } catch (err) {
       if (requestedGeneration !== generation.current) return;
-      setError(err instanceof Error ? err.message : "Gagal memuat hotspot perubahan.");
+      setError(err instanceof Error ? err.message : t("lc.hotspots.loadFailed"));
       setResult(null);
     } finally {
       setRunning(false);
@@ -154,7 +156,7 @@ export default function HotspotPanel({
       <div className="d-flex align-items-end gap-3 flex-wrap mb-3">
         <div>
           <label className="form-label mb-1" style={{ fontSize: ".78rem" }}>
-            Luas minimum (ha)
+            {t("lc.hotspots.minimumArea")}
           </label>
           <input
             type="number"
@@ -168,7 +170,7 @@ export default function HotspotPanel({
         </div>
         <div>
           <label className="form-label mb-1" style={{ fontSize: ".78rem" }}>
-            Jumlah hotspot
+            {t("lc.hotspots.count")}
           </label>
           <input
             type="number"
@@ -183,29 +185,29 @@ export default function HotspotPanel({
         <button className="btn btn-warning btn-sm fw-bold" disabled={!canRun || running} onClick={run}>
           {running ? (
             <>
-              <i className="fas fa-spinner fa-spin" /> Memvektorkan...
+              <i className="fas fa-spinner fa-spin" /> {t("lc.hotspots.vectorizing")}
             </>
           ) : (
             <>
-              <i className="fas fa-map-pin" /> Deteksi Hotspot
+              <i className="fas fa-map-pin" /> {t("lc.hotspots.detect")}
             </>
           )}
         </button>
-        <div><label className="form-label mb-1 small" htmlFor="hotspot-scale">Resolusi poligon</label>
+        <div><label className="form-label mb-1 small" htmlFor="hotspot-scale">{t("lc.hotspots.polygonResolution")}</label>
           <select id="hotspot-scale" className="form-select form-select-sm" value={scaleMultiplier} onChange={(event) => setScaleMultiplier(Number(event.target.value))}>
-            <option value={1}>{nativeScale} m · piksel asli</option><option value={3}>{nativeScale * 3} m · lebih cepat</option><option value={5}>{nativeScale * 5} m · lebih kasar</option>
+            <option value={1}>{nativeScale} m · {t("lc.hotspots.nativePixel")}</option><option value={3}>{nativeScale * 3} m · {t("lc.hotspots.faster")}</option><option value={5}>{nativeScale * 5} m · {t("lc.hotspots.coarser")}</option>
           </select>
         </div>
         {result && (
           <span className="badge bg-secondary align-self-center">
-            {result.hotspot_count} hotspot · skala vektorisasi {result.vector_scale}m
+            {result.hotspot_count} {t("wildfire.stats.hotspots")} · {t("lc.hotspots.vectorScale", { scale: result.vector_scale })}
           </span>
         )}
       </div>
 
       {!canRun && (
         <div className="alert alert-warning py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          Gambar AOI dan pilih 2 tahun (di tab Matriks Transisi/Peta Perubahan) dulu.
+          {t("lc.hotspots.chooseAoiAndYears")}
         </div>
       )}
       {error && (
@@ -215,7 +217,7 @@ export default function HotspotPanel({
       )}
       {result && result.hotspot_count === 0 && (
         <div className="alert alert-info py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          Tidak ada perubahan yang lolos ambang luas minimum di AOI ini.
+          {t("lc.hotspots.noChangesAboveThreshold")}
         </div>
       )}
 
@@ -238,7 +240,7 @@ export default function HotspotPanel({
             <FlyToHotspot target={selected} />
           </MapView>
           <small className="text-muted d-block mt-1">
-            Warna isi = kelas tujuan (to_class) · opasitas = besar relatif area · klik polygon atau baris tabel untuk fokus.
+            {t("lc.hotspots.mapHint")}
           </small>
         </div>
 
@@ -248,9 +250,9 @@ export default function HotspotPanel({
               <thead className="table-primary sticky-top">
                 <tr>
                   <th>#</th>
-                  <th>Luas (ha)</th>
-                  <th>Transisi</th>
-                  <th>Keyakinan</th>
+                  <th>{t("lc.areaHa")}</th>
+                  <th>{t("lc.transition")}</th>
+                  <th>{t("lc.confidence")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -262,7 +264,7 @@ export default function HotspotPanel({
                     onClick={() => setSelected(h)}
                   >
                     <td>{i + 1}</td>
-                    <td className="fw-bold">{h.area_ha.toLocaleString("id-ID")}</td>
+                    <td className="fw-bold">{h.area_ha.toLocaleString(language === "en" ? "en-US" : "id-ID")}</td>
                     <td style={{ fontSize: ".78rem" }}>
                       <span className="badge" style={{ background: h.from_class.color, color: "#fff" }}>
                         {translateLulcClass(h.from_class.label)}
@@ -286,14 +288,14 @@ export default function HotspotPanel({
                 {result && hotspots.length === 0 && (
                   <tr>
                     <td colSpan={4} className="text-center text-muted py-3">
-                      Tidak ada hotspot.
+                      {t("lc.hotspots.none")}
                     </td>
                   </tr>
                 )}
                 {!result && (
                   <tr>
                     <td colSpan={4} className="text-center text-muted py-3">
-                      Klik "Deteksi Hotspot" untuk memuat.
+                      {t("lc.hotspots.clickToLoad")}
                     </td>
                   </tr>
                 )}
@@ -302,8 +304,7 @@ export default function HotspotPanel({
           </div>
           {!result?.confidence_available && result && (
             <small className="text-muted d-block mt-2">
-              <i className="bi bi-info-circle" /> Dataset {result.dataset_name} tidak punya sumber confidence per-piksel
-              (hanya Dynamic World yang punya). Kolom keyakinan kosong, bukan galat.
+              <i className="bi bi-info-circle" /> {t("lc.hotspots.confidenceUnavailable", { dataset: result.dataset_name })}
             </small>
           )}
         </div>

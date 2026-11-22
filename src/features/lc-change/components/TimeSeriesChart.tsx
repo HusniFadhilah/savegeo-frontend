@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import type { LcDataset, LcYearResult } from "../types";
 import { colorForClass, hexRgba, translateLulcClass } from "../utils";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Filler, Tooltip, Legend);
 
@@ -22,6 +23,7 @@ interface Props {
 
 /** Stacked-area class evolution across all analyzed years, ported from LCChange._renderTimeSeries. */
 export default function TimeSeriesChart({ years, yearData, dataset }: Props) {
+  const t = useI18nStore((state) => state.t);
   const allClasses = new Set<string>();
   years.forEach((y) => Object.keys(yearData[y]?.classes || {}).forEach((c) => allClasses.add(c)));
 
@@ -48,12 +50,11 @@ export default function TimeSeriesChart({ years, yearData, dataset }: Props) {
   return (
     <div>
       <p className="text-muted mb-2" style={{ fontSize: ".8rem" }}>
-        <i className="fas fa-info-circle" /> Area stacked seluruh tahun yang dianalisis · Hover untuk detail tiap
-        kelas
+        <i className="fas fa-info-circle" /> {t("lc.timeSeries.hint")}
       </p>
       {areaVarianceHigh && (
         <div className="alert alert-warning py-1 px-2 mb-2" style={{ fontSize: ".78rem" }}>
-          Catatan: total area antar tahun berbeda &gt;10%; cek cakupan dataset/AOI.
+          {t("lc.timeSeries.areaVarianceWarning")}
         </div>
       )}
       <div style={{ height: 420 }}>
@@ -72,8 +73,8 @@ export default function TimeSeriesChart({ years, yearData, dataset }: Props) {
               },
             },
             scales: {
-              x: { title: { display: true, text: "Tahun" } },
-              y: { stacked: true, title: { display: true, text: "Luas (ha)" } },
+              x: { title: { display: true, text: t("lc.startYear") } },
+              y: { stacked: true, title: { display: true, text: t("lc.areaHa") } },
             },
           }}
         />

@@ -6,6 +6,7 @@ import { useAdmin } from "../AdminContext";
 import TablePagination from "@/components/ui/TablePagination";
 import BulkTableToolbar from "./BulkTableToolbar";
 import ImageryProviders from "./ImageryProviders";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 const PAGE_SIZE = 10;
 
@@ -43,6 +44,7 @@ function toEditable(row: SatelliteProviderRow): EditableFields {
  * useServerTable.
  */
 function VegetationProvidersTable() {
+  const t = useI18nStore((state) => state.t);
   const { notify } = useAdmin();
   const [rows, setRows] = useState<SatelliteProviderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ function VegetationProvidersTable() {
     setLoading(true);
     listSatelliteProvidersAdmin()
       .then((res) => setRows((res.satellites ?? []).sort((a, b) => a.display_order - b.display_order)))
-      .catch(() => notify("Gagal memuat daftar penyedia satelit", "e"))
+      .catch(() => notify(t("admin.satellite.loadFailed"), "e"))
       .finally(() => setLoading(false));
   };
 
@@ -86,12 +88,12 @@ function VegetationProvidersTable() {
   const toggleSelected = (key: string) => setSelectedKeys((keys) => (keys.includes(key) ? keys.filter((value) => value !== key) : [...keys, key]));
   const toggleAllPage = () => setSelectedKeys((keys) => (allPageSelected ? keys.filter((key) => !selectableRows.some((row) => row.key === key)) : Array.from(new Set([...keys, ...selectableRows.map((row) => row.key)]))));
   const handleBulkReset = async () => {
-    if (!selectedKeys.length || !confirm(`Hapus override pada ${selectedKeys.length} provider terpilih?`)) return;
+    if (!selectedKeys.length || !confirm(t("admin.satellite.resetSelectedConfirm", { count: selectedKeys.length }))) return;
     setBulkBusy(true);
     const results = await Promise.allSettled(selectedKeys.map((key) => resetSatelliteProvider(key)));
     const failed = results.filter((r) => r.status === "rejected").length;
     setSelectedKeys([]);
-    notify(failed ? `${results.length - failed} override direset, ${failed} gagal` : `${results.length} override direset`, failed ? "e" : "s");
+    notify(failed ? t("admin.satellite.resetSummary", { success: results.length - failed, failed }) : t("admin.satellite.resetSummaryAll", { count: results.length }), failed ? "e" : "s");
     load();
     setBulkBusy(false);
   };
@@ -111,11 +113,11 @@ function VegetationProvidersTable() {
     setSaving(true);
     try {
       await saveSatelliteProvider(key, draft);
-      notify(`Konfigurasi penyedia "${key}" berhasil disimpan`, "s");
+      notify(t("admin.satellite.saved", { key }), "s");
       cancelEdit();
       load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal menyimpan", "e");
+      notify(err instanceof Error ? err.message : t("admin.satellite.saveFailed"), "e");
     } finally {
       setSaving(false);
     }
@@ -123,13 +125,13 @@ function VegetationProvidersTable() {
 
   const resetOverride = async (row: SatelliteProviderRow) => {
     if (!row.has_override) return;
-    if (!confirm(`Hapus penimpaan konfigurasi "${row.key}" dan gunakan kembali katalog bawaan?`)) return;
+    if (!confirm(t("admin.satellite.resetConfirm", { key: row.key }))) return;
     try {
       await resetSatelliteProvider(row.key);
-      notify(`Penimpaan konfigurasi "${row.key}" berhasil dihapus`, "s");
+      notify(t("admin.satellite.resetDone", { key: row.key }), "s");
       load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal memulihkan konfigurasi", "e");
+      notify(err instanceof Error ? err.message : t("admin.satellite.resetFailed"), "e");
     }
   };
 
@@ -138,26 +140,24 @@ function VegetationProvidersTable() {
       await saveSatelliteProvider(row.key, { is_active: !row.is_active });
       load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal mengubah status", "e");
+      notify(err instanceof Error ? err.message : t("admin.satellite.statusFailed"), "e");
     }
   };
 
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Penyedia Satelit</span>
+        <span>{t("admin.satellite.title")}</span>
       </div>
       <div className="card-body-custom">
         <p className="text-muted mb-3" style={{ fontSize: ".85rem" }}>
           <i className="bi bi-info-circle me-1" />
-          Konfigurasi basis data menjadi lapisan pengaturan di atas katalog statis. Jika konfigurasi basis data tidak tersedia,
-          sistem menggunakan nilai bawaan dari katalog tersebut. Perubahan pada <code>GEE Collection</code> akan mengubah sumber
-          citra yang digunakan dalam analisis vegetasi. Pastikan nilai yang dimasukkan sudah benar.
+          {t("admin.satellite.description")} <code>{t("admin.satellite.collection")}</code> {t("admin.satellite.descriptionEnd")}
         </p>
 
         {editingKey && (
           <div className="mb-3">
-            <label className="form-label small text-muted">Deskripsi ({editingKey})</label>
+            <label className="form-label small text-muted">{t("admin.satellite.descriptionField")} ({editingKey})</label>
             <textarea
               className="form-control form-control-sm"
               rows={2}
@@ -169,7 +169,7 @@ function VegetationProvidersTable() {
 
         <BulkTableToolbar selectedCount={selectedKeys.length} onClear={() => setSelectedKeys([])}>
           <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkReset}>
-            <i className="bi bi-arrow-counterclockwise" /> {bulkBusy ? "Memulihkan..." : "Pulihkan konfigurasi terpilih"}
+            <i className="bi bi-arrow-counterclockwise" /> {bulkBusy ? t("admin.satellite.restoreLoading") : t("admin.satellite.restoreSelected")}
           </button>
         </BulkTableToolbar>
 
@@ -189,30 +189,30 @@ function VegetationProvidersTable() {
             </colgroup>
             <thead>
               <tr>
-                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua provider dengan override di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={t("admin.satellite.selectOverrides")} checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <AdminTableNumberHeader />
-                <th>Key</th>
-                <th>Nama</th>
-                <th>Provider</th>
-                <th>Resolusi</th>
-                <th>Koleksi GEE</th>
-                <th>Aktif</th>
-                <th>Penimpaan konfigurasi</th>
-                <th>Aksi</th>
+                <th>{t("admin.satellite.key")}</th>
+                <th>{t("admin.satellite.name")}</th>
+                <th>{t("admin.satellite.provider")}</th>
+                <th>{t("admin.satellite.resolution")}</th>
+                <th>{t("admin.satellite.collectionColumn")}</th>
+                <th>{t("admin.satellite.active")}</th>
+                <th>{t("admin.satellite.override")}</th>
+                <th>{t("admin.satellite.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Memuat...
+                    {t("admin.satellite.loading")}
                   </td>
                 </tr>
               )}
               {!loading && pageRows.length === 0 && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    {search ? "Tidak ada provider yang cocok." : "Belum ada provider satelit."}
+                    {search ? t("admin.satellite.noMatch") : t("admin.satellite.none")}
                   </td>
                 </tr>
               )}
@@ -283,30 +283,30 @@ function VegetationProvidersTable() {
                       </td>
                       <td>
                         {row.has_override ? (
-                          <span className="badge bg-warning text-dark">Basis data</span>
+                          <span className="badge bg-warning text-dark">{t("admin.satellite.database")}</span>
                         ) : (
-                          <span className="badge bg-secondary">Katalog bawaan</span>
+                          <span className="badge bg-secondary">{t("admin.satellite.defaultCatalog")}</span>
                         )}
                       </td>
                       <td style={{ whiteSpace: "nowrap" }}>
                         {isEditing ? (
                           <>
-                            <button className="btn-sm primary me-1" disabled={saving} onClick={() => save(row.key)}>
+                          <button className="btn-sm primary me-1" disabled={saving} onClick={() => save(row.key)} aria-label={t("admin.satellite.save")} title={t("admin.satellite.save")}>
                               <i className="bi bi-check-lg" />
                             </button>
-                            <button className="btn-sm" disabled={saving} onClick={cancelEdit}>
+                          <button className="btn-sm" disabled={saving} onClick={cancelEdit} aria-label={t("admin.satellite.cancelEdit")} title={t("admin.satellite.cancelEdit")}>
                               <i className="bi bi-x-lg" />
                             </button>
                           </>
                         ) : (
                           <>
-                            <button className="btn-sm me-1" onClick={() => startEdit(row)}>
+                            <button className="btn-sm me-1" onClick={() => startEdit(row)} aria-label={t("admin.satellite.edit")} title={t("admin.satellite.edit")}>
                               <i className="bi bi-pencil" />
                             </button>
                             {row.has_override && (
                               <button
                                 className="btn-sm danger"
-                                title="Hapus penimpaan dan gunakan katalog bawaan"
+                                title={t("admin.satellite.resetOverride")}
                                 onClick={() => resetOverride(row)}
                               >
                                 <i className="bi bi-arrow-counterclockwise" />
@@ -331,7 +331,7 @@ function VegetationProvidersTable() {
           onSearchChange={setSearch}
           onPrev={() => setPage((p) => Math.max(0, p - 1))}
           onNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-          searchPlaceholder="Cari key, nama, provider..."
+          searchPlaceholder={t("admin.satellite.search")}
         />
       </div>
     </div>
@@ -339,10 +339,11 @@ function VegetationProvidersTable() {
 }
 
 export default function SatelliteProviders() {
+  const t = useI18nStore((state) => state.t);
   const [catalog, setCatalog] = useState<"imagery" | "vegetation">("imagery");
   return (
     <div>
-      <div className="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Katalog penyedia satelit">
+      <div className="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label={t("admin.satellite.catalogAria")}>
         <button
           type="button"
           role="tab"
@@ -350,7 +351,7 @@ export default function SatelliteProviders() {
           className={`btn-sm ${catalog === "imagery" ? "primary" : ""}`}
           onClick={() => setCatalog("imagery")}
         >
-          Katalog citra satelit
+          {t("admin.satellite.catalogTitle")}
         </button>
         <button
           type="button"
@@ -359,7 +360,7 @@ export default function SatelliteProviders() {
           className={`btn-sm ${catalog === "vegetation" ? "primary" : ""}`}
           onClick={() => setCatalog("vegetation")}
         >
-          Analisis vegetasi
+          {t("admin.satellite.vegetationAnalysis")}
         </button>
       </div>
       {catalog === "imagery" ? <ImageryProviders /> : <VegetationProvidersTable />}

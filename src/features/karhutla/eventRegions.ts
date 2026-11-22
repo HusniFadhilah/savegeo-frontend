@@ -13,7 +13,10 @@ export function wildfireEventIsland(slug: string): string | undefined {
   return Object.prototype.hasOwnProperty.call(EVENT_ISLANDS, slug) ? EVENT_ISLANDS[slug] : undefined;
 }
 
-export function wildfireEventRegionLabel(slug: string): string {
+export function wildfireEventRegionLabel(slug: string, language: string = "id"): string {
   if (slug === "all") return "Indonesia";
-  return wildfireEventIsland(slug)?.replace(/_/g, " ").replace("Bali Nusa", "Bali & Nusa") ?? "wilayah event";
+  const region = wildfireEventIsland(slug);
+  if (!region) return language === "en" ? "event region" : "wilayah event";
+  const label = region.replace(/_/g, " ").replace("Bali Nusa", "Bali & Nusa");
+  return language === "en" && label === "Jawa" ? "Java" : label;
 }

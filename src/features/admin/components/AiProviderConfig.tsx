@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getOllamaModels, getOpenRouterModels } from "../api";
 import { AI_PROVIDERS } from "../types";
 import type { AdminConfigItem, OllamaCatalog, OpenRouterModelInfo } from "../types";
@@ -12,10 +12,15 @@ interface Props {
   providerStatus: Record<string, boolean>;
 }
 
-const GROUP_ORDER = [
-  { id: "free", label: "✅  Model Gratis" },
-  { id: "paid", label: "\u{1F4B0}  Model Berbayar" },
-];
+const PROVIDER_TRANSLATIONS: Record<string, { label: string; hint: string }> = {
+  anthropic: { label: "admin.config.ai.provider.anthropic", hint: "admin.config.ai.provider.anthropicHint" },
+  openai: { label: "admin.config.ai.provider.openai", hint: "admin.config.ai.provider.openaiHint" },
+  openrouter: { label: "admin.config.ai.provider.openrouter", hint: "admin.config.ai.provider.openrouterHint" },
+  deepseek: { label: "admin.config.ai.provider.deepseek", hint: "admin.config.ai.provider.deepseekHint" },
+  gemini: { label: "admin.config.ai.provider.gemini", hint: "admin.config.ai.provider.geminiHint" },
+  ollama: { label: "admin.config.ai.provider.ollama", hint: "admin.config.ai.provider.ollamaHint" },
+  opencode: { label: "admin.config.ai.provider.opencode", hint: "admin.config.ai.provider.opencodeHint" },
+};
 
 /**
  * Renders the "ai" system-config category: the provider selector cards,
@@ -25,6 +30,10 @@ const GROUP_ORDER = [
  */
 export default function AiProviderConfig({ items, values, onChange, providerStatus }: Props) {
   const t = useI18nStore((state) => state.t);
+  const groupOrder = [
+    { id: "free", label: t("admin.config.ai.group.free") },
+    { id: "paid", label: t("admin.config.ai.group.paid") },
+  ];
   const providerItem = items.find((i) => i.key === "ai.provider");
   const currentProvider = values["ai.provider"] ?? providerItem?.raw_value ?? "anthropic";
 
@@ -35,19 +44,19 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
   const [ollama, setOllama] = useState<OllamaCatalog | null>(null);
   const [ollamaLoading, setOllamaLoading] = useState(false);
 
-  const probeOllama = () => {
+  const probeOllama = useCallback(() => {
     setOllamaLoading(true);
     getOllamaModels()
       .then(setOllama)
       .catch(() =>
-        setOllama({ reachable: false, models: [], latency_ms: null, error: "request_failed", message: "Gagal memeriksa Ollama." }),
+        setOllama({ reachable: false, models: [], latency_ms: null, error: "request_failed", message: t("admin.config.ai.ollama.probeFailed") }),
       )
       .finally(() => setOllamaLoading(false));
-  };
+  }, [t]);
 
   useEffect(() => {
     probeOllama();
-  }, []);
+  }, [probeOllama]);
 
   useEffect(() => {
     if (currentProvider !== "openrouter" || orModels !== null || orLoading) return;
@@ -62,7 +71,7 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
       })
       .catch((err) => {
         if (cancelled) return;
-        setOrError(err instanceof Error ? err.message : "Gagal memuat daftar model OpenRouter");
+        setOrError(err instanceof Error ? err.message : t("admin.config.ai.openRouter.loadFailed"));
         setOrModels([]);
       })
       .finally(() => {
@@ -72,7 +81,7 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProvider]);
+  }, [currentProvider, t]);
 
   const orOptions: SearchableOption[] = (orModels || []).map((m) => ({
     value: m.id,
@@ -87,7 +96,12 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
   return (
     <>
       {items.map((item) => {
-        const keyLabel = item.key.split(".").pop();
+        const itemLabelKey = `admin.config.item.${item.key}.label`;
+        const translatedItemLabel = t(itemLabelKey);
+        const keyLabel = translatedItemLabel === itemLabelKey ? item.label || item.key.split(".").pop() : translatedItemLabel;
+        const itemDescriptionKey = `admin.config.item.${item.key}.description`;
+        const translatedItemDescription = t(itemDescriptionKey);
+        const itemDescription = translatedItemDescription === itemDescriptionKey ? item.description : translatedItemDescription;
 
         if (item.key === "ai.provider") {
           return (
@@ -111,18 +125,18 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                           style={{ display: "none" }}
                         />
                         <span className="cfg-provider-icon">{p.icon}</span>
-                        <span className="cfg-provider-name">{p.label}</span>
-                        <span className="cfg-provider-hint">{p.hint}</span>
+                        <span className="cfg-provider-name">{t(PROVIDER_TRANSLATIONS[p.id]?.label ?? "admin.config.ai.provider.openai")}</span>
+                        <span className="cfg-provider-hint">{t(PROVIDER_TRANSLATIONS[p.id]?.hint ?? "admin.config.ai.provider.openaiHint")}</span>
                         <span className={ok ? "cfg-secret-ok" : "cfg-secret-empty"} style={{ fontSize: 10, marginLeft: "auto" }}>
                           {p.id === "ollama"
                             ? ollama === null
-                              ? "Memeriksa…"
+                              ? t("admin.config.ai.ollama.checking")
                               : ok
-                                ? "Siap"
-                                : "Tidak terjangkau"
+                                ? t("admin.config.ai.ollama.ready")
+                                : t("admin.config.ai.ollama.unreachable")
                             : ok
-                              ? "Siap"
-                              : "Perlu key"}
+                              ? t("admin.config.ai.ollama.ready")
+                              : t("admin.config.ai.provider.keyRequired")}
                         </span>
                       </label>
                     );
@@ -153,28 +167,28 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                   value={values[item.key] ?? item.raw_value ?? ""}
                   onChange={(v) => onChange("ai.model", v)}
                   options={isOR ? orOptions : isOllama ? ollamaOptions : []}
-                  groupOrder={isOR ? GROUP_ORDER : undefined}
+                  groupOrder={isOR ? groupOrder : undefined}
                   loading={isOR && orLoading}
                   placeholder={
                     isOR
-                      ? "Cari atau ketik nama model..."
+                      ? t("admin.config.ai.model.search")
                       : currentProvider === "ollama"
-                        ? "Contoh: qwen3:8b (sesuai ollama list)"
-                        : "Kosong = default provider"
+                        ? t("admin.config.ai.model.ollamaExample")
+                        : t("admin.config.ai.model.defaultProviderHint")
                   }
                   allowCustomValue={!isOllama || !ollama?.reachable}
                 />
                 {isOllama && (
                   <small className="text-muted d-block mt-1">
                     {ollamaLoading || ollama === null
-                      ? "Memeriksa server Ollama…"
+                      ? t("admin.config.ai.ollama.checkingServer")
                       : ollama.reachable
-                        ? `Terhubung (${ollama.latency_ms ?? "?"} ms) · ${ollama.models.length} model terpasang. Hanya model terpasang yang dapat disimpan.`
-                        : `Ollama tidak terjangkau: ${ollama.message ?? "tidak ada respons"}. Nama model dapat diisi manual, tetapi belum diverifikasi.`}{" "}
+                        ? t("admin.config.ai.ollama.connectedSummary", { latency: ollama.latency_ms ?? "?", count: ollama.models.length })
+                        : t("admin.config.ai.ollama.unreachableSummary", { message: ollama.message ?? t("admin.config.ai.ollama.noResponse") })}{" "}
                     <button type="button" className="btn btn-link btn-sm p-0" onClick={probeOllama} disabled={ollamaLoading}>
-                      Periksa ulang
+                      {t("admin.config.ai.ollama.checkAgain")}
                     </button>
-                    {" · "}URL diatur pada baris <code>ollama_base_url</code>.
+                    {" · "}{t("admin.config.ai.ollama.urlConfiguredAt")} <code>ollama_base_url</code>.
                   </small>
                 )}
               </div>
@@ -240,14 +254,14 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
                   <input
                     type="password"
                     autoComplete="new-password"
-                    title={item.description}
-                    placeholder={configured ? "Isi untuk mengganti" : "Belum dikonfigurasi"}
+                    title={itemDescription}
+                    placeholder={configured ? t("admin.config.secretReplacePlaceholder") : t("admin.config.secretMissingPlaceholder")}
                     value={values[item.key] ?? ""}
                     onChange={(e) => onChange(item.key, e.target.value)}
                   />
                   <span className={configured ? "cfg-secret-ok" : "cfg-secret-empty"}>
                     <i className={`bi ${configured ? "bi-check-circle-fill" : "bi-exclamation-circle-fill"}`} />{" "}
-                    {configured ? "Dikonfigurasi" : "Belum diisi"}
+                    {configured ? t("admin.config.configured") : t("admin.config.empty")}
                   </span>
                 </div>
               </div>
@@ -263,7 +277,7 @@ export default function AiProviderConfig({ items, values, onChange, providerStat
             </span>
             <div className="cfg-val">
               <input
-                title={item.description}
+                title={itemDescription}
                 value={values[item.key] ?? ""}
                 onChange={(e) => onChange(item.key, e.target.value)}
               />

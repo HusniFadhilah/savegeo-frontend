@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createDisasterImagery, setPrimaryImagery, uploadDisasterImageryGeoTiff } from "../../api";
 import type { ImageryPhase, SatelliteImagery } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 const SATELLITE_OPTIONS = ["Sentinel-1 SAR GRD", "Sentinel-2 Optical", "Landsat 8", "Landsat 9", "Other"];
 
@@ -14,6 +15,7 @@ interface Props {
 
 /** Pre/post imagery list + add form + "Set as Primary" per row, per spec §4. */
 export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
+  const t = useI18nStore((state) => state.t);
   const { notify } = useAdmin();
   const [phase, setPhase] = useState<ImageryPhase>("pre");
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -46,11 +48,11 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
 
   const handleAdd = async () => {
     if (!acquisitionDate) {
-      setFormError("Tanggal akuisisi diperlukan");
+      setFormError(t("admin.disaster.acquisitionRequired"));
       return;
     }
     if (geoTiffFile && !/\.(tif|tiff|zip)$/i.test(geoTiffFile.name)) {
-      setFormError("File harus .tif, .tiff, atau .zip berisi GeoTIFF");
+      setFormError(t("admin.disaster.imageryFormat"));
       return;
     }
     setSaving(true);
@@ -80,12 +82,12 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
           is_primary: isPrimary,
         });
       }
-      notify(geoTiffFile ? "GeoTIFF/ZIP tersimpan dan didaftarkan" : "Citra satelit ditambahkan", "s");
+      notify(geoTiffFile ? t("admin.disaster.imageryUploaded") : t("admin.disaster.imageryAdded"), "s");
       setFormOpen(false);
       resetForm();
       onChanged();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal menambah citra";
+      const msg = err instanceof Error ? err.message : t("admin.disaster.addImageryFailed");
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -97,10 +99,10 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
     setBusyId(imageryId);
     try {
       await setPrimaryImagery(eventId, imageryId);
-      notify("Citra utama diperbarui", "s");
+      notify(t("admin.disaster.primaryUpdated"), "s");
       onChanged();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal mengubah citra utama", "e");
+      notify(err instanceof Error ? err.message : t("admin.disaster.primaryUpdateFailed"), "e");
     } finally {
       setBusyId(null);
     }
@@ -109,25 +111,25 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Citra Satelit</span>
+        <span>{t("admin.disaster.satellite")}</span>
         <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-          <i className="bi bi-plus-lg" /> Tambah Citra
+          <i className="bi bi-plus-lg" /> {t("admin.disaster.addImage")}
         </button>
       </div>
       <div className="card-body-custom">
         <div style={{ display: "flex", gap: 6, marginBottom: "0.75rem" }}>
           <button type="button" className={`btn-sm ${phase === "pre" ? "primary" : ""}`} onClick={() => setPhase("pre")}>
-            Pra-bencana ({imagery.pre.length})
+            {t("admin.disaster.preImageryLabel", { count: imagery.pre.length })}
           </button>
           <button type="button" className={`btn-sm ${phase === "post" ? "primary" : ""}`} onClick={() => setPhase("post")}>
-            Pasca-bencana ({imagery.post.length})
+            {t("admin.disaster.postImageryLabel", { count: imagery.post.length })}
           </button>
         </div>
 
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="three-col" style={{ marginBottom: "0.5rem" }}>
             <div className="form-field">
-              <label className="form-label">Satelit *</label>
+              <label className="form-label">{t("admin.disaster.satelliteField")}</label>
               <select className="form-select" value={satellite} onChange={(e) => setSatellite(e.target.value)}>
                 {SATELLITE_OPTIONS.map((s) => (
                   <option key={s} value={s}>
@@ -137,15 +139,15 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
               </select>
             </div>
             <div className="form-field">
-              <label className="form-label">Tanggal Akuisisi *</label>
+              <label className="form-label">{t("admin.disaster.acquisitionDate")}</label>
               <input className="form-input" type="date" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} />
             </div>
             <div className="form-field">
-              <label className="form-label">Sensor</label>
-                        <input className="form-input" placeholder="Contoh: MSI, C-SAR" value={sensor} onChange={(e) => setSensor(e.target.value)} />
+              <label className="form-label">{t("admin.disaster.sensor")}</label>
+              <input className="form-input" placeholder={t("admin.disaster.sensorPlaceholder")} value={sensor} onChange={(e) => setSensor(e.target.value)} />
             </div>
             <div className="form-field">
-              <label className="form-label">Resolusi (m)</label>
+              <label className="form-label">{t("admin.disaster.resolution")}</label>
               <input
                 className="form-input"
                 type="number"
@@ -157,7 +159,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Tutupan Awan (%)</label>
+              <label className="form-label">{t("admin.disaster.clouds")}</label>
               <input
                 className="form-input"
                 type="number"
@@ -170,16 +172,16 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Sumber Data</label>
+              <label className="form-label">{t("admin.disaster.dataSource")}</label>
               <input
                 className="form-input"
-                        placeholder="Contoh: Copernicus Hub"
+                placeholder={t("admin.disaster.sourceDataPlaceholder")}
                 value={dataSource}
                 onChange={(e) => setDataSource(e.target.value)}
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Unggah GeoTIFF / ZIP</label>
+              <label className="form-label">{t("admin.disaster.uploadImagery")}</label>
               <input
                 className="form-input"
                 type="file"
@@ -191,22 +193,22 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
           {geoTiffFile && (
             <div className="alert alert-info py-1 px-2 small">
               <i className="bi bi-file-earmark-richtext me-1" />
-              {geoTiffFile.name} akan dikonversi ke COG dan path-nya disimpan di database.
+              {geoTiffFile.name} {t("admin.disaster.cogNotice")}
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
             <input type="checkbox" id="im-primary" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} />
             <label htmlFor="im-primary" style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Jadikan citra utama untuk fase {phase === "pre" ? "pra-bencana" : "pasca-bencana"} ini
+              {t("admin.disaster.primaryForPhase", { phase: phase === "pre" ? t("admin.disaster.phasePre") : t("admin.disaster.phasePost") })}
             </label>
           </div>
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn-sm primary" disabled={saving} onClick={handleAdd}>
-              <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan"}
+            <i className="bi bi-save" /> {saving ? t("admin.disaster.saving") : t("admin.disaster.save")}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
-              Batal
+              {t("admin.disaster.cancel")}
             </button>
           </div>
         </div>
@@ -226,20 +228,20 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
             <thead>
               <tr>
                 <AdminTableNumberHeader />
-                  <th>Satelit</th>
-                <th>Tanggal</th>
-                <th>Sensor</th>
-                <th>Resolusi</th>
-                <th>Awan</th>
-                <th>Sumber</th>
-                <th>Aksi</th>
+                  <th>{t("admin.disaster.satellite")}</th>
+                <th>{t("admin.disaster.imageryDate")}</th>
+                <th>{t("admin.disaster.sensor")}</th>
+                <th>{t("admin.disaster.resolution")}</th>
+                <th>{t("admin.disaster.cloudColumn")}</th>
+                <th>{t("admin.disaster.imagerySource")}</th>
+                <th>{t("admin.disaster.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada citra {phase === "pre" ? "pra-bencana" : "pasca-bencana"}.
+                    {t("admin.disaster.noImageryPhase", { phase: phase === "pre" ? t("admin.disaster.phasePre") : t("admin.disaster.phasePost") })}
                   </td>
                 </tr>
               )}
@@ -248,9 +250,9 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
                   <AdminTableNumberCell index={index} />
                   <td>
                     {img.satellite}
-                    {img.is_primary && <span className="stat-badge badge-blue" style={{ marginLeft: 6 }}>Utama</span>}
+                    {img.is_primary && <span className="stat-badge badge-blue" style={{ marginLeft: 6 }}>{t("admin.disaster.primary")}</span>}
                     {img.source_kind === "local_upload" && (
-                      <span className="stat-badge badge-green" style={{ marginLeft: 6 }}>GeoTIFF</span>
+                      <span className="stat-badge badge-green" style={{ marginLeft: 6 }}>{t("admin.disaster.geoTiff")}</span>
                     )}
                   </td>
                   <td>{img.acquisition_date}</td>
@@ -266,7 +268,7 @@ export default function ImageryManager({ eventId, imagery, onChanged }: Props) {
                       disabled={img.is_primary || busyId === img.id}
                       onClick={() => handleSetPrimary(img.id)}
                     >
-                      {img.is_primary ? "Utama" : "Jadikan Utama"}
+                      {img.is_primary ? t("admin.disaster.primary") : t("admin.disaster.makePrimaryAction")}
                     </button>
                   </td>
                 </tr>

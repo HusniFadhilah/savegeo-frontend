@@ -9,10 +9,11 @@ import {
   saveCompany,
   toggleCompanyActive,
 } from "../api";
-import { INDUSTRY_LABEL, INDUSTRY_OPTIONS, SOURCE_LABEL } from "../types";
+import { INDUSTRY_OPTIONS } from "../types";
 import type { CompanyBoundaryFull } from "../types";
 import { useAdmin } from "../AdminContext";
 import BulkTableToolbar from "./BulkTableToolbar";
+import { localeFor, useI18nStore } from "@/hooks/useI18nStore";
 
 const GEOJSON_TYPES = new Set([
   "Feature",
@@ -29,46 +30,49 @@ const GEOJSON_TYPES = new Set([
 /** Validates that text is parseable JSON with a plausible GeoJSON `type`.
  * Only a structural sanity check — the backend still does the real parsing/
  * validation, this just stops obviously-wrong pastes/files client-side. */
-function validateGeoJsonText(text: string): string | null {
+function validateGeoJsonText(text: string, t: (key: string) => string): string | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return "Teks bukan JSON yang valid";
+    return t("admin.company.invalidGeoJson");
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return "GeoJSON harus berupa objek";
+    return t("admin.company.geoJsonObject");
   }
   const type = (parsed as { type?: unknown }).type;
   if (typeof type !== "string" || !GEOJSON_TYPES.has(type)) {
-    return "Objek tidak memiliki field GeoJSON \"type\" yang valid";
+    return t("admin.company.geoJsonType");
   }
   if (type === "Feature" && !(parsed as { geometry?: unknown }).geometry) {
-    return "GeoJSON Feature harus memiliki field \"geometry\"";
+    return t("admin.company.geoJsonGeometry");
   }
   return null;
 }
 
-async function waitForCompanyImport(jobId: string, onProgress: (message: string) => void) {
+async function waitForCompanyImport(jobId: string, onProgress: (message: string) => void, t: (key: string, params?: Record<string, string | number>) => string) {
   // The backend queries Overpass region by region and splits slow regions,
   // so a nationwide multi-industry import can take well over 15 minutes.
   const deadline = Date.now() + 60 * 60 * 1000;
   while (Date.now() < deadline) {
     const job = await getCompanyImportJob(jobId);
     if (job.status === "completed") {
-      if (!job.result) throw new Error("Impor selesai tanpa ringkasan hasil.");
+      if (!job.result) throw new Error(t("admin.company.importNoSummary"));
       return job.result;
     }
     if (job.status === "failed") {
-      throw new Error(job.error || "Impor gagal. Coba lagi nanti.");
+      throw new Error(job.error || t("admin.company.importFailed"));
     }
-    onProgress(job.message || "Impor sedang diproses...");
+    onProgress(job.message || t("admin.company.importProcessing"));
     await new Promise((resolve) => window.setTimeout(resolve, 2000));
   }
-  throw new Error(`Waktu tunggu status impor habis. ID job: ${jobId}`);
+  throw new Error(t("admin.company.importTimeout", { jobId }));
 }
 
 export default function CompanyBoundaries() {
+  const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
+  const locale = localeFor(language);
   const { notify } = useAdmin();
   const [industryFilter, setIndustryFilter] = useState("");
   const {
@@ -108,16 +112,18 @@ export default function CompanyBoundaries() {
   });
   const [importLog, setImportLog] = useState("");
   const [importing, setImporting] = useState(false);
+  const industryLabel = (value: string) => t(`admin.company.industry.${value}`);
+  const sourceLabel = (value: string) => t(`admin.company.source.${value}`);
 
   const pickFile = (f: File | null) => {
     if (!f) return;
     const lower = f.name.toLowerCase();
     if (!lower.endsWith(".geojson") && !lower.endsWith(".json")) {
-      setFormError("File harus berformat .geojson atau .json");
+      setFormError(t("admin.company.fileFormat"));
       return;
     }
     if (f.size > 20 * 1024 * 1024) {
-      setFormError("Ukuran file terlalu besar (maks 20 MB)");
+      setFormError(t("admin.company.fileTooLarge"));
       return;
     }
     setFormError(null);
@@ -142,16 +148,16 @@ export default function CompanyBoundaries() {
   const handleSaveCompany = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setFormError("Nama konsesi diperlukan");
+      setFormError(t("admin.company.nameRequiredError"));
       return;
     }
     const text = geojsonText.trim();
     if (!geojsonFile && !text) {
-      setFormError("GeoJSON diperlukan (file atau teks)");
+      setFormError(t("admin.company.geoJsonRequiredError"));
       return;
     }
     if (!geojsonFile && text) {
-      const err = validateGeoJsonText(text);
+      const err = validateGeoJsonText(text, t);
       if (err) {
         setFormError(err);
         return;
@@ -161,13 +167,13 @@ export default function CompanyBoundaries() {
       // Validate file content is parseable JSON before uploading.
       try {
         const raw = await geojsonFile.text();
-        const err = validateGeoJsonText(raw);
+        const err = validateGeoJsonText(raw, t);
         if (err) {
           setFormError(err);
           return;
         }
       } catch {
-        setFormError("Gagal membaca file");
+        setFormError(t("admin.company.fileReadFailed"));
         return;
       }
     }
@@ -186,12 +192,12 @@ export default function CompanyBoundaries() {
         geojsonText: text,
       });
       if ((r as { error?: string }).error) throw new Error((r as { error?: string }).error);
-      notify("Batas perusahaan berhasil disimpan", "s");
+      notify(t("admin.company.saved"), "s");
       setFormOpen(false);
       resetForm();
       await reload();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan";
+      const msg = err instanceof Error ? err.message : t("admin.company.saveFailed");
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -205,21 +211,21 @@ export default function CompanyBoundaries() {
       await toggleCompanyActive(id, isActive);
       await reload();
     } catch {
-      notify("Gagal mengubah status", "e");
+      notify(t("admin.company.statusFailed"), "e");
     } finally {
       setBusyId(null);
     }
   };
 
   const doDelete = async (id: number, name: string) => {
-    if (!confirm(`Hapus "${name}"?`)) return;
+    if (!confirm(t("admin.company.deleteConfirm", { name }))) return;
     setBusyId(id);
     try {
       await deleteCompany(id);
-      notify("Batas perusahaan berhasil dihapus", "s");
+      notify(t("admin.company.deleted"), "s");
       await reload();
     } catch {
-      notify("Gagal menghapus", "e");
+      notify(t("admin.company.deleteFailed"), "e");
     } finally {
       setBusyId(null);
     }
@@ -229,12 +235,12 @@ export default function CompanyBoundaries() {
   const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
   const toggleAllPage = () => setSelectedIds((ids) => (allPageSelected ? ids.filter((id) => !rows.some((row) => row.id === id)) : Array.from(new Set([...ids, ...rows.map((row) => row.id)]))));
   const handleBulkDelete = async () => {
-    if (!selectedIds.length || !confirm(`Hapus ${selectedIds.length} batas perusahaan terpilih?`)) return;
+    if (!selectedIds.length || !confirm(t("admin.company.bulkDeleteConfirm", { count: selectedIds.length }))) return;
     setBulkBusy(true);
     const results = await Promise.allSettled(selectedIds.map((id) => deleteCompany(id)));
     const failed = results.filter((r) => r.status === "rejected").length;
     setSelectedIds([]);
-    notify(failed ? `${results.length - failed} dihapus, ${failed} gagal` : `${results.length} batas perusahaan dihapus`, failed ? "e" : "s");
+    notify(failed ? t("admin.company.bulkDeletedPartial", { success: results.length - failed, failed }) : t("admin.company.bulkDeleted", { count: results.length }), failed ? "e" : "s");
     await reload();
     setBulkBusy(false);
   };
@@ -244,20 +250,20 @@ export default function CompanyBoundaries() {
       .filter(([, v]) => v)
       .map(([k]) => k);
     if (!types.length) {
-      notify("Pilih minimal satu tipe industri", "e");
+      notify(t("admin.company.chooseIndustry"), "e");
       return;
     }
     setImporting(true);
-    setImportLog("Mengantrekan impor OpenStreetMap...");
+    setImportLog(t("admin.company.importQueue"));
     try {
       const job = await importCompaniesFromOSM(types);
-      const r = await waitForCompanyImport(job.job_id, setImportLog);
-      const completion = r.failed_types?.length ? "Selesai sebagian" : "Selesai";
-      const warning = r.warnings?.length ? ` Peringatan: ${r.warnings.join("; ")}` : "";
-      setImportLog(`${completion}: ${r.imported} diimpor, ${r.skipped} dilewati.${warning}`);
+      const r = await waitForCompanyImport(job.job_id, setImportLog, t);
+      const completion = r.failed_types?.length ? t("admin.company.importPartial") : t("admin.company.importComplete");
+      const warning = r.warnings?.length ? t("admin.company.importWarning", { warnings: r.warnings.join("; ") }) : "";
+      setImportLog(`${t("admin.company.importSummary", { completion, imported: r.imported, skipped: r.skipped })}${warning}`);
       await reload();
     } catch (err) {
-      setImportLog(`Kesalahan: ${err instanceof Error ? err.message : "Gagal mengimpor data OSM"}`);
+      setImportLog(t("admin.company.importError", { error: err instanceof Error ? err.message : t("admin.company.importFailed") }));
     } finally {
       setImporting(false);
     }
@@ -266,13 +272,13 @@ export default function CompanyBoundaries() {
   return (
     <div className="card" style={{ marginBottom: "1rem" }}>
       <div className="card-header-custom">
-        <span>Batas Perusahaan</span>
+        <span>{t("admin.company.title")}</span>
         <div style={{ display: "flex", gap: 6 }}>
           <button type="button" className="btn-sm primary" onClick={() => setFormOpen((o) => !o)}>
-          <i className="bi bi-plus-lg" /> Tambah Manual
+          <i className="bi bi-plus-lg" /> {t("admin.company.addManual")}
           </button>
           <button type="button" className="btn-sm" onClick={() => setImportOpen((o) => !o)}>
-            <i className="bi bi-cloud-arrow-down" /> Impor Data Terbuka
+            <i className="bi bi-cloud-arrow-down" /> {t("admin.company.openData")}
           </button>
         </div>
       </div>
@@ -281,19 +287,19 @@ export default function CompanyBoundaries() {
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="two-col" style={{ marginBottom: "0.75rem" }}>
             <div className="form-field">
-              <label className="form-label">Nama Konsesi / IUP *</label>
+              <label className="form-label">{t("admin.company.nameRequired")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: PT Tambang Jaya - IUP Batubara"
+                placeholder={t("admin.company.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Nama Perusahaan</label>
+              <label className="form-label">{t("admin.company.companyName")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: PT Tambang Jaya"
+                placeholder={t("admin.company.companyPlaceholder")}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
               />
@@ -301,20 +307,20 @@ export default function CompanyBoundaries() {
           </div>
           <div className="two-col" style={{ marginBottom: "0.75rem" }}>
             <div className="form-field">
-              <label className="form-label">Tipe Industri *</label>
+              <label className="form-label">{t("admin.company.industry")}</label>
               <select className="form-input" value={industryType} onChange={(e) => setIndustryType(e.target.value)}>
                 {INDUSTRY_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {industryLabel(o.value)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="form-field">
-              <label className="form-label">Sub-tipe / Jenis Izin</label>
+              <label className="form-label">{t("admin.company.subtype")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: IUP, HPH, HGU, PLTU ..."
+                placeholder={t("admin.company.subtypePlaceholder")}
                 value={subType}
                 onChange={(e) => setSubType(e.target.value)}
               />
@@ -322,35 +328,35 @@ export default function CompanyBoundaries() {
           </div>
           <div className="two-col" style={{ marginBottom: "0.75rem" }}>
             <div className="form-field">
-              <label className="form-label">Provinsi</label>
+              <label className="form-label">{t("admin.company.province")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: Kalimantan Timur"
+                placeholder={t("admin.company.provincePlaceholder")}
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
               />
             </div>
             <div className="form-field">
-              <label className="form-label">Kabupaten/Kota</label>
+              <label className="form-label">{t("admin.company.district")}</label>
               <input
                 className="form-input"
-                placeholder="Contoh: Kutai Kartanegara"
+                placeholder={t("admin.company.districtPlaceholder")}
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
               />
             </div>
           </div>
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-            <label className="form-label">Deskripsi</label>
+            <label className="form-label">{t("admin.company.description")}</label>
             <input
               className="form-input"
-              placeholder="Keterangan tambahan (opsional)"
+              placeholder={t("admin.company.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-            <label className="form-label">GeoJSON Batas Wilayah *</label>
+            <label className="form-label">{t("admin.company.geojsonRequired")}</label>
             <div
               className={`upload-zone ${dragOver ? "dragover" : ""}`}
               onClick={() => fileInputRef.current?.click()}
@@ -367,7 +373,7 @@ export default function CompanyBoundaries() {
             >
               <i className="bi bi-map" style={{ fontSize: 20, color: "#94a3b8", marginBottom: 6, display: "block" }} />
               <div style={{ fontSize: 12, color: "#64748b" }}>
-                Pilih atau seret dan letakkan file <strong>.geojson / .json</strong>
+                {t("admin.company.dropFile")} <strong>.geojson / .json</strong>
               </div>
               {geojsonFile && <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4 }}>{geojsonFile.name}</div>}
             </div>
@@ -380,7 +386,7 @@ export default function CompanyBoundaries() {
             />
             <div style={{ marginTop: 6 }}>
               <label className="form-label" style={{ fontSize: 10, color: "var(--text-muted)" }}>
-                atau tempel GeoJSON secara langsung:
+                {t("admin.company.pasteGeojson")}
               </label>
               <textarea
                 className="form-input"
@@ -398,10 +404,10 @@ export default function CompanyBoundaries() {
           {formError && <div className="alert alert-danger py-1 px-2 small">{formError}</div>}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSaveCompany}>
-              <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan"}
+              <i className="bi bi-save" /> {saving ? t("admin.company.saving") : t("admin.company.save")}
             </button>
             <button type="button" className="btn-sm" onClick={() => setFormOpen(false)}>
-              Batal
+              {t("admin.company.cancel")}
             </button>
           </div>
         </div>
@@ -409,7 +415,7 @@ export default function CompanyBoundaries() {
         {/* Import open data form */}
         <div className={`collapse-form ${importOpen ? "open" : ""}`}>
           <div style={{ marginBottom: "0.75rem", fontSize: 12, color: "var(--text-muted)" }}>
-            OpenStreetMap diproses di latar belakang. Konsesi Indonesia dari GFW saat ini hanya tersedia untuk tampilan, bukan unduhan; unggah GeoJSON yang Anda miliki hak aksesnya melalui formulir batas perusahaan.
+            {t("admin.company.importOsmNotice")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "0.75rem" }}>
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>OpenStreetMap (Overpass API)</div>
@@ -421,23 +427,23 @@ export default function CompanyBoundaries() {
                     checked={osmTypes[o.value] ?? false}
                     onChange={(e) => setOsmTypes((s) => ({ ...s, [o.value]: e.target.checked }))}
                   />{" "}
-                  {o.label.split(" (")[0]}
+                  {industryLabel(o.value).split(" (")[0]}
                 </label>
               ))}
             </div>
             <button type="button" className="btn-sm primary" disabled={importing} onClick={doImportOSM}>
-              <i className="bi bi-geo-alt" /> Impor dari OSM
+              <i className="bi bi-geo-alt" /> {t("admin.company.importOsm")}
             </button>
             <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>Global Forest Watch (GFW)</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Data konsesi Indonesia dari GFW dibatasi hanya untuk tampilan oleh WRI, jadi tidak dapat diimpor langsung.
+              {t("admin.company.gfwNotice")}
             </div>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", minHeight: 20 }}>{importLog}</div>
           <div style={{ marginTop: 6 }}>
             <button type="button" className="btn-sm" onClick={() => setImportOpen(false)}>
-              Tutup
+              {t("admin.company.close")}
             </button>
           </div>
         </div>
@@ -446,7 +452,7 @@ export default function CompanyBoundaries() {
         <div style={{ display: "flex", gap: 8, marginBottom: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
           <input
             className="form-input"
-            placeholder="Cari nama..."
+            placeholder={t("admin.company.searchPlaceholder")}
             style={{ maxWidth: 200 }}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -457,19 +463,19 @@ export default function CompanyBoundaries() {
             value={industryFilter}
             onChange={(e) => setIndustryFilter(e.target.value)}
           >
-            <option value="">Semua tipe</option>
+            <option value="">{t("admin.company.allIndustryTypes")}</option>
             {INDUSTRY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label.split(" (")[0]}
+                {industryLabel(o.value).split(" (")[0]}
               </option>
             ))}
           </select>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && `${recordsFiltered} entri`}</span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{!loading && t("admin.company.recordCount", { count: recordsFiltered })}</span>
         </div>
 
         <BulkTableToolbar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])}>
           <button type="button" className="btn-sm danger" disabled={bulkBusy} onClick={handleBulkDelete}>
-            <i className="bi bi-trash" /> {bulkBusy ? "Menghapus..." : "Hapus terpilih"}
+            <i className="bi bi-trash" /> {bulkBusy ? t("admin.company.deleting") : t("admin.company.deleteSelected")}
           </button>
         </BulkTableToolbar>
 
@@ -490,23 +496,23 @@ export default function CompanyBoundaries() {
             </colgroup>
             <thead>
               <tr>
-                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua batas perusahaan di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={t("admin.company.selectAll")} checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <AdminTableNumberHeader />
-                <th>Nama Konsesi</th>
-                <th>Perusahaan</th>
-                <th>Tipe</th>
-                <th>Sub-tipe</th>
-                <th>Provinsi</th>
-                <th>Luas (ha)</th>
-                <th>Sumber</th>
-                <th>Aksi</th>
+                <th>{t("admin.company.concessionName")}</th>
+                <th>{t("admin.company.company")}</th>
+                <th>{t("admin.company.type")}</th>
+                <th>{t("admin.company.subtypeColumn")}</th>
+                <th>{t("admin.company.province")}</th>
+                <th>{t("admin.company.area")}</th>
+                <th>{t("admin.company.source")}</th>
+                <th>{t("admin.company.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Memuat...
+                    {t("admin.company.loading")}
                   </td>
                 </tr>
               )}
@@ -520,7 +526,7 @@ export default function CompanyBoundaries() {
               {!loading && !error && rows.length === 0 && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem" }}>
-                    Belum ada data. Tambahkan secara manual atau impor dari sumber data terbuka.
+                    {t("admin.company.none")}
                   </td>
                 </tr>
               )}
@@ -528,23 +534,23 @@ export default function CompanyBoundaries() {
                 !error &&
                 rows.map((c, index) => (
                   <tr key={c.id}>
-                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={`Pilih ${c.name}`} checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} /></td>
+                    <td className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={t("admin.company.selectRow", { name: c.name })} checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} /></td>
                     <AdminTableNumberCell index={index} page={page} pageSize={pageSize} />
                     <td title={c.name}>{c.name.length > 30 ? `${c.name.slice(0, 28)}…` : c.name}</td>
                     <td>{c.company_name || "—"}</td>
                     <td>
-                      <span className="badge-label">{INDUSTRY_LABEL[c.industry_type] || c.industry_type}</span>
+                      <span className="badge-label">{industryLabel(c.industry_type)}</span>
                     </td>
                     <td>{c.sub_type || "—"}</td>
                     <td>{c.province || "—"}</td>
-                    <td>{c.area_ha ? c.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "—"}</td>
-                    <td style={{ fontSize: 10 }}>{SOURCE_LABEL[c.source] || c.source}</td>
+                    <td>{c.area_ha ? c.area_ha.toLocaleString(locale, { maximumFractionDigits: 1 }) : "—"}</td>
+                    <td style={{ fontSize: 10 }}>{sourceLabel(c.source)}</td>
                     <td>
                       <button
                         type="button"
                         className="btn-sm"
                         style={{ padding: "2px 6px", fontSize: 10 }}
-                        title={c.is_active ? "Nonaktifkan" : "Aktifkan"}
+                        title={c.is_active ? t("admin.disabled") : t("admin.enabled")}
                         disabled={busyId === c.id || bulkBusy}
                         onClick={() => doToggleActive(c.id, c.is_active)}
                       >
@@ -575,7 +581,7 @@ export default function CompanyBoundaries() {
           onSearchChange={setSearch}
           onPrev={prevPage}
           onNext={nextPage}
-          searchPlaceholder="Cari nama, perusahaan..."
+          searchPlaceholder={t("admin.company.searchPlaceholder")}
           showSearch={false}
         />
       </div>

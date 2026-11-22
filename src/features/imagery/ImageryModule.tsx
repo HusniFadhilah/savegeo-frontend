@@ -607,17 +607,18 @@ function SceneFootprintLayer({
 }
 
 function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source: string }) {
+  const t = useI18nStore((state) => state.t);
   if (!tileUrl) {
     return (
       <div className="imagery-terrain-3d-empty">
         <i className="bi bi-box" />
-        <span>Preview 3D tersedia untuk DEM berbasis tile/asset.</span>
+        <span>{t("imagery.terrain.previewUnavailable")}</span>
       </div>
     );
   }
 
   return (
-    <div className="imagery-terrain-3d" aria-label={`Preview 3D ${source}`}>
+    <div className="imagery-terrain-3d" aria-label={t("imagery.terrain.previewFor", { source })}>
       <div className="imagery-terrain-3d-plane" style={{ backgroundImage: `url("${tileUrl}")` }} />
       <div className="imagery-terrain-3d-grid" />
     </div>
@@ -1251,7 +1252,7 @@ export default function ImageryModule() {
 
   const loadCompare = async () => {
     if (!compareSceneAId || !compareSceneBId) {
-      setCompareError("Pilih Scene A dan Scene B terlebih dahulu.");
+      setCompareError(t("imagery.compare.selectBoth"));
       return;
     }
     if (compareSceneAId === compareSceneBId) {
@@ -1404,19 +1405,19 @@ export default function ImageryModule() {
     if (isMosaicProvider && compareDisplayMode === "mosaic") {
       return sceneGroups.map((group) => ({
         value: group.anchorScene.id,
-        label: `${formatSceneGroupDate(group.anchorScene, isEsriWayback)} · Mosaik AOI · ${group.scenes.length} scene`,
+        label: `${formatSceneGroupDate(group.anchorScene, isEsriWayback)} · ${t("imagery.results.mosaicAoi")} · ${group.scenes.length} ${t(group.scenes.length === 1 ? "imagery.results.scene" : "imagery.results.scenes")}`,
       }));
     }
     return sortedScenes.map((scene) => ({
       value: scene.id,
-      label: `${formatSceneDate(scene.acquired_at, isEsriWayback)}${scene.cloud_cover_pct != null ? ` · awan ${scene.cloud_cover_pct}%` : ""}`,
+      label: `${formatSceneDate(scene.acquired_at, isEsriWayback)}${scene.cloud_cover_pct != null ? ` · ${t("imagery.results.cloudCover")} ${scene.cloud_cover_pct}%` : ""}`,
     }));
-  }, [compareDisplayMode, isEsriWayback, isMosaicProvider, sceneGroups, sortedScenes]);
+  }, [compareDisplayMode, isEsriWayback, isMosaicProvider, sceneGroups, sortedScenes, t]);
   const compareSceneLabel = (sceneId: string | null) => {
     const scene = scenes.find((item) => item.id === sceneId);
     if (!scene) return "";
     return compareUsesMosaic
-      ? `${formatSceneGroupDate(scene, isEsriWayback)} · Mosaik`
+      ? `${formatSceneGroupDate(scene, isEsriWayback)} · ${t("imagery.results.mosaic")}`
       : formatSceneDate(scene.acquired_at, isEsriWayback);
   };
   const changeCompareDisplayMode = (mode: SceneDisplayMode) => {
@@ -1625,8 +1626,8 @@ export default function ImageryModule() {
               className="analysis-settings-expand"
               onClick={() => setSettingsCollapsed(false)}
               aria-expanded={!settingsCollapsed}
-              aria-label="Buka panel citra satelit"
-              title="Buka panel citra satelit"
+              aria-label={t("imagery.panel.open")}
+              title={t("imagery.panel.open")}
             >
               <i className="bi bi-chevron-double-right" aria-hidden="true" />
             </button>
@@ -1639,8 +1640,8 @@ export default function ImageryModule() {
             className="analysis-settings-collapse btn-light"
             onClick={() => setSettingsCollapsed(true)}
             aria-expanded={!settingsCollapsed}
-            aria-label="Sembunyikan panel citra satelit"
-            title="Sembunyikan panel citra satelit"
+            aria-label={t("imagery.panel.hide")}
+            title={t("imagery.panel.hide")}
           >
             <i className="bi bi-chevron-double-left" aria-hidden="true" />
           </button>
@@ -1661,11 +1662,11 @@ export default function ImageryModule() {
               </div>
             ) : isHimawari ? (
               <div className="alert alert-info py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-circle-info" /> Himawari mencakup area full-disk; AOI tidak diperlukan.
+              <i className="fas fa-circle-info" /> {t("imagery.himawari.fullDiskHint")}
               </div>
             ) : (
               <div className="alert alert-info py-2 mb-0" style={{ fontSize: ".8rem" }}>
-                <i className="fas fa-circle-info" /> Tanpa AOI, area peta yang terlihat dipakai untuk mencari scene.
+                <i className="fas fa-circle-info" /> {t("imagery.search.viewportHint")}
               </div>
             )}
             <button type="button" className="btn btn-sm btn-outline-success w-100 mt-2" onClick={() => setAoiModalOpen(true)}>
@@ -1704,10 +1705,10 @@ export default function ImageryModule() {
             </div>
             <small className="text-muted">
               {isHimawari
-                ? "Frame full-disk yang saat ini tersedia dari JMA akan dicari pada tanggal UTC yang dipilih."
+                ? t("imagery.search.himawariRangeHint")
                 : isEsriWayback
-                  ? "Rilis World Imagery Wayback di rentang ini akan dicari dan ditampilkan bertahap."
-                  : "Semua scene asli di rentang ini akan dicari dan ditampilkan bertahap."}
+                  ? t("imagery.search.waybackRangeHint")
+                  : t("imagery.search.dateRangeHint")}
             </small>
           </div>
 
@@ -1772,7 +1773,7 @@ export default function ImageryModule() {
           {satelliteMeta?.key === "planet_commercial" && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="imageryPlanetProduct">
-                <i className="bi bi-collection" /> Produk Planet
+                <i className="bi bi-collection" /> {t("imagery.planet.product")}
               </label>
               <select
                 id="imageryPlanetProduct"
@@ -1780,15 +1781,15 @@ export default function ImageryModule() {
                 value={planetProduct}
                 onChange={(event) => setPlanetProduct(event.target.value)}
               >
-                <option value="all">Semua produk terkonfigurasi</option>
+                <option value="all">{t("imagery.planet.allProducts")}</option>
                 {planetProductOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
               <small className="text-muted d-block mt-1">
                 {planetProductOptions.length
-                  ? "SkySat dan PlanetScope hanya muncul jika koleksi serta entitlement-nya tersedia pada akun Planet."
-                  : "Untuk membuka filter PlanetScope/SkySat, admin perlu mengonfigurasi koleksi PSScene, SkySatScene, atau SkySatCollect dan akun Planet yang berhak."}
+                  ? t("imagery.planet.accessHint")
+                  : t("imagery.planet.configureHint")}
               </small>
             </div>
           )}
@@ -1796,7 +1797,7 @@ export default function ImageryModule() {
           {satelliteMeta?.key === "airbus_oneatlas" && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="imageryAirbusConstellation">
-                <i className="bi bi-collection" /> Konstelasi Airbus
+                <i className="bi bi-collection" /> {t("imagery.airbus.constellation")}
               </label>
               <select
                 id="imageryAirbusConstellation"
@@ -1804,20 +1805,20 @@ export default function ImageryModule() {
                 value={airbusConstellation}
                 onChange={(event) => setAirbusConstellation(event.target.value)}
               >
-                <option value="">Semua produk yang tersedia di akun</option>
-                <option value="PNEO">Pléiades Neo · sekitar 0,3 m</option>
-                <option value="PHR">Pléiades · sekitar 0,5 m</option>
-                <option value="SPOT">SPOT · sekitar 1,5 m</option>
+                <option value="">{t("imagery.airbus.allProducts")}</option>
+                <option value="PNEO">{t("imagery.airbus.pneo")}</option>
+                <option value="PHR">{t("imagery.airbus.phr")}</option>
+                <option value="SPOT">{t("imagery.airbus.spot")}</option>
               </select>
               <small className="text-muted d-block mt-1">
-                Hasil bergantung pada cakupan archive dan hak akses workspace OneAtlas; filter ini hanya mencari scene.
+                {t("imagery.oneatlas.searchHint")}
               </small>
             </div>
           )}
 
           {satelliteMeta?.source_kind === "generic_stac" && (
             <div className="mb-3">
-              <label className="form-label fw-bold" htmlFor="imageryStacExample">Contoh katalog</label>
+              <label className="form-label fw-bold" htmlFor="imageryStacExample">{t("imagery.stac.examples")}</label>
               <select id="imageryStacExample" className="form-select form-select-sm mb-2"
                 value={STAC_EXAMPLES.findIndex((item) => item.url === stacCatalogUrl && item.collection === stacCollections)}
                 onChange={(event) => {
@@ -1825,11 +1826,11 @@ export default function ImageryModule() {
                   if (example) { setStacCatalogUrl(example.url); setStacCollections(example.collection); }
                   else { setStacCatalogUrl(""); setStacCollections(""); }
                 }}>
-                <option value={-1}>URL sendiri</option>
+                <option value={-1}>{t("imagery.stac.customUrl")}</option>
                 {STAC_EXAMPLES.map((example, index) => <option key={example.name} value={index}>{example.name}</option>)}
               </select>
               <label className="form-label fw-bold" htmlFor="imageryStacCatalogUrl">
-                <i className="bi bi-diagram-3" /> STAC Catalog/API
+                <i className="bi bi-diagram-3" /> {t("imagery.stac.catalogApi")}
               </label>
               <input
                 id="imageryStacCatalogUrl"
@@ -1837,7 +1838,7 @@ export default function ImageryModule() {
                 className="form-control form-control-sm"
                 value={stacCatalogUrl}
                 onChange={(e) => setStacCatalogUrl(e.target.value)}
-                placeholder="https://example.org/catalog.json"
+                placeholder={t("imagery.stac.catalogPlaceholder")}
               />
               {STAC_EXAMPLES.some((item) => item.url === stacCatalogUrl) && (
                 <a className="small d-block mt-1 text-break" href={stacCatalogUrl} target="_blank" rel="noreferrer">{stacCatalogUrl}</a>
@@ -1848,7 +1849,7 @@ export default function ImageryModule() {
           {satelliteMeta?.source_kind === "generic_stac" && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="imageryStacCollections">
-                <i className="bi bi-collection" /> Koleksi STAC
+                <i className="bi bi-collection" /> {t("imagery.stac.collections")}
               </label>
               <input
                 id="imageryStacCollections"
@@ -1856,7 +1857,7 @@ export default function ImageryModule() {
                 className="form-control form-control-sm"
                 value={stacCollections}
                 onChange={(e) => setStacCollections(e.target.value)}
-                placeholder="opsional, pisahkan koma"
+                placeholder={t("imagery.stac.collectionsPlaceholder")}
               />
             </div>
           )}
@@ -1865,33 +1866,33 @@ export default function ImageryModule() {
           {supportsGpuEnhancement && <ProviderFeatureAccordion key={`gpu-${satellite}`} title={t("imagery.gpu.title")} icon="bi bi-gpu-card" variant="primary">
                 <div className="form-check form-switch"><input className="form-check-input" type="checkbox" id="imageryGpuEnhancement" checked={visualEnhancement} onChange={(event) => setVisualEnhancement(event.target.checked)} /><label className="form-check-label fw-semibold" htmlFor="imageryGpuEnhancement"><small>{t("imagery.gpu.enable")}</small></label></div>
                 <div className="row g-2 mt-1"><div className="col-7"><select className="form-select form-select-sm" value={gpuEnhancement.model} onChange={(event) => gpuEnhancement.setModel(event.target.value as "shader_x2" | "shader_x4")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.modelAria")}><option value="shader_x2">{t("imagery.gpu.shaderSafe")}</option><option value="shader_x4">{t("imagery.gpu.shaderStrong")}</option></select></div><div className="col-5"><select className="form-select form-select-sm" value={gpuEnhancement.quality} onChange={(event) => gpuEnhancement.setQuality(event.target.value as "low" | "medium" | "high")} disabled={!visualEnhancement} aria-label={t("imagery.gpu.qualityAria")}><option value="low">{t("imagery.gpu.qualityLow")}</option><option value="medium">{t("imagery.gpu.qualityMedium")}</option><option value="high">{t("imagery.gpu.qualityHigh")}</option></select></div></div>
-                <div className="small mt-2" aria-live="polite">Status: <strong>{gpuEnhancement.status}</strong> · Backend: <strong>{gpuEnhancement.backend}</strong>{gpuEnhancement.capabilities?.webgpu ? " (WebGPU tersedia; shader memakai jalur WebGL2 yang kompatibel)" : ""}</div>
+                <div className="small mt-2" aria-live="polite">{t("imagery.gpu.status")}: <strong>{t(`imagery.gpu.status.${gpuEnhancement.status}`)}</strong> · {t("imagery.gpu.backend")}: <strong>{t(`imagery.gpu.backend.${gpuEnhancement.backend}`)}</strong>{gpuEnhancement.capabilities?.webgpu ? ` (${t("imagery.gpu.webgpuCompatible")})` : ""}</div>
                 <div className="small text-muted mt-1">{t("imagery.gpu.hint")}</div>
-                <div className="d-flex align-items-center gap-2 mt-2"><span className="small text-muted">Original</span><input type="range" className="form-range" min={0} max={1} step={0.05} value={gpuOpacity} onChange={(event) => setGpuOpacity(Number(event.target.value))} disabled={!visualEnhancement} aria-label="Perbandingan original enhanced" /><span className="small text-muted">Enhanced</span></div>
-                {selectedScene && <div className="small mt-1"><strong>{satelliteMeta?.name ?? "Scene"}</strong> · Resolusi asli: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta?.resolution_m))} · Enhancement: {visualEnhancement ? `GPU x${gpuEnhancement.model === "shader_x4" ? 4 : 2}` : "nonaktif"} · Mode: Visual only</div>}
-                {visualEnhancement && gpuEnhancement.status === "fallback_original" && <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">GPU enhancement tidak tersedia pada perangkat ini. Citra original tetap ditampilkan.</div>}
-                {visualEnhancement && gpuEnhancement.status === "error" && <div className="alert alert-danger py-1 px-2 mt-2 mb-0 small">Model visual gagal dimuat. Citra original tetap ditampilkan.</div>}
-                <button type="button" className="btn btn-sm btn-outline-secondary mt-2" onClick={gpuEnhancement.clearCache}><i className="bi bi-trash3" /> Clear cache visual</button>
+                <div className="d-flex align-items-center gap-2 mt-2"><span className="small text-muted">{t("imagery.gpu.original")}</span><input type="range" className="form-range" min={0} max={1} step={0.05} value={gpuOpacity} onChange={(event) => setGpuOpacity(Number(event.target.value))} disabled={!visualEnhancement} aria-label={t("imagery.gpu.comparison")} /><span className="small text-muted">{t("imagery.gpu.enhanced")}</span></div>
+                {selectedScene && <div className="small mt-1"><strong>{satelliteMeta?.name ?? t("imagery.scene")}</strong> · {t("imagery.gpu.nativeResolution")}: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta?.resolution_m))} · {t("imagery.gpu.enhancement")}: {visualEnhancement ? `GPU x${gpuEnhancement.model === "shader_x4" ? 4 : 2}` : t("imagery.gpu.disabled")} · {t("imagery.gpu.mode")}: {t("imagery.gpu.visualOnly")}</div>}
+                {visualEnhancement && gpuEnhancement.status === "fallback_original" && <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">{t("imagery.gpu.fallbackNotice")}</div>}
+                {visualEnhancement && gpuEnhancement.status === "error" && <div className="alert alert-danger py-1 px-2 mt-2 mb-0 small">{t("imagery.gpu.errorNotice")}</div>}
+                <button type="button" className="btn btn-sm btn-outline-secondary mt-2" onClick={gpuEnhancement.clearCache}><i className="bi bi-trash3" /> {t("imagery.gpu.clearCache")}</button>
           </ProviderFeatureAccordion>}
 
           {supportsSuperResolution && <ProviderFeatureAccordion key={`interpolation-${satellite}`} title={t("imagery.interpolation")} icon="bi bi-stars">
-            <label className="form-label fw-semibold" htmlFor="imagerySuperResolution">Metode interpolasi</label>
+            <label className="form-label fw-semibold" htmlFor="imagerySuperResolution">{t("imagery.interpolationMethod")}</label>
             <SearchableSelect
               id="imagerySuperResolution"
               value={activeSuperResolution}
               onChange={(value) => setSuperResolution(value as ImagerySuperResolutionMode)}
               disabled={!supportsSuperResolution}
               options={[
-                { value: "off", label: "Nonaktif" },
-                { value: "bicubic_2x", label: "Bicubic (visual saja)" },
+                { value: "off", label: t("imagery.gpu.disabled") },
+                { value: "bicubic_2x", label: t("imagery.interpolationBicubic") },
               ]}
             />
             <small className="text-muted d-block mt-1">{t("imagery.interpolationHint")}</small>
           </ProviderFeatureAccordion>}
 
           {isCogProvider && supportsBandControls && (
-            <ProviderFeatureAccordion key={`cog-${satellite}`} title="Pengaturan Tampilan COG" icon="bi bi-sliders">
-              <label className="form-label fw-semibold" htmlFor="imageryCogAsset">Aset citra</label>
+            <ProviderFeatureAccordion key={`cog-${satellite}`} title={t("imagery.cog.settings")} icon="bi bi-sliders">
+              <label className="form-label fw-semibold" htmlFor="imageryCogAsset">{t("imagery.cog.asset")}</label>
               <SearchableSelect
                 id="imageryCogAsset"
                 value={cogAssetKey}
@@ -1913,7 +1914,7 @@ export default function ImageryModule() {
                     className="form-control form-control-sm"
                     value={cogBands}
                     onChange={(e) => setCogBands(e.target.value)}
-                    placeholder="Band 1,2,3"
+                placeholder={t("imagery.cog.bandsPlaceholder")}
                   />
                 </div>
                 <div className="col-7">
@@ -1922,22 +1923,22 @@ export default function ImageryModule() {
                     className="form-control form-control-sm"
                     value={cogRescale}
                     onChange={(e) => setCogRescale(e.target.value)}
-                    placeholder="Rescale 0,3000"
+                    placeholder={t("imagery.cog.rescalePlaceholder")}
                   />
                 </div>
               </div>
               <small className="text-muted d-block mt-1">
-                {activeCogAsset ? `Asset aktif: ${activeCogAsset.key}` : "Pilih scene untuk melihat asset COG yang tersedia."}
+                {activeCogAsset ? t("imagery.cog.activeAsset", { asset: activeCogAsset.key }) : t("imagery.cog.selectScene")}
               </small>
               {safeHttpUrl(activeCogDownloadUrl) && (
                 <a className="btn btn-sm btn-outline-success w-100 mt-2" href={safeHttpUrl(activeCogDownloadUrl)} target="_blank" rel="noopener noreferrer">
-                  <i className="bi bi-download" /> Download Asset Aktif
+                  <i className="bi bi-download" /> {t("imagery.cog.downloadActive")}
                 </a>
               )}
             </ProviderFeatureAccordion>
           )}
 
-          {supportsSamGeo && <ProviderFeatureAccordion key={`samgeo-${satellite}`} title="Segmentasi AI (SAMGeo)" icon="bi bi-stars">
+          {supportsSamGeo && <ProviderFeatureAccordion key={`samgeo-${satellite}`} title={t("imagery.samgeo.title")} icon="bi bi-stars">
             <SamGeoPanel scene={selectedScene} aoi={aoi}
               assetKey={cogAssetKey} bands={cogBands} rescale={cogRescale}
               providerKey={satellite}
@@ -1947,26 +1948,25 @@ export default function ImageryModule() {
           <ScientificCapabilitiesPanel support={scientificSupport} providerKey={satellite} />
 
           {!isHimawari && satelliteMeta?.visualization === "sar" && (
-            <ProviderFeatureAccordion key={`sar-${satellite}`} title="Mode Tampilan SAR" icon="bi bi-satellite-dish">
+            <ProviderFeatureAccordion key={`sar-${satellite}`} title={t("imagery.sar.title")} icon="bi bi-satellite-dish">
               <div className="btn-group btn-group-sm w-100" role="group">
                 <button
                   type="button"
                   className={`btn ${sarMode === "grayscale" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setSarMode("grayscale")}
                 >
-                  Grayscale (VV)
+                  {t("imagery.sar.grayscale")}
                 </button>
                 <button
                   type="button"
                   className={`btn ${sarMode === "composite" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setSarMode("composite")}
                 >
-                  Komposit Warna
+                  {t("imagery.sar.colorComposite")}
                 </button>
               </div>
               <small className="text-muted d-block mt-1">
-                Grayscale: intensitas pantulan VV saja. Komposit: R=VV, G=VH, B=selisih VV−VH (kombinasi umum untuk
-                membedakan tutupan lahan).
+                {t("imagery.sar.hint")}
               </small>
             </ProviderFeatureAccordion>
           )}
@@ -1974,7 +1974,7 @@ export default function ImageryModule() {
           {isHimawari && (
             <div className="mb-3">
               <label className="form-label fw-bold" htmlFor="himawariOpacity">
-                Opasitas frame Himawari
+                {t("imagery.himawari.opacity")}
               </label>
               <div className="d-flex align-items-center gap-2">
                 <input
@@ -2003,7 +2003,7 @@ export default function ImageryModule() {
                   onChange={(e) => setCloudFilterEnabled(e.target.checked)}
                 />
                 <label className="form-check-label fw-bold" htmlFor="imageryCloudFilterSwitch">
-                  <i className="fas fa-cloud" /> Terapkan filter awan
+                  <i className="fas fa-cloud" /> {t("imagery.cloudFilter.apply")}
                 </label>
               </div>
               {cloudFilterEnabled && (
@@ -2024,24 +2024,31 @@ export default function ImageryModule() {
               )}
               {cloudFilterEnabled && satelliteMeta?.cloud_mask_techniques && satelliteMeta.cloud_mask_techniques.length > 0 && (
                 <div className="mt-2">
-                  <label className="form-label small fw-semibold mb-1">Teknik Masking Awan (opsional)</label>
+                  <label className="form-label small fw-semibold mb-1">{t("imagery.cloudFilter.technique")}</label>
                   <SearchableSelect
                     value={satelliteMeta.cloud_mask_techniques.includes(cloudMaskTechnique) ? cloudMaskTechnique : satelliteMeta.cloud_mask_techniques[0]}
                     onChange={setCloudMaskTechnique}
-                    options={satelliteMeta.cloud_mask_techniques.map((t) => ({
-                      value: t,
-                      label: cloudMaskTechniques[t]?.label ?? t.toUpperCase(),
-                    }))}
+                    options={satelliteMeta.cloud_mask_techniques.map((techniqueId) => {
+                      const key = techniqueId.toLowerCase();
+                      const knownTechnique = ["scl", "qa60", "s2cloudless"].includes(key);
+                      return {
+                        value: techniqueId,
+                        label: knownTechnique
+                          ? t(`imagery.cloudMask.${key}.label`)
+                          : cloudMaskTechniques[techniqueId]?.label ?? techniqueId.toUpperCase(),
+                      };
+                    })}
                   />
                   <small className="text-muted d-block mt-1">
-                    {cloudMaskTechniques[cloudMaskTechnique]?.description ??
-                      "Menyamarkan piksel awan pada citra yang ditampilkan (bukan sekadar memfilter daftar scene)."}
+                    {(["scl", "qa60", "s2cloudless"].includes(cloudMaskTechnique.toLowerCase())
+                      ? t(`imagery.cloudMask.${cloudMaskTechnique.toLowerCase()}.description`)
+                      : cloudMaskTechniques[cloudMaskTechnique]?.description ?? t("imagery.cloudFilter.maskFallback"))}
                   </small>
                 </div>
               )}
               {!cloudFilterEnabled && (
                 <small className="text-muted d-block">
-                  Nonaktif: semua scene ditampilkan apa adanya (termasuk yang sangat berawan) supaya bisa dinilai sendiri.
+                  {t("imagery.cloudFilter.disabledHint")}
                 </small>
               )}
             </ProviderFeatureAccordion>
@@ -2058,11 +2065,11 @@ export default function ImageryModule() {
           <button className="btn btn-warning w-100 fw-bold" disabled={searching || !supportsSearch} onClick={searchScenes}>
             {searching ? (
               <>
-                <i className="fas fa-spinner fa-spin" /> Mencari...
+                <i className="fas fa-spinner fa-spin" /> {t("imagery.search.loading")}
               </>
             ) : (
               <>
-                <i className="fas fa-search" /> Cari Scene
+                <i className="fas fa-search" /> {t("imagery.search.button")}
               </>
             )}
           </button>
@@ -2081,11 +2088,8 @@ export default function ImageryModule() {
             <div className="card-body d-flex align-items-start gap-3">
               <i className="bi bi-cloud-sun text-info fs-3" aria-hidden="true" />
               <div>
-                <h5 className="mb-1">Frame Himawari-9 full-disk</h5>
-                <p className="text-muted mb-0">
-                  Pilih rentang tanggal UTC lalu klik <strong>Cari Scene</strong>. Frame JMA akan muncul pada tabel
-                  yang sama seperti Sentinel; pilih baris untuk menampilkan citra cuaca di peta. AOI tidak diperlukan.
-                </p>
+                  <h5 className="mb-1">{t("imagery.map.himawariTitle")}</h5>
+                  <p className="text-muted mb-0">{t("imagery.map.himawariHelp")}</p>
               </div>
             </div>
           </div>
@@ -2125,23 +2129,23 @@ export default function ImageryModule() {
                 <span className="imagery-accordion-copy">
                   <span className="imagery-accordion-title">
                     <i className="bi bi-list-ul" aria-hidden="true" /> <span>{t("imagery.search.found")}</span>
-                    <span className="badge bg-secondary">{sceneListCount} {useMosaicSceneList ? "grup mosaik" : "scene"}</span>
+                    <span className="badge bg-secondary">{sceneListCount} {t(useMosaicSceneList ? "imagery.results.sceneGroups" : "imagery.results.scenes")}</span>
                     {truncated && (
-                      <span className="badge bg-warning text-dark" title="Provider mencapai batas keamanan hasil; gunakan filter tanggal atau awan untuk mempersempit">
-                        batas provider
+                      <span className="badge bg-warning text-dark" title={t("imagery.results.providerLimitHint")}>
+                        {t("imagery.results.providerLimit")}
                       </span>
                     )}
                   </span>
                 </span>
                 <i className={`bi bi-chevron-${sceneResultsOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
               </button>
-              <div className="btn-group btn-group-sm ms-auto" role="group" aria-label="Mode tampilan">
+              <div className="btn-group btn-group-sm ms-auto" role="group" aria-label={t("imagery.results.viewMode")}>
                 <button
                   type="button"
                   className={`btn text-white ${viewMode === "single" ? "btn-primary" : "btn-outline-secondary"}`}
                   onClick={() => setViewMode("single")}
                 >
-                  Satu Scene
+                  {t("imagery.results.singleScene")}
                 </button>
                 {supportsCompare && (
                   <button
@@ -2158,27 +2162,27 @@ export default function ImageryModule() {
             <div className="p-2 border-top border-bottom bg-body-tertiary">
               <div className="row g-2 align-items-center">
                 <div className={isMosaicProvider ? "col-lg-6" : "col-md-8"}>
-                  <label className="visually-hidden" htmlFor="scene-list-search">Cari scene</label>
-                  <div className="input-group input-group-sm"><span className="input-group-text"><i className="fas fa-search" /></span><input id="scene-list-search" className="form-control" value={sceneSearch} onChange={(event) => setSceneSearch(event.target.value)} placeholder="Cari ID, judul, tanggal, platform, produser..." /><button type="button" className="btn btn-outline-secondary" disabled={!sceneSearch} onClick={() => setSceneSearch("")}>Bersihkan</button></div>
+                  <label className="visually-hidden" htmlFor="scene-list-search">{t("imagery.results.searchLabel")}</label>
+                  <div className="input-group input-group-sm"><span className="input-group-text"><i className="fas fa-search" /></span><input id="scene-list-search" className="form-control" value={sceneSearch} onChange={(event) => setSceneSearch(event.target.value)} placeholder={t("imagery.results.searchPlaceholder")} /><button type="button" className="btn btn-outline-secondary" disabled={!sceneSearch} onClick={() => setSceneSearch("")}>{t("imagery.results.clear")}</button></div>
                 </div>
                 {isMosaicProvider && (
                   <div className="col-lg-3 col-md-6">
-                    <label className="form-label small mb-1" htmlFor="scene-display-mode">Tampilkan sebagai</label>
+                    <label className="form-label small mb-1" htmlFor="scene-display-mode">{t("imagery.results.displayAs")}</label>
                     <select id="scene-display-mode" className="form-select form-select-sm" value={sceneDisplayMode} onChange={(event) => changeSceneDisplayMode(event.target.value as SceneDisplayMode)}>
-                      <option value="mosaic">Mosaik AOI · per tanggal</option>
-                      <option value="scene">Per scene</option>
+                      <option value="mosaic">{t("imagery.results.mosaicByDate")}</option>
+                      <option value="scene">{t("imagery.results.perScene")}</option>
                     </select>
                   </div>
                 )}
-                <div className={`${isMosaicProvider ? "col-lg-3 col-md-6" : "col-md-4"} d-flex align-items-center gap-2 justify-content-md-end`}><label className="small text-muted mb-0" htmlFor="scene-page-size">Per halaman</label><select id="scene-page-size" className="form-select form-select-sm" style={{ maxWidth: 90 }} value={scenePageSize} onChange={(event) => { setScenePageSize(Number(event.target.value)); setScenePage(1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></div>
+                <div className={`${isMosaicProvider ? "col-lg-3 col-md-6" : "col-md-4"} d-flex align-items-center gap-2 justify-content-md-end`}><label className="small text-muted mb-0" htmlFor="scene-page-size">{t("imagery.results.perPage")}</label><select id="scene-page-size" className="form-select form-select-sm" style={{ maxWidth: 90 }} value={scenePageSize} onChange={(event) => { setScenePageSize(Number(event.target.value)); setScenePage(1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></div>
               </div>
             </div>
             <div className="card-body p-0">
               {scenes.length === 0 ? (
                 <div className="p-3 text-center text-muted small">
                   {isHimawari
-                    ? "Tidak ada frame Himawari yang tersedia dari JMA pada rentang tanggal ini. Coba pilih tanggal lain."
-                    : <>Tidak ada scene ditemukan untuk AOI/rentang/filter ini. Coba perlebar {t("imagery.dateRange")} atau nonaktifkan filter awan.</>}
+                    ? t("imagery.results.noFrames")
+                    : t("imagery.results.noScenes")}
                 </div>
               ) : (
                 <>
@@ -2186,21 +2190,21 @@ export default function ImageryModule() {
                   <table className="table table-sm table-hover mb-0">
                     <thead className="table-primary sticky-top">
                       <tr>
-                        <th>Tanggal &amp; Jam Akuisisi (UTC)</th>
+                        <th>{t("imagery.results.acquiredAt")}</th>
                         {(supportsSceneMetadata || isHimawari) && (
                           <>
-                            <th>Resolusi</th>
-                            <th>Platform</th>
-                            <th>Produser</th>
+                            <th>{t("imagery.results.resolution")}</th>
+                            <th>{t("imagery.results.platform")}</th>
+                            <th>{t("imagery.results.producer")}</th>
                           </>
                         )}
-                        <th>Tutupan Awan</th>
+                        <th>{t("imagery.results.cloudCover")}</th>
                         <th />
                       </tr>
                     </thead>
                     <tbody>
                       {visibleSceneItems.length === 0 ? (
-                        <tr><td className="text-center text-muted py-4" colSpan={3 + ((supportsSceneMetadata || isHimawari) ? 3 : 0)}>Tidak ada hasil yang cocok dengan kata kunci.</td></tr>
+                        <tr><td className="text-center text-muted py-4" colSpan={3 + ((supportsSceneMetadata || isHimawari) ? 3 : 0)}>{t("imagery.results.noMatches")}</td></tr>
                       ) : visibleSceneItems.map(({ key, scene, group }) => {
                         const selectedInRow = group ? group.scenes.some((item) => item.id === selectedSceneId) : selectedSceneId === scene.id;
                         const groupPlatforms = group ? [...new Set(group.scenes.map((item) => item.platform).filter((value): value is string => Boolean(value)))] : [];
@@ -2217,14 +2221,14 @@ export default function ImageryModule() {
                           <td>
                             {group ? formatSceneGroupDate(scene, isEsriWayback) : formatSceneDate(scene.acquired_at, isEsriWayback)}
                             {group
-                              ? <small className="text-muted d-block"><i className="bi bi-grid-3x3-gap me-1" />Mosaik AOI · {group.scenes.length} scene{tileRenderMode === "mosaic" && selectedInRow ? ` · aktif ${tileSceneCount}` : ""}</small>
+                              ? <small className="text-muted d-block"><i className="bi bi-grid-3x3-gap me-1" />{t("imagery.results.mosaicAoi")} · {group.scenes.length} {t(group.scenes.length === 1 ? "imagery.results.scene" : "imagery.results.scenes")}{tileRenderMode === "mosaic" && selectedInRow ? ` · ${t("imagery.results.activeScenes", { count: tileSceneCount })}` : ""}</small>
                               : scene.title ? <small className="text-muted d-block">{scene.title}</small> : null}
                           </td>
                           {(supportsSceneMetadata || isHimawari) && (
                             <>
                               <td>{formatResolution(scene.resolution_m)}</td>
-                              <td>{group ? (groupPlatforms.length === 1 ? groupPlatforms[0] : groupPlatforms.length > 1 ? `${groupPlatforms.length} platform` : "-") : scene.platform ?? "-"}</td>
-                              <td>{group ? (groupProducers.length === 1 ? groupProducers[0] : groupProducers.length > 1 ? `${groupProducers.length} produser` : "-") : scene.producer ?? "-"}</td>
+                              <td>{group ? (groupPlatforms.length === 1 ? groupPlatforms[0] : groupPlatforms.length > 1 ? t("imagery.results.platformCount", { count: groupPlatforms.length }) : "-") : scene.platform ?? "-"}</td>
+                              <td>{group ? (groupProducers.length === 1 ? groupProducers[0] : groupProducers.length > 1 ? t("imagery.results.producerCount", { count: groupProducers.length }) : "-") : scene.producer ?? "-"}</td>
                             </>
                           )}
                           <td>
@@ -2233,11 +2237,11 @@ export default function ImageryModule() {
                             </span>
                           </td>
                           <td className="text-end">
-                            <div className="btn-group btn-group-sm" role="group" aria-label="Aksi scene">
+                            <div className="btn-group btn-group-sm" role="group" aria-label={t("imagery.results.actions")}>
                               <button
                                 type="button"
                                 className="btn btn-outline-secondary"
-                                title={isHimawari ? "Citra full-disk, tidak memiliki footprint scene" : "Zoom ke footprint scene"}
+                                title={isHimawari ? t("imagery.results.noFootprint") : t("imagery.results.zoomFootprint")}
                                 disabled={isHimawari}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -2250,7 +2254,7 @@ export default function ImageryModule() {
                                 <a
                                   className="btn btn-outline-secondary"
                                   href={safeHttpUrl(scene.download_url)}
-                                  title="Download source scene"
+                                  title={t("imagery.results.downloadSource")}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
@@ -2273,8 +2277,8 @@ export default function ImageryModule() {
                   </table>
                 </div>
                 <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 border-top">
-                  <small className="text-muted">{sceneListCount === 0 ? "Tidak ada hasil" : `Menampilkan ${(scenePage - 1) * scenePageSize + 1}-${Math.min(scenePage * scenePageSize, sceneListCount)} dari ${sceneListCount} ${useMosaicSceneList ? "grup mosaik" : "scene"}`}</small>
-                  <nav aria-label="Paginasi scene"><div className="btn-group btn-group-sm"><button type="button" className="btn btn-outline-secondary" disabled={scenePage <= 1} onClick={() => setScenePage((page) => Math.max(1, page - 1))}>Sebelumnya</button><button type="button" className="btn btn-outline-secondary" disabled>{scenePage} / {scenePageCount}</button><button type="button" className="btn btn-outline-secondary" disabled={scenePage >= scenePageCount} onClick={() => setScenePage((page) => Math.min(scenePageCount, page + 1))}>Berikutnya</button></div></nav>
+                  <small className="text-muted">{sceneListCount === 0 ? t("imagery.results.noResults") : t("imagery.results.listCount", { from: (scenePage - 1) * scenePageSize + 1, to: Math.min(scenePage * scenePageSize, sceneListCount), count: sceneListCount, kind: t(useMosaicSceneList ? "imagery.results.sceneGroups" : "imagery.results.scenes") })}</small>
+                  <nav aria-label={t("imagery.results.pagination")}><div className="btn-group btn-group-sm"><button type="button" className="btn btn-outline-secondary" disabled={scenePage <= 1} onClick={() => setScenePage((page) => Math.max(1, page - 1))}>{t("imagery.results.previous")}</button><button type="button" className="btn btn-outline-secondary" disabled>{scenePage} / {scenePageCount}</button><button type="button" className="btn btn-outline-secondary" disabled={scenePage >= scenePageCount} onClick={() => setScenePage((page) => Math.min(scenePageCount, page + 1))}>{t("imagery.results.next")}</button></div></nav>
                 </div>
                 </>
               )}
@@ -2284,7 +2288,7 @@ export default function ImageryModule() {
         )}
 
         {selectedScene && satelliteMeta && (
-          <div className="card mb-3" aria-label="Data provenance scene terpilih">
+          <div className="card mb-3" aria-label={t("imagery.provenance.sceneAria")}>
             <div
               className="card-header imagery-accordion-card-header"
               onClick={(event) => {
@@ -2303,7 +2307,7 @@ export default function ImageryModule() {
                 }}
               >
                 <span className="imagery-accordion-copy">
-                  <span className="imagery-accordion-title"><i className="bi bi-info-circle" aria-hidden="true" /> <span>Data Provenance</span></span>
+                    <span className="imagery-accordion-title"><i className="bi bi-info-circle" aria-hidden="true" /> <span>{t("imagery.provenance.title")}</span></span>
                 </span>
                 <i className={`bi bi-chevron-${provenanceOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
               </button>
@@ -2313,14 +2317,14 @@ export default function ImageryModule() {
             </div>
             <div id="imageryProvenanceBody" className="card-body py-2 small" hidden={!provenanceOpen}>
               <div className="row g-2">
-                <div className="col-md-4"><span className="text-muted d-block">Provider / mission</span><strong>{satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.name}</span></div>
-                <div className="col-md-4"><span className="text-muted d-block">Scene ID</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">Platform: {selectedScene.platform ?? "-"}</span></div>
-                <div className="col-md-4"><span className="text-muted d-block">{isEsriWayback ? "Tanggal rilis arsip" : "Akuisisi (UTC)"}</span><strong>{formatSceneDate(selectedScene.acquired_at, isEsriWayback)}</strong><span className="d-block">Resolusi native: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
-                <div className="col-md-4"><span className="text-muted d-block">Tutupan awan</span><strong>{selectedScene.cloud_cover_pct == null ? "Tidak tersedia / tidak relevan" : `${selectedScene.cloud_cover_pct}%`}</strong></div>
-                <div className="col-md-4"><span className="text-muted d-block">Produk / asset</span><strong>{selectedScene.collection ?? satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : "Provider scene")}</strong><span className="d-block">{activeCogAsset ? `Asset: ${activeCogAsset.title || activeCogAsset.key}` : "Asset tile provider"}</span></div>
-                <div className="col-md-4"><span className="text-muted d-block">Attribution / lisensi</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? "Gunakan sesuai ketentuan sumber."}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t("imagery.provenance.providerMission")}</span><strong>{satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.name}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t("imagery.provenance.sceneId")}</span><strong className="text-break">{selectedScene.id}</strong><span className="d-block">{t("imagery.provenance.platform")}: {selectedScene.platform ?? "-"}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t(isEsriWayback ? "imagery.provenance.archiveRelease" : "imagery.provenance.acquiredUtc")}</span><strong>{formatSceneDate(selectedScene.acquired_at, isEsriWayback)}</strong><span className="d-block">{t("imagery.provenance.nativeResolution")}: {formatResolution(sceneResolution(selectedScene, cogAssetKey, satelliteMeta.resolution_m))}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t("imagery.provenance.cloudCover")}</span><strong>{selectedScene.cloud_cover_pct == null ? t("imagery.provenance.cloudUnavailable") : `${selectedScene.cloud_cover_pct}%`}</strong></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t("imagery.provenance.productAsset")}</span><strong>{selectedScene.collection ?? satelliteMeta.stac_collection ?? satelliteMeta.gee_collection ?? selectedScene.title ?? (isEsriWayback ? "Esri World Imagery Wayback" : t("imagery.provenance.providerScene"))}</strong><span className="d-block">{activeCogAsset ? `${t("imagery.provenance.asset")}: ${activeCogAsset.title || activeCogAsset.key}` : t("imagery.provenance.providerTileAsset")}</span></div>
+                <div className="col-md-4"><span className="text-muted d-block">{t("imagery.provenance.attributionLicense")}</span><strong>{isEsriWayback ? "Esri World Imagery Wayback" : satelliteMeta.provider}</strong><span className="d-block">{satelliteMeta.license ?? t("imagery.provenance.followSourceTerms")}</span></div>
               </div>
-              {isEsriWayback && <div className="alert alert-info py-1 px-2 mt-2 mb-0">Tanggal di atas adalah tanggal rilis Wayback (referensi visual), bukan jaminan tanggal akuisisi sensor.</div>}
+              {isEsriWayback && <div className="alert alert-info py-1 px-2 mt-2 mb-0">{t("imagery.provenance.waybackNotice")}</div>}
             </div>
           </div>
         )}
@@ -2331,21 +2335,18 @@ export default function ImageryModule() {
             {tileRenderMode !== "mosaic" && selectedScene?.cloud_cover_pct != null && selectedScene.cloud_cover_pct > 60 && (
               <div className="alert alert-warning py-2 mb-3 small">
                 <i className="bi bi-cloud-haze2 me-1" />
-                Scene ini sangat berawan ({selectedScene.cloud_cover_pct}%). Tampilan abu-abu/pudar berasal dari citra
-                asli pada tanggal tersebut, bukan komposit bebas awan. Aktifkan {t("imagery.cloudFilter")} atau pilih scene
-                dengan badge hijau untuk visual yang lebih jelas.
+                {t("imagery.map.cloudWarning", { percent: selectedScene.cloud_cover_pct })}
               </div>
             )}
             {tileLoading && (
               <div className="alert alert-info py-2 mb-3">
-                <i className="fas fa-spinner fa-spin" /> Memuat citra scene...
+                <i className="fas fa-spinner fa-spin" /> {t("imagery.map.loadingScene")}
               </div>
             )}
             {!tileLoading && tileUrl && tileRenderMode === "mosaic" && (
               <div className="alert alert-info py-2 mb-3 small">
                 <i className="bi bi-grid-3x3-gap me-1" />
-                Menampilkan mosaik {satelliteMeta?.name ?? "provider ini"} dari {tileSceneCount} scene
-                pada rentang tanggal yang dipilih{supportsCloudFilter ? " dan filter awan yang dipilih." : "."}
+                {t("imagery.map.mosaicSummary", { name: satelliteMeta?.name ?? t("imagery.provenance.providerScene"), count: tileSceneCount, sceneUnit: t(tileSceneCount === 1 ? "imagery.results.scene" : "imagery.results.scenes"), filterNote: supportsCloudFilter ? t("imagery.map.mosaicCloudFilterNote") : "" })}
               </div>
             )}
 
@@ -2359,16 +2360,16 @@ export default function ImageryModule() {
                   onClick={() => setMapOpen((open) => !open)}
                 >
                   <span className="imagery-accordion-copy">
-                    <span className="imagery-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>Peta</span></span>
+                    <span className="imagery-accordion-title"><i className="bi bi-map" aria-hidden="true" /> <span>{t("imagery.map.title")}</span></span>
                     {selectedSceneId && (
                       <span className="imagery-accordion-scene">
                         {tileRenderMode === "mosaic"
-                          ? `- mosaik ${tileSceneCount} scene pada rentang tanggal`
-                          : `- menampilkan scene ${formatSceneDate(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "", isEsriWayback)}`}
+                          ? `- ${t("imagery.map.mosaicStatus", { count: tileSceneCount, sceneUnit: t(tileSceneCount === 1 ? "imagery.results.scene" : "imagery.results.scenes") })}`
+                          : `- ${t("imagery.map.sceneStatus", { date: formatSceneDate(scenes.find((s) => s.id === selectedSceneId)?.acquired_at ?? "", isEsriWayback) })}`}
                       </span>
                     )}
                     {himawariTimeLayerUrl && (
-                      <span className="imagery-accordion-scene">- frame Himawari-9 JMA ditampilkan</span>
+                      <span className="imagery-accordion-scene">- {t("imagery.map.himawariStatus")}</span>
                     )}
                   </span>
                   <i className={`bi bi-chevron-${mapOpen ? "up" : "down"} imagery-accordion-chevron`} aria-hidden="true" />
@@ -2464,8 +2465,8 @@ export default function ImageryModule() {
                             onStatus={setGpuTileStatus}
                           />
                         )}
-                        <RasterResolutionNotice layers={[{label: tileRenderMode === "mosaic" ? `${satelliteMeta?.name ?? "Sentinel-2"} · Mosaik` : satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
-                        <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label="Opacity scene" />
+                        <RasterResolutionNotice layers={[{label: tileRenderMode === "mosaic" ? `${satelliteMeta?.name ?? "Sentinel-2"} · ${t("imagery.results.mosaic")}` : satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
+                        <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label={t("imagery.sceneOpacity")} />
                         {effectiveVisualEnhancement && <div className="small text-muted mt-1">GPU tile status: {gpuTileStatus}. Data analitik tetap memakai citra native.</div>}
                       </>
                     )}
@@ -2493,29 +2494,29 @@ export default function ImageryModule() {
                 )}
                 {demLoading && (
                   <div className="alert alert-info py-2 mt-2 mb-0 small">
-                    <i className="fas fa-spinner fa-spin" /> Memuat DEMNAS/3D dari menu layer...
+                  <i className="fas fa-spinner fa-spin" /> {t("imagery.dem.loading")}
                   </div>
                 )}
                 {demResult && demLayerMode !== "none" && (
                   <div className="imagery-map-layer-info mt-2">
                     <div>
                       <span className={`badge ${demResult.is_official_demnas ? "bg-success" : "bg-warning text-dark"}`}>
-                        {demResult.is_official_demnas ? "BIG DEMNAS" : "Fallback DEM"}
+                        {demResult.is_official_demnas ? "BIG DEMNAS" : t("imagery.dem.fallback")}
                       </span>
                       <small className="text-muted ms-2">{demResult.source}</small>
                     </div>
                     {demResult.stats && (
                       <div className="imagery-dem-summary">
                         <div>
-                          <span>Min</span>
+                          <span>{t("imagery.dem.min")}</span>
                           <strong>{formatElevation(demResult.stats.min_elevation_m)}</strong>
                         </div>
                         <div>
-                          <span>Rata-rata</span>
+                          <span>{t("imagery.dem.mean")}</span>
                           <strong>{formatElevation(demResult.stats.mean_elevation_m)}</strong>
                         </div>
                         <div>
-                          <span>Maks</span>
+                          <span>{t("imagery.dem.max")}</span>
                           <strong>{formatElevation(demResult.stats.max_elevation_m)}</strong>
                         </div>
                       </div>
@@ -2523,7 +2524,7 @@ export default function ImageryModule() {
                     {demLayerMode === "3d" && <TerrainPreview3D tileUrl={demResult.tile_url} source={demResult.source} />}
                     {!demResult.is_official_demnas && (
                       <div className="alert alert-warning py-2 mb-0 small">
-                        DEMNAS belum dikonfigurasi di backend, sehingga layer ini memakai SRTM sebagai fallback.
+                        {t("imagery.dem.fallbackHint")}
                       </div>
                     )}
                   </div>
@@ -2533,7 +2534,7 @@ export default function ImageryModule() {
                   onNasaLayer={setNasaTimeLayerUrl} onStory={setStoryMap} mapMode={mapMode} onMapMode={setMapMode} />}
                 {storyMap && <a className="btn btn-sm btn-outline-success mt-2" download="story-map.geojson"
                   href={`data:application/geo+json;charset=utf-8,${encodeURIComponent(JSON.stringify(storyMap))}`}>
-                  <i className="bi bi-download" /> Download Story Map GeoJSON
+                  <i className="bi bi-download" /> {t("imagery.tools.downloadStoryGeoJson")}
                 </a>}
               </div>
             </div>
@@ -2544,28 +2545,28 @@ export default function ImageryModule() {
           <>
             <div className="card mb-3">
               <div className="card-header py-2">
-                <i className="bi bi-arrows-alt-h" /> Pilih 2 Waktu untuk Dibandingkan
+                <i className="bi bi-arrows-alt-h" /> {t("imagery.compare.heading")}
               </div>
               <div className="card-body">
                 {isMosaicProvider && (
                   <div className="row g-2 mb-2 align-items-end">
                     <div className="col-sm-6 col-lg-4">
-                      <label className="form-label small fw-semibold mb-1" htmlFor="compare-display-mode">Tampilan perbandingan</label>
+                      <label className="form-label small fw-semibold mb-1" htmlFor="compare-display-mode">{t("imagery.results.displayAs")}</label>
                       <select id="compare-display-mode" className="form-select form-select-sm" value={compareDisplayMode} onChange={(event) => changeCompareDisplayMode(event.target.value as SceneDisplayMode)}>
-                        <option value="mosaic">Mosaik AOI · per tanggal</option>
-                        <option value="scene">Per scene</option>
+                        <option value="mosaic">{t("imagery.results.mosaicByDate")}</option>
+                        <option value="scene">{t("imagery.results.perScene")}</option>
                       </select>
                     </div>
                     <div className="col-sm-6 col-lg-8 small text-muted">
                       {compareUsesMosaic
-                        ? "Setiap pilihan tanggal menggabungkan scene pada hari yang sama untuk mengisi AOI."
-                        : "Setiap pilihan menampilkan satu scene sesuai footprint aslinya."}
+                        ? t("imagery.compare.mosaicDescription")
+                        : t("imagery.compare.singleDescription")}
                     </div>
                   </div>
                 )}
                 <div className="row g-2 mb-2">
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? "Waktu A" : "Scene A"}</label>
+                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? t("imagery.compare.timeA") : t("imagery.compare.sceneA")}</label>
                     <SearchableSelect
                       value={compareSceneAId ?? ""}
                       onChange={(v) => setCompareSceneAId(v || null)}
@@ -2573,7 +2574,7 @@ export default function ImageryModule() {
                     />
                   </div>
                   <div className="col-sm-6">
-                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? "Waktu B" : "Scene B"}</label>
+                    <label className="form-label small fw-semibold mb-1">{compareUsesMosaic ? t("imagery.compare.timeB") : t("imagery.compare.sceneB")}</label>
                     <SearchableSelect
                       value={compareSceneBId ?? ""}
                       onChange={(v) => setCompareSceneBId(v || null)}
@@ -2585,11 +2586,11 @@ export default function ImageryModule() {
                 <button className="btn btn-warning fw-bold" disabled={compareLoading} onClick={loadCompare}>
                   {compareLoading ? (
                     <>
-                      <i className="fas fa-spinner fa-spin" /> Memuat...
+                      <i className="fas fa-spinner fa-spin" /> {t("imagery.compare.loading")}
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-arrows-alt-h" /> Muat Perbandingan
+                      <i className="fas fa-arrows-alt-h" /> {t("imagery.compare.load")}
                     </>
                   )}
                 </button>
@@ -2601,20 +2602,20 @@ export default function ImageryModule() {
                 {compareRenderInfo && (
                   <div className="px-3 pt-2">
                     <div className="alert alert-info py-2 mb-2 small" role="status">
-                      <strong>Scene A:</strong>{" "}
+                      <strong>{t("imagery.compare.sceneA")}:</strong>{" "}
                       {compareRenderInfo.a.renderMode === "mosaic"
-                        ? `mosaik AOI · ${compareRenderInfo.a.sceneCount} scene`
-                        : "scene tunggal"}
+                        ? t("imagery.compare.aoiMosaic", { count: compareRenderInfo.a.sceneCount })
+                        : t("imagery.compare.singleScene")}
                       {" · "}
-                      <strong>Scene B:</strong>{" "}
+                      <strong>{t("imagery.compare.sceneB")}:</strong>{" "}
                       {compareRenderInfo.b.renderMode === "mosaic"
-                        ? `mosaik AOI · ${compareRenderInfo.b.sceneCount} scene`
-                        : "scene tunggal"}
+                        ? t("imagery.compare.aoiMosaic", { count: compareRenderInfo.b.sceneCount })
+                        : t("imagery.compare.singleScene")}
                       {isMosaicProvider && imagerySearchAoi && (
                         <span className="d-block mt-1">
                           {compareUsesMosaic
-                            ? "Mosaik memakai scene yang beririsan pada tanggal masing-masing pilihan; cakupan mengikuti ketersediaan citra."
-                            : "Mode per scene menampilkan satu granula; bagian AOI di luar footprint dapat kosong."}
+                            ? t("imagery.compare.mosaicCoverage")
+                            : t("imagery.compare.sceneCoverage")}
                         </span>
                       )}
                     </div>
@@ -2622,8 +2623,8 @@ export default function ImageryModule() {
                       || (compareRenderInfo.b.aoiLargerThanScene && compareRenderInfo.b.sceneCount <= 1) ? (
                       <div className="alert alert-warning py-2 mb-2 small" role="status">
                         {compareUsesMosaic
-                          ? "Scene tambahan pada tanggal tersebut tidak ditemukan. Sebagian AOI mungkin berada di luar cakupan citra."
-                          : "Scene tunggal tidak mencakup seluruh AOI. Pilih mode mosaik bila tersedia untuk menggabungkan scene pada tanggal yang sama."}
+                          ? t("imagery.compare.additionalSceneMissing")
+                          : t("imagery.compare.sceneDoesNotCoverAoi")}
                       </div>
                     ) : null}
                   </div>
@@ -2662,7 +2663,7 @@ export default function ImageryModule() {
               <div className="card text-center py-5 border-dashed">
                 <div className="card-body">
                   <i className="bi bi-arrows-angle-expand text-muted" style={{ fontSize: "2.5rem" }} />
-                  <p className="text-muted mb-0 mt-2">Pilih Scene A dan Scene B, lalu klik Muat Perbandingan.</p>
+                  <p className="text-muted mb-0 mt-2">{t("imagery.compare.selectBoth")}</p>
                 </div>
               </div>
             )}
@@ -2675,7 +2676,7 @@ export default function ImageryModule() {
         open={aoiModalOpen}
         id="imageryAoiModalMap"
         title={t("imagery.aoiModalTitle")}
-        description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
+        description={t("imagery.aoiPickerDescription")}
         aoi={aoiState}
         onAoiChange={setAoiState}
         onClose={() => setAoiModalOpen(false)}

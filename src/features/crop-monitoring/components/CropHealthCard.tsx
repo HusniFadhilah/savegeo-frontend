@@ -1,5 +1,5 @@
 import CropPanelAccordion from "./CropPanelAccordion";
-import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE } from "../utils";
+import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE, localizeCropLabel, localizeCropReason } from "../utils";
 import type { HealthResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -14,7 +14,7 @@ export default function CropHealthCard({ health }: Props) {
     <CropPanelAccordion title={t("crop.card.healthTitle")} icon="bi-heart-pulse-fill" className="cm-panel-card cm-health-card">
       {!health.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{health.reason ? `: ${health.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(health.reason, t) ? `: ${localizeCropReason(health.reason, t)}` : "."}
         </div>
       ) : (
         <>
@@ -26,7 +26,7 @@ export default function CropHealthCard({ health }: Props) {
                   className="cm-status-dot"
                   style={{ backgroundColor: styleFor(HEALTH_LABEL_STYLE, health.health_label).color }}
                 />
-                {styleFor(HEALTH_LABEL_STYLE, health.health_label).label}
+                {localizeCropLabel(styleFor(HEALTH_LABEL_STYLE, health.health_label).label, t)}
               </strong>
             </div>
             <div className="cm-mini-stat">
@@ -42,7 +42,7 @@ export default function CropHealthCard({ health }: Props) {
             <div className="cm-mini-stat">
               <span>{t("crop.validPixels")}</span>
               <strong>
-                {fmtPct(health.valid_pixel_pct)} <small className="text-muted">({health.images_used} citra)</small>
+                {fmtPct(health.valid_pixel_pct)} <small className="text-muted">({health.images_used} {t("crop.images")})</small>
               </strong>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function CropHealthCard({ health }: Props) {
                               backgroundColor: info.color,
                             }}
                           />
-                          {name}
+                          {localizeCropLabel(name, t)}
                         </td>
                         <td>{fmtNum(info.area, 2)}</td>
                         <td>

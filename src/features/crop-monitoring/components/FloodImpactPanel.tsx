@@ -2,7 +2,7 @@ import CropPanelAccordion from "./CropPanelAccordion";
 import { useState } from "react";
 import { ApiError } from "@/services/apiClient";
 import { runCropMonitoring } from "../api";
-import { fmtNum, fmtPct, styleFor, FLOOD_SEVERITY_STYLE } from "../utils";
+import { fmtNum, fmtPct, styleFor, FLOOD_SEVERITY_STYLE, localizeCropLabel, localizeCropMessage, localizeCropReason } from "../utils";
 import type { FloodResult } from "../types";
 import { useI18nStore } from "@/hooks/useI18nStore";
 
@@ -41,7 +41,7 @@ export default function FloodImpactPanel({ fieldId, flood, onResult }: Props) {
       });
       onResult(res.sub_analyses.flood ?? { available: false, reason: t("crop.noResult") });
     } catch (err) {
-      setError(err instanceof ApiError ? (err.payload as { detail?: string })?.detail ?? err.message : t("crop.flood.runFailed"));
+      setError(err instanceof ApiError ? localizeCropMessage((err.payload as { detail?: string })?.detail ?? err.message, t) ?? err.message : t("crop.flood.runFailed"));
     } finally {
       setRunning(false);
     }
@@ -76,7 +76,7 @@ export default function FloodImpactPanel({ fieldId, flood, onResult }: Props) {
         <div className="alert alert-secondary py-2 mb-0 small">{t("crop.notRun")}</div>
       ) : !flood.available ? (
         <div className="alert alert-secondary py-2 mb-0 small">
-          {t("crop.unavailable")}{flood.reason ? `: ${flood.reason}` : "."}
+          {t("crop.unavailable")}{localizeCropReason(flood.reason, t) ? `: ${localizeCropReason(flood.reason, t)}` : "."}
         </div>
       ) : (
         <div className="row g-2 text-center">
@@ -95,12 +95,12 @@ export default function FloodImpactPanel({ fieldId, flood, onResult }: Props) {
           <div className="col-6 col-md-3">
             <div className="text-muted small">{t("crop.severity")}</div>
             <span className={`fw-bold ${styleFor(FLOOD_SEVERITY_STYLE, flood.severity).className}`}>
-              {styleFor(FLOOD_SEVERITY_STYLE, flood.severity).emoji} {styleFor(FLOOD_SEVERITY_STYLE, flood.severity).label}
+              {styleFor(FLOOD_SEVERITY_STYLE, flood.severity).emoji} {localizeCropLabel(styleFor(FLOOD_SEVERITY_STYLE, flood.severity).label, t)}
             </span>
           </div>
           {flood.tile_url && (
             <div className="col-12">
-              <small className="text-muted">Lihat layer peta "Banjir" di panel Peta Hasil di bawah.</small>
+              <small className="text-muted">{t("crop.map.layerHint", { layer: t("crop.map.flood") })}</small>
             </div>
           )}
         </div>

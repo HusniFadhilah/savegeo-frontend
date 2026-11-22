@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import type { WildfireQueryState } from "./queryState";
 
 type LayerTab = "hotspot" | "overlays" | "cams" | "fdrs";
@@ -23,45 +24,15 @@ interface LayerOption {
 }
 
 const overlayOptions: LayerOption[] = [
-  { id: "boundary", label: "Batas provinsi", available: true },
-  {
-    id: "clouds",
-    label: "Observasi tutupan awan (H-1)",
-    description: "Feed satelit belum terhubung",
-    available: false,
-  },
-  { id: "wind", label: "Pergerakan angin", description: "Open-Meteo", available: true },
-  {
-    id: "air-quality",
-    label: "Kualitas udara",
-    description: "Feed kualitas udara belum terhubung",
-    available: false,
-  },
-  {
-    id: "rain",
-    label: "Potensi hujan",
-    description: "Feed prakiraan belum terhubung",
-    available: false,
-  },
-  {
-    id: "units",
-    label: "Unit kerja",
-    description: "Data operasional belum terhubung",
-    available: false,
-  },
-  {
-    id: "suppression",
-    label: "Pemadaman kebakaran",
-    description: "Data operasional belum terhubung",
-    available: false,
-  },
-  {
-    id: "groundcheck",
-    label: "Groundcheck hotspot",
-    description: "Feed verifikasi belum terhubung",
-    available: false,
-  },
-  { id: "peat-water", label: "TMAT gambut", description: "Feed belum terhubung", available: false },
+  { id: "boundary", label: "", available: true },
+  { id: "clouds", label: "", description: "", available: false },
+  { id: "wind", label: "", description: "", available: true },
+  { id: "air-quality", label: "", description: "", available: false },
+  { id: "rain", label: "", description: "", available: false },
+  { id: "units", label: "", description: "", available: false },
+  { id: "suppression", label: "", description: "", available: false },
+  { id: "groundcheck", label: "", description: "", available: false },
+  { id: "peat-water", label: "", description: "", available: false },
 ];
 
 const fdrsOptions = [
@@ -82,6 +53,7 @@ function LayerCheckbox({
   checked: boolean;
   onChange: () => void;
 }) {
+  const t = useI18nStore((state) => state.t);
   return (
     <label className={`wildfire-layer-option ${option.available ? "" : "is-disabled"}`}>
       <input
@@ -95,7 +67,7 @@ function LayerCheckbox({
         <span>{option.label}</span>
         {option.description && <small>{option.description}</small>}
       </span>
-      {!option.available && <span className="wildfire-layer-status">Segera</span>}
+      {!option.available && <span className="wildfire-layer-status">{t("wildfire.layers.comingSoon")}</span>}
     </label>
   );
 }
@@ -111,13 +83,14 @@ export default function WildfireLayerPanel({
   camsStatus,
   onRetryCams,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<LayerTab>("hotspot");
   const viirsOption: LayerOption = {
     id: "viirs",
     label: "VIIRS / NASA FIRMS",
     description:
-      viirsAvailable === false ? "Tidak ada data pada periode ini" : "Data hotspot tersimpan",
+      viirsAvailable === false ? t("wildfire.layers.noPeriodData") : t("wildfire.layers.storedHotspots"),
     available: true,
   };
 
@@ -126,8 +99,8 @@ export default function WildfireLayerPanel({
       <button
         type="button"
         className={`wildfire-layer-trigger leaflet-control ${open ? "is-active" : ""}`}
-        title="Tampilkan layer"
-        aria-label="Tampilkan layer"
+        title={t("wildfire.layers.show")}
+        aria-label={t("wildfire.layers.show")}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
@@ -137,27 +110,27 @@ export default function WildfireLayerPanel({
         <div
           className="wildfire-layer-panel leaflet-control"
           role="dialog"
-          aria-label="Layer karhutla"
+          aria-label={t("wildfire.layers.dialogLabel")}
         >
           <div className="wildfire-layer-heading">
             <div>
               <i className="bi bi-layers" aria-hidden="true" />
-              <strong>Layer</strong>
+              <strong>{t("wildfire.layers.title")}</strong>
             </div>
             <button
               type="button"
               className="wildfire-layer-close"
-              aria-label="Tutup layer"
+              aria-label={t("wildfire.layers.close")}
               onClick={() => setOpen(false)}
             >
               <i className="bi bi-x-lg" />
             </button>
           </div>
-          <div className="wildfire-layer-tabs" role="tablist" aria-label="Jenis layer">
+          <div className="wildfire-layer-tabs" role="tablist" aria-label={t("wildfire.layers.types")}>
             {(
               [
-                ["hotspot", "Hotspot"],
-                ["overlays", "Overlays"],
+                ["hotspot", t("wildfire.layers.hotspots")],
+                ["overlays", t("wildfire.layers.overlays")],
                 ["cams", "CAMS"],
                 ["fdrs", "FDRS"],
               ] as const
@@ -180,8 +153,8 @@ export default function WildfireLayerPanel({
               <LayerCheckbox
                 option={{
                   id: "hotspot",
-                  label: "Hotspot tersimpan",
-                  description: "NASA FIRMS - titik tersimpan di database",
+                  label: t("wildfire.layers.storedHotspots"),
+                  description: t("wildfire.layers.nasaStoredDescription"),
                   available: true,
                 }}
                 checked={query.layers.includes("hotspot")}
@@ -204,7 +177,7 @@ export default function WildfireLayerPanel({
                   }
                   aria-hidden="true"
                 />{" "}
-                {syncing ? "Memperbarui data..." : "Perbarui dari NASA FIRMS"}
+                {syncing ? t("wildfire.layers.updating") : t("wildfire.layers.updateFromNasa")}
               </button>
               {syncError && (
                 <div className="wildfire-layer-error" role="alert">
@@ -212,8 +185,7 @@ export default function WildfireLayerPanel({
                 </div>
               )}
               <div className="wildfire-layer-note">
-                <i className="bi bi-database-check" aria-hidden="true" /> Tampilan membaca database.
-                NASA dipanggil saat sinkronisasi.
+                <i className="bi bi-database-check" aria-hidden="true" /> {t("wildfire.layers.databaseNote")}
               </div>
             </div>
           )}
@@ -223,7 +195,13 @@ export default function WildfireLayerPanel({
               {overlayOptions.map((option) => (
                 <LayerCheckbox
                   key={option.id}
-                  option={option}
+                  option={{
+                    ...option,
+                    label: t(`wildfire.layers.overlay.${option.id}.label`),
+                    description: option.id === "wind"
+                      ? "Open-Meteo"
+                      : t(`wildfire.layers.overlay.${option.id}.description`),
+                  }}
                   checked={query.layers.includes(option.id)}
                   onChange={() => onToggleLayer(option.id)}
                 />
@@ -234,7 +212,7 @@ export default function WildfireLayerPanel({
           {tab === "cams" && (
             <div className="wildfire-layer-list" role="tabpanel">
               <fieldset className="wildfire-cams-scope">
-                <legend>Cakupan Aerosol (ungu)</legend>
+                <legend>{t("wildfire.layers.aerosolCoverage")}</legend>
                 <label>
                   <input
                     type="radio"
@@ -242,7 +220,7 @@ export default function WildfireLayerPanel({
                     checked={query.camsScope === "event"}
                     onChange={() => onCamsScopeChange("event")}
                   />
-                  Wilayah event
+                  {t("wildfire.layers.eventRegion")}
                 </label>
                 <label>
                   <input
@@ -251,15 +229,15 @@ export default function WildfireLayerPanel({
                     checked={query.camsScope === "world"}
                     onChange={() => onCamsScopeChange("world")}
                   />
-                  Dunia
+                  {t("wildfire.layers.world")}
                 </label>
-                <small>GFAS dan titik hotspot tetap pada cakupan event.</small>
+                <small>{t("wildfire.layers.gfasEventScope")}</small>
               </fieldset>
               <LayerCheckbox
                 option={{
                   id: "cams-gfas",
-                  label: "Emisi karbon kebakaran · GFAS",
-                  description: "CAMS / ECMWF · frame terbaru yang tersedia",
+                  label: t("wildfire.layers.gfasLabel"),
+                  description: t("wildfire.layers.latestAvailableFrame"),
                   available: true,
                 }}
                 checked={query.layers.includes("cams-gfas")}
@@ -268,8 +246,8 @@ export default function WildfireLayerPanel({
               <LayerCheckbox
                 option={{
                   id: "cams-aod",
-                  label: "Aerosol organik · CAMS",
-                  description: "CAMS / ECMWF · optical depth",
+                  label: t("wildfire.layers.aerosolLabel"),
+                  description: t("wildfire.layers.opticalDepth"),
                   available: true,
                 }}
                 checked={query.layers.includes("cams-aod")}
@@ -279,17 +257,17 @@ export default function WildfireLayerPanel({
                 <i className={`bi ${camsStatus === "error" || camsStatus === "empty" ? "bi-exclamation-triangle" : camsStatus === "loading" ? "bi-arrow-repeat wildfire-spin" : "bi-info-circle"}`} aria-hidden="true" />
                 <span>
                   {camsStatus === "loading"
-                    ? "Memuat arsip CAMS…"
+                    ? t("wildfire.layers.camsLoading")
                     : camsStatus === "error"
-                      ? "Arsip CAMS untuk cakupan yang dipilih tidak dapat dimuat."
+                      ? t("wildfire.layers.camsLoadError")
                       : camsStatus === "empty"
-                        ? "Arsip CAMS belum memiliki raster untuk ditampilkan."
+                        ? t("wildfire.layers.camsNoRaster")
                         : camsStatus === "ready"
                           ? query.camsScope === "world" && query.layers.includes("cams-aod")
-                            ? "Aerosol CAMS global aktif; GFAS dan hotspot tetap di wilayah event."
-                            : "Tanggal dan opasitas mengikuti kontrol arsip CAMS."
-                          : "Pilih layer untuk menampilkan raster CAMS pada peta."}
-                  {camsStatus === "error" && <> <button type="button" className="wildfire-layer-retry" onClick={onRetryCams}>Coba lagi</button></>}
+                            ? t("wildfire.layers.camsGlobalActive")
+                            : t("wildfire.layers.camsArchiveControls")
+                          : t("wildfire.layers.camsChooseLayer")}
+                  {camsStatus === "error" && <> <button type="button" className="wildfire-layer-retry" onClick={onRetryCams}>{t("wildfire.layers.retry")}</button></>}
                 </span>
               </div>
             </div>
@@ -299,18 +277,18 @@ export default function WildfireLayerPanel({
             <div className="wildfire-fdrs-panel" role="tabpanel">
               <div className="wildfire-fdrs-status">
                 <i className="bi bi-info-circle" aria-hidden="true" />
-                <span>Feed FDRS BMKG belum terhubung di SaveGeo.</span>
+                <span>{t("wildfire.layers.fdrsUnavailable")}</span>
               </div>
               <div className="wildfire-fdrs-list">
                 {fdrsOptions.map((label) => (
                   <div key={label} className="wildfire-fdrs-row">
                     <span>{label}</span>
-                    <small>Belum tersedia</small>
+                    <small>{t("wildfire.layers.unavailable")}</small>
                   </div>
                 ))}
               </div>
               <small className="wildfire-layer-source">
-                Sumber target: Spartan BMKG / SiPongi+
+                {t("wildfire.layers.fdrsSource")}
               </small>
             </div>
           )}

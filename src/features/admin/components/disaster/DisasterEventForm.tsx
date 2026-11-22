@@ -2,33 +2,18 @@ import { useState } from "react";
 import { createDisasterEvent, updateDisasterEvent } from "../../api";
 import type { DisasterEvent } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
-const DISASTER_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "flood", label: "Banjir" },
-  { value: "landslide", label: "Longsor" },
-  { value: "forest_fire", label: "Kebakaran Hutan" },
-  { value: "earthquake", label: "Gempa Bumi" },
-  { value: "tsunami", label: "Tsunami" },
-  { value: "volcanic_eruption", label: "Erupsi Gunung Api" },
-  { value: "storm", label: "Badai" },
-  { value: "drought", label: "Kekeringan" },
-  { value: "other", label: "Lainnya" },
-];
-
-const SEVERITY_OPTIONS: { value: string; label: string }[] = [
-  { value: "low", label: "Rendah" },
-  { value: "medium", label: "Sedang" },
-  { value: "high", label: "Tinggi" },
-  { value: "critical", label: "Kritis" },
-];
-
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "draft", label: "Draft" },
-  { value: "processing", label: "Diproses" },
-  { value: "ready_for_review", label: "Siap Ditinjau" },
-  { value: "published", label: "Dipublikasikan" },
-  { value: "archived", label: "Diarsipkan" },
-];
+const DISASTER_TYPE_KEYS: Record<string, string> = {
+  flood: "admin.disaster.flood", landslide: "admin.disaster.landslide", forest_fire: "admin.disaster.forestFire",
+  earthquake: "admin.disaster.earthquake", tsunami: "admin.disaster.tsunami", volcanic_eruption: "admin.disaster.volcanicEruption",
+  storm: "admin.disaster.storm", drought: "admin.disaster.drought", other: "admin.disaster.other",
+};
+const SEVERITY_KEYS: Record<string, string> = { low: "admin.disaster.low", medium: "admin.disaster.medium", high: "admin.disaster.high", critical: "admin.disaster.critical" };
+const STATUS_KEYS: Record<string, string> = {
+  draft: "admin.disaster.draft", processing: "admin.disaster.processingStatus", ready_for_review: "admin.disaster.readyForReview",
+  published: "admin.disaster.published", archived: "admin.disaster.archived",
+};
 
 /** `"Jakarta, Bogor"` <-> `["Jakarta", "Bogor"]` - province/district are JSONB
  * string-list columns on the backend, entered here as a simple comma list. */
@@ -51,11 +36,15 @@ interface Props {
 }
 
 export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
+  const t = useI18nStore((state) => state.t);
+  const disasterTypeOptions = Object.entries(DISASTER_TYPE_KEYS).map(([value, key]) => ({ value, label: t(key) }));
+  const severityOptions = Object.entries(SEVERITY_KEYS).map(([value, key]) => ({ value, label: t(key) }));
+  const statusOptions = Object.entries(STATUS_KEYS).map(([value, key]) => ({ value, label: t(key) }));
   const { notify } = useAdmin();
   const isEdit = Boolean(event);
 
   const [name, setName] = useState(event?.name ?? "");
-  const [disasterType, setDisasterType] = useState(event?.disaster_type ?? DISASTER_TYPE_OPTIONS[0].value);
+  const [disasterType, setDisasterType] = useState(event?.disaster_type ?? disasterTypeOptions[0]?.value ?? "flood");
   const [locationName, setLocationName] = useState(event?.location_name ?? "");
   const [province, setProvince] = useState(listToText(event?.province));
   const [district, setDistrict] = useState(listToText(event?.district));
@@ -79,7 +68,7 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setFormError("Nama kejadian diperlukan");
+      setFormError(t("admin.disaster.nameRequiredError"));
       return;
     }
     setSaving(true);
@@ -107,10 +96,10 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
       const saved = isEdit
         ? await updateDisasterEvent(event!.id, { ...basePayload, status })
         : await createDisasterEvent(basePayload);
-      notify(isEdit ? "Kejadian bencana diperbarui" : "Kejadian bencana dibuat", "s");
+      notify(isEdit ? t("admin.disaster.eventSaved") : t("admin.disaster.eventCreated"), "s");
       onSaved(saved);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan kejadian bencana";
+      const msg = err instanceof Error ? err.message : t("admin.disaster.saveEventFailed");
       setFormError(msg);
       notify(msg, "e");
     } finally {
@@ -121,23 +110,23 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>{isEdit ? "Informasi Kejadian" : "Kejadian Bencana Baru"}</span>
+        <span>{isEdit ? t("admin.disaster.eventInfo") : t("admin.disaster.newEvent")}</span>
       </div>
       <div className="card-body-custom">
         <div className="two-col" style={{ marginBottom: "0.75rem" }}>
           <div className="form-field">
-            <label className="form-label">Nama Kejadian *</label>
+            <label className="form-label">{t("admin.disaster.eventName")}</label>
             <input
               className="form-input"
-              placeholder="Contoh: Banjir Bandang Kalimantan Selatan Jan 2026"
+              placeholder={t("admin.disaster.eventNamePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Jenis Bencana *</label>
+            <label className="form-label">{t("admin.disaster.disasterType")}</label>
             <select className="form-input" value={disasterType} onChange={(e) => setDisasterType(e.target.value)}>
-              {DISASTER_TYPE_OPTIONS.map((o) => (
+              {disasterTypeOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -148,19 +137,19 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
 
         <div className="two-col" style={{ marginBottom: "0.75rem" }}>
           <div className="form-field">
-            <label className="form-label">Nama Lokasi</label>
+            <label className="form-label">{t("admin.disaster.placeName")}</label>
             <input
               className="form-input"
-              placeholder="Contoh: Kabupaten Banjar"
+              placeholder={t("admin.disaster.placePlaceholder")}
               value={locationName}
               onChange={(e) => setLocationName(e.target.value)}
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Tingkat Keparahan</label>
+            <label className="form-label">{t("admin.disaster.severityLabel")}</label>
             <select className="form-input" value={severity ?? ""} onChange={(e) => setSeverity(e.target.value)}>
-              <option value="">Tidak ditentukan</option>
-              {SEVERITY_OPTIONS.map((o) => (
+              <option value="">{t("admin.disaster.unspecified")}</option>
+              {severityOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -171,19 +160,19 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
 
         <div className="two-col" style={{ marginBottom: "0.75rem" }}>
           <div className="form-field">
-            <label className="form-label">Provinsi (pisahkan koma)</label>
+            <label className="form-label">{t("admin.disaster.provinces")}</label>
             <input
               className="form-input"
-              placeholder="Contoh: Kalimantan Selatan"
+              placeholder={t("admin.disaster.provincesPlaceholder")}
               value={province}
               onChange={(e) => setProvince(e.target.value)}
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Kabupaten/Kota (pisahkan koma)</label>
+            <label className="form-label">{t("admin.disaster.districts")}</label>
             <input
               className="form-input"
-              placeholder="Contoh: Banjar, Tanah Laut"
+              placeholder={t("admin.disaster.districtsPlaceholder")}
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
             />
@@ -192,15 +181,15 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
 
         <div className="three-col" style={{ marginBottom: "0.75rem" }}>
           <div className="form-field">
-            <label className="form-label">Tanggal Kejadian</label>
+            <label className="form-label">{t("admin.disaster.eventDate")}</label>
             <input className="form-input" type="date" value={eventDate ?? ""} onChange={(e) => setEventDate(e.target.value)} />
           </div>
           <div className="form-field">
-            <label className="form-label">Tanggal Mulai</label>
+            <label className="form-label">{t("admin.disaster.startDate")}</label>
             <input className="form-input" type="date" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="form-field">
-            <label className="form-label">Tanggal Selesai</label>
+            <label className="form-label">{t("admin.disaster.endDate")}</label>
             <input className="form-input" type="date" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
@@ -209,24 +198,24 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
           <div className="card mb-3" style={{ background: "var(--surface-muted, rgba(13,139,97,.05))" }}>
             <div className="card-body-custom">
               <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-                <label className="form-label">Slug event (URL)</label>
+                <label className="form-label">{t("admin.disaster.eventSlug")}</label>
                 <input className="form-input" placeholder="kalimantan-2026" value={slug} onChange={(e) => setSlug(e.target.value)} />
               </div>
-              <div className="two-col" style={{ marginBottom: "0.75rem" }}>
-                <div className="form-field"><label className="form-label">Judul singkat</label><input className="form-input" value={shortTitle} onChange={(e) => setShortTitle(e.target.value)} /></div>
-                <div className="form-field"><label className="form-label">Mulai pemantauan</label><input className="form-input" type="date" value={monitoringFrom} onChange={(e) => setMonitoringFrom(e.target.value)} /></div>
+                <div className="two-col" style={{ marginBottom: "0.75rem" }}>
+                <div className="form-field"><label className="form-label">{t("admin.disaster.shortTitle")}</label><input className="form-input" value={shortTitle} onChange={(e) => setShortTitle(e.target.value)} /></div>
+                <div className="form-field"><label className="form-label">{t("admin.disaster.monitorStart")}</label><input className="form-input" type="date" value={monitoringFrom} onChange={(e) => setMonitoringFrom(e.target.value)} /></div>
               </div>
-              <div className="two-col" style={{ marginBottom: "0.75rem" }}><div className="form-field"><label className="form-label">Selesai pemantauan</label><input className="form-input" type="date" value={monitoringTo} onChange={(e) => setMonitoringTo(e.target.value)} /></div><div /></div>
-              <div className="form-field"><label className="form-label">Metodologi / catatan data</label><textarea className="form-input" rows={2} value={methodology} onChange={(e) => setMethodology(e.target.value)} /></div>
+              <div className="two-col" style={{ marginBottom: "0.75rem" }}><div className="form-field"><label className="form-label">{t("admin.disaster.monitorEnd")}</label><input className="form-input" type="date" value={monitoringTo} onChange={(e) => setMonitoringTo(e.target.value)} /></div><div /></div>
+              <div className="form-field"><label className="form-label">{t("admin.disaster.methodology")}</label><textarea className="form-input" rows={2} value={methodology} onChange={(e) => setMethodology(e.target.value)} /></div>
             </div>
           </div>
         )}
 
         {isEdit && (
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-            <label className="form-label">Status</label>
+            <label className="form-label">{t("admin.disaster.status")}</label>
             <select className="form-input" value={status} onChange={(e) => setStatus(e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
+              {statusOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -237,16 +226,16 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
 
         <div className="two-col" style={{ marginBottom: "0.75rem" }}>
           <div className="form-field">
-            <label className="form-label">Sumber</label>
+            <label className="form-label">{t("admin.disaster.source")}</label>
             <input
               className="form-input"
-              placeholder="Contoh: BNPB, BMKG"
+              placeholder={t("admin.disaster.sourcePlaceholder")}
               value={source}
               onChange={(e) => setSource(e.target.value)}
             />
           </div>
           <div className="form-field">
-            <label className="form-label">URL Thumbnail</label>
+            <label className="form-label">{t("admin.disaster.thumbnail")}</label>
             <input
               className="form-input"
               placeholder="https://..."
@@ -257,11 +246,11 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
         </div>
 
         <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-          <label className="form-label">Deskripsi</label>
+          <label className="form-label">{t("admin.disaster.description")}</label>
           <textarea
             className="form-input"
             rows={3}
-            placeholder="Ringkasan kejadian bencana (opsional)"
+            placeholder={t("admin.disaster.descriptionPlaceholder")}
             style={{ resize: "vertical" }}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -272,11 +261,11 @@ export default function DisasterEventForm({ event, onSaved, onCancel }: Props) {
 
         <div style={{ display: "flex", gap: 6 }}>
           <button type="button" className="btn-sm primary" disabled={saving} onClick={handleSubmit}>
-            <i className="bi bi-save" /> {saving ? "Menyimpan..." : "Simpan"}
+            <i className="bi bi-save" /> {saving ? t("admin.disaster.saving") : t("admin.disaster.save")}
           </button>
           {onCancel && (
             <button type="button" className="btn-sm" onClick={onCancel}>
-              Batal
+              {t("admin.disaster.cancel")}
             </button>
           )}
         </div>

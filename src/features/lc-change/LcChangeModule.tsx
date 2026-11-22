@@ -526,7 +526,7 @@ export default function LcChangeModule() {
   const runAnalysis = useCallback(async () => {
     const generation = runGeneration.current;
     if (!aoi) {
-      setRunError("Gambar AOI terlebih dahulu di peta.");
+      setRunError(t("lc.run.drawAoiFirst"));
       return;
     }
     const uniqueYears = [...new Set(years)]
@@ -538,8 +538,8 @@ export default function LcChangeModule() {
     if (uniqueYears.length < 2) {
       setRunError(
         dateMode === "date" && isDynamicWorldCompatible
-          ? "Rentang tanggal harus mencakup minimal 2 tahun analisis yang dipilih."
-          : "Pilih minimal 2 tahun yang berbeda.",
+          ? t("lc.run.dateRangeNeedsTwoYears")
+          : t("lc.run.selectTwoYears"),
       );
       return;
     }
@@ -553,7 +553,7 @@ export default function LcChangeModule() {
     const collected: Record<number, LcYearResult> = {};
     const failedYears: Array<{ year: number; message: string }> = [];
 
-    showLoading("Menganalisis tutupan lahan…", `0 dari ${uniqueYears.length} tahun diproses`);
+    showLoading(t("lc.analysisProgress.title"), t("lc.analysisProgress.yearsProcessed", { processed: 0, total: uniqueYears.length }));
     let processedYears = 0;
     // The analysis worker pool is small. Run two yearly summaries in parallel
     // to use it efficiently without flooding the job queue for long ranges.
@@ -590,7 +590,7 @@ export default function LcChangeModule() {
               processedYears += 1;
               setLoadingProgress(
                 Math.round((processedYears / uniqueYears.length) * 85) + 5,
-                `${processedYears} dari ${uniqueYears.length} tahun diproses`,
+                t("lc.analysisProgress.yearsProcessed", { processed: processedYears, total: uniqueYears.length }),
               );
             }
           }
@@ -658,23 +658,21 @@ export default function LcChangeModule() {
         execute: async ({ action, target, parameters }) => {
           const value = parameters?.value;
           if (action === "run_analysis" && target === "lc_change.analysis") {
-            if (!aoi) throw new Error("AOI diperlukan sebelum analisis perubahan tutupan lahan.");
-            if (running) throw new Error("Analisis masih berjalan.");
+            if (!aoi) throw new Error(t("lc.action.aoiRequired"));
+            if (running) throw new Error(t("lc.action.analysisRunning"));
             if (years.length < 2 || years[0] >= years[years.length - 1])
-              throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+              throw new Error(t("lc.action.yearOrder"));
             await runAnalysis();
             return;
           }
           if (action !== "set_parameter")
-            throw new Error(
-              `Perintah ${action} tidak didukung oleh modul perubahan tutupan lahan.`,
-            );
+              throw new Error(t("lc.action.unsupportedCommand", { action }));
           if (target === "lc_change.dataset") {
             if (
               typeof value !== "string" ||
               !datasetOptions.some((item) => item.value === canonicalLandCoverKey(value))
             )
-              throw new Error("Dataset perubahan tutupan lahan tidak tersedia.");
+              throw new Error(t("lc.action.datasetUnavailable"));
             setDataset(canonicalLandCoverKey(value));
           } else if (target === "lc_change.fromYear" || target === "lc_change.toYear") {
             if (
@@ -682,30 +680,30 @@ export default function LcChangeModule() {
               (value as number) < minYear ||
               (value as number) > maxYear
             )
-              throw new Error("Tahun di luar rentang yang tersedia.");
+              throw new Error(t("lc.action.yearOutOfRange"));
             const from = target === "lc_change.fromYear" ? (value as number) : years[0];
             const to = target === "lc_change.toYear" ? (value as number) : years[years.length - 1];
-            if (from >= to) throw new Error("Tahun awal harus lebih kecil dari tahun akhir.");
+            if (from >= to) throw new Error(t("lc.action.yearOrder"));
             const doc = datasetDocs[dataset];
             if (
               doc &&
               ((doc.year_min && from < doc.year_min) || (doc.year_max && to > doc.year_max))
             )
-              throw new Error("Tahun tidak tersedia pada dataset yang dipilih.");
+              throw new Error(t("lc.action.yearUnavailable"));
             setYears([from, to]);
           } else if (target === "lc_change.startMonth" || target === "lc_change.endMonth") {
             if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 12)
-              throw new Error("Bulan harus 1 sampai 12.");
+              throw new Error(t("lc.action.monthRange"));
             const from = target === "lc_change.startMonth" ? (value as number) : startMonth;
             const to = target === "lc_change.endMonth" ? (value as number) : endMonth;
-            if (from > to) throw new Error("Bulan awal harus sebelum bulan akhir.");
+            if (from > to) throw new Error(t("lc.action.monthOrder"));
             if (!isDynamicWorldCompatible)
-              throw new Error("Rentang bulan hanya tersedia untuk Dynamic World.");
+              throw new Error(t("lc.action.monthDynamicWorldOnly"));
             setDateMode("month");
             if (target === "lc_change.startMonth") setStartMonth(from);
             else setEndMonth(to);
           } else {
-            throw new Error(`Target ${target} tidak didukung oleh modul perubahan tutupan lahan.`);
+            throw new Error(t("lc.action.unsupportedTarget", { target }));
           }
         },
       }),
@@ -1082,7 +1080,7 @@ export default function LcChangeModule() {
               >
                 {running ? (
                   <>
-                    <i className="fas fa-spinner fa-spin" /> Menganalisis...
+                    <i className="fas fa-spinner fa-spin" /> {t("lc.analysisProgress.button")}
                   </>
                 ) : (
                   <>
@@ -1302,7 +1300,7 @@ export default function LcChangeModule() {
                 <div className="card-body lc-results-tabs-content">
                   {transitionLoading && (
                     <p role="status" className="text-muted">
-                      Menghitung transisi piksel pada area valid bersama…
+                      {t("lc.change.calculatingTransitions")}
                     </p>
                   )}
                   {transitionError && (
@@ -1385,7 +1383,7 @@ export default function LcChangeModule() {
               <div className="card">
                 <div className="card-header d-flex justify-content-between align-items-center">
                   <span>
-                    <i className="fas fa-table" /> Ringkasan Perubahan (Periode Terpilih)
+                    <i className="fas fa-table" /> {t("lc.change.summaryHeading")}
                   </span>
                   <span className="badge bg-secondary">
                     {yearA} → {yearB}
@@ -1427,7 +1425,7 @@ export default function LcChangeModule() {
         open={aoiModalOpen}
         id="lcChangeAoiModalMap"
         title={t("lc.aoiModalTitle")}
-        description="Pilih wilayah administrasi, koordinat, gambar polygon/rectangle, unggah file, atau pilih batas perusahaan."
+        description={t("imagery.aoiPickerDescription")}
         aoi={aoiState}
         onAoiChange={setAoiState}
         onClose={() => setAoiModalOpen(false)}

@@ -10,6 +10,8 @@ import { boundsFromGeoJSON } from "@/features/carbon/lib/geo";
 import type { AoiFeature, MapLegendEntry } from "@/types/map";
 import type { CropMonitoringSubAnalyses } from "../types";
 import type { CarbonResult } from "@/features/carbon/types";
+import { useI18nStore } from "@/hooks/useI18nStore";
+import { localizeCropLabel } from "../utils";
 
 interface Tab {
   key: string;
@@ -19,63 +21,59 @@ interface Tab {
   legend: MapLegendEntry[];
 }
 
-const PRODUCTIVITY_LEGEND: MapLegendEntry[] = [
-  { color: "#2e7d32", label: "Tinggi" },
-  { color: "#f9a825", label: "Sedang" },
-  { color: "#c62828", label: "Rendah" },
-];
-
-const ANOMALY_LEGEND: MapLegendEntry[] = [
-  { color: "#b71c1c", label: "Penurunan NDVI", value: "< -0.15" },
-  { color: "#ffee58", label: "Mendekati normal", value: "-0.15 - 0.15" },
-  { color: "#2e7d32", label: "Peningkatan NDVI", value: "> 0.15" },
-];
-
 /** `flood.legend[].label` comes straight from `disaster_analysis_service.py`
  * (shared with the Disaster module) in English - translated here at display
  * time rather than touching that shared backend string, which other modules
  * also read as-is. */
-const FLOOD_LEGEND_LABEL: Record<string, string> = {
-  "Existing Water": "Genangan Lama",
-  "New Inundation": "Genangan Baru",
-  "Receded Water": "Air Surut",
+const FLOOD_LEGEND_KEY: Record<string, string> = {
+  "Existing Water": "crop.map.existingWater",
+  "New Inundation": "crop.map.newInundation",
+  "Receded Water": "crop.map.recededWater",
 };
 
-function buildTabs(sub: CropMonitoringSubAnalyses, productivityResults: Record<string, CarbonResult>): Tab[] {
+function buildTabs(sub: CropMonitoringSubAnalyses, productivityResults: Record<string, CarbonResult>, t: (key: string) => string, locale: string): Tab[] {
   const tabs: Tab[] = [];
   if (sub.landcover?.available && sub.landcover.tile_url) tabs.push({
-    key: "landcover", label: "Land cover", icon: "bi-layers", tileUrl: sub.landcover.tile_url,
-    legend: Object.entries(sub.landcover.classes).map(([label, item]) => ({ label, color: item.color })),
+    key: "landcover", label: t("crop.map.landcover"), icon: "bi-layers", tileUrl: sub.landcover.tile_url,
+    legend: Object.entries(sub.landcover.classes).map(([label, item]) => ({ label: localizeCropLabel(label, t), color: item.color })),
   });
   if (sub.health?.available && sub.health.tile_url) tabs.push({
-    key: "health", label: "Kesehatan · NDVI", icon: "bi-heart-pulse", tileUrl: sub.health.tile_url,
-    legend: Object.entries(sub.health.classification?.classes ?? {}).map(([label, item]) => ({ label, color: item.color })),
+    key: "health", label: t("crop.map.health"), icon: "bi-heart-pulse", tileUrl: sub.health.tile_url,
+    legend: Object.entries(sub.health.classification?.classes ?? {}).map(([label, item]) => ({ label: localizeCropLabel(label, t), color: item.color })),
   });
   if (sub.anomaly?.available && sub.anomaly.tile_url) {
     tabs.push({
       key: "anomaly",
-      label: "Anomali",
+      label: t("crop.map.anomaly"),
       icon: "bi-exclamation-diamond",
       tileUrl: sub.anomaly.tile_url,
-      legend: ANOMALY_LEGEND,
+      legend: [
+        { color: "#b71c1c", label: t("crop.map.ndviDecline"), value: "< -0.15" },
+        { color: "#ffee58", label: t("crop.map.nearNormal"), value: "-0.15 - 0.15" },
+        { color: "#2e7d32", label: t("crop.map.ndviIncrease"), value: "> 0.15" },
+      ],
     });
   }
   if (sub.flood?.available && sub.flood.tile_url) {
     tabs.push({
       key: "flood",
-      label: "Banjir",
+      label: t("crop.map.flood"),
       icon: "bi-water",
       tileUrl: sub.flood.tile_url,
-      legend: sub.flood.legend.map((l) => ({ color: l.color, label: FLOOD_LEGEND_LABEL[l.label] ?? l.label })),
+      legend: sub.flood.legend.map((l) => ({ color: l.color, label: FLOOD_LEGEND_KEY[l.label] ? t(FLOOD_LEGEND_KEY[l.label]) : l.label })),
     });
   }
   if (sub.productivity_zones?.available && sub.productivity_zones.tile_url) {
     tabs.push({
       key: "productivity_zones",
-      label: "Zona Produktivitas",
+      label: t("crop.map.productivity"),
       icon: "bi-grid-3x3-gap",
       tileUrl: sub.productivity_zones.tile_url,
-      legend: PRODUCTIVITY_LEGEND,
+      legend: [
+        { color: "#2e7d32", label: t("crop.high") },
+        { color: "#f9a825", label: t("crop.moderate") },
+        { color: "#c62828", label: t("crop.low") },
+      ],
     });
   }
   for (const [key, result] of Object.entries(productivityResults)) {
@@ -91,9 +89,9 @@ function buildTabs(sub: CropMonitoringSubAnalyses, productivityResults: Record<s
       icon: "bi-graph-up-arrow",
       tileUrl,
       legend: [
-        { color: palette[0], label: `${Number(min).toLocaleString("id-ID")} ${result.carbon_estimated.unit ?? ""}`.trim() },
+        { color: palette[0], label: `${Number(min).toLocaleString(locale)} ${result.carbon_estimated.unit ?? ""}`.trim() },
         { color: palette[Math.floor(palette.length / 2)], label: key.toUpperCase() },
-        { color: palette[palette.length - 1], label: `${Number(max).toLocaleString("id-ID")} ${result.carbon_estimated.unit ?? ""}`.trim() },
+        { color: palette[palette.length - 1], label: `${Number(max).toLocaleString(locale)} ${result.carbon_estimated.unit ?? ""}`.trim() },
       ],
     });
   }
@@ -122,7 +120,10 @@ interface Props {
  * field boundary as a default context layer, even with zero tile tabs.
  */
 export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyses, analysisDate, productivityResults = {} }: Props) {
-  const tabs = useMemo(() => buildTabs(subAnalyses, productivityResults), [subAnalyses, productivityResults]);
+  const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
+  const locale = language === "id" ? "id-ID" : "en-US";
+  const tabs = useMemo(() => buildTabs(subAnalyses, productivityResults, t, locale), [subAnalyses, productivityResults, t, locale]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
 
@@ -138,7 +139,7 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
 
   return (
     <CropPanelAccordion
-      title="Peta Hasil"
+      title={t("crop.map.title")}
       icon="bi-globe-americas"
       className="cm-panel-card cm-result-map-card"
       defaultOpen
@@ -169,7 +170,7 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
           {activeTab && (
             <>
               <ResultTileLayer layerKey={activeTab.key} tileUrl={activeTab.tileUrl} opacity={opacity} clipGeometry={fieldFeature} />
-              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={t("crop.map.opacity")} />
             </>
           )}
         </MapView>
@@ -182,8 +183,7 @@ export default function CropMonitoringResultsMapPanel({ fieldFeature, subAnalyse
 
       {tabs.length === 0 && (
         <div className="alert alert-info mt-2 mb-0 py-2 small">
-          <i className="bi bi-info-circle me-1" /> Belum ada layer peta hasil
-          yang tersedia untuk hasil ini - batas lahan tetap ditampilkan di atas.
+          <i className="bi bi-info-circle me-1" /> {t("crop.map.empty")}
         </div>
       )}
     </CropPanelAccordion>

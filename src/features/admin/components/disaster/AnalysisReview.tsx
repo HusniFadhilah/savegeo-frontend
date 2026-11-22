@@ -9,15 +9,11 @@ import MapLegend from "@/components/map/MapLegend";
 import { getDisasterQc, publishAnalysis, runAnalysis, unpublishAnalysis } from "../../api";
 import type { AnalysisRunWithResult, DisasterQcStatus } from "../../types";
 import { useAdmin } from "../../AdminContext";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
-const RUN_STATUS_LABEL: Record<string, string> = {
-  queued: "Queued",
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
-  review_required: "Review Required",
-  published: "Published",
-  stale: "Stale - perlu dihitung ulang",
+const RUN_STATUS_KEYS: Record<string, string> = {
+  queued: "admin.disaster.queuedStatus", processing: "admin.disaster.processingStatus", completed: "admin.disaster.completedStatus",
+  failed: "admin.disaster.failedStatus", review_required: "admin.disaster.reviewRequiredStatus", published: "admin.disaster.published", stale: "admin.disaster.staleStatus",
 };
 
 function renderValue(value: unknown): string {
@@ -74,7 +70,7 @@ function ReviewAccordion({ title, icon, hint, trailing, defaultOpen = false, chi
   );
 }
 
-function DataTable({ title, values, emptyLabel }: { title: string; values: Record<string, unknown> | null | undefined; emptyLabel: string }) {
+function DataTable({ title, values, emptyLabel, t }: { title: string; values: Record<string, unknown> | null | undefined; emptyLabel: string; t: (key: string) => string }) {
   const entries = Object.entries(values ?? {});
   return (
     <section className="analysis-review__data-group" aria-label={title}>
@@ -82,7 +78,7 @@ function DataTable({ title, values, emptyLabel }: { title: string; values: Recor
       {entries.length > 0 ? (
         <div className="analysis-review__table-wrap">
           <table className="tbl analysis-review__table">
-            <thead><tr><AdminTableNumberHeader /><th scope="col">Keterangan</th><th scope="col">Nilai</th></tr></thead>
+            <thead><tr><AdminTableNumberHeader /><th scope="col">{t("admin.disaster.dataLabel")}</th><th scope="col">{t("admin.disaster.valueLabel")}</th></tr></thead>
             <tbody>
               {entries.map(([key, value], index) => (
                 <tr key={key}>
@@ -101,6 +97,7 @@ function DataTable({ title, values, emptyLabel }: { title: string; values: Recor
 
 /** QC, map review, and publishing controls for a single event analysis. */
 export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
+  const t = useI18nStore((state) => state.t);
   const { notify } = useAdmin();
   const reviewable = useMemo(() => runs.filter((run) => run.result && ["completed", "review_required", "published"].includes(run.run.status)), [runs]);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(reviewable[0]?.run.id ?? null);
@@ -121,14 +118,14 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
     setQcError(null);
     getDisasterQc(eventId)
       .then(setQc)
-      .catch((error) => setQcError(error instanceof Error ? error.message : "Gagal memuat status QC"))
+      .catch((error) => setQcError(error instanceof Error ? error.message : t("admin.disaster.loadQcFailed")))
       .finally(() => setQcLoading(false));
   };
 
   useEffect(() => {
     loadQc();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, runs]);
+  }, [eventId, runs, t]);
 
   const selected = reviewable.find((run) => run.run.id === selectedRunId) ?? null;
 
@@ -137,10 +134,10 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
     setBusy(true);
     try {
       await publishAnalysis(selected.run.id);
-      notify("Hasil analisis dipublikasikan", "s");
+      notify(t("admin.disaster.publishResult"), "s");
       onChanged();
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Gagal mempublikasikan", "e");
+      notify(error instanceof Error ? error.message : t("admin.disaster.publishFailed"), "e");
     } finally {
       setBusy(false);
     }
@@ -151,10 +148,10 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
     setBusy(true);
     try {
       await unpublishAnalysis(selected.run.id);
-      notify("Publikasi hasil analisis dibatalkan", "s");
+      notify(t("admin.disaster.unpublishResult"), "s");
       onChanged();
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Gagal membatalkan publikasi", "e");
+      notify(error instanceof Error ? error.message : t("admin.disaster.unpublishFailed"), "e");
     } finally {
       setBusy(false);
     }
@@ -165,40 +162,40 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
     setBusy(true);
     try {
       await runAnalysis(selected.run.id, true);
-      notify("Analisis dijalankan ulang", "s");
+      notify(t("admin.disaster.rerunResult"), "s");
       onChanged();
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Gagal menjalankan ulang analisis", "e");
+      notify(error instanceof Error ? error.message : t("admin.disaster.rerunFailed"), "e");
     } finally {
       setBusy(false);
     }
   };
 
-  const qcStatus = qcLoading ? "Memuat QC" : qcError ? "QC bermasalah" : qc?.ready_to_publish ? "Siap dipublikasikan" : "Perlu ditinjau";
+  const qcStatus = qcLoading ? t("admin.disaster.qcLoading") : qcError ? t("admin.disaster.qcProblem") : qc?.ready_to_publish ? t("admin.disaster.readyToPublish") : t("admin.disaster.needsReview");
   const qcBadgeClass = qc?.ready_to_publish && !qcLoading && !qcError ? "badge-green" : "badge-amber";
 
   return (
-    <section className="card analysis-review" aria-label="Tinjau dan publikasikan analisis">
+    <section className="card analysis-review" aria-label={t("admin.disaster.reviewAria")}>
       <header className="analysis-review__header">
         <div className="analysis-review__title-wrap">
           <span className="analysis-review__title-icon" aria-hidden="true"><i className="bi bi-clipboard2-check" /></span>
           <div>
-            <h2 className="analysis-review__title">Tinjau &amp; Publikasikan</h2>
-            <p className="analysis-review__subtitle">Periksa hasil, kualitas data, dan status publikasi.</p>
+            <h2 className="analysis-review__title">{t("admin.disaster.reviewTitle")}</h2>
+            <p className="analysis-review__subtitle">{t("admin.disaster.reviewSubtitle")}</p>
           </div>
         </div>
         <label className="analysis-review__run-select">
-          <span>Hasil analisis</span>
+          <span>{t("admin.disaster.analysisResults")}</span>
           <select
             className="form-input"
             value={selectedRunId ?? ""}
             onChange={(event) => setSelectedRunId(event.target.value ? Number(event.target.value) : null)}
             disabled={reviewable.length === 0}
           >
-            <option value="">— pilih hasil analisis —</option>
+            <option value="">{t("admin.disaster.chooseAnalysisResult")}</option>
             {reviewable.map(({ run }) => (
               <option key={run.id} value={run.id}>
-                {run.model_id} — Run #{run.id} ({RUN_STATUS_LABEL[run.status] || run.status})
+                {run.model_id} — Run #{run.id} ({RUN_STATUS_KEYS[run.status] ? t(RUN_STATUS_KEYS[run.status]) : run.status})
               </option>
             ))}
           </select>
@@ -210,8 +207,8 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
           <div className="analysis-review__empty" role="status">
             <i className="bi bi-inbox" aria-hidden="true" />
             <div>
-              <strong>Belum ada hasil untuk ditinjau</strong>
-              <p>Jalankan analisis dari tab Analisis terlebih dahulu.</p>
+              <strong>{t("admin.disaster.resultEmpty")}</strong>
+              <p>{t("admin.disaster.runAnalysisFirstText")}</p>
             </div>
           </div>
         )}
@@ -219,10 +216,10 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
         {selected?.result && (
           <>
             <ReviewAccordion
-              title="Peta dan citra hasil"
+              title={t("admin.disaster.mapResult")}
               icon="bi-map"
               hint={`${selected.run.model_id} · Run #${selected.run.id}`}
-              trailing={<span className={`stat-badge ${selected.result.is_published ? "badge-green" : "badge-amber"}`}>{selected.result.is_published ? "Terpublikasi" : "Draft"}</span>}
+              trailing={<span className={`stat-badge ${selected.result.is_published ? "badge-green" : "badge-amber"}`}>{selected.result.is_published ? t("admin.disaster.resultPublished") : t("admin.disaster.resultDraft")}</span>}
               defaultOpen
             >
               <div className="analysis-review__map">
@@ -245,48 +242,48 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
             </ReviewAccordion>
 
             {selected.result.legend.length > 0 && (
-              <ReviewAccordion title="Legenda" icon="bi-palette" hint={`${selected.result.legend.length} kelas`}>
+              <ReviewAccordion title={t("admin.disaster.legend")} icon="bi-palette" hint={`${selected.result.legend.length} ${t("admin.disaster.classes")}`}>
                 <MapLegend entries={selected.result.legend.map((item) => ({ color: item.color, label: item.label }))} />
               </ReviewAccordion>
             )}
 
-            <ReviewAccordion title="Statistik dan kepercayaan" icon="bi-bar-chart-line" hint="Cakupan, hasil, dan confidence">
+            <ReviewAccordion title={t("admin.disaster.statsConfidence")} icon="bi-bar-chart-line" hint={t("admin.disaster.coverageConfidenceHint")}>
               {selected.result.review_reasons?.length ? (
                 <div className="alert alert-warning analysis-review__notice">
                   <i className="bi bi-exclamation-triangle" aria-hidden="true" />
-                  <span><strong>Perlu diperhatikan:</strong> {selected.result.review_reasons.join("; ")}</span>
+                  <span><strong>{t("admin.disaster.requiresAttention")}</strong> {selected.result.review_reasons.join("; ")}</span>
                 </div>
               ) : null}
               {selected.result.coverage && (
-                <div className="analysis-review__coverage" aria-label="Cakupan hasil">
-                  <div><span>Cakupan valid</span><strong>{renderValue(selected.result.coverage.coverage_pct)}%</strong></div>
-                  <div><span>Luas valid</span><strong>{renderValue(selected.result.coverage.valid_area_ha)} ha</strong></div>
-                  <div><span>No-data</span><strong>{renderValue(selected.result.coverage.no_data_area_ha)} ha</strong></div>
+                <div className="analysis-review__coverage" aria-label={t("admin.disaster.coverageResult")}>
+                  <div><span>{t("admin.disaster.validCoverage")}</span><strong>{renderValue(selected.result.coverage.coverage_pct)}%</strong></div>
+                  <div><span>{t("admin.disaster.validArea")}</span><strong>{renderValue(selected.result.coverage.valid_area_ha)} ha</strong></div>
+                  <div><span>{t("admin.disaster.noData")}</span><strong>{renderValue(selected.result.coverage.no_data_area_ha)} ha</strong></div>
                 </div>
               )}
               <div className="analysis-review__data-grid">
-                <DataTable title="Statistik hasil" values={selected.result.statistics} emptyLabel="Statistik tidak tersedia." />
-                <DataTable title="Ringkasan kepercayaan" values={selected.result.confidence_summary} emptyLabel="Ringkasan confidence tidak tersedia." />
+                <DataTable title={t("admin.disaster.resultStats")} values={selected.result.statistics} emptyLabel={t("admin.disaster.noStats")} t={t} />
+                <DataTable title={t("admin.disaster.confidenceSummary")} values={selected.result.confidence_summary} emptyLabel={t("admin.disaster.noConfidence")} t={t} />
               </div>
             </ReviewAccordion>
           </>
         )}
 
         <ReviewAccordion
-          title="QC dan kesiapan publikasi"
+          title={t("admin.disaster.qcReadiness")}
           icon="bi-shield-check"
-          hint="Checklist dan validasi hasil"
+          hint={t("admin.disaster.qcChecklist")}
           trailing={<span className={`stat-badge ${qcBadgeClass}`}>{qcStatus}</span>}
         >
-          {qcLoading && <p className="analysis-review__empty-value" role="status">Memuat checklist QC…</p>}
+          {qcLoading && <p className="analysis-review__empty-value" role="status">{t("admin.disaster.loadingQc")}</p>}
           {qcError && <div className="alert alert-danger analysis-review__notice" role="alert">{qcError}</div>}
           {qc && !qcLoading && (
             <>
               <div className="analysis-review__checklist">
                 {([
-                  ["aoi_configured", "AOI dikonfigurasi"],
-                  ["pre_imagery_available", "Citra pra-bencana tersedia"],
-                  ["post_imagery_available", "Citra pasca-bencana tersedia"],
+                  ["aoi_configured", t("admin.disaster.aoiConfigured")],
+                  ["pre_imagery_available", t("admin.disaster.preImageryAvailable")],
+                  ["post_imagery_available", t("admin.disaster.postImageryAvailable")],
                 ] as const).map(([key, label]) => (
                   <span className={`analysis-review__check ${qc[key] ? "is-ready" : "is-missing"}`} key={key}>
                     <i className={`bi ${qc[key] ? "bi-check-circle-fill" : "bi-x-circle-fill"}`} aria-hidden="true" />
@@ -296,28 +293,28 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
               </div>
               <div className="analysis-review__table-wrap">
                 <table className="tbl tbl-wide analysis-review__table">
-                  <thead><tr><AdminTableNumberHeader /><th>Model</th><th>Status</th><th>Statistik</th><th>Legenda</th><th>Kepercayaan</th></tr></thead>
+                  <thead><tr><AdminTableNumberHeader /><th>{t("admin.disaster.model")}</th><th>{t("admin.disaster.status")}</th><th>{t("admin.disaster.statistics")}</th><th>{t("admin.disaster.legendColumn")}</th><th>{t("admin.disaster.confidence")}</th></tr></thead>
                   <tbody>
                     {qc.analyses.map((analysis, index) => (
                       <tr key={`${analysis.model_id}-${index}`}>
                         <AdminTableNumberCell index={index} />
                         <td>{analysis.model_id}</td>
-                        <td>{RUN_STATUS_LABEL[analysis.status] || analysis.status}</td>
+                        <td>{RUN_STATUS_KEYS[analysis.status] ? t(RUN_STATUS_KEYS[analysis.status]) : analysis.status}</td>
                         <td>{analysis.has_statistics ? "✓" : "—"}</td>
                         <td>{analysis.has_legend ? "✓" : "—"}</td>
                         <td>{analysis.has_confidence ? "✓" : "—"}</td>
                       </tr>
                     ))}
-                    {qc.analyses.length === 0 && <tr><td colSpan={6} className="analysis-review__table-empty">Belum ada analisis.</td></tr>}
+                    {qc.analyses.length === 0 && <tr><td colSpan={6} className="analysis-review__table-empty">{t("admin.disaster.noRows")}</td></tr>}
                   </tbody>
                 </table>
               </div>
               {qc.readiness && (
-                <section className="analysis-review__readiness" aria-label="Matriks kesiapan publikasi">
-                  <h3 className="analysis-review__data-title">Kesiapan publikasi</h3>
+                <section className="analysis-review__readiness" aria-label={t("admin.disaster.publicationMatrix")}>
+                  <h3 className="analysis-review__data-title">{t("admin.disaster.publicationReadiness")}</h3>
                   <div className="analysis-review__table-wrap">
                     <table className="tbl tbl-wide analysis-review__table">
-                      <thead><tr><AdminTableNumberHeader /><th>Komponen</th><th>Status</th><th>Alasan</th></tr></thead>
+                      <thead><tr><AdminTableNumberHeader /><th>{t("admin.disaster.component")}</th><th>{t("admin.disaster.status")}</th><th>{t("admin.disaster.reason")}</th></tr></thead>
                       <tbody>
                         {Object.entries(qc.readiness).map(([key, item], index) => (
                           <tr key={key}>
@@ -337,33 +334,33 @@ export default function AnalysisReview({ eventId, runs, onChanged }: Props) {
         </ReviewAccordion>
 
         <ReviewAccordion
-          title="Tindakan publikasi"
+          title={t("admin.disaster.publicationAction")}
           icon="bi-send-check"
-          hint={selected?.result ? `Run #${selected.run.id}` : "Pilih hasil analisis"}
+          hint={selected?.result ? `Run #${selected.run.id}` : t("admin.disaster.selectAnalysisHint")}
           defaultOpen={!!selected?.result}
         >
           {selected?.result ? (
             <div className="analysis-review__actions">
               {selected.result.features && (
                 <button type="button" className="btn-sm" disabled={!selected.result.features.features.length} onClick={() => exportGeoJson(selected.result?.features, selected.run.id)}>
-                  <i className="bi bi-download" aria-hidden="true" /> Export GeoJSON
+                  <i className="bi bi-download" aria-hidden="true" /> {t("admin.disaster.exportGeoJson")}
                 </button>
               )}
               {selected.result.is_published ? (
                 <button type="button" className="btn-sm danger" disabled={busy} onClick={handleUnpublish}>
-                  <i className="bi bi-eye-slash" aria-hidden="true" /> Batalkan publikasi
+                  <i className="bi bi-eye-slash" aria-hidden="true" /> {t("admin.disaster.unpublish")}
                 </button>
               ) : (
                 <button type="button" className="btn-sm primary" disabled={busy} onClick={handlePublish}>
-                  <i className="bi bi-check2-circle" aria-hidden="true" /> Publikasikan
+                  <i className="bi bi-check2-circle" aria-hidden="true" /> {t("admin.disaster.publish")}
                 </button>
               )}
               <button type="button" className="btn-sm" disabled={busy} onClick={handleRerun}>
-                <i className="bi bi-arrow-repeat" aria-hidden="true" /> Jalankan ulang
+                <i className="bi bi-arrow-repeat" aria-hidden="true" /> {t("admin.disaster.runAgainButton")}
               </button>
-              {busy && <span className="analysis-review__busy" role="status"><span className="spinner-border spinner-border-sm" aria-hidden="true" /> Memproses…</span>}
+              {busy && <span className="analysis-review__busy" role="status"><span className="spinner-border spinner-border-sm" aria-hidden="true" /> {t("admin.disaster.processing")}</span>}
             </div>
-          ) : <p className="analysis-review__empty-value">Pilih hasil analisis yang sudah selesai untuk menampilkan tindakan.</p>}
+          ) : <p className="analysis-review__empty-value">{t("admin.disaster.selectAnalysis")}</p>}
         </ReviewAccordion>
       </div>
     </section>

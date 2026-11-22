@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 export default function DetritusSampleFields({ pool }: { pool: "litter" | "deadwood" }) {
+  const t = useI18nStore((state) => state.t);
   const [pieces, setPieces] = useState([0]);
   const number = (name: string, label: string, min = 0, step = "any") => (
     <label className="col-md-4 form-label">
@@ -12,18 +14,17 @@ export default function DetritusSampleFields({ pool }: { pool: "litter" | "deadw
     return (
       <div className="col-12">
         <div className="border rounded p-3">
-          <h4 className="h6">Sampel komposit serasah</h4>
+          <h4 className="h6">{t("admin.detritus.litter.title")}</h4>
           <p className="small text-muted">
-            Luas yang digunakan adalah jumlah kuadrat × luas setiap kuadrat. Fraksi kering berasal
-            dari subsampel, lalu dikalikan berat basah komposit dan fraksi karbon.
+            {t("admin.detritus.litter.hint")}
           </p>
           <div className="row g-2">
-            {number("litterWet", "Berat basah komposit (kg)", 0.000001)}
-            {number("litterSubWet", "Berat basah subsampel (kg)", 0.000001)}
-            {number("litterSubDry", "Berat kering subsampel (kg)")}
-            {number("litterQuadrats", "Jumlah kuadrat", 1, "1")}
-            {number("litterQuadratArea", "Luas setiap kuadrat (m²)", 0.000001)}
-            {number("litterDiameter", "Batas diameter maksimum serasah (cm)", 0.000001)}
+            {number("litterWet", t("admin.detritus.litter.compositeWetMass"), 0.000001)}
+            {number("litterSubWet", t("admin.detritus.litter.subsampleWetMass"), 0.000001)}
+            {number("litterSubDry", t("admin.detritus.litter.subsampleDryMass"))}
+            {number("litterQuadrats", t("admin.detritus.litter.quadratCount"), 1, "1")}
+            {number("litterQuadratArea", t("admin.detritus.litter.quadratArea"), 0.000001)}
+            {number("litterDiameter", t("admin.detritus.litter.maxDiameter"), 0.000001)}
           </div>
         </div>
       </div>
@@ -31,34 +32,32 @@ export default function DetritusSampleFields({ pool }: { pool: "litter" | "deadw
   return (
     <div className="col-12">
       <div className="border rounded p-3">
-        <h4 className="h6">Volume kayu mati dalam plot</h4>
+        <h4 className="h6">{t("admin.detritus.deadwood.title")}</h4>
         <p className="small text-muted">
-          Pisahkan kayu berdiri dan rebah. Gunakan kerapatan kering yang sesuai kelas pelapukan;
-          tidak ada pengurangan berat otomatis. Volume harus mewakili inventaris dalam luas plot,
-          bukan volume yang belum diekspansi dari transek.
+          {t("admin.detritus.deadwood.hint")}
         </p>
         <div className="row g-2">
-          {number("deadwoodDiameter", "Batas diameter minimum kayu mati (cm)", 0.000001)}
+          {number("deadwoodDiameter", t("admin.detritus.deadwood.minDiameter"), 0.000001)}
         </div>
         {pieces.map((id, index) => (
           <fieldset key={id} className="border rounded p-2 mt-2">
-            <legend className="float-none w-auto fs-6 px-1">Komponen {index + 1}</legend>
+            <legend className="float-none w-auto fs-6 px-1">{t("admin.detritus.deadwood.component", { index: index + 1 })}</legend>
             <div className="row g-2">
               <label className="col-md-4 form-label">
-                Posisi kayu
+                {t("admin.detritus.deadwood.position")}
                 <select name="deadwoodComponent" className="form-select">
-                  <option value="standing">Berdiri</option>
-                  <option value="downed">Rebah</option>
+                  <option value="standing">{t("admin.detritus.deadwood.standing")}</option>
+                  <option value="downed">{t("admin.detritus.deadwood.downed")}</option>
                 </select>
               </label>
-              {number("deadwoodVolume", "Volume (m³)", 0.000001)}
-              {number("deadwoodDensity", "Kerapatan kering (kg/m³)", 0.000001)}
+              {number("deadwoodVolume", t("admin.detritus.deadwood.volume"), 0.000001)}
+              {number("deadwoodDensity", t("admin.detritus.deadwood.dryDensity"), 0.000001)}
               <label className="col-md-4 form-label">
-                Kelas pelapukan
+                {t("admin.detritus.deadwood.decayClass")}
                 <input name="deadwoodDecay" className="form-control" maxLength={64} required />
               </label>
               <label className="col-md-8 form-label">
-                Sumber kerapatan (uji / literatur)
+                {t("admin.detritus.deadwood.densitySource")}
                 <input
                   name="deadwoodDensitySource"
                   className="form-control"
@@ -74,7 +73,7 @@ export default function DetritusSampleFields({ pool }: { pool: "litter" | "deadw
                 className="btn btn-sm btn-outline-danger mt-2"
                 onClick={() => setPieces(pieces.filter((value) => value !== id))}
               >
-                Hapus komponen {index + 1}
+                {t("admin.detritus.deadwood.removeComponent", { index: index + 1 })}
               </button>
             )}
           </fieldset>
@@ -85,7 +84,7 @@ export default function DetritusSampleFields({ pool }: { pool: "litter" | "deadw
           disabled={pieces.length >= 500}
           onClick={() => setPieces([...pieces, Math.max(...pieces) + 1])}
         >
-          Tambah komponen
+          {t("admin.detritus.deadwood.addComponent")}
         </button>
       </div>
     </div>

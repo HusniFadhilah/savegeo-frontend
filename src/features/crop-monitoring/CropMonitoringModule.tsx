@@ -5,7 +5,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { ApiError } from "@/services/apiClient";
 import { getCropMonitoringCommodities, getWeatherProviders, runCropMonitoring } from "./api";
 import { DEFAULT_SUB_ANALYSES, type Commodity, type CropMonitoringPeriodInput, type CropMonitoringPeriodMode, type CropMonitoringResult, type FloodResult, type SubAnalysisKey, type TimeseriesResult, type WeatherProvider } from "./types";
-import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE, RISK_LEVEL_STYLE, WATER_STRESS_STYLE } from "./utils";
+import { fmtNum, fmtPct, styleFor, HEALTH_LABEL_STYLE, RISK_LEVEL_STYLE, WATER_STRESS_STYLE, localizeCropLabel, localizeCropMessage, localizeCropReason, localizeCropSubAnalysis, localizeGrowthStage } from "./utils";
 import { parseQuery, updateUrlFromState } from "./lib/cropMonitoringQueryState";
 import { progressiveRun } from "./lib/progressiveRun";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
@@ -167,7 +167,7 @@ export default function CropMonitoringModule() {
     if (compareSeasonEnabled && !subs.includes("historical_comparison")) subs.push("historical_comparison");
 
     if (!subs.some((key) => key !== "flood")) {
-      setRunError("Pilih setidaknya satu analisis. Banjir dijalankan melalui panel tanggal sebelum/sesudah.");
+      setRunError(t("crop.selectAnalysis"));
       return;
     }
     const generation = ++runGeneration.current;
@@ -176,7 +176,7 @@ export default function CropMonitoringModule() {
     setRunning(true);
     setRunError(null);
     setResult(null);
-    setProgress("Memuat land cover dan kesehatan vegetasi…");
+    setProgress(t("crop.progress.loading"));
     setLastPeriod(period);
     try {
       await progressiveRun({
@@ -186,10 +186,10 @@ export default function CropMonitoringModule() {
         data_sources: { sentinel1: sentinel1Enabled },
         ...(compareSeasonEnabled ? { compare_years: compareYears } : {}),
       }, runCropMonitoring, setResult,
-      (finished, total) => setProgress(`${finished}/${total} kelompok analisis selesai. Hasil yang tersedia langsung ditampilkan.`),
+      (finished, total) => setProgress(t("crop.progress.completed", { finished, total })),
       (sections, err) => {
-        const message = err instanceof ApiError ? err.message : t("crop.runFailed");
-        setRunError((previous) => [previous, `${sections.join(", ")}: ${message}`].filter(Boolean).join("; "));
+        const message = err instanceof ApiError ? localizeCropMessage(err.message, t) ?? err.message : t("crop.runFailed");
+        setRunError((previous) => [previous, `${sections.map((section) => localizeCropSubAnalysis(section, t)).join(", ")}: ${message}`].filter(Boolean).join("; "));
       }, current);
     } finally {
       if (current()) setRunning(false);
@@ -217,25 +217,25 @@ export default function CropMonitoringModule() {
       const value = parameters?.value;
       if (action === "select_field" && target === "crop.field") {
         const id = parameters?.field_id;
-        if (typeof id !== "number" || !useFieldStore.getState().fields.some(f => f.id === id)) throw new Error("Field tidak tersedia.");
+        if (typeof id !== "number" || !useFieldStore.getState().fields.some(f => f.id === id)) throw new Error(t("crop.chat.fieldUnavailable"));
         await useFieldStore.getState().selectField(id);
       } else if (action === "set_parameter" && target === "crop.index") {
-        if (typeof value !== "string" || !["NDVI", "EVI", "SAVI", "NDMI", "NDRE", "GNDVI"].includes(value)) throw new Error("Indeks tanaman tidak tersedia.");
+        if (typeof value !== "string" || !["NDVI", "EVI", "SAVI", "NDMI", "NDRE", "GNDVI"].includes(value)) throw new Error(t("crop.chat.indexUnavailable"));
         setTimeseriesIndex(value);
       } else if (action === "set_parameter" && target === "crop.periodMode") {
-        if (!["current_season", "30d", "90d", "custom"].includes(String(value))) throw new Error("Mode periode tanaman tidak valid.");
+        if (!["current_season", "30d", "90d", "custom"].includes(String(value))) throw new Error(t("crop.chat.periodInvalid"));
         setPeriodMode(value as CropMonitoringPeriodMode);
       } else if (action === "set_date_range" && target === "crop.dateRange") {
         const start = parameters?.start;
         const end = parameters?.end;
         const validDate = (date: unknown) => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date));
-        if (!validDate(start) || !validDate(end) || (start as string) > (end as string)) throw new Error("Rentang tanggal tanaman tidak valid.");
+        if (!validDate(start) || !validDate(end) || (start as string) > (end as string)) throw new Error(t("crop.chat.dateRangeInvalid"));
         setCustomStart(start as string);
         setCustomEnd(end as string);
         setPeriodMode("custom");
       } else if (action === "run_analysis" && target === "crop.analysis") {
-        if (!selectedField) throw new Error("Pilih field tanaman sebelum menjalankan analisis.");
-        if (running) throw new Error("Analisis tanaman masih berjalan.");
+        if (!selectedField) throw new Error(t("crop.selectField"));
+        if (running) throw new Error(t("crop.chat.analysisRunning"));
         await handleRun();
       } else {
         throw new Error(`Perintah ${action} untuk ${target} tidak didukung.`);
@@ -319,7 +319,7 @@ export default function CropMonitoringModule() {
             <i className="bi bi-flower2" />
             <div>
               <span>{t("crop.commodity")}</span>
-              <strong>{activeCommodity?.label ?? selectedField?.commodity ?? "-"}</strong>
+              <strong>{activeCommodity ? localizeCropLabel(activeCommodity.label, t) : localizeCropLabel(selectedField?.commodity, t)}</strong>
             </div>
           </div>
           <div className="cm-status-card">
@@ -416,7 +416,7 @@ export default function CropMonitoringModule() {
               className="cm-summary-card"
               defaultOpen
               headerTrailing={
-                <span className="btn-group btn-group-sm" role="group" aria-label="Ekspor hasil crop monitoring">
+                <span className="btn-group btn-group-sm" role="group" aria-label={t("crop.exportResults")}>
                   <button type="button" className="btn btn-outline-light cm-export-button" onClick={(event) => {
                     event.preventDefault();
                     exportCropResults("json");
@@ -438,7 +438,7 @@ export default function CropMonitoringModule() {
                   <div>
                     <span>{t("crop.health")}</span>
                     <strong className={sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).className : "text-muted"}>
-                      {sub.health?.available ? styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label : "-"}
+                      {sub.health?.available ? localizeCropLabel(styleFor(HEALTH_LABEL_STYLE, sub.health.health_label).label, t) : "-"}
                     </strong>
                   </div>
                 </div>
@@ -465,7 +465,7 @@ export default function CropMonitoringModule() {
                   <div>
                     <span>{t("crop.moisture")}</span>
                     <strong className={sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).className : "text-muted"}>
-                      {sub.water_moisture?.available ? styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label : "-"}
+                      {sub.water_moisture?.available ? localizeCropLabel(styleFor(WATER_STRESS_STYLE, sub.water_moisture.water_stress_label).label, t) : "-"}
                     </strong>
                   </div>
                 </div>
@@ -473,7 +473,7 @@ export default function CropMonitoringModule() {
                   <i className="bi bi-flower2" />
                   <div>
                     <span>{t("crop.growthStage")}</span>
-                    <strong>{sub.growth_stage?.available ? sub.growth_stage.stage : "-"}</strong>
+                    <strong>{sub.growth_stage?.available ? localizeGrowthStage(sub.growth_stage.stage_key, sub.growth_stage.stage, t) : "-"}</strong>
                   </div>
                 </div>
                 <div className="cm-summary-tile">
@@ -481,26 +481,26 @@ export default function CropMonitoringModule() {
                   <div>
                     <span>{t("crop.risk")}</span>
                     <strong className={sub.risk_score?.available ? styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).className : "text-muted"}>
-                      {sub.risk_score?.available ? `${sub.risk_score.score} (${styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label})` : "-"}
+                      {sub.risk_score?.available ? `${sub.risk_score.score} (${localizeCropLabel(styleFor(RISK_LEVEL_STYLE, sub.risk_score.level).label, t)})` : "-"}
                     </strong>
                   </div>
                 </div>
               </div>
               {result.skipped.length > 0 && (
                 <small className="text-muted d-block mt-2">
-                  {t("crop.skipped")}: {result.skipped.map((s) => `${s.sub_analysis} (${s.reason})`).join("; ")}
+                  {t("crop.skipped")}: {result.skipped.map((s) => `${localizeCropSubAnalysis(s.sub_analysis, t)} (${localizeCropReason(s.reason, t) ?? s.reason})`).join("; ")}
                 </small>
               )}
             </CropPanelAccordion>
 
-            <p className="small text-muted">Grid statistik: {result.scale} m. Citra diringkas per bulan dalam rentang tahun {result.period.resolved_year_month_range.year}, bulan {result.period.resolved_year_month_range.start_month}–{result.period.resolved_year_month_range.end_month}. Kesehatan memakai indeks citra, bukan pelatihan model baru.</p>
+            <p className="small text-muted">{t("crop.results.gridSummary", { scale: result.scale, year: result.period.resolved_year_month_range.year, startMonth: result.period.resolved_year_month_range.start_month, endMonth: result.period.resolved_year_month_range.end_month })}</p>
             {sub.landcover && (
-              <CropPanelAccordion title="Land cover · Dynamic World" icon="bi-layers">
+              <CropPanelAccordion title={t("crop.results.landcoverTitle")} icon="bi-layers">
                 {sub.landcover.available ? (
                   <>
-                    Tahun {sub.landcover.year} · Lahan pertanian terklasifikasi: <strong>{fmtNum(sub.landcover.cropland_area_ha, 2)} ha ({fmtPct(sub.landcover.cropland_percentage)})</strong>. Kesehatan vegetasi dihitung untuk seluruh AOI; wilayah ini dapat mencakup kelas selain pertanian.
+                    {t("crop.results.landcoverPrefix", { year: sub.landcover.year })} <strong>{fmtNum(sub.landcover.cropland_area_ha, 2)} ha ({fmtPct(sub.landcover.cropland_percentage)})</strong>. {t("crop.results.healthCoverageNote")}
                   </>
-                ) : sub.landcover.reason ?? "Tutupan lahan belum tersedia."}
+                ) : localizeCropReason(sub.landcover.reason, t) ?? t("crop.results.landcoverUnavailable")}
               </CropPanelAccordion>
             )}
             <CropMonitoringResultsMapPanel

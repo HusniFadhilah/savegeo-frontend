@@ -2,6 +2,7 @@ import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/c
 import { useEffect, useState } from "react";
 import { getDisasterAudit } from "../../api";
 import type { DisasterAuditLogEntry } from "../../types";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface Props {
   eventId: number;
@@ -12,6 +13,7 @@ interface Props {
  * (AOI/imagery/run/result/hotspot) actually changed (all logged under
  * `resource_type="disaster_event"`). */
 export default function DisasterAuditTrail({ eventId }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [logs, setLogs] = useState<DisasterAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function DisasterAuditTrail({ eventId }: Props) {
         if (!cancelled) setLogs(res.logs);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Gagal memuat audit trail");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("admin.disaster.auditLoadFailed"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -38,13 +40,13 @@ export default function DisasterAuditTrail({ eventId }: Props) {
   return (
     <div className="card">
       <div className="card-header-custom">
-        <span>Audit Trail</span>
+        <span>{t("admin.disaster.auditTrail")}</span>
       </div>
       <div className="card-body-custom">
-        {loading && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Memuat...</div>}
+        {loading && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>{t("admin.disaster.loadingShort")}</div>}
         {error && <div className="alert alert-danger py-1 px-2 small">{error}</div>}
         {!loading && !error && logs.length === 0 && (
-          <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Belum ada aktivitas tercatat untuk kejadian ini.</div>
+          <div style={{ color: "var(--text-muted)", fontSize: 12 }}>{t("admin.disaster.auditEmpty")}</div>
         )}
         {!loading && !error && logs.length > 0 && (
           <div style={{ overflowX: "auto" }}>
@@ -59,10 +61,10 @@ export default function DisasterAuditTrail({ eventId }: Props) {
               <thead>
                 <tr>
                   <AdminTableNumberHeader />
-                  <th>Waktu</th>
-                  <th>Aksi</th>
-                  <th>Admin</th>
-                  <th>Detail</th>
+                  <th>{t("admin.disaster.time")}</th>
+                  <th>{t("admin.disaster.actions")}</th>
+                  <th>{t("admin.disaster.admin")}</th>
+                  <th>{t("admin.disaster.detailsColumn")}</th>
                 </tr>
               </thead>
               <tbody>

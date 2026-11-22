@@ -3,9 +3,13 @@ import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { fetchWindLayer } from "@/features/disaster/api";
 import type { WindLayerResponse } from "@/features/disaster/types";
+import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
 
-function directionLabel(degrees: number) {
-  return ["U", "TL", "T", "TG", "S", "BD", "B", "BL"][Math.round(degrees / 45) % 8];
+function directionLabel(degrees: number, language: "id" | "en") {
+  const directions = language === "en"
+    ? ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    : ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
+  return directions[Math.round(degrees / 45) % 8];
 }
 
 function arrowIcon(direction: number) {
@@ -21,6 +25,7 @@ function arrowIcon(direction: number) {
 }
 
 export default function WindArrowLayer({ bbox, date }: { bbox: [number, number, number, number]; date?: string }) {
+  const { language, t } = useI18nStore();
   const [data, setData] = useState<WindLayerResponse | null>(null);
   const [west, south, east, north] = bbox;
 
@@ -38,9 +43,9 @@ export default function WindArrowLayer({ bbox, date }: { bbox: [number, number, 
       <Marker key={`${point.lat}-${point.lon}`} position={[point.lat, point.lon]} icon={arrowIcon(point.direction_deg)}>
         <Popup>
           <div className="wildfire-wind-popup">
-            <strong>Arah angin</strong>
-            <span>{directionLabel(point.direction_deg)} · {point.direction_deg.toFixed(0)}°</span>
-            <span>{point.speed_kmh.toFixed(1)} km/jam</span>
+            <strong>{t("wildfire.wind.direction")}</strong>
+            <span>{directionLabel(point.direction_deg, language)} · {formatNumber(point.direction_deg, language, { maximumFractionDigits: 0 })}°</span>
+            <span>{formatNumber(point.speed_kmh, language, { maximumFractionDigits: 1 })} {t("wildfire.wind.kmh")}</span>
             <small>{data.source} · {data.valid_time_utc ?? data.date}</small>
           </div>
         </Popup>
