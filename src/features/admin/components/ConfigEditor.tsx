@@ -114,6 +114,81 @@ const CARBON_PALETTE_PRESETS = [
     label: "Magma",
     colors: ["000004", "3b0f70", "8c2981", "de4968", "fe9f6d", "fcfdbf"],
   },
+  {
+    id: "turbo",
+    label: "Turbo",
+    colors: ["30123b", "3e9bfe", "46f884", "e1dd37", "f05b12", "7a0403"],
+  },
+  {
+    id: "cubehelix",
+    label: "Cubehelix (luminansi bertahap)",
+    colors: ["000000", "163d4e", "54792f", "d07e93", "c1caf3", "ffffff"],
+  },
+  {
+    id: "gist_earth",
+    label: "Gist Earth",
+    colors: ["000000", "225e7c", "3e915b", "8eac56", "c4a46f", "fdfbfb"],
+  },
+  {
+    id: "YlGn",
+    label: "YlGn (kuning–hijau)",
+    colors: ["ffffe5", "e5f5ac", "a2d88a", "4cb063", "15793e", "004529"],
+  },
+  {
+    id: "YlGnBu",
+    label: "YlGnBu (kuning–hijau–biru)",
+    colors: ["ffffd9", "d6efb3", "73c8bd", "2498c1", "234da0", "081d58"],
+  },
+  {
+    id: "GnBu",
+    label: "GnBu (hijau–biru)",
+    colors: ["f7fcf0", "d4eece", "9fdab8", "57b8d0", "1d7eb7", "084081"],
+  },
+  {
+    id: "BuGn",
+    label: "BuGn (biru–hijau)",
+    colors: ["f7fcfd", "d6f0ee", "8fd4c2", "48b27f", "157f3b", "00441b"],
+  },
+  {
+    id: "PuBuGn",
+    label: "PuBuGn (ungu–biru–hijau)",
+    colors: ["fff7fb", "dbd8ea", "99b9d9", "4095c3", "027976", "014636"],
+  },
+  {
+    id: "PuBu",
+    label: "PuBu (ungu–biru)",
+    colors: ["fff7fb", "dbdaeb", "9cb9d9", "4295c3", "0567a2", "023858"],
+  },
+  {
+    id: "BuPu",
+    label: "BuPu (biru–ungu)",
+    colors: ["f7fcfd", "ccddec", "9ab4d6", "8c74b5", "852d90", "4d004b"],
+  },
+  {
+    id: "Purples",
+    label: "Purples (ungu)",
+    colors: ["fcfbfd", "e2e2ef", "b6b6d8", "8683bd", "61409b", "3f007d"],
+  },
+  {
+    id: "Blues",
+    label: "Blues (biru)",
+    colors: ["f7fbff", "d0e1f2", "94c4df", "4a98c9", "1764ab", "08306b"],
+  },
+  {
+    id: "Greens",
+    label: "Greens (hijau)",
+    colors: ["f7fcf5", "d3eecd", "98d594", "4bb062", "157f3b", "00441b"],
+  },
+  {
+    id: "Oranges",
+    label: "Oranges (jingga)",
+    colors: ["fff5eb", "fdd9b4", "fda762", "f3701b", "c54102", "7f2704"],
+  },
+  {
+    id: "YlOrBr",
+    label: "YlOrBr (kuning–jingga–cokelat)",
+    colors: ["ffffe5", "feeba2", "febb47", "f07818", "b84203", "662506"],
+  },
 ] as const;
 
 function normalizedPaletteKey(colors: string[]) {
