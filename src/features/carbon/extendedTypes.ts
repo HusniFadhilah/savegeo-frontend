@@ -13,6 +13,18 @@ export interface GreenRankingRow {
   coverage_percent?: number;
   error?: string;
   classes_ha?: Record<string, number | null>;
+  /** Area-weighted carbon reference density in Mg C/ha. */
+  agb_mg_c_ha?: number | null;
+  bgb_mg_c_ha?: number | null;
+  soc_mg_c_ha?: number | null;
+  litter_mg_c_ha?: number | null;
+  deadwood_mg_c_ha?: number | null;
+  /** Integrated stocks across valid pixels in Mg C. */
+  agb_total_mg_c?: number | null;
+  bgb_total_mg_c?: number | null;
+  soc_total_mg_c?: number | null;
+  litter_total_mg_c?: number | null;
+  deadwood_total_mg_c?: number | null;
 }
 export interface GreenRankingResult {
   run_id: string;

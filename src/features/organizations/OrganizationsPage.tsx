@@ -150,8 +150,8 @@ export default function OrganizationsPage() {
         )}
         {loading && <p role="status">{tr("Memuat ruang kerja…", "Loading workspaces…")}</p>}
         <div className="row g-3 organizations-page__grid">
-          <div className="col-lg-4">
-            <section className="card organizations-page__card mb-3">
+          <div className="col-lg-5">
+            <section className="card organizations-page__card">
               <div className="card-header organizations-page__card-header">
                 <i className="bi bi-building-add me-2" />
                 {tr("Buat organisasi", "Create organization")}
@@ -215,7 +215,7 @@ export default function OrganizationsPage() {
               </form>
             </section>
           </div>
-          <div className="col-lg-8">
+          <div className="col-lg-7">
             <section className="card organizations-page__card">
               <div className="card-header organizations-page__card-header">
                 <i className="bi bi-people me-2" />

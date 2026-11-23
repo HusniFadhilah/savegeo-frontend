@@ -1,9 +1,9 @@
-.organizations-page {
+.analysis-page.organizations-page {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1720px;
+  max-width: 1680px;
   margin-inline: auto;
-  padding: clamp(18px, 2vw, 30px) clamp(16px, 2.25vw, 36px) 40px;
+  padding: 20px clamp(16px, 2vw, 28px) 36px;
 }
 
 .organizations-page__heading {
@@ -11,26 +11,36 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.8rem 1.25rem;
-  margin-bottom: 1.25rem;
+  gap: 12px 20px;
+  margin-bottom: 20px;
 }
 
 .organizations-page__heading h1 {
   display: flex;
   align-items: center;
   margin: 0;
-  font-size: clamp(1.35rem, 1.8vw, 1.7rem);
-  line-height: 1.25;
+  color: var(--text-primary, #24352b);
+  font-size: clamp(25px, 1.8vw, 29px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.organizations-page__heading h1 > .bi {
+  font-size: 0.86em;
 }
 
 .organizations-page__heading > .btn {
-  min-height: 42px;
-  padding: 0.55rem 1rem;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
-.organizations-page__grid {
-  --bs-gutter-x: 1rem;
-  --bs-gutter-y: 1rem;
+.row.organizations-page__grid {
+  --bs-gutter-x: 20px;
+  --bs-gutter-y: 16px;
 }
 
 .organizations-page__card {
@@ -44,43 +54,72 @@
 .organizations-page__card-header {
   display: flex;
   align-items: center;
-  min-height: 56px;
-  padding: 0.85rem 1.15rem;
+  min-height: 52px;
+  gap: 8px;
+  padding: 12px 18px;
   border: 0;
   color: #fff !important;
   background: linear-gradient(110deg, #287b36, #1d653e);
   font-weight: 700;
+  font-size: 16px;
+  line-height: 1.35;
 }
 
 .organizations-page__card-header .bi {
   flex: 0 0 auto;
+  margin: 0 !important;
 }
 
 .organizations-page__card-body {
-  padding: clamp(1rem, 1.35vw, 1.35rem);
+  padding: clamp(16px, 1.25vw, 20px);
 }
 
 .organizations-page__card-body .form-label {
-  margin-bottom: 0.45rem;
+  margin-bottom: 6px;
   color: var(--text-primary, #26372e);
-  font-size: 0.92rem;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .organizations-page__card-body .form-control,
 .organizations-page__card-body .form-select {
   min-height: 42px;
+  padding: 8px 12px;
   border-radius: 9px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.organizations-page__card-body .form-control.mb-3,
+.organizations-page__card-body .form-select.mb-3 {
+  margin-bottom: 12px !important;
+}
+
+.organizations-page__card-body .form-select {
+  padding-right: 36px;
 }
 
 .organizations-page__card-body .btn {
   min-height: 40px;
-  padding: 0.5rem 0.9rem;
+  padding: 8px 14px;
   border-radius: 9px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.organizations-page__card-body p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .organizations-page__card-body > p:last-child {
   margin-bottom: 0;
+}
+
+.organizations-page__card + .organizations-page__card {
+  margin-top: 16px;
 }
 
 html[data-theme="dark"] .organizations-page__card {
@@ -95,16 +134,31 @@ html[data-theme="dark"] .organizations-page__card-body .form-label {
 }
 
 @media (max-width: 575.98px) {
-  .organizations-page {
+  .analysis-page.organizations-page {
     padding: 16px 12px 28px;
   }
 
   .organizations-page__heading {
     align-items: stretch;
-    margin-bottom: 1rem;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .organizations-page__heading h1 {
+    font-size: 24px;
   }
 
   .organizations-page__heading > .btn {
     width: 100%;
+  }
+
+  .organizations-page__card-header {
+    min-height: 48px;
+    padding: 11px 15px;
+    font-size: 15px;
+  }
+
+  .organizations-page__card-body {
+    padding: 15px;
   }
 }

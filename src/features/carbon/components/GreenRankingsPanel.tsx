@@ -18,7 +18,7 @@ const LEVELS = [
 ];
 const fmt = (value?: number | null) =>
   value == null ? "—" : value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
-const formatRankingValue = (value: number | null | undefined, compact: boolean, unit: "%" | "ha") => {
+const formatRankingValue = (value: number | null | undefined, compact: boolean, unit: "%" | "ha" | "Mg C/ha") => {
   if (value == null) return "—";
   const formatted = new Intl.NumberFormat(
     "id-ID",
@@ -68,7 +68,7 @@ export default function GreenRankingsPanel({
     onResultRef.current = onResult;
   }, [onResult]);
   const filters = { level, province, city, district };
-  const storageKey = `savegeo-green:v1:${year}:${startMonth}:${endMonth}:${level}:${province}:${city}:${district}`;
+  const storageKey = `savegeo-green:v2:${year}:${startMonth}:${endMonth}:${level}:${province}:${city}:${district}`;
   scopeRef.current = storageKey;
   const depth = LEVELS.findIndex(([key]) => key === level);
   useEffect(() => {
@@ -157,7 +157,20 @@ export default function GreenRankingsPanel({
           if (active) localStorage.removeItem(storageKey);
         }));
     } else {
-      void loadLatest().then(acceptResult).catch(() => undefined);
+      void loadLatest().then(acceptResult).catch((reason: unknown) => {
+        if (!active) return;
+        const status =
+          typeof reason === "object" && reason !== null && "status" in reason
+            ? Number((reason as { status?: unknown }).status)
+            : undefined;
+        setError(
+          status === 404
+            ? "Snapshot dengan nilai pool karbon belum tersedia untuk cakupan ini. Klik ‘Hitung peringkat’ sekali untuk membuat dan menyimpannya; pemuatan berikutnya memakai snapshot database."
+            : reason instanceof Error
+              ? reason.message
+              : "Snapshot peringkat gagal dimuat.",
+        );
+      });
     }
     return () => {
       active = false;
@@ -297,9 +310,11 @@ export default function GreenRankingsPanel({
   const exportScopeSuffix = result?.run_id.startsWith("snapshot:")
     ? "?" + exportScopeParams.toString()
     : "";
-  const sortHeading = (key: string, label: string) => (
+  const sortHeading = (key: string, label: string, title?: string) => (
     <th
+      key={key}
       scope="col"
+      title={title}
       aria-sort={tableSort === key ? (tableSortDir === "asc" ? "ascending" : "descending") : "none"}
     >
       <button type="button" className="green-rankings__sort" onClick={() => sortTable(key)}>
@@ -318,6 +333,43 @@ export default function GreenRankingsPanel({
   const compositionTotal = classComposition.reduce((sum, item) => sum + item.value, 0);
   const histogramBins = result?.statistics.histogram ?? [];
   const histogramMax = Math.max(1, ...histogramBins.map((bin) => bin.count));
+  const carbonPools = [
+    {
+      key: "agb",
+      label: "AGB · Mg C/ha",
+      value: (row: GreenRankingResult["rows"][number]) => row.agb_mg_c_ha,
+      source: "NASA/ORNL biomass carbon, baseline 2010",
+      total: (row: GreenRankingResult["rows"][number]) => row.agb_total_mg_c,
+    },
+    {
+      key: "bgb",
+      label: "BGB · Mg C/ha",
+      value: (row: GreenRankingResult["rows"][number]) => row.bgb_mg_c_ha,
+      source: "NASA/ORNL belowground biomass carbon, baseline 2010",
+      total: (row: GreenRankingResult["rows"][number]) => row.bgb_total_mg_c,
+    },
+    {
+      key: "soc",
+      label: "SOC · Mg C/ha",
+      value: (row: GreenRankingResult["rows"][number]) => row.soc_mg_c_ha,
+      source: "SoilGrids SOC stock, kedalaman 0–30 cm",
+      total: (row: GreenRankingResult["rows"][number]) => row.soc_total_mg_c,
+    },
+    {
+      key: "litter",
+      label: "Serasah · Mg C/ha",
+      value: (row: GreenRankingResult["rows"][number]) => row.litter_mg_c_ha,
+      source: "Proxy hutan tropis dari biomassa 2010 dan faktor iklim UNFCCC; bukan pengukuran langsung",
+      total: (row: GreenRankingResult["rows"][number]) => row.litter_total_mg_c,
+    },
+    {
+      key: "deadwood",
+      label: "Kayu mati · Mg C/ha",
+      value: (row: GreenRankingResult["rows"][number]) => row.deadwood_mg_c_ha,
+      source: "Proxy hutan tropis dari biomassa 2010 dan faktor iklim UNFCCC; bukan pengukuran langsung",
+      total: (row: GreenRankingResult["rows"][number]) => row.deadwood_total_mg_c,
+    },
+  ];
   return (
     <section className="green-rankings" aria-label="Peringkat wilayah hijau">
       <div className="green-rankings__intro">
@@ -360,7 +412,7 @@ export default function GreenRankingsPanel({
       <CropPanelAccordion
         title="Wilayah dan tingkat peringkat"
         icon="bi-sliders"
-        className="green-rankings__accordion"
+        className="green-rankings__accordion green-rankings__filter-accordion"
         defaultOpen
       >
         <div className="row g-3">
@@ -469,6 +521,12 @@ export default function GreenRankingsPanel({
               layak peringkat (cakupan ≥80%).
             </span>
           </div>
+          <p className="small text-muted mt-2 mb-0">
+            Nilai pool berupa densitas rata-rata berbobot luas (Mg C/ha); baris kecil menampilkan
+            total pada piksel valid. AGB/BGB memakai referensi NASA/ORNL 2010, SOC SoilGrids
+            0–30 cm, sedangkan serasah dan kayu mati adalah proxy hutan tropis berbasis faktor
+            UNFCCC, bukan hasil pengukuran langsung.
+          </p>
           {result.snapshot_saved_at && (
             <div className="green-rankings__snapshot-note">
               <i className="bi bi-database-check" aria-hidden="true" />
@@ -744,6 +802,9 @@ export default function GreenRankingsPanel({
                       {sortHeading("crops_ha", "Tanaman ha")}
                       {sortHeading("shrubs_ha", "Semak ha")}
                       {sortHeading("flooded_ha", "Vegetasi tergenang ha")}
+                      {carbonPools.map((pool) => (
+                        sortHeading(`${pool.key}_mg_c_ha`, pool.label, pool.source)
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -774,11 +835,21 @@ export default function GreenRankingsPanel({
                               {formatRankingValue(value.value, compactNumbers, value.unit)}
                             </td>
                           ))}
+                          {carbonPools.map((pool) => (
+                            <td key={`carbon-${pool.key}`} title={pool.source}>
+                              <span className="d-block">
+                                {formatRankingValue(pool.value(row), compactNumbers, "Mg C/ha")}
+                              </span>
+                              <small className="text-muted">
+                                Total {pool.total(row) == null ? "—" : `${fmt(pool.total(row))} Mg C`}
+                              </small>
+                            </td>
+                          ))}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={13} className="green-rankings__empty">
+                        <td colSpan={18} className="green-rankings__empty">
                           {tableSearch.trim()
                             ? "Tidak ada wilayah yang cocok dengan pencarian."
                             : "Belum ada wilayah pada halaman ini."}
