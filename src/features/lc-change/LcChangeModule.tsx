@@ -638,6 +638,7 @@ export default function LcChangeModule() {
     showLoading,
     setLoadingProgress,
     hideLoading,
+    t,
   ]);
 
   useEffect(
@@ -722,6 +723,7 @@ export default function LcChangeModule() {
       maxYear,
       isDynamicWorldCompatible,
       runAnalysis,
+      t,
     ],
   );
 

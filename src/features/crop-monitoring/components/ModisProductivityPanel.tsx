@@ -37,7 +37,7 @@ export default function ModisProductivityPanel({ aoi, fieldName, results, onResu
       })
       .catch((reason) => { if (active) setError(localizeCropMessage(reason instanceof Error ? reason.message : null, t) ?? (reason instanceof Error ? reason.message : t("crop.modis.yearsLoadFailed"))); });
     return () => { active = false; };
-  }, []);
+  }, [t]);
 
   const toggle = (metric: string) => setMetrics((current) => current.includes(metric) ? current.filter((item) => item !== metric) : [...current, metric]);
 

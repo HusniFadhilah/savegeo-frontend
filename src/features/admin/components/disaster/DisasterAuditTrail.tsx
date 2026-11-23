@@ -35,7 +35,7 @@ export default function DisasterAuditTrail({ eventId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, t]);
 
   return (
     <div className="card">

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FieldObservationForm from "./FieldObservationForm";
 import { fieldApi } from "./carbonFieldApi";
+import { useI18nStore } from "@/hooks/useI18nStore";
 vi.mock("./carbonFieldApi", () => ({
   fieldApi: { add: vi.fn().mockResolvedValue({ created: 1 }) },
 }));
@@ -10,14 +11,15 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+beforeEach(() => useI18nStore.getState().setLanguage("id"));
 function fill(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 function common() {
   fill("ID plot", "P1");
   fill("Tanggal pengukuran", "2025-06-01");
-  fill("Latitude (WGS84)", "-7");
-  fill("Longitude (WGS84)", "110");
+  fill("Lintang (WGS84)", "-7");
+  fill("Bujur (WGS84)", "110");
   fill("Luas plot terukur (m²)", "400");
   fill("Metode / persamaan / uji laboratorium", "Laboratory method 1");
   fill("Sumber / laporan / kode hasil laboratorium", "Survey 2025");

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listDisasterEvents } from "../../api";
 import type { DisasterEvent } from "../../types";
 import DisasterEventList from "./DisasterEventList";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 vi.mock("../../AdminContext", () => ({ useAdmin: () => ({ notify: vi.fn() }) }));
 vi.mock("../../api", () => ({
@@ -26,6 +27,7 @@ const events: DisasterEvent[] = Array.from({ length: 11 }, (_, index) => ({
 
 describe("disaster event table numbering", () => {
   beforeEach(() => {
+    useI18nStore.getState().setLanguage("id");
     vi.mocked(listDisasterEvents).mockImplementation(async (params) => ({
       events: params?.search ? events.filter((event) => event.name === params.search) : events,
     }));

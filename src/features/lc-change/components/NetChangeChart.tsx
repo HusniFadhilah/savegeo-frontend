@@ -21,7 +21,7 @@ interface Props {
 
 /** Horizontal net-change bar chart, ported from LCChange._renderNetChange (Plotly -> chart.js). */
 export default function NetChangeChart({ clsA, clsB, trans }: Props) {
-  const { t, language } = useI18nStore();
+  const t = useI18nStore((state) => state.t);
   if (!trans) return <p className="text-muted small">{t("lc.netChange.requiresTransition")}</p>;
   const all = [...new Set([...Object.keys(clsA), ...Object.keys(clsB)])];
   const rows = all
