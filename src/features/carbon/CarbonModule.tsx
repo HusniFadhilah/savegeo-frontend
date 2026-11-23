@@ -28,7 +28,7 @@ import { HIGH_DETAIL_MAX_ZOOM } from "@/config/mapZoom";
 import { analyzeVegetation, analyzeVegetationTimeSeries, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 import VegetationTimeSeriesPanel from "@/features/vegetation/components/VegetationTimeSeriesPanel";
 import { analyzeLandCover, fetchLandCoverDatasets } from "@/features/landcover/api";
-import { analyzeCarbon, analyzeCarbonDelta, listCarbonDatasets, listCarbonModels, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer } from "@/features/carbon/api";
+import { analyzeCarbon, analyzeCarbonDelta, listCarbonDatasets, listCarbonModels, loadDirectCarbonReferenceLayer, loadDirectLandCoverReferenceLayer, type AnalyzeCarbonArgs } from "@/features/carbon/api";
 import CarbonTimeSeriesPanel from "./components/CarbonTimeSeriesPanel";
 import { DEFAULT_VEGETATION_INDICES, VEGETATION_INDICES } from "@/features/vegetation/indices";
 import {
@@ -45,6 +45,8 @@ import type {
   CarbonParams,
   CarbonModelListItem,
   CarbonPoolResults,
+  CarbonPoolKey,
+  CarbonVisualizationStretch,
   CarbonDeltaResponse,
   AnalysisProcessingTimes,
 } from "@/features/carbon/types";
@@ -292,6 +294,8 @@ export default function CarbonModule() {
   const registerExtraRun = useCallback((run: (() => Promise<boolean>) | null) => { extraAnalysisRun.current = run; }, []);
   const [runError, setRunError] = useState<string | null>(null);
   const [results, setResults] = useState<AnalysisResultsBundle>({});
+  const carbonPoolRequestArgs = useRef<Partial<Record<CarbonPoolKey, AnalyzeCarbonArgs>>>({});
+  const primaryCarbonRequestArgs = useRef<AnalyzeCarbonArgs | null>(null);
   const [reportJobs, setReportJobs] = useState<{ job_id: string; type: string }[]>([]);
   const [processingTimes, setProcessingTimes] = useState<AnalysisProcessingTimes>({});
   const [mapKey, setMapKey] = useState(0);
@@ -307,6 +311,8 @@ export default function CarbonModule() {
 
   useEffect(() => {
     setResults({});
+    carbonPoolRequestArgs.current = {};
+    primaryCarbonRequestArgs.current = null;
     setDeltaResult(null);
     setVegTsResult(null);
     setRunError(null);
@@ -321,6 +327,8 @@ export default function CarbonModule() {
     if (nextType === analysisType) return;
     setAnalysisType(nextType);
     setResults({});
+    carbonPoolRequestArgs.current = {};
+    primaryCarbonRequestArgs.current = null;
     setProcessingTimes({});
     setDeltaResult(null);
     setVegTsResult(null);
@@ -449,6 +457,26 @@ export default function CarbonModule() {
     return outcome;
   }
 
+  async function handleCarbonVisualizationChange(
+    target: CarbonPoolKey | "primary",
+    stretch: CarbonVisualizationStretch,
+  ) {
+    const request = target === "primary"
+      ? primaryCarbonRequestArgs.current
+      : carbonPoolRequestArgs.current[target];
+    if (!request) throw new Error("Parameter layer karbon tidak tersedia. Jalankan analisis kembali.");
+
+    const updated = await analyzeCarbon({ ...request, visualizationStretch: stretch });
+    if (target === "primary") {
+      setResults((current) => ({ ...current, carbon: updated }));
+      return;
+    }
+    setResults((current) => ({
+      ...current,
+      carbonPools: { ...(current.carbonPools ?? {}), [target]: updated },
+    }));
+  }
+
   async function handleRunBasicCarbon(): Promise<UiCommandOutcome> {
     if (!aoi) {
       const error = t("carbon.err.selectAoi");
@@ -471,6 +499,8 @@ export default function CarbonModule() {
     setDeltaResult(null);
     setVegTsResult(null);
     setResults({});
+    carbonPoolRequestArgs.current = {};
+    primaryCarbonRequestArgs.current = null;
     showLoading(t("carbon.loading.runningTitle"), t("carbon.basic.preparing"));
     const poolResults: CarbonPoolResults = {};
     const errors: string[] = [];
@@ -493,14 +523,17 @@ export default function CarbonModule() {
           clipMode: "clipped",
         };
         try {
-          const result = await analyzeCarbon({
+          const request: AnalyzeCarbonArgs = {
             aoi: aoiPayload,
             params,
             selectedModel: target.model,
             visMin,
             visMax,
             visPalette,
-          });
+            visualizationStretch: "p2_98",
+          };
+          carbonPoolRequestArgs.current[target.key] = request;
+          const result = await analyzeCarbon(request);
           return { key: target.key, result };
         } catch (err) {
           errors.push(`${poolLabel}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
@@ -673,17 +706,31 @@ export default function CarbonModule() {
       setLoadingProgress(75, t("carbon.loading.carbonProgress"));
       const t0 = Date.now();
       try {
-        const primary = analyzeCarbon({
+        const primaryArgs: AnalyzeCarbonArgs = {
           aoi: aoiPayload,
           params: carbonParams,
           selectedModel,
           visMin,
           visMax,
           visPalette,
-        });
+          visualizationStretch: "p2_98",
+        };
+        primaryCarbonRequestArgs.current = primaryArgs;
+        carbonPoolRequestArgs.current = {};
+        const primary = analyzeCarbon(primaryArgs);
         const detritus = Promise.all((["litter", "deadwood"] as const).map(async (pool) => {
           try {
-            const result = await analyzeCarbon({ aoi: aoiPayload, params: { ...carbonParams, referenceDataset: `TROPICAL_${pool.toUpperCase()}_REFERENCE`, datasetYear: 2010, modelName: null, referenceOnly: false, loadOnly: false, simpleMode: true, scale: simpleCarbonSummaryScale(aoiPayload) }, selectedModel: null, visMin, visMax, visPalette });
+            const request: AnalyzeCarbonArgs = {
+              aoi: aoiPayload,
+              params: { ...carbonParams, referenceDataset: `TROPICAL_${pool.toUpperCase()}_REFERENCE`, datasetYear: 2010, modelName: null, referenceOnly: false, loadOnly: false, simpleMode: true, scale: simpleCarbonSummaryScale(aoiPayload) },
+              selectedModel: null,
+              visMin,
+              visMax,
+              visPalette,
+              visualizationStretch: "p2_98",
+            };
+            carbonPoolRequestArgs.current[pool] = request;
+            const result = await analyzeCarbon(request);
             return { pool, result };
           } catch (err) { errors.push(`${pool}: ${err instanceof Error ? err.message : "Estimasi gagal"}`); return null; }
         }));
@@ -1302,14 +1349,15 @@ export default function CarbonModule() {
               aoi={aoi}
               zoom={zoom}
               results={results}
-          visMin={visMin}
-          visMax={visMax}
-          visPalette={visPalette}
-          legendBins={carbonLegendBins}
-          showReference={carbonParams.showReference && !carbonParams.referenceOnly && !directLoadEnabled}
-          mapKey={mapKey}
-          analysisDate={`${year}-12-31`}
-        />
+              visMin={visMin}
+              visMax={visMax}
+              visPalette={visPalette}
+              legendBins={carbonLegendBins}
+              showReference={carbonParams.showReference && !carbonParams.referenceOnly && !directLoadEnabled}
+              mapKey={mapKey}
+              analysisDate={`${year}-12-31`}
+              onCarbonVisualizationChange={handleCarbonVisualizationChange}
+            />
 
             {!hasDirectResults && <div className="card">
               <div className="card-header">

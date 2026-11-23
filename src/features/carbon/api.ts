@@ -11,6 +11,7 @@ import type {
   CarbonParams,
   CarbonResult,
   CompanyBoundary,
+  CarbonVisualizationStretch,
 } from "./types";
 
 interface CarbonDatasetApiItem {
@@ -120,6 +121,7 @@ export interface AnalyzeCarbonArgs {
   visMin: number;
   visMax: number;
   visPalette: string[];
+  visualizationStretch?: CarbonVisualizationStretch;
 }
 
 /**
@@ -151,6 +153,7 @@ export async function analyzeCarbon({
   visMin,
   visMax,
   visPalette,
+  visualizationStretch = "p2_98",
 }: AnalyzeCarbonArgs): Promise<CarbonResult> {
   const meta = selectedModel?.metadata_json;
 
@@ -168,6 +171,7 @@ export async function analyzeCarbon({
           vis_min: visMin,
           vis_max: visMax,
           vis_palette: visPalette,
+          auto_vis_mode: visualizationStretch,
         },
         { timeoutMs: CARBON_TIMEOUT_MS },
       );
@@ -192,6 +196,7 @@ export async function analyzeCarbon({
         vis_min: visMin,
         vis_max: visMax,
         vis_palette: visPalette,
+        auto_vis_mode: visualizationStretch,
       },
       { timeoutMs: CARBON_TIMEOUT_MS },
     );
@@ -221,6 +226,7 @@ export async function analyzeCarbon({
       // stretch. This keeps the tile and legend useful for small AOIs whose
       // values occupy only a fraction of the global 0-200 configuration.
       auto_vis: true,
+      auto_vis_mode: visualizationStretch,
     },
     { timeoutMs: CARBON_TIMEOUT_MS },
   );

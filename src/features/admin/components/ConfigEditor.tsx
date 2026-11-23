@@ -45,6 +45,10 @@ function isPaletteConfig(item: AdminConfigItem, value: string) {
   return /(^|[._-])palette([._-]|$)/i.test(item.key) || value.split(",").filter((part) => /^#?[0-9a-f]{6}$/i.test(part.trim())).length > 1;
 }
 
+function isCarbonPaletteConfig(item: AdminConfigItem) {
+  return item.key === "carbon.vis_palette" || /^carbon\.pool\.(agb|bgb|soc|litter|deadwood)\.vis_palette$/.test(item.key);
+}
+
 function parsePalette(value: string) {
   return value
     .split(",")
@@ -54,6 +58,38 @@ function parsePalette(value: string) {
 
 function serializePalette(colors: string[]) {
   return colors.map((color) => color.trim().replace(/^#/, "")).filter(Boolean).join(",");
+}
+
+const CARBON_PALETTE_PRESETS = [
+  {
+    id: "viridis",
+    label: "Viridis (ramah buta warna)",
+    colors: ["440154", "414487", "2a788e", "22a884", "7ad151", "fde725"],
+  },
+  {
+    id: "cividis",
+    label: "Cividis (ramah buta warna)",
+    colors: ["00204c", "414f79", "697777", "97935f", "c5b54f", "ffea46"],
+  },
+  {
+    id: "plasma",
+    label: "Plasma",
+    colors: ["0d0887", "5c01a6", "9c179e", "cc4778", "ed7953", "f0f921"],
+  },
+  {
+    id: "inferno",
+    label: "Inferno",
+    colors: ["000004", "420a68", "932667", "dd513a", "fba40a", "fcffa4"],
+  },
+  {
+    id: "magma",
+    label: "Magma",
+    colors: ["000004", "3b0f70", "8c2981", "de4968", "fe9f6d", "fcfdbf"],
+  },
+] as const;
+
+function normalizedPaletteKey(colors: string[]) {
+  return colors.map((color) => color.trim().replace(/^#/, "").toLowerCase()).join(",");
 }
 
 function getNumericControl(item: AdminConfigItem): NumericControl | null {
@@ -103,6 +139,10 @@ function ConfigValueControl({
 
   if (isPaletteConfig(item, value)) {
     const normalized = paletteColors.length ? paletteColors : ["2e7d32"];
+    const presetKey = normalizedPaletteKey(normalized);
+    const selectedPreset = CARBON_PALETTE_PRESETS.find(
+      (preset) => normalizedPaletteKey([...preset.colors]) === presetKey,
+    );
     const updateColor = (index: number, nextColor: string) => {
       const next = [...normalized];
       next[index] = nextColor;
@@ -114,6 +154,32 @@ function ConfigValueControl({
     };
     return (
       <div className="cfg-palette-control">
+        {isCarbonPaletteConfig(item) && (
+          <div className="cfg-palette-preset-row">
+            <select
+              className="form-select form-select-sm"
+              aria-label={`Preset palet ${title || item.key}`}
+              title="Pilih palet standar matplotlib"
+              value={selectedPreset?.id ?? "custom"}
+              onChange={(event) => {
+                const preset = CARBON_PALETTE_PRESETS.find((option) => option.id === event.target.value);
+                if (preset) onChange(item.key, serializePalette([...preset.colors]));
+              }}
+            >
+              <option value="custom">Warna kustom</option>
+              {CARBON_PALETTE_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>{preset.label}</option>
+              ))}
+            </select>
+            <span
+              className="cfg-palette-preview"
+              aria-label={selectedPreset?.label ?? "Palet warna kustom"}
+              style={{
+                background: `linear-gradient(90deg, ${normalized.map(normalizeColor).join(", ")})`,
+              }}
+            />
+          </div>
+        )}
         <div className="cfg-palette-pickers">
           {normalized.map((color, index) => (
             <div className="cfg-palette-chip" key={`${index}-${color}`}>

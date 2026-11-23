@@ -12,7 +12,7 @@ import { registerMap } from "@/features/chatbot/mapActions";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
 import type { AoiState } from "@/features/carbon/types";
 import type { CarbonLayerResult } from "@/features/carbon/types";
-import type { CarbonPoolKey } from "@/features/carbon/types";
+import type { CarbonPoolKey, CarbonVisualizationStretch } from "@/features/carbon/types";
 import type { AnalysisResultsBundle } from "@/features/reports/export";
 import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
@@ -52,6 +52,10 @@ interface Props {
   showReference: boolean;
   mapKey: string | number;
   analysisDate?: string;
+  onCarbonVisualizationChange?: (
+    target: CarbonPoolKey | "primary",
+    stretch: CarbonVisualizationStretch,
+  ) => Promise<void>;
 }
 
 function isCarbonPoolTab(key: string) {
@@ -330,6 +334,7 @@ export default function ResultsMapPanel({
   showReference,
   mapKey,
   analysisDate,
+  onCarbonVisualizationChange,
 }: Props) {
   const [refreshToken, setRefreshToken] = useState(0);
   const tabs = useMemo(() => buildTabs(results, showReference, refreshToken), [results, showReference, refreshToken]);
@@ -342,6 +347,10 @@ export default function ResultsMapPanel({
   const [compareOn, setCompareOn] = useState(false);
   const [compareKey, setCompareKey] = useState<string | null>(null);
   const [compareOrientation, setCompareOrientation] = useState<SwipeOrientation>("vertical");
+  const [stretchMenuOpen, setStretchMenuOpen] = useState(false);
+  const [stretchMode, setStretchMode] = useState<CarbonVisualizationStretch>("p2_98");
+  const [stretchBusy, setStretchBusy] = useState(false);
+  const [stretchError, setStretchError] = useState("");
 
   useEffect(() => {
     setActiveKey(tabs[0]?.key ?? null);
@@ -349,12 +358,27 @@ export default function ResultsMapPanel({
     setCompareOn(false);
     setCompareKey(null);
     setRefreshToken(0);
+    setStretchMenuOpen(false);
+    setStretchMode("p2_98");
+    setStretchError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
 
   useEffect(() => {
     setOpacity(1);
+    setStretchMenuOpen(false);
+    setStretchError("");
   }, [activeKey]);
+
+  useEffect(() => {
+    const mode = activeKey === "carbon_estimated"
+      ? results.carbon?.model_info?.visualization_mode
+      : activeKey?.startsWith("carbon_pool:")
+        ? results.carbonPools?.[activeKey.slice("carbon_pool:".length) as CarbonPoolKey]?.model_info?.visualization_mode
+        : undefined;
+    if (mode) setStretchMode(mode);
+    else if (isCarbonPoolTab(activeKey ?? "")) setStretchMode("p2_98");
+  }, [activeKey, results.carbon, results.carbonPools]);
 
   useEffect(() => registerUiCommands("results", {
     read: () => ({ activeLayer: activeKey, availableLayers: tabs.map((tab) => tab.key), visible: activeKey !== null }),
@@ -375,6 +399,10 @@ export default function ResultsMapPanel({
 
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
   const legend = buildLegend(activeKey, results, visMin, visMax, visPalette, legendBins);
+  const stretchTarget: CarbonPoolKey | "primary" | null = activeKey?.startsWith("carbon_pool:")
+    ? activeKey.slice("carbon_pool:".length) as CarbonPoolKey
+    : activeKey === "carbon_estimated" ? "primary" : null;
+  const canAdjustStretch = Boolean(stretchTarget && onCarbonVisualizationChange);
   const center: [number, number] = aoi?.bounds && isFiniteMapBounds(aoi.bounds)
     ? [aoi.bounds.getCenter().lat, aoi.bounds.getCenter().lng]
     : [-2.5, 118];
@@ -388,6 +416,21 @@ export default function ResultsMapPanel({
   }, [compareOn, compareKey, compareTabs]);
   const compareTab = compareTabs.find((t) => t.key === compareKey) ?? null;
   const compareLegend = buildLegend(compareKey, results, visMin, visMax, visPalette, legendBins);
+
+  async function applyStretch(next: CarbonVisualizationStretch) {
+    if (!stretchTarget || !onCarbonVisualizationChange || next === stretchMode || stretchBusy) return;
+    setStretchBusy(true);
+    setStretchError("");
+    try {
+      await onCarbonVisualizationChange(stretchTarget, next);
+      setStretchMode(next);
+      setStretchMenuOpen(false);
+    } catch (error) {
+      setStretchError(error instanceof Error ? error.message : "Rentang warna gagal diperbarui.");
+    } finally {
+      setStretchBusy(false);
+    }
+  }
 
   return (
     <div className="card">
@@ -424,6 +467,46 @@ export default function ResultsMapPanel({
               >
                 <i className="fas fa-arrows-alt-h me-1" /> Bandingkan
               </button>
+            )}
+            {canAdjustStretch && (
+              <div className={`dropdown ${stretchMenuOpen ? "show" : ""}`}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary flex-shrink-0"
+                  title="Atur kontras warna berdasarkan distribusi raster"
+                  aria-label="Atur rentang warna peta karbon"
+                  aria-expanded={stretchMenuOpen}
+                  disabled={stretchBusy}
+                  onClick={() => setStretchMenuOpen((open) => !open)}
+                >
+                  <i className={`bi ${stretchBusy ? "bi-arrow-repeat" : "bi-sliders"} me-1`} />
+                  Skala warna
+                </button>
+                <div
+                  className={`dropdown-menu dropdown-menu-end p-3 ${stretchMenuOpen ? "show" : ""}`}
+                  style={{ minWidth: 270 }}
+                >
+                  <label className="form-label small fw-semibold mb-1" htmlFor="carbon-map-stretch">
+                    Rentang nilai raster
+                  </label>
+                  <select
+                    id="carbon-map-stretch"
+                    className="form-select form-select-sm"
+                    value={stretchMode}
+                    disabled={stretchBusy}
+                    onChange={(event) => void applyStretch(event.target.value as CarbonVisualizationStretch)}
+                  >
+                    <option value="p2_98">Persentil 2-98 - seimbang</option>
+                    <option value="p5_95">Persentil 5-95 - kontras kuat</option>
+                    <option value="min_max">Rentang penuh - min-maks</option>
+                    <option value="admin">Rentang yang diatur admin</option>
+                  </select>
+                  <p className="small text-body-secondary mt-2 mb-0">
+                    Nilai di luar persentil tetap terlihat, dengan warna pada ujung skala.
+                  </p>
+                  {stretchError && <div className="small text-danger mt-2" role="alert">{stretchError}</div>}
+                </div>
+              </div>
             )}
             {activeTab && isCarbonPoolTab(activeTab.key) && (
               <button

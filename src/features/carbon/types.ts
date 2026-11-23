@@ -154,9 +154,13 @@ export interface CarbonStats {
     scale_m?: number;
   };
   percentiles?: {
+    p2?: number | null;
+    p5?: number | null;
     p25?: number | null;
     median?: number | null;
     p75?: number | null;
+    p95?: number | null;
+    p98?: number | null;
   };
 }
 
@@ -206,6 +210,7 @@ export interface CarbonModelRunInfo {
   provider?: string;
   calculation_mode?: string;
   display_mode?: string;
+  visualization_mode?: CarbonVisualizationStretch;
   scale?: number;
   /** Pixel spacing of the rendered model layer; may differ from summary scale. */
   map_resolution_m?: number;
@@ -261,6 +266,7 @@ export interface CarbonResult {
 }
 
 export type CarbonPoolKey = "agb" | "bgb" | "soc" | "litter" | "deadwood";
+export type CarbonVisualizationStretch = "admin" | "p2_98" | "p5_95" | "min_max";
 
 export type CarbonPoolResults = Partial<Record<CarbonPoolKey, CarbonResult>>;
 

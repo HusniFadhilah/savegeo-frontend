@@ -1482,6 +1482,21 @@ html[data-theme="dark"] .admin-panel .analysis-review .legend {
   width: 100%;
 }
 
+.admin-panel .cfg-palette-preset-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(90px, 140px);
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-panel .cfg-palette-preview {
+  display: block;
+  min-width: 90px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 .admin-panel .cfg-palette-pickers {
   display: flex;
   flex-wrap: wrap;
@@ -2810,3 +2825,8 @@ html[data-theme="dark"] .admin-panel .calibration-detail > .calibration-actions 
 html[data-theme="dark"] .admin-panel .calibration-detail > .calibration-actions .btn-outline-primary:hover:not(:disabled), html[data-theme="dark"] .admin-panel .calibration-detail > .calibration-actions .btn-outline-secondary:hover:not(:disabled) { border-color: #47935a; color: #fff; background: #267a3b; }
 html[data-theme="dark"] .admin-panel .calibration-undip-details { border-color: #334155; background: #172033; }
 @media (max-width: 560px) { .admin-panel .calibration-detail > .admin-card-head { align-items: flex-start; }.admin-panel .calibration-detail > .calibration-actions .btn { flex: 1 1 auto; }.admin-panel .calibration-detail > :not(.admin-card-head) { margin-right: .65rem; margin-left: .65rem; } }
+
+/* Keep the field-observation table readable on narrow admin panels. */
+.admin-panel .field-calibration-panel__body > .field-calibration-table-wrap { width: 100%; min-width: 0; max-width: 100%; }
+.admin-panel .field-calibration-table--observations { min-width: 960px; }
+.admin-panel .calibration-detail > .calibration-files-heading { margin-top: 1.25rem; }
