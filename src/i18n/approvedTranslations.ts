@@ -1748,7 +1748,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "admin.config.item.ai.rate_limit_max_file_mb.label": "Ukuran file maksimum (MB)",
     "admin.config.item.ai.rate_limit_max_file_mb.description": "Ukuran maksimum file atau foto yang dapat diunggah ke chatbot.",
     "admin.config.item.ai.daily_budget_usd.label": "Batas belanja AI harian (USD)",
-    "admin.config.item.ai.daily_budget_usd.description": "Batas global harian. Nilai 0 menonaktifkan batas biaya. Atur tarif setiap penyedia dan model sebelum mengaktifkannya.",
+    "admin.config.item.ai.daily_budget_usd.description": "Plafon global per hari dalam USD. Nilai 0 memblokir penyedia berbayar sampai plafon dan tarif model diatur. Ollama dan OpenCode lokal tetap dapat digunakan.",
     "admin.config.item.ai.model_pricing_json.label": "Tarif model AI (JSON)",
     "admin.config.item.ai.model_pricing_json.description": "Tarif USD per satu juta token menurut penyedia dan model. Perbarui tarif agar sesuai dengan harga akun atau penyedia.",
     "admin.config.item.crop_risk.weight_vegetation.label": "Bobot: anomali vegetasi",
@@ -1757,7 +1757,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "admin.config.item.crop_risk.weight_flood.label": "Bobot: banjir",
     "admin.config.item.crop_risk.weight_growth_anomaly.label": "Bobot: anomali fase pertumbuhan",
     "admin.ai.dailyBudget.label": "Plafon biaya AI harian",
-    "admin.ai.dailyBudget.hint": "Plafon global per hari dalam USD. Isi 0 untuk menonaktifkannya. Tarif semua model harus diatur sebelum plafon aktif.",
+    "admin.ai.dailyBudget.hint": "Plafon global per hari dalam USD. Nilai 0 memblokir penyedia berbayar; Ollama dan OpenCode lokal tetap tersedia. Atur tarif semua model sebelum menetapkan plafon positif.",
     "admin.ai.dailyBudget.unit": "USD/hari",
     "admin.ai.modelPricing.label": "Tarif model AI (JSON)",
     "admin.ai.modelPricing.hint": "Tarif dalam USD per satu juta token. Gunakan nama provider dan model secara persis, lalu perbarui sesuai tarif penyedia.",
@@ -2800,6 +2800,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoi.drawHint":
       "Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi AOI dan tetap bisa diedit/dihapus lewat toolbar peta.",
     "carbon.aoi.selectedLabel": "AOI",
+    "aoi.externalProcessingNotice": "Geometri dan koordinat AOI yang diperlukan untuk analisis dapat diproses oleh penyedia layanan eksternal, termasuk Google Earth Engine atau penyedia citra. Penyedia peta dasar menerima area peta yang sedang dilihat. Hindari mengirim lokasi sensitif tanpa izin.",
     "carbon.aoi.sizeWarning":
       "AOI besar ({area} km²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.",
     "carbon.aoi.fromChatbot": "AOI dari chatbot",
@@ -4834,7 +4835,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "admin.config.item.ai.rate_limit_max_file_mb.label": "Maximum file size (MB)",
     "admin.config.item.ai.rate_limit_max_file_mb.description": "Maximum file or photo size that can be uploaded to the chatbot.",
     "admin.config.item.ai.daily_budget_usd.label": "Daily AI spending cap (USD)",
-    "admin.config.item.ai.daily_budget_usd.description": "Global daily cap. Set to 0 to disable the cost limit. Configure rates for every provider and model before enabling it.",
+    "admin.config.item.ai.daily_budget_usd.description": "Global daily cap in USD. A value of 0 blocks billable providers until a cap and model rates are configured. Local Ollama and OpenCode remain available.",
     "admin.config.item.ai.model_pricing_json.label": "AI model pricing (JSON)",
     "admin.config.item.ai.model_pricing_json.description": "Rates in USD per one million tokens by provider and model. Keep rates current with account or provider pricing.",
     "admin.config.item.crop_risk.weight_vegetation.label": "Weight: vegetation anomaly",
@@ -4843,7 +4844,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "admin.config.item.crop_risk.weight_flood.label": "Weight: flood",
     "admin.config.item.crop_risk.weight_growth_anomaly.label": "Weight: growth-stage anomaly",
     "admin.ai.dailyBudget.label": "Daily AI spending cap",
-    "admin.ai.dailyBudget.hint": "Global daily limit in USD. Enter 0 to disable it. Set rates for every model before enabling the cap.",
+    "admin.ai.dailyBudget.hint": "Global daily limit in USD. A value of 0 blocks billable providers; local Ollama and OpenCode remain available. Configure every model rate before setting a positive cap.",
     "admin.ai.dailyBudget.unit": "USD/day",
     "admin.ai.modelPricing.label": "AI model pricing (JSON)",
     "admin.ai.modelPricing.hint": "Rates in USD per one million tokens. Use exact provider and model names, and keep them current with provider pricing.",
@@ -5886,6 +5887,7 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoi.drawHint":
       "Draw a polygon or rectangle directly on the map below. The shape automatically becomes the AOI and stays editable/deletable via the map toolbar.",
     "carbon.aoi.selectedLabel": "AOI",
+    "aoi.externalProcessingNotice": "AOI geometry and coordinates needed for analysis may be processed by external service providers, including Google Earth Engine or imagery providers. Basemap providers receive the area currently being viewed. Do not submit sensitive locations without authorization.",
     "carbon.aoi.sizeWarning":
       "Large AOI ({area} km²) - GEE processing (cloud mosaicking, feature extraction, model prediction) may be slow or time out. Consider narrowing the area or increasing the pixel resolution.",
     "carbon.aoi.fromChatbot": "AOI from chatbot",

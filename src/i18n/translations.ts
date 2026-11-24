@@ -228,6 +228,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.aoi.drawHint":
       "Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi AOI dan tetap bisa diedit/dihapus lewat toolbar peta.",
     "carbon.aoi.selectedLabel": "AOI",
+    "aoi.externalProcessingNotice": "Geometri dan koordinat AOI yang diperlukan untuk analisis dapat diproses oleh penyedia layanan eksternal, termasuk Google Earth Engine atau penyedia citra. Penyedia peta dasar menerima area peta yang sedang dilihat. Hindari mengirim lokasi sensitif tanpa izin.",
     "carbon.aoi.sizeWarning":
       "AOI besar ({area} km²) - proses GEE (mosaik awan, ekstraksi fitur, prediksi model) bisa lambat atau timeout. Pertimbangkan mempersempit area atau memperbesar resolusi piksel.",
     "carbon.aoi.fromChatbot": "AOI dari chatbot",
@@ -965,6 +966,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.aoi.drawHint":
       "Draw a polygon or rectangle directly on the map below. The shape automatically becomes the AOI and stays editable/deletable via the map toolbar.",
     "carbon.aoi.selectedLabel": "AOI",
+    "aoi.externalProcessingNotice": "AOI geometry and coordinates needed for analysis may be processed by external service providers, including Google Earth Engine or imagery providers. Basemap providers receive the area currently being viewed. Do not submit sensitive locations without authorization.",
     "carbon.aoi.sizeWarning":
       "Large AOI ({area} km²) - GEE processing (cloud mosaicking, feature extraction, model prediction) may be slow or time out. Consider narrowing the area or increasing the pixel resolution.",
     "carbon.aoi.fromChatbot": "AOI from chatbot",

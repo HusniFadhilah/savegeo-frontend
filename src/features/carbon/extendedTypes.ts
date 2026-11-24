@@ -25,6 +25,22 @@ export interface GreenRankingRow {
   soc_total_mg_c?: number | null;
   litter_total_mg_c?: number | null;
   deadwood_total_mg_c?: number | null;
+  carbon_pool_sources?: Record<string, {
+    dataset: string;
+    name?: string;
+    source_year?: number | null;
+    estimate_year?: number | null;
+    reference_year?: number | null;
+    source_period?: string;
+    resolution_m?: number | null;
+    status: string;
+    coverage_type?: string;
+    valid_coverage_percent?: number | null;
+    total_scope?: string;
+    source_url?: string;
+    method?: string;
+    formula?: string;
+  }>;
 }
 export interface GreenRankingResult {
   run_id: string;

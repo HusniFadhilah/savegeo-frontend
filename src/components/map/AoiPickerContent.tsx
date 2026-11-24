@@ -9,6 +9,7 @@ import AoiUploadTab from "@/features/carbon/components/AoiUploadTab";
 import AoiCompanyTab from "@/features/carbon/components/AoiCompanyTab";
 import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapClickPicker from "@/components/map/MapClickPicker";
+import AoiExternalProcessingNotice from "@/components/map/AoiExternalProcessingNotice";
 import { boundsFromGeoJSON, areaKm2 } from "@/features/carbon/lib/geo";
 import type { AoiState, AoiSource } from "@/features/carbon/types";
 import type { AoiFeature } from "@/types/map";
@@ -79,6 +80,7 @@ export default function AoiPickerContent({ id, aoi, onAoiChange, defaultTab = "a
         ))}
       </div>
 
+      <AoiExternalProcessingNotice />
       <div className="tab-content mb-3">
         {activeTab === "admin" && <AoiRegionTab onApply={(f, n) => applyAoi(f, n, "admin")} />}
         {activeTab === "coordinate" && (

@@ -18,6 +18,18 @@ const LEVELS = [
 ];
 const fmt = (value?: number | null) =>
   value == null ? "—" : value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+const carbonStatusLabel: Record<string, string> = {
+  year_product: "produk tahun terpilih",
+  nearest_year_product: "tahun sumber terdekat",
+  modelled_wall_to_wall: "peta hasil imputasi",
+  sparse_footprint_sample: "sampel footprint GEDI",
+  forward_estimate_from_latest_sample: "estimasi dari sampel terbaru",
+  forward_estimate_from_latest_map: "estimasi dari peta terbaru",
+  derived_estimate: "estimasi turunan",
+  derived_proxy: "proksi turunan",
+  period_model: "model periode",
+  period_extrapolation: "ekstrapolasi periode",
+};
 const formatRankingValue = (value: number | null | undefined, compact: boolean, unit: "%" | "ha" | "Mg C/ha") => {
   if (value == null) return "—";
   const formatted = new Intl.NumberFormat(
@@ -46,6 +58,9 @@ export default function GreenRankingsPanel({
   onRunReady?: (run: (() => Promise<boolean>) | null) => void;
 }) {
   const [level, setLevel] = useState("province");
+  const [rankingYear, setRankingYear] = useState(year);
+  const rankingStartMonth = rankingYear <= 2022 ? 1 : startMonth;
+  const rankingEndMonth = rankingYear <= 2022 ? 12 : endMonth;
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
@@ -68,7 +83,7 @@ export default function GreenRankingsPanel({
     onResultRef.current = onResult;
   }, [onResult]);
   const filters = { level, province, city, district };
-  const storageKey = `savegeo-green:v2:${year}:${startMonth}:${endMonth}:${level}:${province}:${city}:${district}`;
+  const storageKey = `savegeo-green:v4:${rankingYear}:${rankingStartMonth}:${rankingEndMonth}:${level}:${province}:${city}:${district}`;
   scopeRef.current = storageKey;
   const depth = LEVELS.findIndex(([key]) => key === level);
   useEffect(() => {
@@ -116,9 +131,9 @@ export default function GreenRankingsPanel({
     setResult(null);
     const saved = localStorage.getItem(storageKey);
     const params = new URLSearchParams({
-      year: String(year),
-      start_month: String(startMonth),
-      end_month: String(endMonth),
+      year: String(rankingYear),
+      start_month: String(rankingStartMonth),
+      end_month: String(rankingEndMonth),
       level,
     });
     if (province) params.set("province", province);
@@ -175,7 +190,7 @@ export default function GreenRankingsPanel({
     return () => {
       active = false;
     };
-  }, [city, district, endMonth, level, province, startMonth, storageKey, year]);
+  }, [city, district, rankingEndMonth, level, province, rankingStartMonth, storageKey, rankingYear]);
   async function run(fresh = false) {
     setBusy(true);
     setError(null);
@@ -187,9 +202,9 @@ export default function GreenRankingsPanel({
           "carbon",
           {
             extension: "green_rankings",
-            year,
-            start_month: startMonth,
-            end_month: endMonth,
+            year: rankingYear,
+            start_month: rankingStartMonth,
+            end_month: rankingEndMonth,
             aoi: { west: 94, south: -12, east: 142, north: 8 },
             extension_settings: {
               ...filters,
@@ -239,9 +254,9 @@ export default function GreenRankingsPanel({
       const search = (overrides.search ?? tableSearch).trim();
       if (search) params.set("search", search);
       if (result.run_id.startsWith("snapshot:")) {
-        params.set("year", String(year));
-        params.set("start_month", String(startMonth));
-        params.set("end_month", String(endMonth));
+        params.set("year", String(rankingYear));
+        params.set("start_month", String(rankingStartMonth));
+        params.set("end_month", String(rankingEndMonth));
         params.set("level", level);
         if (province) params.set("province", province);
         if (city) params.set("city", city);
@@ -299,9 +314,9 @@ export default function GreenRankingsPanel({
   const firstRow = recordsFiltered === 0 ? 0 : ((result?.page ?? 1) - 1) * (result?.page_size ?? 50) + 1;
   const lastRow = Math.min(recordsFiltered, (result?.page ?? 1) * (result?.page_size ?? 50));
   const exportScopeParams = new URLSearchParams({
-    year: String(year),
-    start_month: String(startMonth),
-    end_month: String(endMonth),
+    year: String(rankingYear),
+    start_month: String(rankingStartMonth),
+    end_month: String(rankingEndMonth),
     level,
   });
   if (province) exportScopeParams.set("province", province);
@@ -338,35 +353,35 @@ export default function GreenRankingsPanel({
       key: "agb",
       label: "AGB · Mg C/ha",
       value: (row: GreenRankingResult["rows"][number]) => row.agb_mg_c_ha,
-      source: "NASA/ORNL biomass carbon, baseline 2010",
+      source: "Sumber AGB dipilih sesuai ketersediaan tahun; resolusi dan cakupan sumber tercatat per hasil.",
       total: (row: GreenRankingResult["rows"][number]) => row.agb_total_mg_c,
     },
     {
       key: "bgb",
       label: "BGB · Mg C/ha",
       value: (row: GreenRankingResult["rows"][number]) => row.bgb_mg_c_ha,
-      source: "NASA/ORNL belowground biomass carbon, baseline 2010",
+      source: "Estimasi BGB untuk tahun terpilih dari rasio spasial BGB/AGB NASA/ORNL 2010; resolusi efektif mengikuti sumber yang lebih kasar.",
       total: (row: GreenRankingResult["rows"][number]) => row.bgb_total_mg_c,
     },
     {
       key: "soc",
       label: "SOC · Mg C/ha",
       value: (row: GreenRankingResult["rows"][number]) => row.soc_mg_c_ha,
-      source: "SoilGrids SOC stock, kedalaman 0–30 cm",
+      source: "OpenLandMap-soildb SOC 0–30 cm, 30 m; sumber tersedia per periode, bukan observasi tahunan.",
       total: (row: GreenRankingResult["rows"][number]) => row.soc_total_mg_c,
     },
     {
       key: "litter",
       label: "Serasah · Mg C/ha",
       value: (row: GreenRankingResult["rows"][number]) => row.litter_mg_c_ha,
-      source: "Proxy hutan tropis dari biomassa 2010 dan faktor iklim UNFCCC; bukan pengukuran langsung",
+      source: "Estimasi proxy hutan tropis dari biomassa dan faktor iklim; bukan pengukuran langsung.",
       total: (row: GreenRankingResult["rows"][number]) => row.litter_total_mg_c,
     },
     {
       key: "deadwood",
       label: "Kayu mati · Mg C/ha",
       value: (row: GreenRankingResult["rows"][number]) => row.deadwood_mg_c_ha,
-      source: "Proxy hutan tropis dari biomassa 2010 dan faktor iklim UNFCCC; bukan pengukuran langsung",
+      source: "Estimasi proxy hutan tropis dari biomassa dan faktor iklim; bukan pengukuran langsung.",
       total: (row: GreenRankingResult["rows"][number]) => row.deadwood_total_mg_c,
     },
   ];
@@ -380,9 +395,10 @@ export default function GreenRankingsPanel({
             content={
               <div className="green-rankings__method-tip">
                 <p>
-                  Persentase tutupan hijau dihitung dari Dynamic World pada periode analisis yang
-                  dipilih. Kelas hijau mencakup pohon, rumput, vegetasi tergenang, tanaman, dan
-                  semak.
+                  Persentase tutupan hijau memakai GLC_FCS30D 30 m untuk 2000–2022 dan Dynamic
+                  World untuk 2023 ke atas. Kelas hijau mencakup pohon, rumput, vegetasi tergenang,
+                  tanaman, dan semak. Perbandingan lintas sumber perlu memperhatikan perbedaan
+                  skema klasifikasi.
                 </p>
                 <p>
                   Nilai dibandingkan terhadap luas penuh batas administrasi. Wilayah dengan cakupan
@@ -397,17 +413,37 @@ export default function GreenRankingsPanel({
                 </p>
                 <p>
                   Hasil disimpan terpisah untuk setiap tahun, periode, tingkat, dan filter wilayah.
-                  Gunakan tombol hitung ulang untuk mengambil kondisi Dynamic World terbaru dan
-                  memperbarui snapshot tahun/periode tersebut.
+                  Gunakan tombol hitung ulang untuk memperbarui snapshot tahun/periode tersebut.
                 </p>
-                <small>Sumber: Google Earth Engine · Dynamic World V1</small>
+                <small>Sumber: GLC_FCS30D dan Dynamic World · Google Earth Engine</small>
               </div>
             }
           />
         </span>
         <p className="small text-muted mb-0">
-          Peringkat tutupan hijau untuk periode analisis yang dipilih.
+          Peringkat tutupan hijau historis dan terbaru.
         </p>
+        <div className="mt-3" style={{ maxWidth: 240 }}>
+          <label className="form-label mb-1" htmlFor="green-ranking-year">Tahun peringkat</label>
+          <input
+            id="green-ranking-year"
+            className="form-control"
+            type="number"
+            min={2000}
+            max={new Date().getFullYear()}
+            step={1}
+            value={rankingYear}
+            disabled={busy}
+            onChange={(event) => {
+              const nextYear = Number(event.target.value);
+              if (Number.isInteger(nextYear) && nextYear >= 2000 && nextYear <= new Date().getFullYear())
+                setRankingYear(nextYear);
+            }}
+          />
+          <small className="text-muted">
+            {rankingYear <= 2022 ? "Data tahunan GLC_FCS30D; periode Januari–Desember." : "Periode mengikuti pilihan bulan analisis."}
+          </small>
+        </div>
       </div>
       <CropPanelAccordion
         title="Wilayah dan tingkat peringkat"
@@ -523,9 +559,10 @@ export default function GreenRankingsPanel({
           </div>
           <p className="small text-muted mt-2 mb-0">
             Nilai pool berupa densitas rata-rata berbobot luas (Mg C/ha); baris kecil menampilkan
-            total pada piksel valid. AGB/BGB memakai referensi NASA/ORNL 2010, SOC SoilGrids
-            0–30 cm, sedangkan serasah dan kayu mati adalah proxy hutan tropis berbasis faktor
-            UNFCCC, bukan hasil pengukuran langsung.
+            total pada piksel valid. Sumber, tahun, resolusi, cakupan, dan status estimasi tiap pool
+            ditampilkan pada setiap sel. BGB diturunkan dari rasio NASA/ORNL 2010; SOC memakai
+            OpenLandMap-soildb 0–30 cm; serasah dan kayu mati adalah proxy hutan tropis berbasis
+            faktor UNFCCC, bukan hasil pengukuran langsung.
           </p>
           {result.snapshot_saved_at && (
             <div className="green-rankings__snapshot-note">
@@ -836,7 +873,18 @@ export default function GreenRankingsPanel({
                             </td>
                           ))}
                           {carbonPools.map((pool) => (
-                            <td key={`carbon-${pool.key}`} title={pool.source}>
+                            <td key={`carbon-${pool.key}`} title={row.carbon_pool_sources?.[pool.key]?.method || pool.source}>
+                              {row.carbon_pool_sources?.[pool.key] && (
+                                <small className="d-block text-muted">
+                                  {row.carbon_pool_sources[pool.key].name || row.carbon_pool_sources[pool.key].dataset}
+                                  {" · "}{row.carbon_pool_sources[pool.key].source_period || row.carbon_pool_sources[pool.key].source_year || "tahun sumber tidak tercatat"}
+                                  {" · "}{row.carbon_pool_sources[pool.key].resolution_m ? `${row.carbon_pool_sources[pool.key].resolution_m} m` : "resolusi tidak tercatat"}
+                                  {" · "}{carbonStatusLabel[row.carbon_pool_sources[pool.key].status] || row.carbon_pool_sources[pool.key].status}
+                                  {row.carbon_pool_sources[pool.key].estimate_year != null && ` · estimasi ${row.carbon_pool_sources[pool.key].estimate_year}`}
+                                  {row.carbon_pool_sources[pool.key].reference_year != null && ` · acuan ${row.carbon_pool_sources[pool.key].reference_year}`}
+                                  {row.carbon_pool_sources[pool.key].valid_coverage_percent != null && ` · cakupan valid ${fmt(row.carbon_pool_sources[pool.key].valid_coverage_percent)}%`}
+                                </small>
+                              )}
                               <span className="d-block">
                                 {formatRankingValue(pool.value(row), compactNumbers, "Mg C/ha")}
                               </span>

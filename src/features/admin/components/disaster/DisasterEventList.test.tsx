@@ -28,9 +28,12 @@ const events: DisasterEvent[] = Array.from({ length: 11 }, (_, index) => ({
 describe("disaster event table numbering", () => {
   beforeEach(() => {
     useI18nStore.getState().setLanguage("id");
-    vi.mocked(listDisasterEvents).mockImplementation(async (params) => ({
-      events: params?.search ? events.filter((event) => event.name === params.search) : events,
-    }));
+    vi.mocked(listDisasterEvents).mockImplementation(async (params) => {
+      const filtered = params?.search ? events.filter((event) => event.name === params.search) : events;
+      const pageSize = params?.page_size ?? 10;
+      const page = Math.max(0, (params?.page ?? 1) - 1);
+      return { events: filtered.slice(page * pageSize, (page + 1) * pageSize), total: filtered.length };
+    });
   });
 
   it("keeps numbers beside the checkbox across pages and resets after filtering", async () => {
@@ -40,7 +43,8 @@ describe("disaster event table numbering", () => {
     expect(within(screen.getByRole("row", { name: /Kejadian 1 Banjir/ })).getAllByRole("cell")[1]).toHaveTextContent("1");
 
     fireEvent.click(screen.getByRole("button", { name: "Halaman berikutnya" }));
-    expect(within(screen.getByRole("row", { name: /Kejadian 11 Banjir/ })).getAllByRole("cell")[1]).toHaveTextContent("11");
+    await waitFor(() => expect(listDisasterEvents).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, page_size: 10 })));
+    expect(within(await screen.findByRole("row", { name: /Kejadian 11 Banjir/ })).getAllByRole("cell")[1]).toHaveTextContent("11");
 
     fireEvent.change(screen.getByPlaceholderText("Cari nama, lokasi..."), { target: { value: "Kejadian 11" } });
     await waitFor(() => {
@@ -51,7 +55,7 @@ describe("disaster event table numbering", () => {
   it("renders hostile event names as text rather than executable markup", async () => {
     const hostileName = '<img src=x onerror="alert(1)">';
     vi.mocked(listDisasterEvents).mockResolvedValueOnce({
-      events: [{ ...events[0], name: hostileName }],
+      events: [{ ...events[0], name: hostileName }], total: 1,
     });
 
     const { container } = render(<DisasterEventList onCreateNew={vi.fn()} onEdit={vi.fn()} onOpen={vi.fn()} />);

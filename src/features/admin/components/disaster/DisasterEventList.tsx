@@ -45,12 +45,8 @@ interface Props {
 const PAGE_SIZE = 10;
 
 /**
- * All-status admin listing of disaster events - `GET /admin/disasters`
- * doesn't speak the DataTables `{draw,recordsTotal,...}` protocol
- * `useServerTable` expects (it just returns `{events: [...]}` filtered by
- * query params), so pagination here is a plain client-side slice of the
- * already-filtered response. Filter bar / table / row-actions styling
- * mirrors CompanyBoundaries.tsx.
+ * All-status admin listing of disaster events. The API returns a bounded,
+ * filtered page and a total count; row actions and filter controls stay here.
  */
 export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadKey }: Props) {
   const t = useI18nStore((state) => state.t);
@@ -59,6 +55,7 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
   const severities = Object.entries(SEVERITY_KEYS).map(([value, key]) => ({ value, label: t(key) }));
   const { notify } = useAdmin();
   const [events, setEvents] = useState<DisasterEvent[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -87,15 +84,22 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
         severity: severityFilter || undefined,
         year: yearFilter || undefined,
         search: search.trim() || undefined,
+        page: page + 1,
+        page_size: PAGE_SIZE,
       });
       setEvents(res.events);
+      const nextTotal = typeof res.total === "number" ? res.total : res.events.length;
+      setTotal(nextTotal);
+      const nextPageCount = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE));
+      if (page >= nextPageCount) setPage(nextPageCount - 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.disaster.loadingFailed"));
       setEvents([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, typeFilter, severityFilter, yearFilter, search, t]);
+  }, [statusFilter, typeFilter, severityFilter, yearFilter, search, page, t]);
 
   useEffect(() => {
     load();
@@ -107,8 +111,8 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
     setSelectedIds([]);
   }, [statusFilter, typeFilter, severityFilter, yearFilter, search]);
 
-  const pageCount = Math.max(1, Math.ceil(events.length / PAGE_SIZE));
-  const pageRows = events.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageRows = events;
   const pageIds = pageRows.map((ev) => ev.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
   const toggleSelected = (id: number) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
@@ -408,8 +412,8 @@ export default function DisasterEventList({ onCreateNew, onEdit, onOpen, reloadK
         <TablePagination
           page={page}
           pageCount={pageCount}
-          recordsTotal={events.length}
-          recordsFiltered={events.length}
+          recordsTotal={total}
+          recordsFiltered={total}
           pageSize={PAGE_SIZE}
           search={search}
           onSearchChange={setSearch}

@@ -461,6 +461,8 @@ export const listDisasterEvents = (params?: {
   severity?: string;
   year?: string | number;
   search?: string;
+  page?: number;
+  page_size?: number;
 }) => {
   const qs = new URLSearchParams();
   if (params) {
@@ -469,7 +471,7 @@ export const listDisasterEvents = (params?: {
     }
   }
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
-  return apiClient.get<{ events: DisasterEvent[] }>(`/admin/disasters${suffix}`, { auth: true });
+  return apiClient.get<{ events: DisasterEvent[]; page?: number; page_size?: number; total?: number; has_more?: boolean }>(`/admin/disasters${suffix}`, { auth: true });
 };
 
 export const getDisasterEvent = (id: number) =>
