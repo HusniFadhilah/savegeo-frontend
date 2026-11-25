@@ -1,15 +1,36 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { apiClient } from "./apiClient";
+import { useI18nStore } from "@/hooks/useI18nStore";
+
+const originalLanguage = useI18nStore.getState().language;
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  useI18nStore.getState().setLanguage(originalLanguage);
 });
 
 it("keeps private server errors out of the displayed message", async () => {
+  useI18nStore.getState().setLanguage("en");
   const payload = { detail: "private-upstream-key", request_id: "audit-request.1" };
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 503, headers: { "content-type": "application/problem+json" } })));
   await expect(apiClient.get("/analysis-jobs/example")).rejects.toMatchObject({
-    status: 503, message: "Server temporarily unavailable (audit-request.1)", payload,
+    status: 503, message: "The service is temporarily unavailable. Please try again shortly. (audit-request.1)", payload,
+  });
+});
+
+it("translates standard API problem codes using the selected language", async () => {
+  useI18nStore.getState().setLanguage("id");
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    type: "urn:savegeo:problem:429",
+    status: 429,
+    code: "rate_limited",
+    detail: "Too many requests",
+  }), { status: 429, headers: { "content-type": "application/problem+json" } })));
+
+  await expect(apiClient.get("/regions/cities")).rejects.toMatchObject({
+    status: 429,
+    code: "rate_limited",
+    message: "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.",
   });
 });
 

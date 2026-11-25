@@ -2,6 +2,7 @@ import { env } from "@/config/env";
 import { clearAuthToken } from "@/services/authService";
 import { handleAppUnauthorized } from "@/services/appSession";
 import { handleUserUnauthorized } from "@/services/userAuthService";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 export class ApiError extends Error {
   status: number;
@@ -33,6 +34,21 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 // milliseconds regardless, so this only changes how long a genuinely slow/
 // hung request is given before erroring out.
 const DEFAULT_TIMEOUT_MS = 180_000;
+
+const API_ERROR_TRANSLATION_KEYS: Record<string, string> = {
+  bad_request: "errors.api.badRequest",
+  validation_error: "errors.api.validation",
+  unauthorized: "errors.api.unauthorized",
+  forbidden: "errors.api.forbidden",
+  not_found: "errors.api.notFound",
+  conflict: "errors.api.conflict",
+  payload_too_large: "errors.api.payloadTooLarge",
+  rate_limited: "errors.api.rateLimited",
+  internal_error: "errors.api.serverUnavailable",
+  upstream_error: "errors.api.upstreamUnavailable",
+  service_unavailable: "errors.api.serverUnavailable",
+  upstream_timeout: "errors.api.timeout",
+};
 
 let onUnauthorized: (() => void) | null = null;
 
@@ -83,14 +99,29 @@ function formatErrorValue(value: unknown): string | null {
   return null;
 }
 
+function translatedErrorCode(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const detail = record.detail && typeof record.detail === "object"
+    ? record.detail as Record<string, unknown> : null;
+  const code = [record.code, detail?.code].find((value): value is string =>
+    typeof value === "string" && /^[a-z0-9_]{1,80}$/i.test(value),
+  );
+  const key = code ? API_ERROR_TRANSLATION_KEYS[code] : undefined;
+  return key ? useI18nStore.getState().t(key) : null;
+}
+
 export function formatApiErrorMessage(payload: unknown, status: number): string {
   if (status >= 500) {
+    const translated = translatedErrorCode(payload) ?? useI18nStore.getState().t("errors.api.serverUnavailable");
     const requestId = payload && typeof payload === "object" && "request_id" in payload
       ? (payload as Record<string, unknown>).request_id : undefined;
     const reference = typeof requestId === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId)
       ? ` (${requestId})` : "";
-    return `Server temporarily unavailable${reference}`;
+    return `${translated}${reference}`;
   }
+  const translated = translatedErrorCode(payload);
+  if (translated) return translated;
   if (typeof payload === "string") {
     const plainText = sanitizeErrorText(payload);
     if (plainText) return plainText;
