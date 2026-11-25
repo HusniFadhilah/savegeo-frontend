@@ -23,7 +23,7 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import MultiSearchableSelect from "@/components/ui/MultiSearchableSelect";
 import AsyncLocationSelect from "@/components/ui/AsyncLocationSelect";
 import InfoTip from "@/components/ui/InfoTip";
-import { withAoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
+import { getAoiRegionSelection, withAoiRegionSelection, type AoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
 
 interface Props {
   onApply: (feature: AoiFeature, name: string) => void;
@@ -78,6 +78,17 @@ function matchRegionOption(
 
 function uniqueOptions(options: RegionOption[]): RegionOption[] {
   return Array.from(new Map(options.map((option) => [option.code, option])).values());
+}
+
+function adminSelectionKey(selection: Extract<AoiRegionSelection, { scope: "admin" }>): string {
+  return JSON.stringify({
+    ...selection,
+    codes: [...selection.codes].sort(),
+    provinceCodes: [...selection.provinceCodes].sort(),
+    cityCodes: [...selection.cityCodes].sort(),
+    districtCodes: [...selection.districtCodes].sort(),
+    villageCodes: [...selection.villageCodes].sort(),
+  });
 }
 
 /**
@@ -168,6 +179,8 @@ export default function AoiRegionTab({ onApply }: Props) {
   const [villageCodes, setVillageCodes] = useState<string[]>([]);
   const provincesRef = useRef(provinces);
   provincesRef.current = provinces;
+  const provincesRequest = useRef<Promise<RegionOption[]> | null>(null);
+  const lastSyncedRegionSelection = useRef("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -193,10 +206,99 @@ export default function AoiRegionTab({ onApply }: Props) {
   const [globalAdmin3Loading, setGlobalAdmin3Loading] = useState(false);
   const [globalAdmin4Loading, setGlobalAdmin4Loading] = useState(false);
 
+  // Shared AOIs restored from a URL already carry the same admin selection
+  // that produced their geometry. Reflect that selection in the dropdowns,
+  // loading only the option lists here so the boundary geometry is not fetched
+  // a second time.
+  const restoredRegion = getAoiRegionSelection(activeAoi?.feature);
+  const restoredAdminSelectionKey = restoredRegion?.scope === "admin" ? adminSelectionKey(restoredRegion) : "";
+
   useEffect(() => {
-    fetchProvinces()
+    if (!restoredAdminSelectionKey || lastSyncedRegionSelection.current === restoredAdminSelectionKey) return;
+    lastSyncedRegionSelection.current = restoredAdminSelectionKey;
+    let cancelled = false;
+    const selection = JSON.parse(restoredAdminSelectionKey) as Extract<AoiRegionSelection, { scope: "admin" }>;
+    const selectedCodes = (codes: string[], level: string) => codes.length
+      ? codes
+      : selection.level === level ? selection.codes : [];
+    const selectedProvinceCodes = selectedCodes(selection.provinceCodes, "province");
+    const selectedCityCodes = selectedCodes(selection.cityCodes, "city");
+    const selectedDistrictCodes = selectedCodes(selection.districtCodes, "district");
+    const selectedVillageCodes = selectedCodes(selection.villageCodes, "village");
+
+    async function syncDropdownsFromRegion() {
+      setScope("admin");
+      setError(null);
+      setProvinceCodes([]);
+      setCityCodes([]);
+      setDistrictCodes([]);
+      setVillageCodes([]);
+      setCities([]);
+      setDistricts([]);
+      setVillages([]);
+
+      try {
+        const nextProvinces = provincesRef.current.length ? provincesRef.current : await fetchProvinces();
+        if (cancelled) return;
+        setProvinces(nextProvinces);
+        const provincesByCode = nextProvinces.filter((option) => selectedProvinceCodes.includes(option.code));
+        if (!provincesByCode.length || provincesByCode.length !== selectedProvinceCodes.length) {
+          setError(t("carbon.aoiRegion.err.selectionNotFound"));
+          return;
+        }
+        setProvinceCodes(provincesByCode.map((option) => option.code));
+
+        if (!selectedCityCodes.length) return;
+        const nextCities = uniqueOptions((await Promise.all(provincesByCode.map((option) => fetchCities(option.code)))).flat());
+        if (cancelled) return;
+        setCities(nextCities);
+        const citiesByCode = nextCities.filter((option) => selectedCityCodes.includes(option.code));
+        if (!citiesByCode.length || citiesByCode.length !== selectedCityCodes.length) {
+          setError(t("carbon.aoiRegion.err.selectionNotFound"));
+          return;
+        }
+        setCityCodes(citiesByCode.map((option) => option.code));
+
+        if (!selectedDistrictCodes.length) return;
+        const nextDistricts = uniqueOptions((await Promise.all(citiesByCode.map((option) => fetchDistricts(option.code)))).flat());
+        if (cancelled) return;
+        setDistricts(nextDistricts);
+        const districtsByCode = nextDistricts.filter((option) => selectedDistrictCodes.includes(option.code));
+        if (!districtsByCode.length || districtsByCode.length !== selectedDistrictCodes.length) {
+          setError(t("carbon.aoiRegion.err.selectionNotFound"));
+          return;
+        }
+        setDistrictCodes(districtsByCode.map((option) => option.code));
+
+        const nextVillages = uniqueOptions((await Promise.all(districtsByCode.map((option) => fetchVillages(option.code)))).flat());
+        if (cancelled) return;
+        setVillages(nextVillages);
+        if (!selectedVillageCodes.length) return;
+        const villagesByCode = nextVillages.filter((option) => selectedVillageCodes.includes(option.code));
+        if (!villagesByCode.length || villagesByCode.length !== selectedVillageCodes.length) {
+          setError(t("carbon.aoiRegion.err.selectionNotFound"));
+          return;
+        }
+        setVillageCodes(villagesByCode.map((option) => option.code));
+      } catch {
+        if (!cancelled) setError(t("carbon.aoiRegion.err.selectionSync"));
+      }
+    }
+
+    void syncDropdownsFromRegion();
+    return () => { cancelled = true; };
+  }, [restoredAdminSelectionKey, t]);
+
+  useEffect(() => {
+    const request = fetchProvinces();
+    provincesRequest.current = request;
+    request
       .then((r) => setProvinces(r ?? []))
       .catch(() => setError(t("carbon.aoiRegion.err.provinces")));
+    void request.then(
+      () => { if (provincesRequest.current === request) provincesRequest.current = null; },
+      () => { if (provincesRequest.current === request) provincesRequest.current = null; },
+    );
     fetchIslands()
       .then((r) => setIslands(r ?? []))
       .catch(() => {
@@ -308,7 +410,9 @@ export default function AoiRegionTab({ onApply }: Props) {
       setDistricts([]);
       setVillages([]);
       try {
-        const nextProvinces = provincesRef.current.length ? provincesRef.current : await fetchProvinces();
+        const nextProvinces = provincesRef.current.length
+          ? provincesRef.current
+          : await (provincesRequest.current ?? fetchProvinces());
         if (cancelled) return;
         setProvinces(nextProvinces);
 
@@ -519,6 +623,22 @@ export default function AoiRegionTab({ onApply }: Props) {
         codes = villageCodes;
         selectedOptions = villages;
       }
+      const selection: Extract<AoiRegionSelection, { scope: "admin" }> = {
+        scope: "admin",
+        level: endpoint,
+        codes,
+        provinceCodes,
+        cityCodes,
+        districtCodes,
+        villageCodes,
+      };
+      const activeSelection = activeAoi ? getAoiRegionSelection(activeAoi.feature) : null;
+      if (
+        activeAoi?.source === "admin" &&
+        activeSelection?.scope === "admin" &&
+        adminSelectionKey(activeSelection) === adminSelectionKey(selection)
+      ) return;
+      lastSyncedRegionSelection.current = adminSelectionKey(selection);
       const geometries = await Promise.all(codes.map((code) => fetchRegionGeometry(endpoint, code)));
       const features = geometries.filter(Boolean).map(toFeature);
       if (!features.length) throw new Error(t("carbon.aoiRegion.err.geometryNotFound"));
@@ -528,18 +648,7 @@ export default function AoiRegionTab({ onApply }: Props) {
       const name = codes
         .map((code) => selectedOptions.find((option) => option.code === code)?.name || code)
         .join(", ");
-      onApply(
-        withAoiRegionSelection(feature, {
-          scope: "admin",
-          level: endpoint,
-          codes,
-          provinceCodes,
-          cityCodes,
-          districtCodes,
-          villageCodes,
-        }),
-        name,
-      );
+      onApply(withAoiRegionSelection(feature, selection), name);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("carbon.aoiRegion.err.loadRegionFailed"));
     } finally {

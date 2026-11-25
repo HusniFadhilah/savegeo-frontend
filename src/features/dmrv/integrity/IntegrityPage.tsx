@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import DashboardShell from "@/components/layout/DashboardShell";
 import DmrvPageHeader from "../DmrvPageHeader";
-import { getProject, listMonitoringPeriods } from "../api";
-import type { MonitoringPeriod, Project } from "../types";
+import { getProject, listBoundaries, listMonitoringPeriods } from "../api";
+import type { BoundaryVersion, MonitoringPeriod, Project } from "../types";
 import AccountingPanel from "./AccountingPanel";
 import { CreditLedgerPanel, MethodologyPanel, SatelliteProvenancePanel } from "./AdvancedPanels";
 import ChecklistPanel from "./ChecklistPanel";
 import { RegistryPanel, ValidationPanel } from "./DataPanels";
 import DocumentsPanel from "./DocumentsPanel";
+import CarbonOperationsPanel, { AutomaticImageProvenance } from "./CarbonOperationsPanel";
 import RisksPanel, { IssueForm } from "./RisksPanel";
 import SettingsPanel from "./SettingsPanel";
 import { downloadWorkspace, getWorkspace } from "./api";
@@ -20,6 +21,7 @@ const SECTIONS = [
   ["readiness", "bi-clipboard-check", "Kesiapan", "Readiness"],
   ["risks", "bi-shield-exclamation", "Risiko", "Risks"],
   ["accounting", "bi-calculator", "Mitigasi", "Mitigation"],
+  ["carbon", "bi-tree", "MRV karbon", "Carbon MRV"],
   ["methodology", "bi-journal-check", "Metodologi & data", "Methodology & data"],
   ["registry", "bi-intersect", "Registry", "Registry"],
   ["credits", "bi-arrow-left-right", "Siklus kredit", "Credit lifecycle"],
@@ -38,6 +40,7 @@ export default function IntegrityPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [workspace, setWorkspace] = useState<IntegrityWorkspace | null>(null);
   const [periods, setPeriods] = useState<MonitoringPeriod[]>([]);
+  const [boundaries, setBoundaries] = useState<BoundaryVersion[]>([]);
   const [section, setSection] = useState<Section>("readiness");
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -51,12 +54,14 @@ export default function IntegrityPage() {
       getProject(projectId),
       getWorkspace(projectId),
       listMonitoringPeriods(projectId),
+      listBoundaries(projectId),
     ])
-      .then(([nextProject, nextWorkspace, nextPeriods]) => {
+      .then(([nextProject, nextWorkspace, nextPeriods, nextBoundaries]) => {
         if (active) {
           setProject(nextProject);
           setWorkspace(nextWorkspace);
           setPeriods(nextPeriods);
+          setBoundaries(nextBoundaries);
         }
       })
       .catch((cause: unknown) => {
@@ -258,9 +263,14 @@ export default function IntegrityPage() {
                   records={workspace.records.filter((r) => r.category === "accounting")}
                 />
               ) : null}
+              {section === "carbon" ? <CarbonOperationsPanel {...props} periods={periods} boundaries={boundaries} /> : null}
               {section === "methodology" ? (
                 <>
                   <MethodologyPanel {...props} />
+                  <h3 className="integrity-subheading">
+                    {c("Provenance otomatis dari citra", "Automatic image provenance")}
+                  </h3>
+                  <AutomaticImageProvenance projectId={projectId} />
                   <h3 className="integrity-subheading">
                     {c("Jejak mutu citra satelit", "Satellite data quality trail")}
                   </h3>

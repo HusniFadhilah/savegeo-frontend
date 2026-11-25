@@ -1,0 +1,115 @@
+.result-map-legend-control {
+  position: absolute;
+  z-index: 1200;
+  top: 80px;
+  right: 10px;
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  color: #263746;
+  font: 13px/1.4 "Montserrat", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.btn.btn-sm.result-map-icon-button {
+  display: inline-flex;
+  width: 34px;
+  height: 32px;
+  min-width: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+}
+
+.result-map-legend-control__trigger {
+  display: flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #cbd5dc;
+  border-radius: 4px;
+  background: #fff;
+  color: #334155;
+  font-size: 1rem;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px #102a3520;
+}
+
+.result-map-legend-control__trigger:hover,
+.result-map-legend-control__trigger[aria-expanded="true"] {
+  border-color: #54856c;
+  background: #edf7f2;
+  color: #176b3a;
+}
+
+.result-map-legend-control__trigger:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.result-map-legend-control__popover {
+  position: absolute;
+  top: 0;
+  right: 38px;
+  width: min(320px, calc(100% - 54px));
+  max-height: min(60vh, 480px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #cbd5dc;
+  border-radius: 9px;
+  background: #fff;
+  color: #263746;
+  box-shadow: 0 10px 32px #102a3540;
+  pointer-events: auto;
+}
+
+.result-map-legend-control__heading {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.result-map-legend-control__content .legend {
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.result-map-legend-control__content .legend + .legend {
+  margin-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.result-map-legend-control__content .legend > .fw-semibold {
+  margin-bottom: 6px !important;
+  font-size: 12px;
+}
+
+[data-theme="dark"] .result-map-legend-control__trigger {
+  border-color: #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .result-map-legend-control__trigger:hover,
+[data-theme="dark"] .result-map-legend-control__trigger[aria-expanded="true"] {
+  border-color: #4ade80;
+  background: #1e293b;
+  color: #bbf7d0;
+}
+
+[data-theme="dark"] .result-map-legend-control__popover {
+  border-color: #334155;
+  background: #111827;
+  color: #e5e7eb;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+}
+
+[data-theme="dark"] .result-map-legend-control__content .legend + .legend {
+  border-color: #334155;
+}

@@ -493,3 +493,51 @@
 [data-theme="dark"] .integrity-methodology-item h4 {
   color: #d6e7d9;
 }
+.carbon-operations-tabs {
+  margin: 0 0 1.25rem;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.carbon-operations-tabs button {
+  white-space: nowrap;
+}
+
+.integrity-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.integrity-feature-grid > .integrity-editor {
+  margin: 0;
+}
+
+.integrity-auto-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.integrity-auto-metadata div {
+  min-width: 0;
+}
+
+.integrity-auto-metadata dt {
+  color: var(--bs-secondary-color, #64748b);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.integrity-auto-metadata dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .integrity-feature-grid {
+    grid-template-columns: 1fr;
+  }
+}

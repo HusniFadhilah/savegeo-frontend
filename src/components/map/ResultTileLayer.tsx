@@ -1,5 +1,5 @@
 import RasterResolutionNotice from "./RasterResolutionNotice";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { RESULT_PANE, RESULT_PANE_Z_INDEX } from "@/config/mapPanes";
@@ -13,6 +13,8 @@ interface Props {
   opacity: number;
   attribution?: string;
   resolutionM?: number;
+  /** Redraw the existing tile layer without changing its (possibly signed) URL. */
+  refreshToken?: number;
   /** AOI used to keep result pixels inside the selected analysis geometry. */
   clipGeometry?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
 }
@@ -55,9 +57,11 @@ export default function ResultTileLayer({
   opacity,
   attribution,
   resolutionM,
+  refreshToken = 0,
   clipGeometry,
 }: Props) {
   const map = useMap();
+  const layerRef = useRef<L.TileLayer | null>(null);
 
   useEffect(() => {
     if (!clipGeometry) return;
@@ -117,12 +121,18 @@ export default function ResultTileLayer({
     });
     const stopRetrying = installResultTileRetry(layer, map);
     layer.addTo(map);
+    layerRef.current = layer;
     return () => {
       stopRetrying();
+      if (layerRef.current === layer) layerRef.current = null;
       map.removeLayer(layer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, layerKey, tileUrl, resolutionM]);
+
+  useEffect(() => {
+    if (refreshToken > 0) layerRef.current?.redraw();
+  }, [refreshToken]);
 
   useEffect(() => {
     map.eachLayer((layer) => {

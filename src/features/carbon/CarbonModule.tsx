@@ -1295,9 +1295,6 @@ export default function CarbonModule() {
               </>
             )}
           </button>}
-          {!aoi && !directLoadEnabled && analysisType !== "green_rankings" && analysisType !== "bluecarbon" && analysisType !== "productivity" && (
-            <small className="text-muted d-block mt-2">{t("carbon.sidebar.selectAoiHint")}</small>
-          )}
         </div>
       </div>
         )}

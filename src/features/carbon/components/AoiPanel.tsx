@@ -132,6 +132,16 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
               {t(`carbon.aoi.tab.${key}`)}
             </button>
           ))}
+          <InfoTip
+            align="end"
+            label={t("carbon.aoi.infoLabel")}
+            content={(
+              <>
+                <span className="d-block">{t("carbon.aoi.privacyNotice")}</span>
+                <span className="d-block mt-2">{t("carbon.aoi.selectHint")}</span>
+              </>
+            )}
+          />
         </div>
 
         <AoiExternalProcessingNotice />
