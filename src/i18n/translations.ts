@@ -1553,6 +1553,39 @@ export const translations: Record<Language, Record<string, string>> = {
   },
 };
 
+const apiErrorTranslations: Record<Language, Record<string, string>> = {
+  id: {
+    "errors.api.badRequest": "Permintaan tidak valid.",
+    "errors.api.validation": "Data yang dikirim belum sesuai format.",
+    "errors.api.unauthorized": "Silakan masuk untuk melanjutkan.",
+    "errors.api.forbidden": "Anda tidak memiliki izin untuk melakukan tindakan ini.",
+    "errors.api.notFound": "Data yang diminta tidak ditemukan.",
+    "errors.api.conflict": "Permintaan tidak dapat diproses karena bertentangan dengan kondisi saat ini.",
+    "errors.api.payloadTooLarge": "Ukuran data yang dikirim melebihi batas.",
+    "errors.api.rateLimited": "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.",
+    "errors.api.serverUnavailable": "Layanan sedang tidak tersedia. Coba lagi sebentar lagi.",
+    "errors.api.upstreamUnavailable": "Layanan data eksternal sedang tidak merespons.",
+    "errors.api.timeout": "Layanan data eksternal terlalu lama merespons.",
+  },
+  en: {
+    "errors.api.badRequest": "The request is invalid.",
+    "errors.api.validation": "Some submitted data is not in the expected format.",
+    "errors.api.unauthorized": "Sign in to continue.",
+    "errors.api.forbidden": "You do not have permission to perform this action.",
+    "errors.api.notFound": "The requested data could not be found.",
+    "errors.api.conflict": "The request conflicts with the current state and could not be processed.",
+    "errors.api.payloadTooLarge": "The submitted data exceeds the allowed size.",
+    "errors.api.rateLimited": "Too many requests. Wait a moment, then try again.",
+    "errors.api.serverUnavailable": "The service is temporarily unavailable. Please try again shortly.",
+    "errors.api.upstreamUnavailable": "The external data service is not responding.",
+    "errors.api.timeout": "The external data service took too long to respond.",
+  },
+};
+
+for (const language of ["id", "en"] as const) {
+  Object.assign(translations[language], apiErrorTranslations[language]);
+}
+
 // dMRV copy lives with its feature; keys are namespaced `dmrv.*`.
 for (const language of ["id", "en"] as const) {
   Object.assign(translations[language], dmrvTranslations[language]);
