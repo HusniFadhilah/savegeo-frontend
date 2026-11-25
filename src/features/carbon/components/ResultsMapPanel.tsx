@@ -7,6 +7,7 @@ import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import ResultTileLayer from "@/components/map/ResultTileLayer";
 import LayerOpacityControl from "@/components/map/LayerOpacityControl";
 import MapLegend from "@/components/map/MapLegend";
+import ResultMapLegendControl from "@/components/map/ResultMapLegendControl";
 import SwipeCompareMap, { type SwipeOrientation } from "@/components/map/SwipeCompareMap";
 import { registerMap } from "@/features/chatbot/mapActions";
 import { registerUiCommands } from "@/features/chatbot/uiCommandBus";
@@ -17,6 +18,7 @@ import type { AnalysisResultsBundle } from "@/features/reports/export";
 import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 import type { MapLegendEntry } from "@/types/map";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 interface ResultTab {
   key: string;
@@ -62,12 +64,7 @@ function isCarbonPoolTab(key: string) {
   return key === "carbon_estimated" || key.startsWith("carbon_pool:");
 }
 
-function addRefreshToken(url: string, token: number) {
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}_refresh=${token}`;
-}
-
-function buildTabs(results: AnalysisResultsBundle, showReference: boolean, refreshToken: number): ResultTab[] {
+function buildTabs(results: AnalysisResultsBundle, showReference: boolean): ResultTab[] {
   const tabs: ResultTab[] = [];
 
   if (results.vegetation) {
@@ -151,11 +148,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean, refre
   for (const [key, result] of Object.entries(results.carbonExtensions || {})) {
     tabs.push({ key: `carbon_extension:${key}`, label: result.carbon_reference?.name || key.toUpperCase(), icon: "bi-tree", tileUrl: result.carbon_estimated.tile_url, resolutionM: result.carbon_reference?.resolution });
   }
-  return refreshToken > 0
-    ? tabs.map((tab) => tab.tileUrl && isCarbonPoolTab(tab.key)
-      ? { ...tab, tileUrl: addRefreshToken(tab.tileUrl, refreshToken) }
-      : tab)
-    : tabs;
+  return tabs;
 }
 
 function buildLegend(
@@ -336,8 +329,9 @@ export default function ResultsMapPanel({
   analysisDate,
   onCarbonVisualizationChange,
 }: Props) {
+  const t = useI18nStore((state) => state.t);
   const [refreshToken, setRefreshToken] = useState(0);
-  const tabs = useMemo(() => buildTabs(results, showReference, refreshToken), [results, showReference, refreshToken]);
+  const tabs = useMemo(() => buildTabs(results, showReference), [results, showReference]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
   const [opacity, setOpacity] = useState(1);
 
@@ -461,11 +455,13 @@ export default function ResultsMapPanel({
             {tabs.length > 1 && (
               <button
                 type="button"
-                className={`btn btn-sm ${compareOn ? "btn-primary" : "btn-outline-secondary"} flex-shrink-0`}
+                className={`btn btn-sm result-map-icon-button ${compareOn ? "btn-primary" : "btn-outline-secondary"} flex-shrink-0`}
                 onClick={() => setCompareOn((v) => !v)}
-                title="Bandingkan dua layer dengan slider geser"
+                title={t("carbon.resultsMap.compareTitle")}
+                aria-label={t("carbon.resultsMap.compareTitle")}
+                aria-pressed={compareOn}
               >
-                <i className="fas fa-arrows-alt-h me-1" /> Bandingkan
+                <i className="bi bi-arrow-left-right" aria-hidden="true" />
               </button>
             )}
             {canAdjustStretch && (
@@ -511,12 +507,12 @@ export default function ResultsMapPanel({
             {activeTab && isCarbonPoolTab(activeTab.key) && (
               <button
                 type="button"
-                className="btn btn-sm btn-outline-secondary flex-shrink-0"
+                className="btn btn-sm btn-outline-secondary result-map-icon-button flex-shrink-0"
                 onClick={() => setRefreshToken((value) => value + 1)}
-                title={`Muat ulang tile layer ${activeTab.label}`}
-                aria-label={`Muat ulang tile layer ${activeTab.label}`}
+                title={t("carbon.resultsMap.refreshLayer", { layer: activeTab.label })}
+                aria-label={t("carbon.resultsMap.refreshLayer", { layer: activeTab.label })}
               >
-                <i className="bi bi-arrow-clockwise me-1" /> Refresh
+                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -565,19 +561,17 @@ export default function ResultsMapPanel({
               <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
               {aoi?.feature && <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
               {aoi && <FitResultAoi aoi={aoi} zoom={zoom} />}
+              {(legend.entries.length > 0 || legend.scale || compareLegend.entries.length > 0 || compareLegend.scale) && (
+                <ResultMapLegendControl>
+                  {legend.entries.length > 0 || legend.scale ? (
+                    <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
+                  ) : null}
+                  {compareLegend.entries.length > 0 || compareLegend.scale ? (
+                    <MapLegend title={compareLegend.title} entries={compareLegend.entries} scale={compareLegend.scale} />
+                  ) : null}
+                </ResultMapLegendControl>
+              )}
             </SwipeCompareMap>
-            <div className="row g-2 mt-1">
-              {(legend.entries.length > 0 || legend.scale) && (
-                <div className="col-md-6">
-                  <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
-                </div>
-              )}
-              {(compareLegend.entries.length > 0 || compareLegend.scale) && (
-                <div className="col-md-6">
-                  <MapLegend title={compareLegend.title} entries={compareLegend.entries} scale={compareLegend.scale} />
-                </div>
-              )}
-            </div>
           </div>
         ) : (
           <div style={{ position: "relative" }}>
@@ -600,17 +594,18 @@ export default function ResultsMapPanel({
                     tileUrl={activeTab.tileUrl}
                     resolutionM={activeTab.resolutionM}
                     opacity={opacity}
+                    refreshToken={refreshToken}
                     clipGeometry={aoi?.feature}
                   />
                   <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
                 </>
               )}
+              {(legend.entries.length > 0 || legend.scale) && (
+                <ResultMapLegendControl>
+                  <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
+                </ResultMapLegendControl>
+              )}
             </MapView>
-            {(legend.entries.length > 0 || legend.scale) && (
-              <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 1000, maxWidth: 220 }}>
-                <MapLegend title={legend.title} entries={legend.entries} scale={legend.scale} />
-              </div>
-            )}
           </div>
         )}
 

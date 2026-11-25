@@ -799,6 +799,11 @@
   box-shadow: 0 2px 6px rgba(46, 125, 50, 0.35);
 }
 
+.aoi-tabs > .inline-info-tip {
+  align-self: center;
+  margin-left: auto;
+}
+
 /* Generic equal-width segmented control (AoiRegionTab scope picker, etc.) */
 .segmented-control {
   display: flex;

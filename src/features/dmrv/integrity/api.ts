@@ -23,6 +23,42 @@ export const getReviewerPriority = (id: string) =>
   apiClient.get<ReviewerPriority>(`${base(id)}/risk-priority`, AUTH);
 export const getCreditLedger = (id: string) =>
   apiClient.get<CreditLedger>(`${base(id)}/credit-events`, AUTH);
+export interface AutomaticImageSnapshot {
+  id: string;
+  kind: string;
+  snapshot_hash: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  quality_warnings: string[];
+  attestation: string;
+}
+export interface RegistryConnectorStatus {
+  configured: boolean;
+  provider: string | null;
+  read_only: boolean;
+  write_operations: boolean;
+  status: string;
+  required_environment: string[];
+  response_contract: string;
+  official_docs: Record<string, string>;
+  message: string;
+}
+export const getRegistryConnectorStatus = (id: string) =>
+  apiClient.get<RegistryConnectorStatus>(`${base(id)}/registry-connector/status`, AUTH);
+export const syncOfficialRegistry = (id: string, registry: string, externalProjectId: string, key: string) =>
+  apiClient.post<IntegrityRecord>(`${base(id)}/registry-connector/sync`, {
+    registry, external_project_id: externalProjectId, record_key: key,
+  }, { ...AUTH, headers: { "If-Match": '"0"' } });
+export const getAutomaticImageSnapshots = (id: string) =>
+  apiClient.get<{ items: AutomaticImageSnapshot[] }>(`${base(id)}/image-provenance/snapshots`, AUTH);
+export const importRegistryCsv = (id: string, file: File, registry: string, key: string, sourceUrl = "") => {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("registry", registry);
+  form.append("key", key);
+  form.append("source_url", sourceUrl);
+  return apiClient.upload<IntegrityRecord>(`${base(id)}/registry-import`, form, match(0));
+};
 export const appendCreditEvent = (id: string, payload: object) =>
   apiClient.post(`${base(id)}/credit-events`, payload, AUTH);
 export const getRecord = (id: string, recordId: string) =>
@@ -71,6 +107,12 @@ export const reviewRecord = (
     { decision, reason },
     match(record.revision),
   );
+export const deploySamplingPlanPlots = (id: string, recordId: string) =>
+  apiClient.post<{ plot_count: number; created_plot_codes: string[]; warnings: string[] }>(
+    `${base(id)}/records/${recordId}/deploy-plots`,
+    {},
+    AUTH,
+  );
 export const getHistory = (id: string, recordId: string) =>
   apiClient.get<{ revision: number; sha256: string; snapshot: IntegrityRecord }[]>(
     `${base(id)}/records/${recordId}/history`,
@@ -116,6 +158,14 @@ export function saveBlob(blob: Blob, filename: string) {
   anchor.download = filename;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export async function downloadSamplingFieldTemplate(id: string, recordId: string) {
+  const response = await fetch(`${env.apiBaseUrl}${base(id)}/records/${encodeURIComponent(recordId)}/field-template.csv`, { credentials: "include" });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new ApiError(body?.message || `Download failed (${response.status})`, response.status);
+  }
+  saveBlob(await response.blob(), `savegeo-sampling-plan-${recordId.slice(0, 8)}.csv`);
 }
 export async function downloadWorkspace(id: string, document?: IntegrityDocument) {
   const path = document ? `${base(id)}/documents/${document.id}/download` : `${base(id)}/export`;

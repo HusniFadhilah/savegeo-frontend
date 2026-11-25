@@ -10,7 +10,15 @@ export type Category =
   | "scan"
   | "grievance"
   | "methodology_check"
-  | "satellite_provenance";
+  | "satellite_provenance"
+  | "methodology_calc"
+  | "vmd0054_leakage"
+  | "uncertainty"
+  | "blue_carbon"
+  | "sampling_plan"
+  | "registry_import"
+  | "safeguard_metric"
+  | "community_benefit";
 export interface Criterion {
   category: Category;
   key: string;

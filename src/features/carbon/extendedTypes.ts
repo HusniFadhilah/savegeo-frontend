@@ -82,3 +82,31 @@ export interface GreenRankingResult {
   boundary_source: string;
   source_url: string;
 }
+
+export interface GreenRankingHistoryPoint {
+  year: number;
+  rank?: number | null;
+  green_percent: number | null;
+}
+
+export interface GreenRankingHistoryRegion {
+  code: string;
+  name: string;
+  points: GreenRankingHistoryPoint[];
+}
+
+export interface GreenRankingHistoryYear {
+  year: number;
+  snapshot_saved_at: string;
+  eligible_regions: number;
+  top10: GreenRankingRow[];
+}
+
+export interface GreenRankingHistory {
+  selected_year: number;
+  cohort_year: number | null;
+  available_years: number[];
+  years: GreenRankingHistoryYear[];
+  trend: GreenRankingHistoryRegion[];
+  period: { start_month: number; end_month: number; level: string };
+}

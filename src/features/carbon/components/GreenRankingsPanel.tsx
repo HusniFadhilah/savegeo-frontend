@@ -3,10 +3,11 @@ import { fetchProvinces, fetchCities, fetchDistricts } from "@/services/analysis
 import { runAnalysisJob } from "@/services/analysisJobs";
 import { apiClient } from "@/services/apiClient";
 import { env } from "@/config/env";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import InfoTip from "@/components/ui/InfoTip";
 import type { RegionOption } from "@/types/api";
-import type { GreenRankingResult } from "../extendedTypes";
+import type { GreenRankingHistory, GreenRankingResult } from "../extendedTypes";
 import CropPanelAccordion from "@/features/crop-monitoring/components/CropPanelAccordion";
 import "./green-rankings-panel.css";
 
@@ -57,10 +58,11 @@ export default function GreenRankingsPanel({
   onResult: (result: GreenRankingResult) => void;
   onRunReady?: (run: (() => Promise<boolean>) | null) => void;
 }) {
+  const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
   const [level, setLevel] = useState("province");
-  const [rankingYear, setRankingYear] = useState(year);
-  const rankingStartMonth = rankingYear <= 2022 ? 1 : startMonth;
-  const rankingEndMonth = rankingYear <= 2022 ? 12 : endMonth;
+  const rankingStartMonth = year <= 2022 ? 1 : startMonth;
+  const rankingEndMonth = year <= 2022 ? 12 : endMonth;
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
@@ -68,6 +70,10 @@ export default function GreenRankingsPanel({
   const [cities, setCities] = useState<RegionOption[]>([]);
   const [districts, setDistricts] = useState<RegionOption[]>([]);
   const [result, setResult] = useState<GreenRankingResult | null>(null);
+  const [history, setHistory] = useState<GreenRankingHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
   const [tableSearch, setTableSearch] = useState("");
   const [tableSort, setTableSort] = useState("rank");
   const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("asc");
@@ -83,7 +89,7 @@ export default function GreenRankingsPanel({
     onResultRef.current = onResult;
   }, [onResult]);
   const filters = { level, province, city, district };
-  const storageKey = `savegeo-green:v4:${rankingYear}:${rankingStartMonth}:${rankingEndMonth}:${level}:${province}:${city}:${district}`;
+  const storageKey = `savegeo-green:v4:${year}:${rankingStartMonth}:${rankingEndMonth}:${level}:${province}:${city}:${district}`;
   scopeRef.current = storageKey;
   const depth = LEVELS.findIndex(([key]) => key === level);
   useEffect(() => {
@@ -128,10 +134,45 @@ export default function GreenRankingsPanel({
   }, [city]);
   useEffect(() => {
     let active = true;
+    const params = new URLSearchParams({
+      year: String(year),
+      start_month: String(rankingStartMonth),
+      end_month: String(rankingEndMonth),
+      level,
+    });
+    if (province) params.set("province", province);
+    if (city) params.set("city", city);
+    if (district) params.set("district", district);
+    setHistory(null);
+    setHistoryError(false);
+    setHistoryLoading(true);
+    void apiClient
+      .get<GreenRankingHistory>(`/carbon/green-rankings/history?${params}`, { auth: "app" })
+      .then((data) => {
+        if (active) {
+          setHistory(data);
+          setHistoryError(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setHistory(null);
+          setHistoryError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [city, district, historyRefreshToken, level, province, rankingEndMonth, rankingStartMonth, result?.snapshot_saved_at, year]);
+  useEffect(() => {
+    let active = true;
     setResult(null);
     const saved = localStorage.getItem(storageKey);
     const params = new URLSearchParams({
-      year: String(rankingYear),
+      year: String(year),
       start_month: String(rankingStartMonth),
       end_month: String(rankingEndMonth),
       level,
@@ -190,7 +231,7 @@ export default function GreenRankingsPanel({
     return () => {
       active = false;
     };
-  }, [city, district, rankingEndMonth, level, province, rankingStartMonth, storageKey, rankingYear]);
+  }, [city, district, level, province, rankingEndMonth, rankingStartMonth, storageKey, year]);
   async function run(fresh = false) {
     setBusy(true);
     setError(null);
@@ -202,7 +243,7 @@ export default function GreenRankingsPanel({
           "carbon",
           {
             extension: "green_rankings",
-            year: rankingYear,
+            year,
             start_month: rankingStartMonth,
             end_month: rankingEndMonth,
             aoi: { west: 94, south: -12, east: 142, north: 8 },
@@ -220,6 +261,7 @@ export default function GreenRankingsPanel({
         setResult(next);
         onResult(next);
       } while (keepRunning.current && !next.done);
+      if (next?.done) setHistoryRefreshToken((value) => value + 1);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Peringkat gagal dihitung.");
     } finally {
@@ -254,7 +296,7 @@ export default function GreenRankingsPanel({
       const search = (overrides.search ?? tableSearch).trim();
       if (search) params.set("search", search);
       if (result.run_id.startsWith("snapshot:")) {
-        params.set("year", String(rankingYear));
+        params.set("year", String(year));
         params.set("start_month", String(rankingStartMonth));
         params.set("end_month", String(rankingEndMonth));
         params.set("level", level);
@@ -314,7 +356,7 @@ export default function GreenRankingsPanel({
   const firstRow = recordsFiltered === 0 ? 0 : ((result?.page ?? 1) - 1) * (result?.page_size ?? 50) + 1;
   const lastRow = Math.min(recordsFiltered, (result?.page ?? 1) * (result?.page_size ?? 50));
   const exportScopeParams = new URLSearchParams({
-    year: String(rankingYear),
+    year: String(year),
     start_month: String(rankingStartMonth),
     end_month: String(rankingEndMonth),
     level,
@@ -385,6 +427,37 @@ export default function GreenRankingsPanel({
       total: (row: GreenRankingResult["rows"][number]) => row.deadwood_total_mg_c,
     },
   ];
+  const trendYears = history?.available_years ?? [];
+  const trendWidth = 900;
+  const trendHeight = 300;
+  const trendMargin = { top: 18, right: 18, bottom: 38, left: 48 };
+  const trendPlotWidth = trendWidth - trendMargin.left - trendMargin.right;
+  const trendPlotHeight = trendHeight - trendMargin.top - trendMargin.bottom;
+  const trendMinYear = trendYears[0] ?? year;
+  const trendMaxYear = trendYears[trendYears.length - 1] ?? year;
+  const xForYear = (value: number) =>
+    trendMargin.left + (trendMaxYear === trendMinYear ? trendPlotWidth / 2 : ((value - trendMinYear) / (trendMaxYear - trendMinYear)) * trendPlotWidth);
+  const yForPercent = (value: number) => trendMargin.top + ((100 - value) / 100) * trendPlotHeight;
+  const trendColors = ["#218346", "#2874b8", "#d59421", "#8759b5", "#15989b", "#da5c54", "#698a37", "#be5c9a", "#4e6c91", "#9a744c"];
+  const trendSeries = (history?.trend ?? []).map((region, index) => {
+    const points = [...region.points]
+      .filter((point) => point.green_percent != null)
+      .sort((a, b) => a.year - b.year);
+    const segments: typeof points[] = [];
+    for (const point of points) {
+      const segment = segments[segments.length - 1];
+      if (segment && point.year === segment[segment.length - 1].year + 1) segment.push(point);
+      else segments.push([point]);
+    }
+    return { ...region, color: trendColors[index % trendColors.length], points, segments };
+  });
+  const formatTrendPercent = (value: number | null) =>
+    value == null
+      ? "—"
+      : new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }).format(value) + "%";
   return (
     <section className="green-rankings" aria-label="Peringkat wilayah hijau">
       <div className="green-rankings__intro">
@@ -421,29 +494,11 @@ export default function GreenRankingsPanel({
           />
         </span>
         <p className="small text-muted mb-0">
-          Peringkat tutupan hijau historis dan terbaru.
+          {t("carbon.greenRankings.intro")}
+          <strong className="green-rankings__selected-year">
+            {t("carbon.greenRankings.selectedYear", { year })}
+          </strong>
         </p>
-        <div className="mt-3" style={{ maxWidth: 240 }}>
-          <label className="form-label mb-1" htmlFor="green-ranking-year">Tahun peringkat</label>
-          <input
-            id="green-ranking-year"
-            className="form-control"
-            type="number"
-            min={2000}
-            max={new Date().getFullYear()}
-            step={1}
-            value={rankingYear}
-            disabled={busy}
-            onChange={(event) => {
-              const nextYear = Number(event.target.value);
-              if (Number.isInteger(nextYear) && nextYear >= 2000 && nextYear <= new Date().getFullYear())
-                setRankingYear(nextYear);
-            }}
-          />
-          <small className="text-muted">
-            {rankingYear <= 2022 ? "Data tahunan GLC_FCS30D; periode Januari–Desember." : "Periode mengikuti pilihan bulan analisis."}
-          </small>
-        </div>
       </div>
       <CropPanelAccordion
         title="Wilayah dan tingkat peringkat"
@@ -938,6 +993,148 @@ export default function GreenRankingsPanel({
           </CropPanelAccordion>
         </div>
       )}
+      <section className="green-rankings__history" aria-labelledby="green-ranking-history-title">
+        <div className="green-rankings__history-heading">
+          <div>
+            <span className="green-rankings__eyebrow">
+              <i className="bi bi-clock-history" aria-hidden="true" /> {t("carbon.greenRankings.historyEyebrow")}
+            </span>
+            <h2 id="green-ranking-history-title">{t("carbon.greenRankings.historyTitle")}</h2>
+            <p>{t("carbon.greenRankings.historyDescription")}</p>
+          </div>
+          <span className="green-rankings__year-chip">
+            <i className="bi bi-calendar3" aria-hidden="true" /> {year}
+          </span>
+        </div>
+        {historyLoading && !history ? (
+          <div className="green-rankings__history-empty" role="status">
+            <span className="spinner-border spinner-border-sm" aria-hidden="true" /> {t("carbon.greenRankings.historyLoading")}
+          </div>
+        ) : historyError ? (
+          <div className="alert alert-warning mb-0" role="alert">{t("carbon.greenRankings.historyError")}</div>
+        ) : !history?.years.length ? (
+          <div className="green-rankings__history-empty">
+            <i className="bi bi-database-exclamation" aria-hidden="true" />
+            <span>{t("carbon.greenRankings.historyEmpty", { year })}</span>
+          </div>
+        ) : (
+          <>
+            <article className="green-rankings__trend-card">
+              <div className="green-rankings__history-card-heading">
+                <div>
+                  <h3>{t("carbon.greenRankings.trendTitle", { year: history.cohort_year ?? year })}</h3>
+                  <p>{t("carbon.greenRankings.trendDescription")}</p>
+                </div>
+                <span className="green-rankings__year-count">
+                  {t("carbon.greenRankings.yearsAvailable", { count: trendYears.length })}
+                </span>
+              </div>
+              {history.cohort_year !== year && (
+                <div className="green-rankings__history-note" role="note">
+                  <i className="bi bi-info-circle" aria-hidden="true" />
+                  {t("carbon.greenRankings.cohortFallback", { selected: year, cohort: history.cohort_year ?? "—" })}
+                </div>
+              )}
+              <div className="green-rankings__trend-chart-wrap">
+                <svg
+                  className="green-rankings__trend-chart"
+                  viewBox={`0 0 ${trendWidth} ${trendHeight}`}
+                  role="img"
+                  aria-label={t("carbon.greenRankings.trendChartLabel", { year: history.cohort_year ?? year })}
+                >
+                  {[0, 25, 50, 75, 100].map((value) => {
+                    const y = yForPercent(value);
+                    return (
+                      <g key={value}>
+                        <line x1={trendMargin.left} x2={trendWidth - trendMargin.right} y1={y} y2={y} className="green-rankings__trend-gridline" />
+                        <text x={trendMargin.left - 8} y={y + 4} textAnchor="end" className="green-rankings__trend-axis-label">{value}%</text>
+                      </g>
+                    );
+                  })}
+                  {trendYears.map((trendYear) => (
+                    <text key={trendYear} x={xForYear(trendYear)} y={trendHeight - 10} textAnchor="middle" className="green-rankings__trend-axis-label">
+                      {trendYear}
+                    </text>
+                  ))}
+                  {trendSeries.map((region) => (
+                    <g key={region.code}>
+                      {region.segments.filter((segment) => segment.length > 1).map((segment) => (
+                        <polyline
+                          key={`${region.code}-${segment[0].year}`}
+                          points={segment.map((point) => `${xForYear(point.year)},${yForPercent(point.green_percent!)}`).join(" ")}
+                          fill="none"
+                          stroke={region.color}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      ))}
+                      {region.points.map((point) => (
+                        <circle
+                          key={`${region.code}-${point.year}`}
+                          cx={xForYear(point.year)}
+                          cy={yForPercent(point.green_percent!)}
+                          r="4"
+                          fill={region.color}
+                          stroke="white"
+                          strokeWidth="1.5"
+                        >
+                          <title>{`${region.name} · ${point.year}: ${formatTrendPercent(point.green_percent)}`}</title>
+                        </circle>
+                      ))}
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              <div className="green-rankings__trend-legend">
+                {trendSeries.map((region) => (
+                  <span key={region.code} title={`${region.name} (${region.code})`}>
+                    <i style={{ backgroundColor: region.color }} aria-hidden="true" />
+                    {region.name}
+                  </span>
+                ))}
+              </div>
+              <p className="green-rankings__trend-footnote">{t("carbon.greenRankings.trendFootnote")}</p>
+            </article>
+
+            <div className="green-rankings__annual-heading">
+              <h3>{t("carbon.greenRankings.annualTopTitle")}</h3>
+              <span>{t("carbon.greenRankings.annualTopSubtitle", { count: history.years.length })}</span>
+            </div>
+            <div className="green-rankings__annual-list">
+              {[...history.years].reverse().map((snapshot) => (
+                <details className="green-rankings__annual-year" key={snapshot.year} open={snapshot.year === history.cohort_year}>
+                  <summary>
+                    <span><i className="bi bi-calendar3" aria-hidden="true" /> {snapshot.year}</span>
+                    <small>{t("carbon.greenRankings.eligibleCount", { count: snapshot.eligible_regions })}</small>
+                    <i className="bi bi-chevron-down" aria-hidden="true" />
+                  </summary>
+                  <div className="table-responsive">
+                    <table className="table table-sm align-middle mb-0 green-rankings__top-table">
+                      <thead><tr><th>{t("carbon.greenRankings.rank")}</th><th>{t("carbon.greenRankings.region")}</th><th>{t("carbon.greenRankings.greenPercent")}</th><th>{t("carbon.greenRankings.coverage")}</th></tr></thead>
+                      <tbody>
+                        {snapshot.top10.map((row) => (
+                          <tr key={row.code}>
+                            <td><span className={`green-rankings__top-rank${row.rank && row.rank <= 3 ? ` is-${row.rank}` : ""}`}>{row.rank}</span></td>
+                            <td><strong>{row.name}</strong><small>{row.code}</small></td>
+                            <td>{formatTrendPercent(row.green_percent ?? null)}</td>
+                            <td>{formatTrendPercent(row.coverage_percent ?? null)}</td>
+                          </tr>
+                        ))}
+                        {!snapshot.top10.length && <tr><td colSpan={4} className="text-muted text-center">{t("carbon.greenRankings.noEligibleTopTen")}</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              ))}
+            </div>
+            <p className="green-rankings__history-source">
+              <i className="bi bi-database-check" aria-hidden="true" />
+              {t("carbon.greenRankings.snapshotOnly")}
+            </p>
+          </>
+        )}
+      </section>
     </section>
   );
 }

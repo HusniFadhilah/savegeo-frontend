@@ -1,7 +1,7 @@
 import RecordResults from "./RecordResults";
 import { useCopy, errorMessage, pretty } from "./helpers";
 import { cloneElement, isValidElement, useId, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
-import { getHistory, getRecord, reviewRecord, saveRecord } from "./api";
+import { deploySamplingPlanPlots, downloadSamplingFieldTemplate, getHistory, getRecord, reviewRecord, saveRecord } from "./api";
 import type { IntegrityRecord } from "./types";
 
 export function Status({ status }: { status: string }) {
@@ -87,6 +87,7 @@ export function RecordActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState<Awaited<ReturnType<typeof getHistory>> | null>(null);
+  const [deployedPlotCount, setDeployedPlotCount] = useState<number | null>(null);
   async function act(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -136,6 +137,24 @@ export function RecordActions({
             {c("Ajukan review", "Submit for review")}
           </button>
         ) : null}
+        {canWrite && record.category === "sampling_plan" && record.status === "accepted" && !record.result.field_plot_deployment ? (
+          <button type="button" className="btn btn-outline-primary btn-sm" disabled={busy} onClick={() => {
+            setBusy(true); setError("");
+            void deploySamplingPlanPlots(projectId, record.id)
+              .then((result) => { setDeployedPlotCount(result.plot_count); return onChanged(); })
+              .catch((cause: unknown) => setError(errorMessage(cause)))
+              .finally(() => setBusy(false));
+          }}>{c("Buat plot di register lapangan", "Create plots in field register")}</button>
+        ) : null}
+        {canWrite && record.category === "sampling_plan" && record.result.field_plot_deployment ? (
+          <button type="button" className="btn btn-outline-success btn-sm" disabled={busy} onClick={() => {
+            setBusy(true); setError("");
+            void downloadSamplingFieldTemplate(projectId, record.id)
+              .catch((cause: unknown) => setError(errorMessage(cause)))
+              .finally(() => setBusy(false));
+          }}>{c("Unduh template pengukuran CSV", "Download field measurement CSV template")}</button>
+        ) : null}
+        {canWrite && record.category === "sampling_plan" && record.result.field_plot_deployment ? <small className="text-muted">{c("Isi tanggal kunjungan dan satu baris untuk setiap pohon terukur; tambahkan tree_code unik serta DBH atau keliling. Plot yang sudah dibuat akan dikenali saat CSV diimpor dari tab data lapangan.", "Enter the visit date and one row per measured tree; add a unique tree_code and DBH or circumference. The imported CSV will match these deployed plots in the field-data tab.")}</small> : null}
         {canReview && record.status === "submitted" ? (
           <>
             <button
@@ -228,6 +247,7 @@ export function RecordActions({
           </div>
         </form>
       ) : null}
+      {deployedPlotCount !== null ? <p className="small text-success">{c("Plot sampel terhubung ke register lapangan", "Sample plots connected to the field register")}: {deployedPlotCount}.</p> : null}
       {record.review_reason ? <p className="integrity-note">{record.review_reason}</p> : null}
       {error ? (
         <p role="alert" className="text-danger">

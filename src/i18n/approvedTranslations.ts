@@ -2760,7 +2760,6 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.sidebar.vegTsHint": "Pilih satu atau beberapa indeks. Seri bulanan memakai rentang bulan, tahun, dan batas awan yang dipilih.",
     "carbon.sidebar.analyzing": "Menganalisis...",
     "carbon.sidebar.runAnalysis": "Jalankan Analisis",
-    "carbon.sidebar.selectAoiHint": "Pilih AOI terlebih dahulu untuk mengaktifkan tombol.",
     "carbon.results.statsHeader": "Statistik",
 
     //  Carbon module: errors/loading 
@@ -2797,6 +2796,9 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoi.tab.draw": "Gambar di Peta",
     "carbon.aoi.tab.upload": "Unggah File",
     "carbon.aoi.tab.company": "Perusahaan",
+    "carbon.aoi.selectHint": "Pilih AOI terlebih dahulu untuk mengaktifkan tombol.",
+    "carbon.aoi.infoLabel": "Informasi AOI dan privasi",
+    "carbon.aoi.privacyNotice": "Geometri dan koordinat AOI yang diperlukan untuk analisis dapat diproses oleh penyedia layanan eksternal, termasuk Google Earth Engine atau penyedia citra. Penyedia peta dasar menerima area peta yang sedang dilihat. Hindari mengirim lokasi sensitif tanpa izin.",
     "carbon.aoi.drawHint":
       "Gambar polygon atau rectangle langsung di peta di bawah. Bentuk otomatis menjadi AOI dan tetap bisa diedit/dihapus lewat toolbar peta.",
     "carbon.aoi.selectedLabel": "AOI",
@@ -2865,6 +2867,8 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoiRegion.err.globalCountries": "Gagal memuat daftar negara dan batas global",
     "carbon.aoiRegion.err.globalLevel": "Data batas ADM1 atau ADM2 tidak tersedia untuk negara ini.",
     "carbon.aoiRegion.err.loadRegionFailed": "Gagal memuat wilayah",
+    "carbon.aoiRegion.err.selectionNotFound": "Kode wilayah pada tautan tidak ditemukan di daftar administratif.",
+    "carbon.aoiRegion.err.selectionSync": "Gagal menyinkronkan pilihan wilayah dengan daftar administratif.",
 
     //  AOI: Coordinate tab 
     "carbon.aoiCoord.info":
@@ -3102,6 +3106,9 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.title": "Peta Hasil",
     "carbon.resultsMap.compareTitle": "Bandingkan dua layer dengan slider geser",
     "carbon.resultsMap.compare": "Bandingkan",
+    "carbon.resultsMap.refreshLayer": "Muat ulang layer peta {layer}",
+    "carbon.resultsMap.legendControl": "Tampilkan legenda dan skala warna",
+    "carbon.resultsMap.legendTitle": "Legenda peta",
     "carbon.resultsMap.compareWith": "dengan",
     "carbon.resultsMap.densityLegend": "Densitas Karbon",
     "carbon.resultsMap.opacity": "Opacity",
@@ -5847,7 +5854,6 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.sidebar.vegTsHint": "Select one or more indices. The monthly series uses the selected month range, year, and cloud threshold.",
     "carbon.sidebar.analyzing": "Analyzing...",
     "carbon.sidebar.runAnalysis": "Run Analysis",
-    "carbon.sidebar.selectAoiHint": "Select an AOI first to enable the button.",
     "carbon.results.statsHeader": "Statistics",
 
     //  Carbon module: errors/loading 
@@ -5884,6 +5890,9 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoi.tab.draw": "Draw on Map",
     "carbon.aoi.tab.upload": "Upload File",
     "carbon.aoi.tab.company": "Company",
+    "carbon.aoi.selectHint": "Select an AOI first to enable the button.",
+    "carbon.aoi.infoLabel": "AOI and privacy information",
+    "carbon.aoi.privacyNotice": "AOI geometry and coordinates required for analysis may be processed by external service providers, including Google Earth Engine or imagery providers. Basemap providers receive the map area currently in view. Avoid sending sensitive locations without permission.",
     "carbon.aoi.drawHint":
       "Draw a polygon or rectangle directly on the map below. The shape automatically becomes the AOI and stays editable/deletable via the map toolbar.",
     "carbon.aoi.selectedLabel": "AOI",
@@ -5952,6 +5961,8 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.aoiRegion.err.globalCountries": "Failed to load the country list and global boundaries",
     "carbon.aoiRegion.err.globalLevel": "ADM1 or ADM2 boundaries are unavailable for this country.",
     "carbon.aoiRegion.err.loadRegionFailed": "Failed to load the region",
+    "carbon.aoiRegion.err.selectionNotFound": "The region codes in this link were not found in the administrative lists.",
+    "carbon.aoiRegion.err.selectionSync": "Could not sync the selected region with the administrative lists.",
 
     //  AOI: Coordinate tab 
     "carbon.aoiCoord.info":
@@ -6189,6 +6200,9 @@ export const approvedTranslations: Record<Language, Record<string, string>> = {
     "carbon.resultsMap.title": "Results Map",
     "carbon.resultsMap.compareTitle": "Compare two layers with a swipe slider",
     "carbon.resultsMap.compare": "Compare",
+    "carbon.resultsMap.refreshLayer": "Refresh map layer {layer}",
+    "carbon.resultsMap.legendControl": "Show map legend and color scale",
+    "carbon.resultsMap.legendTitle": "Map legend",
     "carbon.resultsMap.compareWith": "with",
     "carbon.resultsMap.densityLegend": "Carbon Density",
     "carbon.resultsMap.opacity": "Opacity",
