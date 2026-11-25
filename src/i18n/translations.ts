@@ -1016,7 +1016,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.aoi.tab.company": "Company",
     "carbon.aoi.selectHint": "Select an AOI first to enable the button.",
     "carbon.aoi.infoLabel": "AOI and privacy information",
-    "carbon.aoi.privacyNotice": "AOI geometry and coordinates required for analysis may be processed by external service providers, including Google Earth Engine or imagery providers. Basemap providers receive the map area currently in view. Avoid sending sensitive locations without permission.",
+    "carbon.aoi.privacyNotice": "AOI geometry and coordinates needed for analysis may be processed by external service providers, including Google Earth Engine or imagery providers. Basemap providers receive the area currently being viewed. Do not submit sensitive locations without authorization.",
     "carbon.aoi.drawHint":
       "Draw a polygon or rectangle directly on the map below. The shape automatically becomes the AOI and stays editable/deletable via the map toolbar.",
     "carbon.aoi.selectedLabel": "AOI",

@@ -16,7 +16,6 @@ import AoiCompanyTab from "./AoiCompanyTab";
 import { registerMap } from "@/features/chatbot/mapActions";
 import MapCursorPosition from "@/components/map/MapCursorPosition";
 import MapClickPicker from "@/components/map/MapClickPicker";
-import AoiExternalProcessingNotice from "@/components/map/AoiExternalProcessingNotice";
 
 interface Props {
   aoi: AoiState | null;
@@ -144,7 +143,6 @@ export default function AoiPanel({ aoi, onAoiChange }: Props) {
           />
         </div>
 
-        <AoiExternalProcessingNotice />
         <div className="tab-content mb-3">
           {activeTab === "admin" && (
             <AoiRegionTab onApply={(f, n) => applyAoi(f, n, "admin")} />
