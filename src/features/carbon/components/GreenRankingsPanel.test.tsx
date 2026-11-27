@@ -5,11 +5,12 @@ import GreenRankingsPanel from "./GreenRankingsPanel";
 import * as regions from "@/services/analysisService";
 import { runAnalysisJob } from "@/services/analysisJobs";
 import type { GreenRankingResult } from "../extendedTypes";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 vi.mock("@/services/analysisService", () => ({ fetchProvinces: vi.fn(), fetchCities: vi.fn(), fetchDistricts: vi.fn() }));
 vi.mock("@/services/analysisJobs", () => ({ runAnalysisJob: vi.fn() }));
 vi.mock("@/components/ui/SearchableSelect", () => ({ default: ({ id, value, options, onChange, disabled }: { id: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled: boolean }) => <select id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
-beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); vi.mocked(regions.fetchProvinces).mockResolvedValue([{ code: "33", name: "Jawa Tengah" }]); vi.mocked(regions.fetchCities).mockResolvedValue([{ code: "3374", name: "Kota Semarang" }]); vi.mocked(regions.fetchDistricts).mockResolvedValue([{ code: "337401", name: "Kecamatan test" }]); });
+beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); useI18nStore.getState().setLanguage("id"); vi.mocked(regions.fetchProvinces).mockResolvedValue([{ code: "33", name: "Jawa Tengah" }]); vi.mocked(regions.fetchCities).mockResolvedValue([{ code: "3374", name: "Kota Semarang" }]); vi.mocked(regions.fetchDistricts).mockResolvedValue([{ code: "337401", name: "Kecamatan test" }]); });
 afterEach(cleanup);
 
 it("filters village rankings by province, city and district, and continues a durable run", async () => {

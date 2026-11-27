@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FeatureCollection } from "geojson";
 import FireMultiSourcePanel from "./FireMultiSourcePanel";
 import { loadFireMultiSource } from "../api";
+import { useI18nStore } from "@/hooks/useI18nStore";
 
 vi.mock("../api", () => ({ loadFireMultiSource: vi.fn(), importFireObservations: vi.fn() }));
 const aoi: FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -21,6 +22,8 @@ afterEach(() => {
 });
 
 describe("multi-source wildfire controls", () => {
+  beforeEach(() => useI18nStore.getState().setLanguage("id"));
+
   it("requires an AOI before loading", () => {
     render(<FireMultiSourcePanel {...props} aoi={null} />);
     expect(

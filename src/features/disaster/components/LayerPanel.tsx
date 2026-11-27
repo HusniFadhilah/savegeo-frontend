@@ -209,7 +209,7 @@ export default function LayerPanel({
                   >
                     {LAYER_LABELS[entry.model_id] ?? entry.user_label}
                   </label>
-                  {layerInfo(entry) && (
+                  {layerInfo(entry, c) && (
                     <InfoTip
                       label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}`}
                       content={layerInfo(entry, c)}

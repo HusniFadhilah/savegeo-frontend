@@ -120,7 +120,7 @@ it("restores kind and baseline, preserves unrelated URL filters and resets pagin
   );
   await screen.findByText("Belum ada pekerjaan untuk filter ini.");
   expect(screen.getByLabelText("Jenis analisis")).toHaveValue("landcover_transition");
-  expect(screen.getByLabelText("Baseline")).toHaveValue("baseline1");
+  expect(screen.getByLabelText("Tahun dasar")).toHaveValue("baseline1");
   expect(api.listAnalysisRuns).toHaveBeenCalledWith("project1", "period1", 20, 40);
   fireEvent.click(screen.getByRole("button", { name: "Jalankan analisis" }));
   await waitFor(() =>
