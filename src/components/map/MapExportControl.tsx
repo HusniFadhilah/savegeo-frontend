@@ -6,6 +6,7 @@ import type { Feature, FeatureCollection, GeoJsonProperties, Geometry } from "ge
 import { localeFor, useI18nStore } from "@/hooks/useI18nStore";
 import type { Language } from "@/i18n/translations";
 import { escapeHtmlText } from "@/utils/safeHttpUrl";
+import { RESULT_PANE } from "@/config/mapPanes";
 import "./MapExportControl.css";
 
 type ExportAction = "png" | "geotiff" | "geojson" | "csv" | "json" | "print";
@@ -130,7 +131,28 @@ function mapMetadata(
 }
 
 async function renderMap(map: L.Map) {
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 180));
+  map.stop();
+  map.fire("move");
+
+  const hasServerClippedEarthEngineLayer = (() => {
+    let found = false;
+    map.eachLayer((rawLayer) => {
+      if (!(rawLayer instanceof L.TileLayer)) return;
+      const layer = rawLayer as L.TileLayer & { _url?: string };
+      const className = (layer.options as L.TileLayerOptions & { className?: string }).className;
+      if (className === "gee-tile-layer" && /earthengine\.googleapis\.com/i.test(layer._url ?? "")) {
+        found = true;
+      }
+    });
+    return found;
+  })();
+  const resultPane = hasServerClippedEarthEngineLayer ? map.getPane(RESULT_PANE) : undefined;
+  const resultPaneClass = resultPane?.className.split(/\s+/).find((className) => className !== "leaflet-pane");
+  const mapContainerId = map.getContainer().id;
+
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.setTimeout(resolve, 180)));
+  });
   const { default: html2canvas } = await import("html2canvas");
   return html2canvas(map.getContainer(), {
     allowTaint: false,
@@ -139,6 +161,19 @@ async function renderMap(map: L.Map) {
     logging: false,
     scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
     ignoreElements: (element) => element.classList?.contains("savegeo-map-export") ?? false,
+    onclone: (clonedDocument) => {
+      // Earth Engine result images are already clipped to the AOI by the
+      // server. html2canvas applies Leaflet's CSS path clip in a different
+      // coordinate space, shifting the raster away from the AOI outline.
+      const clonedMap = mapContainerId ? clonedDocument.getElementById(mapContainerId) : null;
+      const clonedPane = resultPaneClass && clonedMap
+        ? clonedMap.getElementsByClassName(resultPaneClass).item(0) as HTMLElement | null
+        : null;
+      if (clonedPane) {
+        clonedPane.style.clipPath = "none";
+        clonedPane.style.setProperty("-webkit-clip-path", "none");
+      }
+    },
   });
 }
 
