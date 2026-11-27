@@ -1,3 +1,4 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useEffect, useRef, useState } from "react";
 import { fetchProvinces, fetchCities, fetchDistricts } from "@/services/analysisService";
 import { runAnalysisJob } from "@/services/analysisJobs";
@@ -59,6 +60,7 @@ export default function GreenRankingsPanel({
   onRunReady?: (run: (() => Promise<boolean>) | null) => void;
 }) {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const language = useI18nStore((state) => state.language);
   const [level, setLevel] = useState("province");
   const rankingStartMonth = year <= 2022 ? 1 : startMonth;
@@ -81,6 +83,7 @@ export default function GreenRankingsPanel({
   const [compactNumbers, setCompactNumbers] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [snapshotUnavailable, setSnapshotUnavailable] = useState(false);
   const keepRunning = useRef(false);
   const scopeRef = useRef("");
   const mounted = useRef(true);
@@ -170,6 +173,8 @@ export default function GreenRankingsPanel({
   useEffect(() => {
     let active = true;
     setResult(null);
+    setError(null);
+    setSnapshotUnavailable(false);
     const saved = localStorage.getItem(storageKey);
     const params = new URLSearchParams({
       year: String(year),
@@ -182,6 +187,8 @@ export default function GreenRankingsPanel({
     if (district) params.set("district", district);
     const acceptResult = (data: GreenRankingResult) => {
       if (!active) return;
+      setError(null);
+      setSnapshotUnavailable(false);
       setResult(data);
       onResultRef.current(data);
       setTableSearch(data.search || "");
@@ -209,8 +216,15 @@ export default function GreenRankingsPanel({
             acceptResult(data);
           }
         })
-        .catch(() => loadLatest().then(acceptResult).catch(() => {
-          if (active) localStorage.removeItem(storageKey);
+        .catch(() => loadLatest().then(acceptResult).catch((reason: unknown) => {
+          if (!active) return;
+          localStorage.removeItem(storageKey);
+          const status =
+            typeof reason === "object" && reason !== null && "status" in reason
+              ? Number((reason as { status?: unknown }).status)
+              : undefined;
+          if (status === 404) setSnapshotUnavailable(true);
+          else setError(reason instanceof Error ? reason.message : "Snapshot peringkat gagal dimuat.");
         }));
     } else {
       void loadLatest().then(acceptResult).catch((reason: unknown) => {
@@ -219,13 +233,11 @@ export default function GreenRankingsPanel({
           typeof reason === "object" && reason !== null && "status" in reason
             ? Number((reason as { status?: unknown }).status)
             : undefined;
-        setError(
-          status === 404
-            ? "Snapshot dengan nilai pool karbon belum tersedia untuk cakupan ini. Klik ‘Hitung peringkat’ sekali untuk membuat dan menyimpannya; pemuatan berikutnya memakai snapshot database."
-            : reason instanceof Error
-              ? reason.message
-              : "Snapshot peringkat gagal dimuat.",
-        );
+        if (status === 404) {
+          setSnapshotUnavailable(true);
+          return;
+        }
+        setError(reason instanceof Error ? reason.message : "Snapshot peringkat gagal dimuat.");
       });
     }
     return () => {
@@ -235,6 +247,7 @@ export default function GreenRankingsPanel({
   async function run(fresh = false) {
     setBusy(true);
     setError(null);
+    setSnapshotUnavailable(false);
     keepRunning.current = true;
     let next = fresh ? null : result;
     try {
@@ -459,36 +472,27 @@ export default function GreenRankingsPanel({
           maximumFractionDigits: 1,
         }).format(value) + "%";
   return (
-    <section className="green-rankings" aria-label="Peringkat wilayah hijau">
+    <section className="green-rankings" aria-label={c("Peringkat wilayah hijau", "Green area rankings")}>
       <div className="green-rankings__intro">
         <span className="green-rankings__eyebrow">
-          <i className="bi bi-globe-asia-australia" aria-hidden="true" /> Analisis wilayah
+          <i className="bi bi-globe-asia-australia" aria-hidden="true" /> {c("Analisis wilayah", "Regional analysis")}
           <InfoTip
-            label="Metode dan cakupan peringkat hijau"
+            label={c("Metode dan cakupan peringkat hijau", "Green ranking method and coverage")}
             content={
               <div className="green-rankings__method-tip">
                 <p>
-                  Persentase tutupan hijau memakai GLC_FCS30D 30 m untuk 2000–2022 dan Dynamic
-                  World untuk 2023 ke atas. Kelas hijau mencakup pohon, rumput, vegetasi tergenang,
-                  tanaman, dan semak. Perbandingan lintas sumber perlu memperhatikan perbedaan
-                  skema klasifikasi.
+                  {c("Persentase tutupan hijau memakai GLC_FCS30D 30 m untuk 2000?2022 dan Dynamic World mulai 2023. Kelas hijau mencakup pohon, rumput, vegetasi tergenang, tanaman, dan semak. Perbandingan antar-sumber perlu mempertimbangkan perbedaan skema klasifikasi.", "Green-cover percentage uses GLC_FCS30D at 30 m for 2000?2022 and Dynamic World from 2023 onward. Green classes include trees, grass, flooded vegetation, crops, and shrubs. Cross-source comparisons should account for differences in classification schemes.")}
                 </p>
                 <p>
-                  Nilai dibandingkan terhadap luas penuh batas administrasi. Wilayah dengan cakupan
-                  data di bawah 80% tidak diberi peringkat. Peringkat parsial dapat berubah sampai
-                  seluruh wilayah selesai diproses; proses yang dihentikan dapat dilanjutkan.
+                  {c("Nilai dibandingkan dengan luas penuh batas administrasi. Wilayah dengan cakupan data di bawah 80% tidak diberi peringkat. Peringkat parsial dapat berubah hingga semua wilayah selesai diproses; pemrosesan yang dihentikan dapat dilanjutkan.", "Values are compared with the full area of each administrative boundary. Regions with less than 80% data coverage are not ranked. Partial rankings may change until all regions are processed; interrupted processing can be resumed.")}
                 </p>
                 <p>
-                  Hasil dapat dihitung secara nasional atau dibatasi induk wilayah. Filter ini
-                  berdiri sendiri dari AOI peta utama. Resolusi statistik mengikuti tingkat yang
-                  dipilih: provinsi 100 m, kabupaten/kota 30 m, kecamatan 20 m, dan desa/kelurahan
-                  10 m.
+                  {c("Hasil dapat dihitung secara nasional atau dibatasi ke wilayah induk. Filter ini terpisah dari AOI peta utama. Resolusi statistik mengikuti tingkat yang dipilih: provinsi 100 m, kabupaten/kota 30 m, kecamatan 20 m, dan desa/kelurahan 10 m.", "Results can be calculated nationally or limited to a parent region. These filters are independent of the main map AOI. Statistical resolution follows the selected level: 100 m for provinces, 30 m for regencies/cities, 20 m for districts, and 10 m for villages.")}
                 </p>
                 <p>
-                  Hasil disimpan terpisah untuk setiap tahun, periode, tingkat, dan filter wilayah.
-                  Gunakan tombol hitung ulang untuk memperbarui snapshot tahun/periode tersebut.
+                  {c("Hasil disimpan terpisah untuk setiap tahun, periode, tingkat, dan filter wilayah. Gunakan tombol hitung ulang untuk memperbarui snapshot tahun/periode tersebut.", "Results are stored separately for each year, period, level, and region filter. Recalculate to refresh the snapshot for that year and period.")}
                 </p>
-                <small>Sumber: GLC_FCS30D dan Dynamic World · Google Earth Engine</small>
+                <small>{c("Sumber: GLC_FCS30D dan Dynamic World ? Google Earth Engine", "Source: GLC_FCS30D and Dynamic World ? Google Earth Engine")}</small>
               </div>
             }
           />
@@ -501,7 +505,7 @@ export default function GreenRankingsPanel({
         </p>
       </div>
       <CropPanelAccordion
-        title="Wilayah dan tingkat peringkat"
+        title={c("Wilayah dan tingkat peringkat", "Region and ranking level")}
         icon="bi-sliders"
         className="green-rankings__accordion green-rankings__filter-accordion"
         defaultOpen
@@ -509,7 +513,7 @@ export default function GreenRankingsPanel({
         <div className="row g-3">
           <div className="col-md-4">
             <label className="form-label" htmlFor="green-level">
-              Tingkat peringkat
+              {c("Tingkat peringkat", "Ranking level")}
             </label>
             <select
               id="green-level"
@@ -531,7 +535,7 @@ export default function GreenRankingsPanel({
             </select>
           </div>
           {depth > 0 &&
-            select("Provinsi", province, provinces, (value) => {
+            select(c("Provinsi", "Province"), province, provinces, (value) => {
               setProvince(value);
               setCity("");
               setDistrict("");
@@ -561,8 +565,8 @@ export default function GreenRankingsPanel({
             {busy
               ? "Menghitung batch wilayah..."
               : result && !result.done
-                ? "Lanjutkan perhitungan"
-                : "Hitung peringkat"}
+                ? c("Lanjutkan perhitungan", "Continue calculation")
+                : c("Hitung peringkat", "Calculate rankings")}
           </button>
         )}
         {busy && (
@@ -573,7 +577,7 @@ export default function GreenRankingsPanel({
               keepRunning.current = false;
             }}
           >
-            Berhenti setelah batch ini
+            {c("Berhenti setelah batch ini", "Stop after this batch")}
           </button>
         )}
         {result && (
@@ -589,6 +593,11 @@ export default function GreenRankingsPanel({
           </button>
         )}
       </div>
+      {snapshotUnavailable && !result && (
+        <div className="alert alert-warning mt-3" role="alert">
+          Snapshot dengan nilai pool karbon belum tersedia untuk cakupan ini. Klik ‘Hitung peringkat’ sekali untuk membuat dan menyimpannya; pemuatan berikutnya memakai snapshot database.
+        </div>
+      )}
       {error && (
         <div className="alert alert-warning mt-3" role="alert">
           {error}
@@ -605,81 +614,83 @@ export default function GreenRankingsPanel({
               aria-hidden="true"
             />
             <span>
-              {result.done
-                ? "Penelusuran wilayah selesai"
-                : "Hasil parsial; belum merupakan peringkat lengkap"}{" "}
-              · {result.statistics.processed} wilayah diproses · {result.statistics.eligible || 0}{" "}
-              layak peringkat (cakupan ≥80%).
+              {result.done ? c("Penelusuran wilayah selesai", "Region scan complete") : c("Hasil parsial; belum merupakan peringkat lengkap", "Partial results; rankings are not yet complete")} · {result.statistics.processed} {c("wilayah diproses", "regions processed")} · {result.statistics.eligible || 0} {c("layak peringkat (cakupan ≥80%).", "eligible for ranking (≥80% coverage).")}
             </span>
+            <InfoTip
+              label={c("Penjelasan nilai karbon", "Carbon value explanation")}
+              align="end"
+              popoverClassName="green-rankings__method-popover"
+              content={
+                <div className="green-rankings__method-tip">
+                  {c(
+                    "Nilai pool berupa densitas rata-rata berbobot luas (Mg C/ha); baris kecil menampilkan total pada piksel valid. Sumber, tahun, resolusi, cakupan, dan status estimasi tiap pool ditampilkan pada setiap sel. BGB diturunkan dari rasio NASA/ORNL 2010; SOC memakai OpenLandMap-soildb 0–30 cm; serasah dan kayu mati adalah proxy hutan tropis berbasis faktor UNFCCC, bukan hasil pengukuran langsung.",
+                    "Pool values are area-weighted mean density (Mg C/ha); small rows show totals across valid pixels. Each cell lists the source, year, resolution, coverage, and estimate status for each pool. BGB is derived from the 2010 NASA/ORNL ratio; SOC uses OpenLandMap-soildb 0–30 cm; litter and deadwood are tropical-forest proxies based on UNFCCC factors, not direct measurements.",
+                  )}
+                </div>
+              }
+            />
           </div>
-          <p className="small text-muted mt-2 mb-0">
-            Nilai pool berupa densitas rata-rata berbobot luas (Mg C/ha); baris kecil menampilkan
-            total pada piksel valid. Sumber, tahun, resolusi, cakupan, dan status estimasi tiap pool
-            ditampilkan pada setiap sel. BGB diturunkan dari rasio NASA/ORNL 2010; SOC memakai
-            OpenLandMap-soildb 0–30 cm; serasah dan kayu mati adalah proxy hutan tropis berbasis
-            faktor UNFCCC, bukan hasil pengukuran langsung.
-          </p>
           {result.snapshot_saved_at && (
             <div className="green-rankings__snapshot-note">
               <i className="bi bi-database-check" aria-hidden="true" />
               <span>
-                Snapshot database · {new Date(result.snapshot_saved_at).toLocaleString("id-ID")}
-                {result.snapshot_refresh_due && <strong> · Perlu diperbarui</strong>}
+                {c("Snapshot database", "Database snapshot")} ? {new Date(result.snapshot_saved_at!).toLocaleString(language === "id" ? "id-ID" : "en-US")}
+                {result.snapshot_refresh_due && <strong> ? {c("Perlu diperbarui", "Refresh recommended")}</strong>}
               </span>
             </div>
           )}
           <div className="green-rankings__stats">
             {[
               {
-                label: "Hijau tertimbang (%)",
+                label: c("Hijau tertimbang (%)", "Weighted green cover (%)"),
                 value: result.statistics.area_weighted_green_percent,
                 icon: "bi-leaf-fill",
                 tone: "green",
               },
               {
-                label: "Rata-rata wilayah (%)",
+                label: c("Rata-rata wilayah (%)", "Mean region cover (%)"),
                 value: result.statistics.mean_percent,
                 icon: "bi-bar-chart-line-fill",
                 tone: "blue",
               },
               {
-                label: "Median (%)",
+                label: c("Median (%)", "Median (%)"),
                 value: result.statistics.median_percent,
                 icon: "bi-distribute-vertical",
                 tone: "teal",
               },
               {
-                label: "Simpangan baku (%)",
+                label: c("Simpangan baku (%)", "Standard deviation (%)"),
                 value: result.statistics.std_dev_percent,
                 icon: "bi-activity",
                 tone: "violet",
               },
               {
-                label: "Minimum (%)",
+                label: c("Minimum (%)", "Minimum (%)"),
                 value: result.statistics.min_percent,
                 icon: "bi-arrow-down-short",
                 tone: "amber",
               },
               {
-                label: "Maksimum (%)",
+                label: c("Maksimum (%)", "Maximum (%)"),
                 value: result.statistics.max_percent,
                 icon: "bi-arrow-up-short",
                 tone: "green",
               },
               {
-                label: "Luas batas (ha)",
+                label: c("Luas batas (ha)", "Boundary area (ha)"),
                 value: result.statistics.area_ha,
                 icon: "bi-bounding-box",
                 tone: "blue",
               },
               {
-                label: "Luas data valid (ha)",
+                label: c("Luas data valid (ha)", "Valid data area (ha)"),
                 value: result.statistics.valid_area_ha,
                 icon: "bi-patch-check-fill",
                 tone: "teal",
               },
               {
-                label: "Luas hijau teramati (ha)",
+                label: c("Luas hijau teramati (ha)", "Observed green area (ha)"),
                 value: result.statistics.green_area_ha,
                 icon: "bi-tree-fill",
                 tone: "green",
@@ -697,7 +708,7 @@ export default function GreenRankingsPanel({
             ))}
           </div>
           <CropPanelAccordion
-            title="Distribusi dan komposisi tutupan hijau"
+            title={c("Distribusi dan komposisi tutupan hijau", "Green-cover distribution and composition")}
             icon="bi-bar-chart-line"
             className="green-rankings__accordion green-rankings__visual-accordion"
             defaultOpen
@@ -709,19 +720,19 @@ export default function GreenRankingsPanel({
                     <span className="green-rankings__chart-icon is-green">
                       <i className="bi bi-tree-fill" aria-hidden="true" />
                     </span>
-                    <h3>Komposisi kelas vegetasi</h3>
+                    <h3>{c("Komposisi kelas vegetasi", "Vegetation class composition")}</h3>
                   </div>
                   <strong>{fmt(compositionTotal)} ha</strong>
                 </div>
                 <p className="green-rankings__chart-caption">
-                  Proporsi luas vegetasi yang teramati pada periode terpilih.
+                  {c("Proporsi luas vegetasi yang teramati pada periode terpilih.", "Share of vegetation area observed during the selected period.")}
                 </p>
                 {compositionTotal > 0 ? (
                   <>
                     <div
                       className="green-rankings__stacked-bar"
                       role="img"
-                      aria-label={"Komposisi vegetasi, total " + fmt(compositionTotal) + " hektare"}
+                      aria-label={c("Komposisi vegetasi, total ", "Vegetation composition, total ") + fmt(compositionTotal) + (language === "id" ? " hektare" : " hectares")}
                     >
                       {classComposition
                         .filter((item) => item.value > 0)
@@ -750,7 +761,7 @@ export default function GreenRankingsPanel({
                   </>
                 ) : (
                   <div className="green-rankings__chart-empty">
-                    Belum ada data komposisi vegetasi.
+                    {c("Belum ada data komposisi vegetasi.", "No vegetation composition data is available.")}
                   </div>
                 )}
               </article>
@@ -760,18 +771,18 @@ export default function GreenRankingsPanel({
                     <span className="green-rankings__chart-icon is-blue">
                       <i className="bi bi-bar-chart-fill" aria-hidden="true" />
                     </span>
-                    <h3>Sebaran persentase hijau</h3>
+                    <h3>{c("Sebaran persentase hijau", "Green-cover percentage distribution")}</h3>
                   </div>
-                  <span className="green-rankings__chart-unit">jumlah wilayah</span>
+                  <span className="green-rankings__chart-unit">{c("jumlah wilayah", "regions")}</span>
                 </div>
                 <p className="green-rankings__chart-caption">
-                  Banyaknya wilayah pada setiap rentang tutupan hijau.
+                  {c("Banyaknya wilayah pada setiap rentang tutupan hijau.", "Number of regions in each green-cover range.")}
                 </p>
                 {histogramBins.length > 0 ? (
                   <div
                     className="green-rankings__histogram"
                     role="img"
-                    aria-label="Histogram sebaran persentase tutupan hijau"
+                    aria-label={c("Histogram sebaran persentase tutupan hijau", "Histogram of green-cover percentages")}
                   >
                     {histogramBins.map((bin) => (
                       <div
@@ -795,7 +806,7 @@ export default function GreenRankingsPanel({
                   </div>
                 ) : (
                   <div className="green-rankings__chart-empty">
-                    Histogram belum tersedia untuk hasil ini.
+                    {c("Histogram belum tersedia untuk hasil ini.", "A histogram is not available for these results.")}
                   </div>
                 )}
               </article>
@@ -803,17 +814,16 @@ export default function GreenRankingsPanel({
             <div className="green-rankings__quality-note">
               <span>
                 <i className="bi bi-check2-circle" aria-hidden="true" />{" "}
-                {result.statistics.processed - (result.statistics.failed_geometry || 0)} geometri
-                berhasil diproses
+                {result.statistics.processed - (result.statistics.failed_geometry || 0)} {c("geometri berhasil diproses", "geometries processed successfully")}
               </span>
               <span>
                 <i className="bi bi-exclamation-triangle" aria-hidden="true" />{" "}
-                {result.statistics.failed_geometry || 0} geometri bermasalah
+                {result.statistics.failed_geometry || 0} {c("geometri bermasalah", "geometries with errors")}
               </span>
             </div>
           </CropPanelAccordion>
           <CropPanelAccordion
-            title="Tabel peringkat wilayah"
+            title={c("Tabel peringkat wilayah", "Regional ranking table")}
             icon="bi-table"
             className="green-rankings__accordion green-rankings__table-accordion"
             defaultOpen
@@ -826,7 +836,7 @@ export default function GreenRankingsPanel({
                   href={env.apiBaseUrl + "/carbon/green-rankings/" + result.run_id + "/export" + exportScopeSuffix}
                 >
                   <i className="bi bi-download me-1" aria-hidden="true" />
-                  Unduh statistik CSV ({result.status})
+                  {c("Unduh statistik CSV (", "Download statistics CSV (")}{result.status})
                 </a>
                 <div className="green-rankings__datatable-toolbar">
                   <label className="green-rankings__search">
@@ -834,8 +844,8 @@ export default function GreenRankingsPanel({
                     <input
                       type="search"
                       className="form-control"
-                      aria-label="Cari wilayah berdasarkan nama atau kode"
-                      placeholder="Cari wilayah atau kode"
+                      aria-label={c("Cari wilayah berdasarkan nama atau kode", "Search regions by name or code")}
+                      placeholder={c("Cari wilayah atau kode", "Search region or code")}
                       value={tableSearch}
                       onChange={(event) => setTableSearch(event.target.value)}
                     />
@@ -855,10 +865,10 @@ export default function GreenRankingsPanel({
                       />
                     </button>
                     <label className="green-rankings__page-size">
-                      <span>Baris</span>
+                      <span>{c("Baris", "Rows")}</span>
                       <select
                         className="form-select"
-                        aria-label="Jumlah baris per halaman"
+                        aria-label={c("Jumlah baris per halaman", "Rows per page")}
                         value={tablePageSize}
                         onChange={(event) => {
                           const nextSize = Number(event.target.value);
@@ -872,7 +882,7 @@ export default function GreenRankingsPanel({
                           </option>
                         ))}
                       </select>
-                      <span>per halaman</span>
+                      <span>{c("per halaman", "per page")}</span>
                     </label>
                   </div>
                 </div>
@@ -944,7 +954,7 @@ export default function GreenRankingsPanel({
                                 {formatRankingValue(pool.value(row), compactNumbers, "Mg C/ha")}
                               </span>
                               <small className="text-muted">
-                                Total {pool.total(row) == null ? "—" : `${fmt(pool.total(row))} Mg C`}
+                                {c("Total", "Total")} {pool.total(row) == null ? "—" : `${fmt(pool.total(row))} Mg C`}
                               </small>
                             </td>
                           ))}
@@ -964,7 +974,7 @@ export default function GreenRankingsPanel({
               </div>
               <div className="green-rankings__datatable-footer">
                 <span>
-                  Menampilkan {firstRow}–{lastRow} dari {recordsFiltered} wilayah
+                  {c("Menampilkan", "Showing")} {firstRow}?{lastRow} {c("dari", "of")} {recordsFiltered} {c("wilayah", "regions")}
                   {recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal})` : ""}
                 </span>
                 <div>
@@ -974,10 +984,10 @@ export default function GreenRankingsPanel({
                     disabled={busy || result.page <= 1}
                     onClick={() => void page(result.page - 1)}
                   >
-                    Sebelumnya
+                    {c("Sebelumnya", "Previous")}
                   </button>
                   <span>
-                    Halaman {result.page} dari {pageCount}
+                    {c("Halaman", "Page")} {result.page} {c("dari", "of")} {pageCount}
                   </span>
                   <button
                     type="button"
@@ -985,7 +995,7 @@ export default function GreenRankingsPanel({
                     disabled={busy || result.page >= pageCount}
                     onClick={() => void page(result.page + 1)}
                   >
-                    Berikutnya
+                    {c("Berikutnya", "Next")}
                   </button>
                 </div>
               </div>

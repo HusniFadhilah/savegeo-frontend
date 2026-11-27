@@ -182,11 +182,11 @@ export default function MobileCapturePanel({ projectId, canWrite }: { projectId:
                 <input id="capture-time" type="datetime-local" className="form-control" required value={form.observed_at} onChange={(event) => setForm((old) => ({ ...old, observed_at: event.target.value }))} />
               </div>
               <div className="col-sm-6 col-lg-2">
-                <label className="form-label" htmlFor="capture-lat">Latitude</label>
+                <label className="form-label" htmlFor="capture-lat">{id ? "Garis lintang" : "Latitude"}</label>
                 <input id="capture-lat" type="number" step="any" min="-85" max="85" className="form-control" required value={form.latitude} onChange={(event) => setForm((old) => ({ ...old, latitude: event.target.value }))} />
               </div>
               <div className="col-sm-6 col-lg-2">
-                <label className="form-label" htmlFor="capture-lon">Longitude</label>
+                <label className="form-label" htmlFor="capture-lon">{id ? "Garis bujur" : "Longitude"}</label>
                 <input id="capture-lon" type="number" step="any" min="-180" max="180" className="form-control" required value={form.longitude} onChange={(event) => setForm((old) => ({ ...old, longitude: event.target.value }))} />
               </div>
               <div className="col-sm-6 col-lg-2">

@@ -1,4 +1,5 @@
 import { renderInlineMarkdown } from "../utils/markdownLite";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   role: "user" | "assistant";
@@ -15,10 +16,11 @@ interface Props {
  * DOM as markup, sanitized or not.
  */
 export default function MessageBubble({ role, text, image, file }: Props) {
+  const c = useBilingualCopy();
   return (
     <div className={`sgc-message sgc-${role}`}>
       <div className="sgc-bubble">
-        {image && <img src={`data:image/png;base64,${image}`} className="sgc-img-bubble" alt="lampiran" />}
+        {image && <img src={`data:image/png;base64,${image}`} className="sgc-img-bubble" alt={c("Gambar terlampir", "Attached image")} />}
         {file && (
           <span className="sgc-file-badge">
             <i className={`bi ${file.icon}`} /> {file.name} ({file.size_label})

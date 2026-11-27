@@ -288,6 +288,8 @@ const MODEL_DOCS = [
  */
 export default function GuideModule() {
   const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
+  const c = (id: string, en: string) => (language === "id" ? id : en);
   const setActiveModule = useUiStore((s) => s.setActiveModule);
   const isViewer = useAuthStore((s) => isViewerRole(s.user));
   const navigate = useNavigate();
@@ -387,8 +389,7 @@ export default function GuideModule() {
                 </li>
               </ol>
               <Note tone="info" title={t("guide.tips")}>
-                Anda bisa memilih hanya sampai level provinsi dengan klik &quot;📍 Use Province Only&quot; atau level
-                lainnya sesuai kebutuhan.
+                {c("Anda dapat memilih wilayah hingga tingkat provinsi dengan memilih Gunakan Provinsi Saja, atau memilih tingkat administrasi lain sesuai kebutuhan.", "You can select an area up to the province level using Use Province Only, or choose another administrative level as needed.")}
               </Note>
             </div>
 
@@ -401,21 +402,20 @@ export default function GuideModule() {
                   {t("guide.method.clickTab")} <strong>&quot;{t("aoi.tab.coordinate")}&quot;</strong>
                 </li>
                 <li>
-                  {t("guide.method.enter")} <strong>Latitude</strong> ({t("guide.example")}: -6.9667)
+                  {t("guide.method.enter")} <strong>{c("Lintang", "Latitude")}</strong> ({t("guide.example")}: -6.9667)
                 </li>
                 <li>
-                  {t("guide.method.enter")} <strong>Longitude</strong> ({t("guide.example")}: 110.4167)
+                  {t("guide.method.enter")} <strong>{c("Bujur", "Longitude")}</strong> ({t("guide.example")}: 110.4167)
                 </li>
                 <li>
-                  {t("guide.method.set")} <strong>Buffer</strong> ({t("guide.kilometers")}: 1-50 km)
+                  {t("guide.method.set")} <strong>{c("Zona penyangga (buffer)", "Buffer")}</strong> ({t("guide.kilometers")}: {c("1–50 km", "1–50 km")})
                 </li>
                 <li>
                   {t("guide.method.clickButton")} <strong>&quot;{t("carbon.aoiCoord.setAoi")}&quot;</strong>
                 </li>
               </ol>
               <Note tone="warn" title={t("guide.note")}>
-                Buffer yang terlalu besar dapat memperlambat processing.
-              </Note>
+                {c("Buffer yang terlalu besar dapat memperlambat pemrosesan.", "A large buffer can slow processing.")}</Note>
             </div>
 
             <div className="guide-method-card">
@@ -433,8 +433,7 @@ export default function GuideModule() {
                 </li>
               </ol>
               <Note tone="success" title={t("guide.advantage")}>
-                Metode ini paling fleksibel untuk area yang spesifik.
-              </Note>
+                {c("Metode ini paling fleksibel untuk area tertentu.", "This method is the most flexible for a specific area.")}</Note>
             </div>
           </div>
         </GuideStep>
@@ -444,46 +443,46 @@ export default function GuideModule() {
           <div className="guide-analysis-grid">
             <div className="guide-analysis-card">
               <i className="bi bi-tree-fill" />
-              <h3>1. Vegetation Indices</h3>
-              <p>Analisis 8 indeks vegetasi: NDVI, NDWI, MNDWI, NDBI, EVI, SAVI, BSI, NDMI</p>
-              <strong>Cocok untuk:</strong>
+              <h3>{c("1. Indeks Vegetasi", "1. Vegetation Indices")}</h3>
+              <p>{c("Analisis delapan indeks vegetasi: NDVI, NDWI, MNDWI, NDBI, EVI, SAVI, BSI, dan NDMI.", "Analyze eight vegetation indices: NDVI, NDWI, MNDWI, NDBI, EVI, SAVI, BSI, and NDMI.")}</p>
+              <strong>{c("Cocok untuk:", "Best for:")}</strong>
               <ul>
-                <li>Monitoring kesehatan vegetasi</li>
-                <li>Deteksi stress tanaman</li>
-                <li>Monitoring kandungan air</li>
+                <li>{c("Memantau kesehatan vegetasi", "Monitoring vegetation health")}</li>
+                <li>{c("Mendeteksi stres tanaman", "Detecting crop stress")}</li>
+                <li>{c("Memantau kandungan air", "Monitoring water content")}</li>
               </ul>
             </div>
             <div className="guide-analysis-card">
               <i className="bi bi-map-fill" />
-              <h3>2. Land Cover</h3>
-              <p>Klasifikasi tutupan lahan dari 3 dataset: Dynamic World, ESA WorldCover, ESRI</p>
-              <strong>Cocok untuk:</strong>
+              <h3>{c("2. Tutupan Lahan", "2. Land Cover")}</h3>
+              <p>{c("Klasifikasi tutupan lahan dari tiga dataset: Dynamic World, ESA WorldCover, dan Esri.", "Land cover classification from three datasets: Dynamic World, ESA WorldCover, and Esri.")}</p>
+              <strong>{c("Cocok untuk:", "Best for:")}</strong>
               <ul>
-                <li>Pemetaan penggunaan lahan</li>
-                <li>Monitoring perubahan lahan</li>
-                <li>Analisis habitat</li>
+                <li>{c("Memetakan penggunaan lahan", "Land-use mapping")}</li>
+                <li>{c("Memantau perubahan lahan", "Monitoring land change")}</li>
+                <li>{c("Menganalisis habitat", "Habitat analysis")}</li>
               </ul>
             </div>
             <div className="guide-analysis-card">
               <i className="bi bi-graph-up-arrow" />
-              <h3>3. Carbon Stock Estimation</h3>
-              <p>Estimasi stok karbon menggunakan machine learning dan data biomassa</p>
-              <strong>Cocok untuk:</strong>
+              <h3>{c("3. Estimasi Stok Karbon", "3. Carbon Stock Estimation")}</h3>
+              <p>{c("Estimasi stok karbon menggunakan pembelajaran mesin dan data biomassa.", "Estimate carbon stock using machine learning and biomass data.")}</p>
+              <strong>{c("Cocok untuk:", "Best for:")}</strong>
               <ul>
-                <li>Inventarisasi karbon</li>
-                <li>Pelaporan emisi</li>
-                <li>Valuasi jasa ekosistem</li>
+                <li>{c("Menginventarisasi karbon", "Carbon inventory")}</li>
+                <li>{c("Melaporkan emisi", "Emissions reporting")}</li>
+                <li>{c("Menilai jasa ekosistem", "Ecosystem-service valuation")}</li>
               </ul>
             </div>
             <div className="guide-analysis-card">
               <i className="bi bi-layers-fill" />
-              <h3>4. Combined Analysis</h3>
-              <p>Menggabungkan semua analisis dalam satu proses (lebih lama)</p>
-              <strong>Cocok untuk:</strong>
+              <h3>{c("4. Analisis Gabungan", "4. Combined Analysis")}</h3>
+              <p>{c("Menggabungkan semua analisis dalam satu proses (waktu pemrosesan lebih lama).", "Combines all analyses in one process (takes longer).")}</p>
+              <strong>{c("Cocok untuk:", "Best for:")}</strong>
               <ul>
-                <li>Laporan komprehensif</li>
-                <li>Studi multi-aspek</li>
-                <li>Analisis mendalam</li>
+                <li>{c("Menyusun laporan komprehensif", "Comprehensive reporting")}</li>
+                <li>{c("Melakukan studi multi-aspek", "Multi-aspect studies")}</li>
+                <li>{c("Melakukan analisis mendalam", "In-depth analysis")}</li>
               </ul>
             </div>
           </div>
@@ -491,8 +490,7 @@ export default function GuideModule() {
 
         <GuideStep id="step3" num="3" icon="bi-sliders" title={t("guide.step.parameters")} openId={openId} onToggle={toggle}>
           <Note tone="warn">
-            <strong>Parameter berbeda untuk setiap jenis analisis.</strong> Pilih tab di bawah untuk masing-masing:
-          </Note>
+            <strong>{c("Setiap jenis analisis memiliki parameter yang berbeda.", "Each analysis type uses different parameters.")}</strong> {c("Pilih tab di bawah untuk melihat parameter tiap analisis:", "Select a tab below to view parameters for each analysis:")}</Note>
 
           <div className="guide-param-tabs" role="tablist">
             {PARAM_TABS.map((p) => (
@@ -514,39 +512,39 @@ export default function GuideModule() {
               <table className="guide-table">
                 <thead>
                   <tr>
-                    <th>Parameter</th>
-                    <th>Deskripsi</th>
-                    <th>Rekomendasi</th>
+                    <th>{c("Parameter", "Parameter")}</th>
+                    <th>{c("Deskripsi", "Description")}</th>
+                    <th>{c("Rekomendasi", "Recommendation")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
-                      <strong>Year</strong>
+                      <strong>{c("Tahun", "Year")}</strong>
                     </td>
-                    <td>Tahun citra Sentinel-2</td>
-                    <td>2022-2025 untuk data terbaru</td>
+                    <td>{c("Tahun citra Sentinel-2", "Sentinel-2 imagery year")}</td>
+                    <td>{c("2022?2025 untuk data terbaru", "2022?2025 for recent data")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Month Range</strong>
+                      <strong>{c("Rentang Bulan", "Month Range")}</strong>
                     </td>
-                    <td>Rentang bulan untuk analisis</td>
-                    <td>3-4 bulan untuk composite stabil</td>
+                    <td>{c("Rentang bulan analisis", "Analysis month range")}</td>
+                    <td>{c("3?4 bulan untuk komposit yang stabil", "3?4 months for a stable composite")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Cloud Threshold</strong>
+                      <strong>{c("Ambang Awan", "Cloud Threshold")}</strong>
                     </td>
-                    <td>% awan maksimal</td>
-                    <td>20-40% untuk area tropis</td>
+                    <td>{c("Persentase awan maksimum", "Maximum cloud percentage")}</td>
+                    <td>{c("20?40% untuk wilayah tropis", "20?40% for tropical regions")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Indices Selection</strong>
+                      <strong>{c("Pilihan Indeks", "Index Selection")}</strong>
                     </td>
-                    <td>Pilih indeks yang dibutuhkan</td>
-                    <td>NDVI wajib, tambahkan sesuai kebutuhan</td>
+                    <td>{c("Pilih indeks yang diperlukan", "Select the required indices")}</td>
+                    <td>{c("NDVI wajib; tambahkan indeks lain sesuai kebutuhan.", "NDVI is required; add other indices as needed.")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -558,32 +556,32 @@ export default function GuideModule() {
               <table className="guide-table">
                 <thead>
                   <tr>
-                    <th>Parameter</th>
-                    <th>Deskripsi</th>
-                    <th>Rekomendasi</th>
+                    <th>{c("Parameter", "Parameter")}</th>
+                    <th>{c("Deskripsi", "Description")}</th>
+                    <th>{c("Rekomendasi", "Recommendation")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
-                      <strong>Year</strong>
+                      <strong>{c("Tahun", "Year")}</strong>
                     </td>
-                    <td>Tahun dataset</td>
-                    <td>2021-2023 untuk data terkini</td>
+                    <td>{c("Tahun dataset", "Dataset year")}</td>
+                    <td>{c("2021?2023 untuk data terkini", "2021?2023 for recent data")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Datasets</strong>
+                      <strong>{c("Dataset", "Datasets")}</strong>
                     </td>
-                    <td>Pilih 1 atau lebih dataset</td>
-                    <td>Dynamic World untuk near-realtime</td>
+                    <td>{c("Pilih satu atau beberapa dataset", "Select one or more datasets")}</td>
+                    <td>{c("Dynamic World untuk data mendekati waktu nyata", "Dynamic World for near-real-time data")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>DW Mode</strong>
+                      <strong>{c("Mode DW", "DW Mode")}</strong>
                     </td>
-                    <td>Mode untuk Dynamic World</td>
-                    <td>Mode (paling stabil)</td>
+                    <td>{c("Mode untuk Dynamic World", "Mode for Dynamic World")}</td>
+                    <td>{c("Mode (paling stabil)", "Mode (most stable)")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -595,53 +593,53 @@ export default function GuideModule() {
               <table className="guide-table">
                 <thead>
                   <tr>
-                    <th>Parameter</th>
-                    <th>Deskripsi</th>
-                    <th>Rekomendasi</th>
+                    <th>{c("Parameter", "Parameter")}</th>
+                    <th>{c("Deskripsi", "Description")}</th>
+                    <th>{c("Rekomendasi", "Recommendation")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
-                      <strong>Reference Dataset</strong>
+                      <strong>{c("Dataset Referensi", "Reference Dataset")}</strong>
                     </td>
-                    <td>Dataset biomassa acuan</td>
-                    <td>ESA CCI (paling akurat)</td>
+                    <td>{c("Dataset biomassa referensi", "Biomass reference dataset")}</td>
+                    <td>{c("ESA CCI (akurasi tertinggi)", "ESA CCI (highest accuracy)")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Pre-trained Model</strong>
+                      <strong>{c("Model Terlatih", "Pre-trained Model")}</strong>
                     </td>
-                    <td>Model ML yang digunakan</td>
-                    <td>Gunakan default atau pilih model GEE-compatible</td>
+                    <td>{c("Model machine learning yang digunakan", "Machine-learning model used")}</td>
+                    <td>{c("Gunakan model bawaan atau pilih model yang kompatibel dengan GEE.", "Use the default model or choose a GEE-compatible model.")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Year</strong>
+                      <strong>{c("Tahun", "Year")}</strong>
                     </td>
-                    <td>Tahun Sentinel-2</td>
+                    <td>{c("Tahun Sentinel-2", "Sentinel-2 year")}</td>
                     <td>2022-2024</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Month Range</strong>
+                      <strong>{c("Rentang Bulan", "Month Range")}</strong>
                     </td>
-                    <td>Rentang bulan</td>
-                    <td>Seluruh tahun (Jan-Dec) untuk akurasi terbaik</td>
+                    <td>{c("Rentang bulan", "Month range")}</td>
+                    <td>{c("Setahun penuh (Jan?Des) untuk hasil terbaik", "Full year (Jan?Dec) for the best results")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Cloud Threshold</strong>
+                      <strong>{c("Ambang Awan", "Cloud Threshold")}</strong>
                     </td>
-                    <td>% awan maksimal</td>
-                    <td>10% (lebih ketat untuk carbon)</td>
+                    <td>{c("Persentase awan maksimum", "Maximum cloud percentage")}</td>
+                    <td>{c("10% (lebih ketat untuk karbon)", "10% (stricter for carbon)")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Display Mode</strong>
+                      <strong>{c("Mode Tampilan", "Display Mode")}</strong>
                     </td>
-                    <td>Clipped vs Full Tiles</td>
-                    <td>Clipped untuk akurasi, Full untuk kecepatan</td>
+                    <td>{c("Tile terpotong vs tile penuh", "Clipped vs. full tiles")}</td>
+                    <td>{c("Tile terpotong untuk detail, tile penuh untuk kecepatan.", "Clipped tiles for detail; full tiles for speed.")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -657,113 +655,108 @@ export default function GuideModule() {
             <div className="guide-run-grid">
               <div className="guide-run-step">
                 <span>1</span>
-                <strong>Cek AOI</strong>
-                <p>Pastikan area sudah dipilih dan luasnya wajar untuk jenis analisis.</p>
+                <strong>{c("Periksa AOI", "Check AOI")}</strong>
+                <p>{c("Pastikan area sudah dipilih dan luasnya sesuai untuk jenis analisis.", "Make sure an area is selected and its size is suitable for the analysis.")}</p>
               </div>
               <div className="guide-run-step">
                 <span>2</span>
-                <strong>Cek Parameter</strong>
-                <p>Pilih dataset, tahun/periode, cloud threshold, model, dan opsi layer.</p>
+                <strong>{c("Periksa Parameter", "Check Parameters")}</strong>
+                <p>{c("Pilih dataset, tahun/periode, ambang awan, model, dan opsi layer.", "Choose the dataset, year or period, cloud threshold, model, and layer options.")}</p>
               </div>
               <div className="guide-run-step">
                 <span>3</span>
-                <strong>Jalankan</strong>
-                <p>Klik tombol <strong>Jalankan Analisis</strong> dan biarkan proses berjalan sampai selesai.</p>
+                <strong>{c("Jalankan", "Run")}</strong>
+                <p>{c("Klik tombol", "Click")}{" "}<strong>{c("Jalankan Analisis", "Run Analysis")}</strong> {c("dan tunggu hingga proses selesai.", "and let the process finish.")}</p>
               </div>
               <div className="guide-run-step">
                 <span>4</span>
-                <strong>Review Output</strong>
-                <p>Baca peta, statistik, chart, dan catatan peringatan sebelum export.</p>
+                <strong>{c("Tinjau Hasil", "Review Results")}</strong>
+                <p>{c("Tinjau peta, statistik, grafik, dan catatan peringatan sebelum mengekspor hasil.", "Review the map, statistics, charts, and warnings before exporting.")}</p>
               </div>
             </div>
-            <Note tone="info" title="Waktu Processing:">
-              AOI kecil &amp; kondisi cuaca cerah di sisi cepat; AOI besar, banyak awan, atau server sibuk bisa
-              mendekati batas atas.
-            </Note>
+            <Note tone="info" title={c("Waktu Pemrosesan:", "Processing Time:")}>
+              {c("AOI kecil dengan cuaca cerah biasanya diproses lebih cepat. AOI besar, tutupan awan tinggi, atau server sibuk dapat memperpanjang waktu pemrosesan.", "Small AOIs with clear skies usually process faster. Large AOIs, heavy cloud cover, or a busy server can increase processing time.")}</Note>
             <div className="guide-timing-grid">
               <div>
-                <strong>Vegetation</strong>
-                <span>~30 detik - 5 menit</span>
+                <strong>{c("Vegetasi", "Vegetation")}</strong>
+                <span>{c("~30 detik?5 menit", "~30 seconds?5 minutes")}</span>
               </div>
               <div>
-                <strong>Land Cover</strong>
-                <span>~1-3 menit per tahun</span>
+                <strong>{c("Tutupan Lahan", "Land Cover")}</strong>
+                <span>{c("~1?3 menit per tahun", "~1?3 minutes per year")}</span>
               </div>
               <div>
-                <strong>LC-Change</strong>
-                <span>~1-2 menit/tahun; 5 tahun bisa ~5-10 menit</span>
+                <strong>{c("Perubahan Tutupan Lahan", "Land Cover Change")}</strong>
+                <span>{c("~1?2 menit/tahun; 5 tahun dapat memerlukan ~5?10 menit", "~1?2 minutes/year; 5 years may take ~5?10 minutes")}</span>
               </div>
               <div>
-                <strong>Carbon</strong>
-                <span>~2-8 menit; AOI besar bisa mendekati timeout</span>
+                <strong>{c("Karbon", "Carbon")}</strong>
+                <span>{c("~2?8 menit; AOI besar dapat mendekati batas waktu", "~2?8 minutes; large AOIs may approach the time limit")}</span>
               </div>
               <div>
-                <strong>Carbon time-series</strong>
-                <span>sampai ~15 menit karena proses diulang per tahun</span>
+                <strong>{c("Deret waktu karbon", "Carbon time series")}</strong>
+                <span>{c("hingga ~15 menit karena proses diulang setiap tahun", "up to ~15 minutes because processing repeats for each year")}</span>
               </div>
               <div>
-                <strong>Combined</strong>
-                <span>~5-15 menit sesuai jumlah analisis</span>
+                <strong>{c("Gabungan", "Combined")}</strong>
+                <span>{c("~5?15 menit, bergantung pada jumlah analisis", "~5?15 minutes, depending on the number of analyses")}</span>
               </div>
             </div>
           </div>
 
           <div className="guide-block">
             <h3>
-              <i className="bi bi-bar-chart-fill" /> Membaca Hasil Analisis
-            </h3>
+              <i className="bi bi-bar-chart-fill" /> {c("Membaca Hasil Analisis", "Reading Analysis Results")}</h3>
             <div className="guide-read-grid">
               <div className="guide-read-card">
                 <i className="bi bi-map-fill" />
-                <h4>Results Map</h4>
+                <h4>{c("Peta Hasil", "Results Map")}</h4>
                 <ul>
-                  <li>Tab untuk setiap layer hasil</li>
-                  <li>Peta interaktif dengan zoom/pan</li>
-                  <li>Legend menunjukkan skala nilai</li>
+                  <li>{c("Tab untuk tiap layer hasil", "A tab for each result layer")}</li>
+                  <li>{c("Peta interaktif dengan fungsi zoom dan geser", "Interactive map with zoom and pan")}</li>
+                  <li>{c("Legenda menunjukkan skala nilai", "The legend shows the value scale")}</li>
                 </ul>
               </div>
               <div className="guide-read-card">
                 <i className="bi bi-speedometer2" />
-                <h4>Metrics Cards</h4>
+                <h4>{c("Kartu Metrik", "Metric Cards")}</h4>
                 <ul>
-                  <li>Ringkasan nilai utama</li>
-                  <li>Jumlah citra, area total, nilai rata-rata</li>
-                  <li>Badge berwarna untuk interpretasi cepat</li>
+                  <li>{c("Ringkasan nilai utama", "Summary of key values")}</li>
+                  <li>{c("Jumlah citra, luas total, dan nilai rata-rata", "Image count, total area, and mean value")}</li>
+                  <li>{c("Lencana warna untuk interpretasi cepat", "Color badges for quick interpretation")}</li>
                 </ul>
               </div>
               <div className="guide-read-card">
                 <i className="bi bi-table" />
-                <h4>Statistics Table</h4>
+                <h4>{c("Tabel Statistik", "Statistics Table")}</h4>
                 <ul>
-                  <li>Detail statistik per indeks/kelas</li>
-                  <li>Min, Mean, Max, Std Dev</li>
-                  <li>Deskripsi untuk setiap metrik</li>
+                  <li>{c("Statistik terperinci per indeks/kelas", "Detailed statistics by index/class")}</li>
+                  <li>{c("Minimum, rata-rata, maksimum, simpangan baku", "Minimum, mean, maximum, standard deviation")}</li>
+                  <li>{c("Deskripsi tiap metrik", "Description of each metric")}</li>
                 </ul>
               </div>
               <div className="guide-read-card">
                 <i className="bi bi-bar-chart-fill" />
-                <h4>Charts & Visualization</h4>
+                <h4>{c("Grafik & Visualisasi", "Charts & Visualization")}</h4>
                 <ul>
-                  <li>Bar chart untuk perbandingan</li>
-                  <li>Pie chart untuk distribusi (land cover)</li>
-                  <li>Line chart untuk trend (time series)</li>
+                  <li>{c("Diagram batang untuk perbandingan", "Bar chart for comparison")}</li>
+                  <li>{c("Diagram lingkaran untuk distribusi (tutupan lahan)", "Pie chart for distribution (land cover)")}</li>
+                  <li>{c("Grafik garis untuk tren (deret waktu)", "Line chart for trends (time series)")}</li>
                 </ul>
               </div>
               <div className="guide-read-card guide-read-card-wide">
                 <i className="bi bi-tree-fill" />
-                <h4>Carbon-Specific Results</h4>
+                <h4>{c("Hasil Khusus Karbon", "Carbon-specific Results")}</h4>
                 <ul>
                   <li>
-                    <strong>Carbon Density:</strong> Mean, Std Dev, Min, Max (Mg/ha)
+                    <strong>{c("Densitas Karbon:", "Carbon Density:")}</strong> {c("Rata-rata, simpangan baku, minimum, maksimum (Mg/ha)", "Mean, standard deviation, minimum, maximum (Mg/ha)")}</li>
+                  <li>
+                    <strong>{c("Stok Total:", "Total Stock:")}</strong> {c("Total karbon (ton), luas (ha)", "Total carbon (tonnes), area (ha)")}</li>
+                  <li>
+                    <strong>{c("Setara CO₂:", "CO₂ equivalent:")}</strong> {c("Konversi karbon ke ekuivalen CO₂", "Carbon-to-CO₂ conversion")}
                   </li>
                   <li>
-                    <strong>Total Stock:</strong> Total carbon (tons), Area (ha)
-                  </li>
-                  <li>
-                    <strong>CO₂ Equivalent:</strong> Konversi ke CO₂
-                  </li>
-                  <li>
-                    <strong>Model Performance:</strong> RMSE, R², Validation metrics
+                    <strong>{c("Kinerja Model:", "Model performance:")}</strong> {c("Metrik validasi (RMSE, R²)", "Validation metrics (RMSE, R²)")}
                   </li>
                 </ul>
               </div>
@@ -772,24 +765,23 @@ export default function GuideModule() {
 
           <div className="guide-block">
             <h3>
-              <i className="bi bi-download" /> Export Hasil
-            </h3>
-            <p className="guide-lead">3 cara export hasil:</p>
+              <i className="bi bi-download" /> {c("Ekspor Hasil", "Export Results")}</h3>
+            <p className="guide-lead">{c("Tiga cara mengekspor hasil:", "Three ways to export results:")}</p>
             <div className="guide-export-grid">
               <div className="guide-export-card">
                 <i className="bi bi-file-image" />
-                <h4>Export GeoTIFF</h4>
-                <p>Untuk GIS software</p>
+                <h4>{c("Ekspor GeoTIFF", "Export GeoTIFF")}</h4>
+                <p>{c("Untuk perangkat lunak GIS", "For GIS software")}</p>
               </div>
               <div className="guide-export-card">
                 <i className="bi bi-file-code" />
-                <h4>Download Stats</h4>
-                <p>JSON format</p>
+                <h4>{c("Unduh Statistik", "Download Statistics")}</h4>
+                <p>{c("Format JSON", "JSON format")}</p>
               </div>
               <div className="guide-export-card">
                 <i className="bi bi-file-text" />
-                <h4>Generate Report</h4>
-                <p>Markdown format</p>
+                <h4>{c("Buat Laporan", "Generate Report")}</h4>
+                <p>{c("Format Markdown", "Markdown format")}</p>
               </div>
             </div>
           </div>
@@ -799,91 +791,76 @@ export default function GuideModule() {
           <div className="guide-do-dont-grid">
             <div className="guide-do-card">
               <h3>
-                <i className="bi bi-check-circle-fill" /> DO&apos;s (Lakukan)
-              </h3>
+                <i className="bi bi-check-circle-fill" /> {c("Yang Dianjurkan", "Recommended Practices")}</h3>
               <ul>
-                <li>Mulai dengan area kecil untuk testing</li>
-                <li>Gunakan cloud threshold yang sesuai dengan wilayah</li>
-                <li>Pilih periode kering untuk hasil terbaik (carbon)</li>
-                <li>Save/export hasil untuk dokumentasi</li>
-                <li>Bandingkan multiple datasets untuk validasi</li>
-                <li>Perhatikan mode display (Clipped vs Full) untuk carbon</li>
+                <li>{c("Mulai dengan area kecil untuk uji coba.", "Start with a small area for testing.")}</li>
+                <li>{c("Gunakan ambang awan yang sesuai untuk wilayah tersebut.", "Use a cloud threshold suited to the region.")}</li>
+                <li>{c("Pilih periode kering untuk hasil karbon yang lebih baik.", "Choose a dry period for better carbon results.")}</li>
+                <li>{c("Simpan atau ekspor hasil sebagai dokumentasi.", "Save or export results for documentation.")}</li>
+                <li>{c("Bandingkan beberapa dataset untuk validasi.", "Compare multiple datasets for validation.")}</li>
+                <li>{c("Perhatikan mode tampilan (terpotong atau penuh) untuk analisis karbon.", "Consider the display mode (clipped or full) for carbon analysis.")}</li>
               </ul>
             </div>
             <div className="guide-dont-card">
               <h3>
-                <i className="bi bi-x-circle-fill" /> DON&apos;Ts (Hindari)
-              </h3>
+                <i className="bi bi-x-circle-fill" /> {c("Yang Perlu Dihindari", "Avoid These Practices")}</h3>
               <ul>
-                <li>Area terlalu besar (&gt;1000 km²) untuk carbon</li>
-                <li>Cloud threshold terlalu rendah di area tropis</li>
-                <li>Month range terlalu pendek (&lt;3 bulan)</li>
-                <li>Menjalankan multiple analysis bersamaan</li>
-                <li>Menutup browser saat processing</li>
+                <li>{c("Area terlalu besar (&gt;1.000 km²) untuk analisis karbon.", "An area larger than 1,000 km² for carbon analysis.")}</li>
+                <li>{c("Ambang awan terlalu rendah untuk wilayah tropis.", "Setting the cloud threshold too low in tropical regions.")}</li>
+                <li>{c("Rentang bulan terlalu singkat (<3 bulan).", "A month range shorter than 3 months.")}</li>
+                <li>{c("Menjalankan beberapa analisis secara bersamaan.", "Running multiple analyses at the same time.")}</li>
+                <li>{c("Menutup browser saat pemrosesan berlangsung.", "Closing the browser while processing.")}</li>
               </ul>
             </div>
           </div>
 
           <div className="guide-block">
             <h3>
-              <i className="bi bi-question-circle-fill" /> Troubleshooting
-            </h3>
+              <i className="bi bi-question-circle-fill" /> {c("Pemecahan Masalah", "Troubleshooting")}</h3>
             <div className="guide-table-wrap">
               <table className="guide-table">
                 <thead>
                   <tr>
-                    <th>Problem</th>
-                    <th>Solution</th>
+                    <th>{c("Masalah", "Problem")}</th>
+                    <th>{c("Solusi", "Solution")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
-                      <strong>No images found</strong>
+                      <strong>{c("Citra tidak ditemukan", "No images found")}</strong>
                     </td>
                     <td>
-                      Tingkatkan cloud threshold
-                      <br />
-                      Perluas month range
-                      <br />
-                      Coba tahun berbeda
-                    </td>
+                      {c("Naikkan ambang awan.", "Increase the cloud threshold.")}<br />
+                      {c("Perluas rentang bulan.", "Extend the month range.")}<br />
+                      {c("Coba tahun lain.", "Try a different year.")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Processing timeout</strong>
+                      <strong>{c("Pemrosesan melewati batas waktu", "Processing timed out")}</strong>
                     </td>
                     <td>
-                      Kurangi area size
-                      <br />
-                      Gunakan Full Tiles mode
-                      <br />
-                      Perpendek month range
-                    </td>
+                      {c("Kurangi luas area.", "Reduce the area size.")}<br />
+                      {c("Gunakan mode tile penuh.", "Use full-tile mode.")}<br />
+                      {c("Perpendek rentang bulan.", "Shorten the month range.")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Empty results</strong>
+                      <strong>{c("Hasil kosong", "No results")}</strong>
                     </td>
                     <td>
-                      Pastikan AOI benar
-                      <br />
-                      Check internet connection
-                      <br />
-                      Refresh page dan coba lagi
-                    </td>
+                      {c("Pastikan AOI sudah benar.", "Check that the AOI is correct.")}<br />
+                      {c("Periksa koneksi internet.", "Check your internet connection.")}<br />
+                      {c("Muat ulang halaman lalu coba lagi.", "Refresh the page and try again.")}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Low accuracy (carbon)</strong>
+                      <strong>{c("Akurasi rendah (karbon)", "Low accuracy (carbon)")}</strong>
                     </td>
                     <td>
-                      Gunakan ESA CCI dataset
-                      <br />
-                      Pilih pre-trained model
-                      <br />
-                      Gunakan longer time period
-                    </td>
+                      {c("Gunakan dataset ESA CCI.", "Use the ESA CCI dataset.")}<br />
+                      {c("Pilih model terlatih.", "Choose a pre-trained model.")}<br />
+                      {c("Gunakan rentang waktu yang lebih panjang.", "Use a longer time period.")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -892,30 +869,28 @@ export default function GuideModule() {
 
           <div className="guide-links">
             <h3>
-              <i className="bi bi-book" /> Referensi & Learning
-            </h3>
+              <i className="bi bi-book" /> {c("Referensi & Pembelajaran", "References & Learning")}</h3>
             <ul>
               <li>
-                <strong>Google Earth Engine Docs:</strong>{" "}
+                <strong>{c("Dokumentasi Google Earth Engine:", "Google Earth Engine documentation:")}</strong>{" "}
                 <a href="https://developers.google.com/earth-engine" target="_blank" rel="noreferrer">
                   developers.google.com/earth-engine
                 </a>
               </li>
               <li>
-                <strong>Sentinel-2 Info:</strong>{" "}
+                <strong>{c("Informasi Sentinel-2:", "Sentinel-2 information:")}</strong>{" "}
                 <a href="https://sentinel.esa.int/web/sentinel/missions/sentinel-2" target="_blank" rel="noreferrer">
                   sentinel.esa.int
                 </a>
               </li>
               <li>
-                <strong>Dynamic World:</strong>{" "}
+                <strong>{c("Dynamic World:", "Dynamic World:")}</strong>{" "}
                 <a href="https://dynamicworld.app/" target="_blank" rel="noreferrer">
                   dynamicworld.app
                 </a>
               </li>
               <li>
-                <strong>Carbon Stock Methodology:</strong> IPCC Guidelines
-              </li>
+                <strong>{c("Metodologi Stok Karbon:", "Carbon Stock Methodology:")}</strong> {c("Pedoman IPCC", "IPCC Guidelines")}</li>
             </ul>
           </div>
         </GuideStep>
@@ -924,45 +899,41 @@ export default function GuideModule() {
       {!isViewer && (
         <div className="guide-doc-section">
         <div className="guide-doc-heading">
-          <span className="guide-hero-eyebrow">Referensi Teknis</span>
-          <h2>Dokumentasi Dataset & Model</h2>
+          <span className="guide-hero-eyebrow">{c("Referensi Teknis", "Technical References")}</span>
+          <h2>{c("Dokumentasi Dataset & Model", "Dataset & Model Documentation")}</h2>
           <p>
-            Ringkasan sumber data dan model yang dipakai platform. Katalog aktif tetap mengikuti konfigurasi backend,
-            tetapi daftar ini membantu membaca asal data, resolusi, dan batasan utama setiap analisis.
-          </p>
+            {c("Ringkasan sumber data dan model yang digunakan platform. Katalog aktif mengikuti konfigurasi backend; daftar ini menjelaskan asal data, resolusi, dan batasan utama tiap analisis.", "A summary of the data sources and models used by the platform. The active catalogue follows backend configuration; this list explains each analysis source, resolution, and key limitation.")}</p>
         </div>
 
         <div className="guide-doc-card">
           <div className="guide-doc-toolbar">
             <h3>
-              <i className="bi bi-database-fill" /> Dataset
-            </h3>
+              <i className="bi bi-database-fill" /> {c("Dataset", "Dataset")}</h3>
             <label className="guide-doc-search">
               <i className="bi bi-search" />
               <input
                 type="search"
                 value={datasetSearch}
                 onChange={(e) => setDatasetSearch(e.target.value)}
-                placeholder="Cari dataset, metode, akurasi..."
-                aria-label="Cari dokumentasi dataset"
+                placeholder={c("Cari dataset, metode, akurasi...", "Search datasets, methods, or accuracy...")}
+                aria-label={c("Cari dokumentasi dataset", "Search dataset documentation")}
               />
             </label>
           </div>
           <div className="guide-doc-meta">
-            Menampilkan <strong>{filteredDatasetDocs.length}</strong> dari <strong>{DATASET_DOCS.length}</strong> dataset.
-          </div>
+            {c("Menampilkan", "Showing")}{" "}<strong>{filteredDatasetDocs.length}</strong> {c("dari", "of")}{" "}<strong>{DATASET_DOCS.length}</strong> {c("dataset.", "datasets.")}</div>
           <div className="guide-table-wrap">
             <table className="guide-table guide-doc-table">
               <thead>
                 <tr>
-                  <th>Kelompok</th>
-                  <th>Dataset</th>
-                  <th>Resolusi</th>
-                  <th>Periode</th>
-                  <th>Dipakai Untuk</th>
-                  <th>Metode</th>
-                  <th>Akurasi / Validasi</th>
-                  <th>Sumber</th>
+                  <th>{c("Kelompok", "Group")}</th>
+                  <th>{c("Dataset", "Dataset")}</th>
+                  <th>{c("Resolusi", "Resolution")}</th>
+                  <th>{c("Periode", "Period")}</th>
+                  <th>{c("Kegunaan", "Used For")}</th>
+                  <th>{c("Metode", "Method")}</th>
+                  <th>{c("Akurasi / Validasi", "Accuracy / Validation")}</th>
+                  <th>{c("Sumber", "Source")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -984,8 +955,8 @@ export default function GuideModule() {
                     <td>{dataset.accuracy}</td>
                     <td>
                       <div className="guide-doc-links">
-                        {safeHttpUrl(dataset.sourceUrl) && <a href={safeHttpUrl(dataset.sourceUrl)} target="_blank" rel="noopener noreferrer">Dataset</a>}
-                        {safeHttpUrl(dataset.paperUrl) && <a href={safeHttpUrl(dataset.paperUrl)} target="_blank" rel="noopener noreferrer">Paper/Dok.</a>}
+                        {safeHttpUrl(dataset.sourceUrl) && <a href={safeHttpUrl(dataset.sourceUrl)} target="_blank" rel="noopener noreferrer">{c("Dataset", "Dataset")}</a>}
+                        {safeHttpUrl(dataset.paperUrl) && <a href={safeHttpUrl(dataset.paperUrl)} target="_blank" rel="noopener noreferrer">{c("Paper/Dokumen", "Paper/Documentation")}</a>}
                       </div>
                     </td>
                   </tr>
@@ -993,8 +964,7 @@ export default function GuideModule() {
                 {filteredDatasetDocs.length === 0 && (
                   <tr>
                     <td colSpan={8} className="guide-empty-cell">
-                      Tidak ada dataset yang cocok dengan pencarian.
-                    </td>
+                      {c("Tidak ada dataset yang cocok dengan pencarian.", "No datasets match your search.")}</td>
                   </tr>
                 )}
               </tbody>
@@ -1004,8 +974,7 @@ export default function GuideModule() {
 
         <div className="guide-doc-card">
           <h3>
-            <i className="bi bi-cpu-fill" /> Model & Inference
-          </h3>
+            <i className="bi bi-cpu-fill" /> {c("Model & Inferensi", "Model & Inference")}</h3>
           <div className="guide-model-grid">
             {MODEL_DOCS.map((model) => (
               <div className="guide-model-card" key={model.name}>
@@ -1015,10 +984,10 @@ export default function GuideModule() {
                 </div>
                 <h4>{model.name}</h4>
                 <p>
-                  <strong>Input:</strong> {model.input}
+                  <strong>{c("Masukan:", "Input:")}</strong> {model.input}
                 </p>
                 <p>
-                  <strong>Output:</strong> {model.output}
+                  <strong>{c("Keluaran:", "Output:")}</strong> {model.output}
                 </p>
                 <small>{model.notes}</small>
               </div>
@@ -1030,34 +999,29 @@ export default function GuideModule() {
 
       <div className="guide-quickref">
         <h2 className="guide-section-title">
-          <i className="bi bi-bookmark-fill" /> Quick Reference
-        </h2>
+          <i className="bi bi-bookmark-fill" /> {c("Referensi Cepat", "Quick Reference")}</h2>
         <div className="guide-quickref-grid">
           <div>
             <h4>
-              <i className="bi bi-keyboard" /> Keyboard Shortcuts
-            </h4>
+              <i className="bi bi-keyboard" /> {c("Pintasan Keyboard", "Keyboard Shortcuts")}</h4>
             <div className="guide-kbd-row">
-              <kbd>Ctrl + Z</kbd> <span>Undo drawing</span>
+              <kbd>Ctrl + Z</kbd> <span>{c("Batalkan gambar", "Undo drawing")}</span>
             </div>
             <div className="guide-kbd-row">
-              <kbd>Escape</kbd> <span>Cancel drawing</span>
+              <kbd>Escape</kbd> <span>{c("Batalkan gambar", "Cancel drawing")}</span>
             </div>
             <div className="guide-kbd-row">
-              <kbd>+ / -</kbd> <span>Zoom in/out map</span>
+              <kbd>+ / -</kbd> <span>{c("Perbesar/perkecil peta", "Zoom in/out map")}</span>
             </div>
           </div>
           <div>
             <h4>
-              <i className="bi bi-lightning-fill" /> Quick Actions
-            </h4>
+              <i className="bi bi-lightning-fill" /> {c("Aksi Cepat", "Quick Actions")}</h4>
             <div className="guide-quickref-buttons">
               <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openModule("carbon")}>
-                <i className="bi bi-play" /> Go to Analysis
-              </button>
+                <i className="bi bi-play" /> {c("Buka Analisis", "Go to Analysis")}</button>
               <button type="button" className="btn btn-sm btn-outline-success" onClick={() => openModule("about")}>
-                <i className="bi bi-info-circle" /> About Program
-              </button>
+                <i className="bi bi-info-circle" /> {c("Tentang Program", "About Program")}</button>
             </div>
           </div>
         </div>

@@ -106,12 +106,12 @@ export default function LandCoverModels() {
       </div>
       <details className="admin-lc-aoi"><summary>{text("AOI khusus (opsional)", "Custom AOI (optional)")}</summary>
         <div className="admin-lc-label-row admin-lc-aoi__hint"><span>{text("Unggah batas training sendiri", "Provide a custom training boundary")}</span><InfoTip label={text("Tentang AOI training", "About training AOI")} content={text("Kosongkan untuk memakai sampel referensi dari 12 wilayah di Indonesia.", "Leave empty to use reference samples from 12 regions in Indonesia.")} /></div>
-        <textarea id="lulc-training-aoi" className="form-control font-monospace mt-2" rows={3} aria-label="Training AOI GeoJSON" placeholder="GeoJSON" value={aoi} onChange={(event) => setAoi(event.target.value)} />
+        <textarea id="lulc-training-aoi" className="form-control font-monospace mt-2" rows={3} aria-label={text("AOI pelatihan GeoJSON", "Training AOI GeoJSON")} placeholder="GeoJSON" value={aoi} onChange={(event) => setAoi(event.target.value)} />
       </details>
       <button type="button" className="btn btn-success admin-lc-train-btn" disabled={!canWrite || busy || !asset.trim() || !version.trim() || Boolean(job && !["completed", "failed"].includes(job.status))} onClick={() => void train()}>
         <i className={`bi ${busy ? "bi-arrow-repeat" : "bi-play-fill"}`} aria-hidden="true" /> {busy ? text("Memproses…", "Working…") : text("Latih classifier", "Train classifier")}
       </button>
-      {job && <div className={`admin-lc-job is-${job.status}`} role="status"><div className="admin-lc-job__top"><strong>{job.model}</strong><span>{job.status}</span></div>{job.task_id && <div className="admin-lc-job__task">EE task: <code>{job.task_id}</code></div>}{job.error && <div className="text-danger">{job.error}</div>}
+      {job && <div className={`admin-lc-job is-${job.status}`} role="status"><div className="admin-lc-job__top"><strong>{job.model}</strong><span>{job.status}</span></div>{job.task_id && <div className="admin-lc-job__task">{text("Tugas EE:", "EE task:")} <code>{job.task_id}</code></div>}{job.error && <div className="text-danger">{job.error}</div>}
         {job.training_metadata && <div className="admin-lc-job__meta">{job.training_metadata.training_sample_count} {text("sampel", "samples")} · {text("Kelas tanpa sampel", "Missing classes")}: {job.training_metadata.missing_training_classes.join(", ") || "—"}</div>}
       {job.status === "completed" && job.config_entry && <button type="button" className="btn btn-success btn-sm" disabled={busy || !canWrite} onClick={() => {
         try { const config = JSON.parse(configText) as LandCoverModelConfig; void save({ ...config, [job.model]: { ...config[job.model], ...job.config_entry, enabled: true } }); }

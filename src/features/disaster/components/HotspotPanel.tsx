@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { HotspotRecord } from "../types";
 import { SEVERITY_LABELS, type EventSeverity } from "../types";
 
@@ -33,16 +34,17 @@ function impactBadgeClass(level: string): string {
  * Detail buttons only, no edit affordance anywhere.
  */
 export default function HotspotPanel({ hotspots, highlightedHotspotId, onZoom, onHighlight }: Props) {
+  const c = useBilingualCopy();
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (!hotspots.length) {
-    return <div className="alert alert-secondary py-2 mb-3">Belum ada hotspot yang dipublikasikan untuk event ini.</div>;
+    return <div className="alert alert-secondary py-2 mb-3">{c("Belum ada hotspot yang dipublikasikan untuk kejadian ini.", "No hotspots have been published for this event.")}</div>;
   }
 
   return (
     <div className="card mb-3">
       <div className="card-header py-2">
-        <i className="bi bi-geo-alt-fill" /> Hotspot ({hotspots.length})
+        <i className="bi bi-geo-alt-fill" /> {c("Titik panas", "Hotspots")} ({hotspots.length})
       </div>
       <div className="list-group list-group-flush">
         {hotspots.map((hotspot) => (
@@ -55,17 +57,17 @@ export default function HotspotPanel({ hotspots, highlightedHotspotId, onZoom, o
               <span className="fw-semibold">{hotspot.name}</span>
               <div className="btn-group btn-group-sm ms-auto">
                 <button type="button" className="btn btn-outline-primary" onClick={() => onZoom(hotspot)}>
-                  <i className="bi bi-zoom-in" /> Zoom
+                  <i className="bi bi-zoom-in" /> {c("Perbesar", "Zoom")}
                 </button>
                 <button type="button" className="btn btn-outline-secondary" onClick={() => onHighlight(hotspot.id)}>
-                  <i className="bi bi-stars" /> Highlight
+                  <i className="bi bi-stars" /> {c("Sorot", "Highlight")}
                 </button>
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
                   onClick={() => setExpandedId((id) => (id === hotspot.id ? null : hotspot.id))}
                 >
-                  <i className={`bi ${expandedId === hotspot.id ? "bi-chevron-up" : "bi-chevron-down"}`} /> Detail
+                  <i className={`bi ${expandedId === hotspot.id ? "bi-chevron-up" : "bi-chevron-down"}`} /> {c("Detail", "Details")}
                 </button>
               </div>
             </div>
@@ -80,7 +82,7 @@ export default function HotspotPanel({ hotspots, highlightedHotspotId, onZoom, o
                     ))}
                   </ul>
                 ) : (
-                  <span>Tidak ada detail statistik tambahan.</span>
+                  <span>{c("Tidak ada detail statistik tambahan.", "No additional statistics are available.")}</span>
                 )}
               </div>
             )}

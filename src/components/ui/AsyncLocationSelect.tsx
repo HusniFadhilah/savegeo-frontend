@@ -1,6 +1,7 @@
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useEffect, useRef, useState } from "react";
 import { searchLocations, type LocationSearchResult } from "@/services/analysisService";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   onSelect: (result: LocationSearchResult) => void;
@@ -18,8 +19,10 @@ interface Props {
  * as the sync SearchableSelect for visual consistency, just with a remote,
  * debounced data source instead of a local option list.
  */
-export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota, provinsi, kecamatan, alamat...", selectedLabel, onClear }: Props) {
+export default function AsyncLocationSelect({ onSelect, placeholder, selectedLabel, onClear }: Props) {
   const t = useI18nStore(s => s.t);
+  const c = useBilingualCopy();
+  const searchPlaceholder = placeholder ?? c("Cari kota, provinsi, kecamatan, atau alamat…", "Search for a city, province, district, or address…");
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [open, setOpen] = useState(false);
@@ -90,7 +93,7 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
         <input
           type="text"
           className="sg-ssel-input"
-          placeholder={selectedLabel || placeholder}
+          placeholder={selectedLabel || searchPlaceholder}
           value={open ? query : ""}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
@@ -109,7 +112,7 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
           <button
             type="button"
             className="sg-ssel-clear"
-            title="Kosongkan"
+            title={c("Kosongkan", "Clear")}
             onClick={(e) => {
               e.stopPropagation();
               onClear();
@@ -122,6 +125,12 @@ export default function AsyncLocationSelect({ onSelect, placeholder = "Cari kota
       </div>
       {open && (
         <div className="sg-ssel-dropdown">
+          <div className="sg-ssel-empty sg-ssel-disclosure" role="note">
+            {c(
+              "Nama tempat yang Anda ketik dikirim ke Nominatim (OpenStreetMap) untuk pencarian. Titik hasil pencarian dipakai untuk menampilkan lokasi di peta.",
+              "The place name you enter is sent to Nominatim (OpenStreetMap) for search. The returned point is used to show the location on the map.",
+            )}
+          </div>
           {query.trim().length < 3 && <div className="sg-ssel-empty">{t("location.minimum")}</div>}
           {query.trim().length >= 3 && loading && <div className="sg-ssel-empty">{t("location.loading")}</div>}
           {query.trim().length >= 3 && searched && !error && !loading && results.length === 0 && (

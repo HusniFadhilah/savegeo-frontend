@@ -1,5 +1,6 @@
 import type { AoiFeature } from "@/types/map";
 import { calcAreaKm2 } from "../utils";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   aoi: AoiFeature | null;
@@ -12,11 +13,11 @@ interface Props {
  * its own AOI drawn directly on its map instead.
  */
 export default function AoiStatusCard({ aoi }: Props) {
+  const c = useBilingualCopy();
   if (!aoi) {
     return (
       <div className="alert alert-warning py-2" style={{ fontSize: ".82rem" }}>
-        <i className="bi bi-exclamation-triangle-fill" /> Belum ada AOI. Gambar poligon/kotak AOI di peta
-        untuk memulai.
+        <i className="bi bi-exclamation-triangle-fill" /> {c("Belum ada AOI. Gambar poligon atau kotak AOI di peta untuk memulai.", "No AOI selected. Draw a polygon or rectangle on the map to get started.")}
       </div>
     );
   }
@@ -25,8 +26,8 @@ export default function AoiStatusCard({ aoi }: Props) {
 
   return (
     <div className="alert alert-success py-2" style={{ fontSize: ".82rem" }}>
-      <i className="bi bi-check-circle-fill" /> <strong>AOI dipilih</strong> ·{" "}
-      {areaKm2.toLocaleString("id-ID", { maximumFractionDigits: 2 })} km²
+      <i className="bi bi-check-circle-fill" /> <strong>{c("AOI dipilih", "AOI selected")}</strong> ·{" "}
+      {areaKm2.toLocaleString(c("id-ID", "en-US"), { maximumFractionDigits: 2 })} km²
     </div>
   );
 }

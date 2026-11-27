@@ -146,7 +146,7 @@ export default function SettingsPanel({
         </p>
         <form onSubmit={(e) => void add(e)}>
           <div className="integrity-form-grid">
-            <Field label="Username">
+            <Field label={c("Nama pengguna", "Username")}>
               <input
                 required
                 maxLength={64}
@@ -162,7 +162,7 @@ export default function SettingsPanel({
                 onChange={(e) => setInvite((old) => ({ ...old, principal_type: e.target.value }))}
               >
                 <option value="admin">Admin</option>
-                <option value="user">User</option>
+                <option value="user">{c("Pengguna", "User")}</option>
               </select>
             </Field>
             <Field label={c("Peran", "Role")}>
@@ -189,7 +189,7 @@ export default function SettingsPanel({
           <table className="table">
             <thead>
               <tr>
-                <th>Username</th>
+                <th>{c("Nama pengguna", "Username")}</th>
                 <th>{c("Peran", "Role")}</th>
                 <th>{c("Akses", "Access")}</th>
               </tr>

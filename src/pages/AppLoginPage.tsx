@@ -1,3 +1,4 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LoginIllustration from "@/components/auth/LoginIllustration";
@@ -9,6 +10,7 @@ import { userAuthService } from "@/services/userAuthService";
 import { ApiError } from "@/services/apiClient";
 
 function UnifiedAccessForm() {
+  const c = useBilingualCopy();
   const userLogin = useUserAuthStore((state) => state.login);
   const userLoading = useUserAuthStore((state) => state.isLoading);
   const userError = useUserAuthStore((state) => state.error);
@@ -41,7 +43,7 @@ function UnifiedAccessForm() {
     setFormError(
         useUserAuthStore.getState().error ||
         useAuthStore.getState().error ||
-        "Username atau password tidak sesuai.",
+        c("Nama pengguna atau kata sandi tidak sesuai.", "Incorrect username or password."),
     );
   }
 
@@ -50,7 +52,7 @@ function UnifiedAccessForm() {
     setResetMessage(null);
     setResetError(null);
     if (!identifier.trim()) {
-      setResetError("Masukkan email atau username.");
+      setResetError(c("Masukkan email atau nama pengguna.", "Enter an email address or username."));
       return;
     }
     setResetLoading(true);
@@ -63,7 +65,7 @@ function UnifiedAccessForm() {
         setResetMessage(result.message);
       } catch (adminError) {
         const error = adminError ?? userError;
-        setResetError(error instanceof ApiError ? error.message : "Gagal mengirim email reset password.");
+        setResetError(error instanceof ApiError ? error.message : c("Gagal mengirim email untuk mengatur ulang kata sandi.", "Could not send the password reset email."));
       }
     } finally {
       setResetLoading(false);
@@ -74,35 +76,35 @@ function UnifiedAccessForm() {
     <div className="app-login-form-card">
       <div className="app-login-form-heading">
         <span className="app-login-form-icon"><i className="bi bi-shield-lock" /></span>
-        <div><h2>Login SaveGeo</h2><p>Akses workspace analitik dengan akun user atau admin.</p></div>
+        <div><h2>{c("Masuk ke SaveGeo", "Sign in to SaveGeo")}</h2><p>{c("Akses ruang kerja analitik dengan akun pengguna atau admin.", "Access the analytics workspace with a user or admin account.")}</p></div>
       </div>
-      <div className="app-login-role-note"><i className="bi bi-shield-check" /> Akses dan authorization akan menyesuaikan role akun Anda.</div>
+      <div className="app-login-role-note"><i className="bi bi-shield-check" /> {c("Akses dan otorisasi mengikuti peran akun Anda.", "Access and authorization follow your account role.")}</div>
       {mfaChallenge || recoveryCodes.length > 0 ? <MfaLoginPanel /> : forgotMode ? (
         <form onSubmit={submitForgot}>
-          <label className="app-login-label" htmlFor="unified-reset-identifier">Email atau username</label>
+          <label className="app-login-label" htmlFor="unified-reset-identifier">{c("Email atau nama pengguna", "Email or username")}</label>
           <input id="unified-reset-identifier" className="app-login-input" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" required />
           {resetError && <div className="app-login-error">{resetError}</div>}
           {resetMessage && <div className="app-login-success">{resetMessage}</div>}
-          <button className="app-login-submit" type="submit" disabled={resetLoading}>{resetLoading ? "Mengirim..." : "Kirim Link Reset"}</button>
-          <button className="app-login-text-button" type="button" onClick={() => setForgotMode(false)}>Kembali ke login</button>
+          <button className="app-login-submit" type="submit" disabled={resetLoading}>{resetLoading ? c("Mengirim...", "Sending...") : c("Kirim Tautan Pengaturan Ulang", "Send Reset Link")}</button>
+          <button className="app-login-text-button" type="button" onClick={() => setForgotMode(false)}>{c("Kembali ke halaman masuk", "Back to sign in")}</button>
         </form>
       ) : (
         <form onSubmit={submit}>
-          <label className="app-login-label" htmlFor="unified-username">Username</label>
+          <label className="app-login-label" htmlFor="unified-username">{c("Nama pengguna", "Username")}</label>
           <input id="unified-username" className="app-login-input" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required />
-          <label className="app-login-label" htmlFor="unified-password">Password</label>
+          <label className="app-login-label" htmlFor="unified-password">{c("Kata sandi", "Password")}</label>
           <div className="app-login-password-wrap">
             <input id="unified-password" className="app-login-input" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
-            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} /></button>
+            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? c("Sembunyikan kata sandi", "Hide password") : c("Tampilkan kata sandi", "Show password")}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} /></button>
           </div>
           {(formError || adminError || userError) && (
             <div className="app-login-error" role="alert" aria-live="polite">
               {formError || adminError || userError}
             </div>
           )}
-          <button className="app-login-submit" type="submit" disabled={isLoading}>{isLoading ? "Memproses..." : "Login"}</button>
+          <button className="app-login-submit" type="submit" disabled={isLoading}>{isLoading ? c("Memproses...", "Signing in...") : c("Masuk", "Sign in")}</button>
           <div className="app-login-form-links">
-            <button className="app-login-text-button" type="button" onClick={() => setForgotMode(true)}>Lupa password?</button>
+            <button className="app-login-text-button" type="button" onClick={() => setForgotMode(true)}>{c("Lupa kata sandi?", "Forgot password?")}</button>
             {/* <Link className="app-login-text-button" to="/register">Daftar</Link> */}
           </div>
         </form>
@@ -112,6 +114,7 @@ function UnifiedAccessForm() {
 }
 
 export default function AppLoginPage() {
+  const c = useBilingualCopy();
   const navigate = useNavigate();
   const userAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const adminAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -125,19 +128,19 @@ export default function AppLoginPage() {
   }, [adminAuthenticated, destination, navigate, userAuthenticated]);
 
   if (userLoading || adminLoading) {
-    return <div className="d-flex min-vh-100 align-items-center justify-content-center">Memverifikasi sesi...</div>;
+    return <div className="d-flex min-vh-100 align-items-center justify-content-center">{c("Memverifikasi sesi...", "Verifying session...")}</div>;
   }
 
   return (
     <div className="app-login-page">
       <div className="app-login-visual">
-        <Link to="/" className="app-login-brand"><img src="/images/savegeo-logo.svg" alt="SaveGeo" /><span><strong>SaveGeo</strong><small>AI Imagery Analytics Platform</small></span></Link>
+        <Link to="/" className="app-login-brand"><img src="/images/savegeo-logo.svg" alt="SaveGeo" /><span><strong>SaveGeo</strong><small>{c("Analitik Citra Satelit Berbasis AI", "AI-Powered Satellite Imagery Analytics")}</small></span></Link>
         <div className="app-login-visual-copy">
-          <span className="landing-kicker"><span /> SECURE WORKSPACE</span>
-          <h1>Data bumi untuk<br /><em>keputusan nyata.</em></h1>
-          <p>Masuk ke ruang kerja SaveGeo untuk mengeksplorasi analitik geospasial yang terhubung.</p>
+          <span className="landing-kicker"><span /> {c("RUANG KERJA AMAN", "SECURE WORKSPACE")}</span>
+          <h1>{c("Data bumi untuk", "Earth data for")}<br /><em>{c("keputusan nyata.", "real decisions.")}</em></h1>
+          <p>{c("Masuk ke ruang kerja SaveGeo untuk menggunakan analitik geospasial yang saling terhubung.", "Sign in to explore connected geospatial analytics in SaveGeo.")}</p>
         </div>
-        <LoginIllustration ariaLabel="Visual bumi untuk keamanan platform SaveGeo" cards={[{ kicker: "AOI", note: "terpilih" }, { kicker: "Layer", note: "terhubung" }, { kicker: "Insight", note: "siap dibaca" }]} />
+        <LoginIllustration ariaLabel={c("Ilustrasi bumi untuk keamanan platform SaveGeo", "Earth illustration for SaveGeo platform security")} cards={[{ kicker: "AOI", note: c("terpilih", "selected") }, { kicker: c("Layer", "Layer"), note: c("terhubung", "connected") }, { kicker: c("Wawasan", "Insight"), note: c("siap dibaca", "ready to explore") }]} />
       </div>
       <div className="app-login-panel">
         <UnifiedAccessForm />

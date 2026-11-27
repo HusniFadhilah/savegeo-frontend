@@ -1,9 +1,10 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
+
 interface Props {
   onClick: () => void;
   hasUnread: boolean;
   isOpen: boolean;
 }
-
 /**
  * `isOpen` toggles `.sgc-toggle-open` - on mobile the chat panel goes full-
  * width/anchored to the bottom of the screen (see chatbot.css's `max-width:
@@ -14,12 +15,13 @@ interface Props {
  * hides it.
  */
 export default function ChatToggleButton({ onClick, hasUnread, isOpen }: Props) {
+  const c = useBilingualCopy();
   return (
     <button
       type="button"
       id="sgc-toggle-btn"
       className={isOpen ? "sgc-toggle-open" : undefined}
-      title="SaveGeo Assistant"
+      title={c("Asisten SaveGeo", "SaveGeo Assistant")}
       onClick={onClick}
     >
       <i className="bi bi-robot" />

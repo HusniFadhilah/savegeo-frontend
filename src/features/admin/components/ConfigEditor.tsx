@@ -8,6 +8,7 @@ import { useAdmin } from "../AdminContext";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { hasAdminPermission } from "@/auth/access";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 type NumericControl = {
   mode: "range" | "number";
@@ -225,6 +226,7 @@ function ConfigValueControl({
   onChange: (key: string, value: string) => void;
 }) {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const description = configItemText(item, "description", t);
   const numeric = getNumericControl(item, t);
   const title = description;
@@ -263,14 +265,14 @@ function ConfigValueControl({
             <select
               className="form-select form-select-sm"
               aria-label={`Preset palet ${title || item.key}`}
-              title="Pilih palet standar matplotlib"
+              title={c("Pilih palet standar Matplotlib", "Choose a standard Matplotlib palette")}
               value={selectedPreset?.id ?? "custom"}
               onChange={(event) => {
                 const preset = CARBON_PALETTE_PRESETS.find((option) => option.id === event.target.value);
                 if (preset) onChange(item.key, serializePalette([...preset.colors]));
               }}
             >
-              <option value="custom">Warna kustom</option>
+              <option value="custom">{c("Warna kustom", "Custom colors")}</option>
               {CARBON_PALETTE_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id}>{preset.label}</option>
               ))}

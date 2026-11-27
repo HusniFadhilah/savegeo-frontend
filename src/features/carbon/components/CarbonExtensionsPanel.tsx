@@ -1,3 +1,4 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/services/apiClient";
 import { runAnalysisJob } from "@/services/analysisJobs";
@@ -30,6 +31,7 @@ export default function CarbonExtensionsPanel({
   onResult,
   onRanking,
 }: Props) {
+  const c = useBilingualCopy();
   const scope = JSON.stringify({ aoi, year, analysisMode });
   const activeScope = useRef(scope);
   activeScope.current = scope;
@@ -85,12 +87,12 @@ export default function CarbonExtensionsPanel({
   const [error, setError] = useState<string | null>(null);
   const numeric = (value: string, label: string) => {
     if (value.trim() === "" || !Number.isFinite(Number(value)) || Number(value) < 0)
-      throw new Error(`Isi ${label} dengan angka ≥0 dari sumber yang sesuai.`);
+      throw new Error(c(`Isi ${label} dengan angka ≥0 dari sumber yang sesuai.`, `Enter a value ≥0 for ${label} using an appropriate source.`));
     return Number(value);
   };
   async function run() {
     if (!aoi) {
-      setError("Pilih AOI terlebih dahulu.");
+      setError(c("Pilih AOI terlebih dahulu.", "Select an AOI first."));
       return false;
     }
     setBusy(true);
@@ -102,10 +104,10 @@ export default function CarbonExtensionsPanel({
       if (mode === "detritus") {
         if (preset && !domainConfirmed)
           throw new Error(
-            "Konfirmasikan bahwa kategori iklim hutan preset sesuai dengan area penerapan.",
+            c("Pastikan kategori iklim hutan preset sesuai dengan area penerapan.", "Confirm that the preset forest climate category applies to this area."),
           );
         if (!preset && source.trim().length < 5)
-          throw new Error("Cantumkan sumber pengukuran atau literatur koefisien.");
+          throw new Error(c("Cantumkan sumber pengukuran atau literatur koefisien.", "Provide a measurement source or coefficient literature reference."));
         jobs = [
           {
             extension: "litter",
@@ -129,9 +131,9 @@ export default function CarbonExtensionsPanel({
           },
         ];
       } else if (mode === "bluecarbon") {
-        if (source.trim().length < 5) throw new Error("Cantumkan sumber stok blue carbon.");
+        if (source.trim().length < 5) throw new Error(c("Cantumkan sumber stok karbon biru.", "Provide the blue carbon stock source."));
         if (habitat === "aoi_habitat" && !confirmed)
-          throw new Error("Konfirmasikan bahwa AOI adalah batas habitat yang sudah dipetakan.");
+          throw new Error(c("Konfirmasikan bahwa AOI adalah batas habitat yang sudah dipetakan.", "Confirm that the AOI is a mapped habitat boundary."));
         jobs = [
           {
             extension: "bluecarbon",
@@ -201,14 +203,14 @@ export default function CarbonExtensionsPanel({
     <details className="card mb-3" open={Boolean(analysisMode)}>
       <summary className="card-header fw-semibold">
         {analysisMode === "bluecarbon"
-          ? "Parameter blue carbon"
-          : "Produktivitas vegetasi NPP / GPP"}
+          ? c("Parameter blue carbon", "Blue carbon parameters")
+          : c("Produktivitas vegetasi NPP / GPP", "NPP / GPP vegetation productivity")}
       </summary>
       <div className="card-body">
         {!analysisMode && (
           <>
             <label className="form-label" htmlFor="carbon-extension">
-              Analisis tambahan
+              {c("Analisis tambahan", "Additional analysis")}
             </label>
             <select
               id="carbon-extension"
@@ -221,8 +223,8 @@ export default function CarbonExtensionsPanel({
                 if (event.target.value === "bluecarbon" && preset) setSource("");
               }}
             >
-              <option value="productivity">Produktivitas vegetasi NPP dan GPP</option>
-              <option value="bluecarbon">Blue carbon</option>
+              <option value="productivity">{c("Produktivitas vegetasi NPP dan GPP", "NPP and GPP vegetation productivity")}</option>
+              <option value="bluecarbon">{c("Karbon biru (blue carbon)", "Blue carbon")}</option>
             </select>
           </>
         )}
@@ -236,7 +238,7 @@ export default function CarbonExtensionsPanel({
         ) : (
           <>
             <label className="form-label">
-              Tahun data / skenario
+              {c("Tahun data / skenario", "Data / scenario year")}
               <input
                 type="number"
                 min="2001"
@@ -249,7 +251,7 @@ export default function CarbonExtensionsPanel({
             </label>
             {mode === "productivity" && productivityYears.length > 0 && (
               <label className="form-label d-block">
-                Tahun MODIS yang sudah diterbitkan
+                {c("Tahun MODIS yang sudah diterbitkan", "Published MODIS years")}
                 <select
                   className="form-select"
                   value={productivityYears.includes(sourceYear) ? sourceYear : ""}
@@ -257,33 +259,29 @@ export default function CarbonExtensionsPanel({
                   onChange={(event) => setSourceYear(Number(event.target.value))}
                 >
                   <option value="" disabled>
-                    Pilih tahun sumber yang tersedia
+                    {c("Pilih tahun sumber yang tersedia", "Select an available source year")}
                   </option>
                   {productivityYears.map((value) => (
                     <option key={value} value={value}>
                       {value}
-                      {value === productivityYears[0] ? " · terbaru tersedia" : ""}
+                      {value === productivityYears[0] ? ` · ${c("terbaru tersedia", "latest available")}` : ""}
                     </option>
                   ))}
                 </select>
                 <small className="text-muted">
-                  Tahun analisis utama tidak diganti otomatis. Produktivitas memakai tahun sumber
-                  yang dipilih di sini.
+                  {c("Tahun analisis utama tidak berubah otomatis. Produktivitas memakai tahun sumber yang dipilih di sini.", "The main analysis year does not change automatically. Productivity uses the source year selected here.")}
                 </small>
               </label>
             )}
             {mode === "productivity" ? (
               <p className="small text-muted">
-                MODIS MOD17A3HGF, resolusi sumber 500 m, satu tahun penuh. NPP dan GPP mengukur
-                produktivitas vegetasi, bukan serapan bersih ekosistem atau pengukuran daun
-                individual. Tahun yang belum diterbitkan tidak diganti diam-diam dengan tahun
-                sebelumnya.{" "}
+                {c("MODIS MOD17A3HGF, resolusi sumber 500 m, satu tahun penuh. NPP dan GPP mengukur produktivitas vegetasi, bukan serapan bersih ekosistem atau pengukuran daun individual. Tahun yang belum diterbitkan tidak diganti diam-diam dengan tahun sebelumnya.", "MODIS MOD17A3HGF provides annual data at a native 500 m resolution. NPP and GPP measure vegetation productivity, not net ecosystem uptake or individual leaf measurements. Unpublished years are not silently replaced with the previous year.")}{" "}
                 <a
                   href="https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD17A3HGF"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Sumber dan periode tersedia
+                  {c("Sumber dan periode tersedia", "Source and available period")}
                 </a>
                 .
               </p>
@@ -291,7 +289,7 @@ export default function CarbonExtensionsPanel({
               <>
                 {mode === "detritus" && (
                   <label className="form-label d-block">
-                    Metode koefisien
+                    {c("Metode koefisien", "Coefficient method")}
                     <select
                       className="form-select"
                       value={preset}
@@ -311,17 +309,17 @@ export default function CarbonExtensionsPanel({
                         if (chosen) setMask("trees");
                       }}
                     >
-                      <option value="">Data lapangan / literatur yang ditentukan pengguna</option>
+                      <option value="">{c("Data lapangan / literatur yang ditentukan pengguna", "User-provided field data / literature")}</option>
                       {catalog?.detritus_presets.map((item) => (
                         <option key={item.key} value={item.key}>
-                          IPCC Tier 1 · {item.label}
+                          {c("IPCC Tingkat 1 ·", "IPCC Tier 1 ·")} {item.label}
                         </option>
                       ))}
                     </select>
                   </label>
                 )}
                 <label className="form-label d-block">
-                  Sumber koefisien (pengukuran lapangan, judul/tautan literatur, lokasi dan tahun)
+                  {c("Sumber koefisien (pengukuran lapangan, judul/tautan literatur, lokasi dan tahun)", "Coefficient source (field measurement, literature title/link, location, and year)")}
                   <textarea
                     className="form-control"
                     value={source}
@@ -331,26 +329,24 @@ export default function CarbonExtensionsPanel({
                   />
                 </label>
                 <p className="small text-muted">
-                  Masukkan stok karbon dalam Mg C/ha. Nilai ini bukan berat biomassa kering; lakukan
-                  konversi memakai fraksi karbon terukur sebelum memasukkan data. Hasil diberi label
-                  skenario dan tidak dijumlahkan otomatis dengan pool lain.
+                  {c("Masukkan stok karbon dalam Mg C/ha, bukan berat biomassa kering. Konversikan dengan fraksi karbon terukur sebelum memasukkan data. Hasil ditampilkan sebagai skenario dan tidak otomatis dijumlahkan dengan pool lain.", "Enter carbon stock in Mg C/ha, not dry biomass mass. Convert it using a measured carbon fraction before entering the data. Results are labelled as a scenario and are not automatically added to other pools.")}
                 </p>
                 {mode === "detritus" ? (
                   <>
                     <div className="row g-2">
-                      {input("Serasah (Mg C/ha)", litter, setLitter)}
-                      {input("Kayu mati (Mg C/ha)", deadwood, setDeadwood)}
+                      {input(c("Serasah (Mg C/ha)", "Litter (Mg C/ha)"), litter, setLitter)}
+                      {input(c("Kayu mati (Mg C/ha)", "Deadwood (Mg C/ha)"), deadwood, setDeadwood)}
                     </div>
                     <label className="form-label d-block">
-                      Area penerapan
+                      {c("Area penerapan", "Area of application")}
                       <select
                         className="form-select"
                         value={mask}
                         disabled={busy || Boolean(preset)}
                         onChange={(event) => setMask(event.target.value)}
                       >
-                        <option value="trees">Kelas pohon Dynamic World tahun skenario</option>
-                        <option value="aoi">Seluruh AOI (area pengukuran homogen)</option>
+                        <option value="trees">{c("Kelas pohon Dynamic World tahun skenario", "Dynamic World tree class for the scenario year")}</option>
+                        <option value="aoi">{c("Seluruh AOI (area pengukuran homogen)", "Entire AOI (homogeneous measurement area)")}</option>
                       </select>
                     </label>
                     {preset && (
@@ -363,8 +359,7 @@ export default function CarbonExtensionsPanel({
                           disabled={busy}
                         />
                         <span className="form-check-label">
-                          Kategori iklim hutan preset sesuai dengan area penerapan. Saya membaca
-                          hasil sebagai skenario Tier 1, bukan hasil survei lokal. {catalog?.method}
+                          {c("Kategori iklim hutan preset sesuai dengan area penerapan. Saya memahami hasilnya sebagai skenario Tier 1, bukan hasil survei lokal.", "The preset forest climate category applies to this area. I understand the result is a Tier 1 scenario, not a local survey result.")} {catalog?.method}
                         </span>
                       </label>
                     )}
@@ -372,7 +367,7 @@ export default function CarbonExtensionsPanel({
                 ) : (
                   <>
                     <label className="form-label d-block">
-                      Batas habitat
+                      {c("Batas habitat", "Habitat boundary")}
                       <select
                         className="form-select"
                         value={habitat}
@@ -383,25 +378,25 @@ export default function CarbonExtensionsPanel({
                         }}
                       >
                         <option value="mangrove_2000">
-                          Mangrove Landsat baseline 2000 di dalam AOI
+                          {c("Mangrove Landsat baseline 2000 di dalam AOI", "Landsat 2000 mangrove baseline within the AOI")}
                         </option>
                         <option value="aoi_habitat">
-                          AOI habitat terpetakan yang diunggah/dipilih
+                          {c("AOI habitat terpetakan yang diunggah/dipilih", "Uploaded/selected mapped habitat AOI")}
                         </option>
                       </select>
                     </label>
                     {habitat === "aoi_habitat" && (
                       <>
                         <label className="form-label d-block">
-                          Jenis habitat
+                          {c("Jenis habitat", "Habitat type")}
                           <select
                             className="form-select"
                             value={habitatType}
                             onChange={(event) => setHabitatType(event.target.value)}
                           >
-                            <option value="mangrove">Mangrove</option>
-                            <option value="seagrass">Lamun</option>
-                            <option value="saltmarsh">Rawa asin</option>
+                            <option value="mangrove">{c("Mangrove", "Mangrove")}</option>
+                            <option value="seagrass">{c("Lamun", "Seagrass")}</option>
+                            <option value="saltmarsh">{c("Rawa asin", "Salt marsh")}</option>
                           </select>
                         </label>
                         <label className="form-check mb-2">
@@ -412,21 +407,19 @@ export default function CarbonExtensionsPanel({
                             onChange={(event) => setConfirmed(event.target.checked)}
                           />
                           <span className="form-check-label">
-                            AOI hanya mencakup habitat terpetakan; sumber batas dicantumkan di atas.
+                            {c("AOI hanya mencakup habitat terpetakan; sumber batas dicantumkan di atas.", "The AOI covers only mapped habitat; the boundary source is listed above.")}
                           </span>
                         </label>
                       </>
                     )}
                     <div className="row g-2">
-                      {input("AGB karbon (Mg C/ha)", agb, setAgb)}
-                      {input("BGB karbon (Mg C/ha)", bgb, setBgb)}
-                      {input("SOC sedimen (Mg C/ha)", soc, setSoc)}
-                      {input("Kedalaman sedimen (cm)", depth, setDepth)}
+                      {input(c("AGB karbon (Mg C/ha)", "AGB carbon (Mg C/ha)"), agb, setAgb)}
+                      {input(c("BGB karbon (Mg C/ha)", "BGB carbon (Mg C/ha)"), bgb, setBgb)}
+                      {input(c("SOC sedimen (Mg C/ha)", "Sediment SOC (Mg C/ha)"), soc, setSoc)}
+                      {input(c("Kedalaman sedimen (cm)", "Sediment depth (cm)"), depth, setDepth)}
                     </div>
                     <p className="small text-muted">
-                      Blue carbon di sini adalah skenario stok pada habitat dan kedalaman yang
-                      dinyatakan. Tidak mengasumsikan luas habitat masa kini dari baseline 2000,
-                      tidak menghitung penimbunan tahunan, emisi, atau kredit karbon.
+                      {c("Blue carbon di sini merupakan skenario stok untuk habitat dan kedalaman yang disebutkan. Perhitungan ini tidak menggunakan luas habitat masa kini dari baseline 2000 serta tidak menghitung penimbunan tahunan, emisi, atau kredit karbon.", "Blue carbon here is a stock scenario for the stated habitat and depth. It does not infer current habitat area from the 2000 baseline or calculate annual accumulation, emissions, or carbon credits.")}
                     </p>
                   </>
                 )}
@@ -439,7 +432,7 @@ export default function CarbonExtensionsPanel({
                 disabled={busy || !aoi}
                 onClick={() => void run()}
               >
-                {busy ? "Memproses modul..." : "Jalankan modul"}
+                {busy ? c("Memproses modul...", "Processing module...") : c("Jalankan modul", "Run module")}
               </button>
             )}
             {error && (
@@ -458,7 +451,7 @@ export default function CarbonExtensionsPanel({
             <p className="small mt-2">{result.model_info.method_description}</p>
             <div className="d-flex gap-4 flex-wrap">
               <span>
-                Rata-rata:{" "}
+                {c("Rata-rata:", "Mean:")}{" "}
                 <strong>
                   {result.carbon_estimated.statistics?.mean?.toLocaleString("id-ID", {
                     maximumFractionDigits: 2,
@@ -467,10 +460,10 @@ export default function CarbonExtensionsPanel({
                 </strong>
               </span>
               <span>
-                Total{" "}
+                {c("Total", "Total")}{" "}
                 {result.carbon_estimated.quantity === "productivity"
-                  ? "produktivitas tahunan"
-                  : "stok"}
+                  ? c("produktivitas tahunan", "annual productivity")
+                  : c("stok", "stock")}
                 :{" "}
                 <strong>
                   {result.area_info.total_carbon_tons?.toLocaleString("id-ID", {

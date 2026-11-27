@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ApiError } from "@/services/apiClient";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { fetchFirmsFires, fetchFirmsSources } from "../api";
 import { featureContainsPoint } from "../lib/fireLayers";
 import type {
@@ -63,6 +64,7 @@ function filteredSummary(features: FirmsHotspotFeature[]) {
 
 export default function FirmsHotspotPanel({ aoi, onChange, onZoom }: Props) {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState<FirmsQueryState>(() => parseFirmsQuery(searchParams.toString()));
   const [sources, setSources] = useState<FirmsSourcesResponse | null>(null);
@@ -247,10 +249,10 @@ export default function FirmsHotspotPanel({ aoi, onChange, onZoom }: Props) {
               <div className="col-3"><strong>{summary.total.toLocaleString()}</strong><span className="d-block text-muted">{t("disaster.firms.totalHotspots")}</span></div>
               <div className="col-3"><strong>{summary.high.toLocaleString()}</strong><span className="d-block text-muted">{t("disaster.firms.highConfidence")}</span></div>
               <div className="col-3"><strong>{summary.totalFrp.toFixed(1)}</strong><span className="d-block text-muted">{t("disaster.firms.totalFrp")}</span></div>
-              <div className="col-3"><strong>{summary.maxFrp.toFixed(1)}</strong><span className="d-block text-muted">FRP max</span></div>
+              <div className="col-3"><strong>{summary.maxFrp.toFixed(1)}</strong><span className="d-block text-muted">{c("FRP maksimum", "Maximum FRP")}</span></div>
             </div>
             {timelineValues.length > 1 && (
-              <label className="small d-block mt-2">Timeline UTC
+              <label className="small d-block mt-2">{c("Linimasa UTC", "UTC timeline")}
                 <input className="form-range" type="range" min={timelineMin} max={timelineMax} value={timelineCutoff ?? timelineMax} onChange={(event) => setTimelineCutoff(Number(event.target.value))} />
               </label>
             )}

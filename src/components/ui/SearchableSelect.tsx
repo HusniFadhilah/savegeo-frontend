@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 /**
  * Generic app-wide searchable dropdown (Select2-style type-to-filter),
@@ -41,14 +42,17 @@ export default function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = "Cari...",
+  placeholder,
   loading = false,
   disabled = false,
-  emptyHint = "Tidak ditemukan",
+  emptyHint,
   clearable = false,
   id,
   className,
 }: Props) {
+  const c = useBilingualCopy();
+  const displayPlaceholder = placeholder ?? c("Cari…", "Search…");
+  const displayEmptyHint = emptyHint ?? c("Tidak ditemukan", "No results found");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -117,7 +121,7 @@ export default function SearchableSelect({
           className="sg-ssel-input"
           type="text"
           disabled={disabled || loading}
-          placeholder={loading ? "Memuat..." : selected ? selected.label : placeholder}
+          placeholder={loading ? c("Memuat…", "Loading…") : selected ? selected.label : displayPlaceholder}
           value={open ? query : ""}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
@@ -131,7 +135,7 @@ export default function SearchableSelect({
           <button
             type="button"
             className="sg-ssel-clear"
-            title="Kosongkan"
+            title={c("Kosongkan", "Clear")}
             onClick={(e) => {
               e.stopPropagation();
               commit("");
@@ -143,7 +147,7 @@ export default function SearchableSelect({
       </div>
       {open && !disabled && (
         <div className="sg-ssel-dropdown">
-          {filtered.length === 0 && <div className="sg-ssel-empty">{emptyHint}</div>}
+          {filtered.length === 0 && <div className="sg-ssel-empty">{displayEmptyHint}</div>}
           {filtered.map((opt, idx) => {
             const showGroup = opt.group && opt.group !== filtered[idx - 1]?.group;
             return (

@@ -1,5 +1,6 @@
 import type { DisasterSourcesMap } from "../types";
 import { safeHttpUrl } from "@/utils/safeHttpUrl";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   loading: boolean;
@@ -14,11 +15,12 @@ interface Props {
  * configured/not-configured status cards.
  */
 export default function SourceStatusPanel({ loading, error, sources }: Props) {
+  const c = useBilingualCopy();
   if (loading) {
     return (
       <div className="alert alert-info py-2 mb-3">
         <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-        Memuat konfigurasi sumber resmi...
+        {c("Memuat konfigurasi sumber resmi…", "Loading official source configuration…")}
       </div>
     );
   }
@@ -31,7 +33,7 @@ export default function SourceStatusPanel({ loading, error, sources }: Props) {
 
   const entries = Object.entries(sources);
   if (!entries.length) {
-    return <div className="alert alert-secondary py-2 mb-3">Tidak ada sumber resmi terdaftar.</div>;
+    return <div className="alert alert-secondary py-2 mb-3">{c("Belum ada sumber resmi yang terdaftar.", "No official sources are registered.")}</div>;
   }
 
   return (
@@ -41,10 +43,10 @@ export default function SourceStatusPanel({ loading, error, sources }: Props) {
           <div className={`alert ${item.configured ? "alert-success" : "alert-warning"} py-2 h-100 mb-0`}>
             <strong>{item.name}</strong>
             <div className="small">{item.type}</div>
-            <div className="small">{item.configured ? "Terkonfigurasi" : "Belum dikonfigurasi di .env"}</div>
+            <div className="small">{item.configured ? c("Terkonfigurasi", "Configured") : c("Belum dikonfigurasi di .env", "Not configured in .env")}</div>
             {safeHttpUrl(item.official_url) && (
               <a href={safeHttpUrl(item.official_url)} target="_blank" rel="noopener noreferrer" className="small">
-                Sumber resmi
+                {c("Sumber resmi", "Official source")}
               </a>
             )}
           </div>

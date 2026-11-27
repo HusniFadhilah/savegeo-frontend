@@ -91,8 +91,8 @@ export function MethodologyPanel(props: SectionProps) {
           </div>
           <Field label={c("Pendekatan metodologi", "Methodology approach")}>
             <select className="form-select" value={check.approach || "area_based"} onChange={(event) => changeApproach(event.target.value as "area_based" | "census_based")}>
-              <option value="area_based">Area-based</option>
-              <option value="census_based">Census-based</option>
+              <option value="area_based">{c("Berbasis area", "Area-based")}</option>
+              <option value="census_based">{c("Berbasis sensus", "Census-based")}</option>
             </select>
           </Field>
           <div className="integrity-methodology-list">
@@ -211,7 +211,7 @@ export function SatelliteProvenancePanel(props: SectionProps) {
           <Field label={c("Jumlah observasi", "Observation count")}><input type="number" min="0" step="1" className="form-control" value={form.observation_count} onChange={(e) => change("observation_count", e.target.value)} /></Field>
           <Field label={c("Kecocokan musim / window", "Season match / window")}><input maxLength={200} className="form-control" value={form.season_window} onChange={(e) => change("season_window", e.target.value)} /></Field>
           <Field label={c("Frekuensi temporal", "Temporal cadence")}><input maxLength={100} className="form-control" value={form.temporal_cadence} onChange={(e) => change("temporal_cadence", e.target.value)} /></Field>
-          <Field label={c("Status aerosol", "Aerosol status")}><select className="form-select" value={form.aerosol_status} onChange={(e) => change("aerosol_status", e.target.value)}><option value="unknown">Unknown</option><option value="corrected">Corrected</option><option value="not_corrected">Not corrected</option><option value="qa_reported">QA reported</option><option value="not_applicable">Not applicable</option></select></Field>
+          <Field label={c("Status aerosol", "Aerosol status")}><select className="form-select" value={form.aerosol_status} onChange={(e) => change("aerosol_status", e.target.value)}><option value="unknown">{c("Tidak diketahui", "Unknown")}</option><option value="corrected">{c("Sudah dikoreksi", "Corrected")}</option><option value="not_corrected">{c("Belum dikoreksi", "Not corrected")}</option><option value="qa_reported">{c("Dilaporkan oleh QA", "QA reported")}</option><option value="not_applicable">{c("Tidak berlaku", "Not applicable")}</option></select></Field>
           <Field label={c("Versi pemrosesan", "Processing version")}><input required maxLength={100} className="form-control" value={form.processing_version} onChange={(e) => change("processing_version", e.target.value)} /></Field>
         </div>
         <Field label={c("Metode koreksi atau referensi QA aerosol", "Aerosol correction method or QA reference")}><textarea rows={2} maxLength={1000} className="form-control" value={form.aerosol_method_or_qa} onChange={(e) => change("aerosol_method_or_qa", e.target.value)} /></Field>
@@ -274,7 +274,7 @@ export function CreditLedgerPanel({ projectId, canWrite }: Pick<SectionProps, "p
           <Field label={c("Batch / referensi serial", "Batch / serial reference")}><input required maxLength={120} className="form-control" value={form.batch_reference} onChange={(e) => change("batch_reference", e.target.value)} /></Field>
           <Field label={c("Jenis event", "Event type")}><select className="form-select" value={form.event_type} onChange={(e) => change("event_type", e.target.value)}>{Object.entries(eventLabels).map(([value, labels]) => <option key={value} value={value}>{c(labels[0], labels[1])}</option>)}</select></Field>
           <Field label={c("Jumlah unit (bilangan bulat)", "Quantity (whole units)")}><input required type="number" min="1" step="1" className="form-control" value={form.quantity} onChange={(e) => change("quantity", e.target.value)} /></Field>
-          <Field label="Registry"><input required maxLength={100} className="form-control" value={form.registry} onChange={(e) => change("registry", e.target.value)} /></Field>
+          <Field label={c("Nama registry", "Registry name")}><input required maxLength={100} className="form-control" value={form.registry} onChange={(e) => change("registry", e.target.value)} /></Field>
           <Field label={c("ID transaksi eksternal", "External transaction ID")}><input required maxLength={160} className="form-control" value={form.external_transaction_id} onChange={(e) => change("external_transaction_id", e.target.value)} /></Field>
           <Field label={c("Tanggal efektif", "Effective date")}><input required type="date" className="form-control" value={form.effective_date} onChange={(e) => change("effective_date", e.target.value)} /></Field>
           {form.event_type !== "issuance_reported" && <Field label={c("Pemilik asal", "From owner")}><input required maxLength={200} className="form-control" value={form.owner_from} onChange={(e) => change("owner_from", e.target.value)} /></Field>}
@@ -285,7 +285,7 @@ export function CreditLedgerPanel({ projectId, canWrite }: Pick<SectionProps, "p
         {error && <p role="alert" className="text-danger mt-2">{error}</p>}
       </form>}
       <h3 className="integrity-subheading">{c("Riwayat event", "Event history")}</h3>
-      {ledger?.events.length ? <div className="table-responsive"><table className="table table-sm align-middle"><thead><tr><th>{c("Tanggal", "Date")}</th><th>{c("Event", "Event")}</th><th>{c("Batch", "Batch")}</th><th>{c("Jumlah", "Quantity")}</th><th>{c("Pihak", "Parties")}</th><th>Registry</th><th>{c("Status catatan", "Record status")}</th></tr></thead><tbody>{ledger.events.map((event) => <tr key={event.event_id}><td>{event.effective_date}</td><td>{c(eventLabels[event.event_type]?.[0] || event.event_type, eventLabels[event.event_type]?.[1] || event.event_type)}</td><td>{event.batch_reference}</td><td>{event.quantity.toLocaleString()}</td><td>{event.owner_from || "—"} → {event.owner_to || "—"}</td><td>{event.registry}</td><td>{c("Dilaporkan internal", "Reported internally")}</td></tr>)}</tbody></table></div> : <p className="integrity-empty">{c("Belum ada event yang dicatat.", "No events recorded yet.")}</p>}
+      {ledger?.events.length ? <div className="table-responsive"><table className="table table-sm align-middle"><thead><tr><th>{c("Tanggal", "Date")}</th><th>{c("Event", "Event")}</th><th>{c("Batch", "Batch")}</th><th>{c("Jumlah", "Quantity")}</th><th>{c("Pihak", "Parties")}</th><th>{c("Registry", "Registry")}</th><th>{c("Status catatan", "Record status")}</th></tr></thead><tbody>{ledger.events.map((event) => <tr key={event.event_id}><td>{event.effective_date}</td><td>{c(eventLabels[event.event_type]?.[0] || event.event_type, eventLabels[event.event_type]?.[1] || event.event_type)}</td><td>{event.batch_reference}</td><td>{event.quantity.toLocaleString()}</td><td>{event.owner_from || "—"} → {event.owner_to || "—"}</td><td>{event.registry}</td><td>{c("Dilaporkan internal", "Reported internally")}</td></tr>)}</tbody></table></div> : <p className="integrity-empty">{c("Belum ada event yang dicatat.", "No events recorded yet.")}</p>}
     </div>
   );
 }

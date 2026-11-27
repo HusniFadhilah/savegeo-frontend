@@ -3,6 +3,7 @@ import { useConfigStore } from "@/hooks/useConfigStore";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { isViewerRole } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
@@ -82,6 +83,7 @@ const VEGETATION_SERIES_BANDS = [
  */
 export default function CarbonModule() {
   const t = useI18nStore((s) => s.t);
+  const c = useBilingualCopy();
   const configReady = useConfigStore((s) => s.ready);
   const configLoad = useConfigStore((s) => s.load);
   const getInt = useConfigStore((s) => s.getInt);
@@ -968,8 +970,8 @@ export default function CarbonModule() {
               className="analysis-settings-expand"
               onClick={() => setSettingsCollapsed(false)}
               aria-expanded={!settingsCollapsed}
-              aria-label="Buka panel pengaturan"
-              title="Buka panel pengaturan"
+              aria-label={c("Buka panel pengaturan", "Open settings panel")}
+              title={c("Buka panel pengaturan", "Open settings panel")}
             >
               <i className="bi bi-chevron-double-right" aria-hidden="true" />
             </button>
@@ -982,8 +984,8 @@ export default function CarbonModule() {
             className="analysis-settings-collapse btn-light"
             onClick={() => setSettingsCollapsed(true)}
             aria-expanded={!settingsCollapsed}
-            aria-label="Sembunyikan panel pengaturan"
-            title="Sembunyikan panel pengaturan"
+            aria-label={c("Sembunyikan panel pengaturan", "Hide settings panel")}
+            title={c("Sembunyikan panel pengaturan", "Hide settings panel")}
           >
             <i className="bi bi-chevron-double-left" aria-hidden="true" />
           </button>
@@ -1323,24 +1325,24 @@ export default function CarbonModule() {
         {vegTsResult && <VegetationTimeSeriesPanel result={vegTsResult} />}
 
         {analysisType === "bluecarbon" && <BlueCarbonCatalogPanel />}
-        {analysisType === "productivity" && <div className="alert alert-info"><i className="bi bi-arrow-right-circle me-2" />Produktivitas NPP/GPP sekarang tersedia sebagai sumber analisis di <a href="/crop-monitoring">Crop Monitoring</a>.</div>}
+        {analysisType === "productivity" && <div className="alert alert-info"><i className="bi bi-arrow-right-circle me-2" />{c("Produktivitas NPP/GPP sekarang tersedia sebagai sumber analisis di", "NPP/GPP productivity is now available as an analysis source in")} <a href="/crop-monitoring">{c("Pemantauan Tanaman", "Crop Monitoring")}</a>.</div>}
         {analysisType === "green_rankings" && <GreenRankingsPanel year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth} onRunReady={registerExtraRun} onResult={(greenRanking) => setResults({ greenRanking })} />}
 
         {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (
           <>
             {hasDirectResults && <div className="alert alert-info small" role="status">
               {(results.direct ?? []).map((layer) => <div key={layer.dataset}>
-                {layer.dataset_name}: tahun dataset referensi <strong>{layer.effective_year ?? layer.year ?? "tidak diketahui"}</strong>
+                {layer.dataset_name}: {c("tahun dataset referensi", "reference dataset year")} <strong>{layer.effective_year ?? layer.year ?? c("tidak diketahui", "unknown")}</strong>
                 {layer.requested_year != null && layer.requested_year !== (layer.effective_year ?? layer.year)
-                  ? ` (tahun yang diminta ${layer.requested_year})` : ""}.
-                {layer.target_pool === "aboveground_belowground_biomass_carbon" && " Pool: karbon biomassa atas dan bawah tanah."}
-                {layer.target_pool === "soil_organic_carbon" && " Pool: karbon organik tanah."}
-                {layer.target_pool === "belowground_biomass_carbon" && " Pool: karbon biomassa akar hidup."}
-                {layer.depth_cm && ` Kedalaman: ${layer.depth_cm.join("–")} cm.`}
-                {layer.source_period && ` Periode sumber: ${layer.source_period}.`}
+                  ? ` (${c("tahun yang diminta", "requested year")} ${layer.requested_year})` : ""}.
+                {layer.target_pool === "aboveground_belowground_biomass_carbon" && ` ${c("Pool: karbon biomassa atas dan bawah tanah.", "Pool: above- and belowground biomass carbon.")}`}
+                {layer.target_pool === "soil_organic_carbon" && ` ${c("Pool: karbon organik tanah.", "Pool: soil organic carbon.")}`}
+                {layer.target_pool === "belowground_biomass_carbon" && ` ${c("Pool: karbon biomassa akar hidup.", "Pool: live root biomass carbon.")}`}
+                {layer.depth_cm && ` ${c("Kedalaman:", "Depth:")} ${layer.depth_cm.join("–")} cm.`}
+                {layer.source_period && ` ${c("Periode sumber:", "Source period:")} ${layer.source_period}.`}
                 {layer.load_note ? ` ${layer.load_note}` : ""}
               </div>)}
-              Peta global dimuat. AOI tidak digunakan; statistik dan total tidak dihitung.
+              {c("Peta global dimuat. AOI tidak digunakan; statistik dan total tidak dihitung.", "Global map loaded. The AOI is not used, and statistics and totals are not calculated.")}
             </div>}
             <ResultsMapPanel
               aoi={aoi}

@@ -1,5 +1,6 @@
 import type { Metric } from "./carbonFieldApi";
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 export default function FieldValidationPlot({
   baseline,
@@ -11,6 +12,7 @@ export default function FieldValidationPlot({
   independent: boolean;
 }) {
   const { t, language } = useI18nStore();
+  const c = useBilingualCopy();
   const series = [
     { label: t("admin.fieldCalibration.beforeCalibration"), color: "#2482c5", rows: baseline.rows ?? [] },
     { label: t("admin.fieldCalibration.afterCalibration"), color: "#26924c", rows: corrected?.rows ?? [] },
@@ -28,7 +30,7 @@ export default function FieldValidationPlot({
   return (
     <figure className="border rounded p-3 mt-3 mb-0">
       <figcaption className="fw-semibold">
-        Referensi lapangan dan prediksi ·{" "}
+        {c("Referensi lapangan dan prediksi", "Field observations and predictions")} ·{" "}
         {independent
           ? t("admin.fieldCalibration.independentValidationPlot")
           : corrected?.status === "computed"

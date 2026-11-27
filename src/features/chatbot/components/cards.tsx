@@ -1,13 +1,15 @@
 import { actionLabel } from "../utils/actionLabel";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { zoomToFeature, highlightPolygon } from "../mapActions";
 import type { ChatAction, QuickAction, ResultCard, ResultSource } from "../types";
 
 /* ── Warnings block ────────────────────────────────────────────── */
 export function WarningsBlock({ warnings }: { warnings: string[] }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-warnings">
       <div className="sgc-warning-title">
-        <i className="bi bi-exclamation-triangle" /> Catatan Penting
+        <i className="bi bi-exclamation-triangle" /> {copy("Catatan penting", "Important notes")}
       </div>
       {warnings.map((w, i) => (
         <p key={i} className="sgc-warning-item">
@@ -34,6 +36,7 @@ export function ConfirmActionCard({
   onRun: () => void;
   onCancel: () => void;
 }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-plan-card">
       <div className="sgc-plan-header">
@@ -67,23 +70,23 @@ export function ConfirmActionCard({
         {status === "pending" && (
           <>
             <button type="button" className="sgc-exec-btn" onClick={onRun}>
-              <i className="bi bi-play-circle" /> Jalankan
+              <i className="bi bi-play-circle" /> {copy("Jalankan", "Run")}
             </button>
             <button type="button" className="sgc-cancel-btn" onClick={onCancel}>
-              Batalkan
+              {copy("Batalkan", "Cancel")}
             </button>
           </>
         )}
         {status === "running" && (
           <div className="sgc-status-running">
-            <i className="bi bi-arrow-repeat sgc-spin me-1" /> Menjalankan tindakan...
+            <i className="bi bi-arrow-repeat sgc-spin me-1" /> {copy("Menjalankan tindakan...", "Running action...")}
           </div>
         )}
-        {status === "waiting" && <span>Pilih batas AOI untuk melanjutkan.</span>}
-        {status === "failed" && <span role="alert">{errorMessage || "Tindakan gagal. Periksa pesan kesalahan."}</span>}
+        {status === "waiting" && <span>{copy("Pilih batas AOI untuk melanjutkan.", "Select an AOI boundary to continue.")}</span>}
+        {status === "failed" && <span role="alert">{errorMessage || copy("Tindakan gagal. Periksa pesan kesalahan.", "The action failed. Check the error message.")}</span>}
         {status === "done" && (
           <span style={{ color: "#1e6b3c", fontSize: 13 }}>
-            <i className="bi bi-check-circle me-1" /> Selesai
+            <i className="bi bi-check-circle me-1" /> {copy("Selesai", "Done")}
           </span>
         )}
       </div>
@@ -99,6 +102,7 @@ export function ActionHistoryCard({
   actions: ChatAction[];
   timestamp?: string;
 }) {
+  const copy = useBilingualCopy();
   let ts = "";
   if (timestamp) {
     try {
@@ -111,7 +115,7 @@ export function ActionHistoryCard({
     <div className="sgc-action-history-card">
       <div className="sgc-action-history-header">
         <span className="sgc-action-history-badge">
-          <i className="bi bi-list-check" /> Rencana Percakapan
+          <i className="bi bi-list-check" /> {copy("Rencana tindakan", "Action plan")}
         </span>
         {ts && <span className="sgc-action-history-time">{ts}</span>}
       </div>
@@ -172,12 +176,13 @@ export function GuideStepCard({
   title: string;
   body: string;
 }) {
+  const copy = useBilingualCopy();
   const pct = Math.round((step / total) * 100);
   return (
     <div className="sgc-guide-step">
       <div className="sgc-guide-header">
         <span className="sgc-guide-badge">
-          Langkah {step} / {total}
+          {copy("Langkah", "Step")} {step} / {total}
         </span>
         <span className="sgc-guide-title">{title}</span>
       </div>
@@ -205,13 +210,14 @@ export function AoiOfferCard({
   onSet: () => void;
   onSend: () => void;
 }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-aoi-offer">
       <div className="sgc-aoi-offer-icon">
         <i className="bi bi-pin-map" />
       </div>
       <div className="sgc-aoi-offer-body">
-        <div className="sgc-aoi-offer-title">GeoJSON AOI terdeteksi{name ? `: ${name}` : ""}</div>
+        <div className="sgc-aoi-offer-title">{copy("AOI GeoJSON terdeteksi", "GeoJSON AOI detected")}{name ? `: ${name}` : ""}</div>
         <div className="sgc-aoi-offer-name">
           {fileName} &bull; {sizeLabel}
         </div>
@@ -219,10 +225,10 @@ export function AoiOfferCard({
       {!resolved && (
         <div className="sgc-aoi-offer-actions">
           <button type="button" className="sgc-aoi-btn-set" onClick={onSet}>
-            📍 Jadikan AOI
+            📍 {copy("Jadikan AOI", "Use as AOI")}
           </button>
           <button type="button" className="sgc-aoi-btn-send" onClick={onSend}>
-            💬 Kirim ke AI
+            💬 {copy("Kirim ke AI", "Send to AI")}
           </button>
         </div>
       )}
@@ -232,13 +238,14 @@ export function AoiOfferCard({
 
 /* ── Retry chip (after a failed / cancelled request) ──────────────── */
 export function RetryChip({ cancelNote, onRetry }: { cancelNote?: string; onRetry: () => void }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-action-row">
       {cancelNote && (
         <span style={{ fontSize: 12, color: "#6b7280", marginRight: 6 }}>{cancelNote}</span>
       )}
       <button type="button" className="sgc-chip sgc-chip-warn" onClick={onRetry}>
-        <i className="bi bi-arrow-clockwise" /> Coba Lagi
+        <i className="bi bi-arrow-clockwise" /> {copy("Coba lagi", "Try again")}
       </button>
     </div>
   );
@@ -288,13 +295,14 @@ export function HotspotResultCard({
   card: Extract<ResultCard, { type: "hotspot" }>;
   onDetails: (message: string) => void;
 }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-result-card sgc-hotspot-card">
       <div className="sgc-result-card-title">{card.title}</div>
       <div className="sgc-metric-row">
         <div className="sgc-metric-item">
           <div className="sgc-metric-value">{card.area_ha.toLocaleString("id-ID")} ha</div>
-          <div className="sgc-metric-label">Area</div>
+          <div className="sgc-metric-label">{copy("Area", "Area")}</div>
         </div>
         <div className="sgc-metric-item">
           <div className="sgc-metric-value">{card.metric_value}</div>
@@ -303,27 +311,27 @@ export function HotspotResultCard({
         {card.period && (
           <div className="sgc-metric-item">
             <div className="sgc-metric-value">{card.period}</div>
-            <div className="sgc-metric-label">Periode</div>
+            <div className="sgc-metric-label">{copy("Periode", "Period")}</div>
           </div>
         )}
       </div>
       <div className="sgc-action-row">
         <button type="button" className="sgc-chip" onClick={() => zoomToFeature(card.geometry)}>
-          <i className="bi bi-zoom-in" /> Zoom
+          <i className="bi bi-zoom-in" /> {copy("Perbesar", "Zoom")}
         </button>
         <button
           type="button"
           className="sgc-chip"
           onClick={() => highlightPolygon(card.geometry, { label: card.title })}
         >
-          <i className="bi bi-pin-map" /> Highlight
+          <i className="bi bi-pin-map" /> {copy("Sorot", "Highlight")}
         </button>
         <button
           type="button"
           className="sgc-chip"
-          onClick={() => onDetails(`Detail untuk ${card.title} (id ${card.id})`)}
+          onClick={() => onDetails(copy(`Detail untuk ${card.title} (id ${card.id})`, `Details for ${card.title} (ID ${card.id})`))}
         >
-          <i className="bi bi-info-circle" /> Detail
+          <i className="bi bi-info-circle" /> {copy("Detail", "Details")}
         </button>
       </div>
       <SourceFootnote source={card.source} />
@@ -336,16 +344,17 @@ export function ComparisonResultCard({
 }: {
   card: Extract<ResultCard, { type: "comparison" }>;
 }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-result-card sgc-comparison-card">
       <div className="sgc-result-card-title">{card.title}</div>
       <div className="sgc-comparison-row">
         <div className="sgc-comparison-col">
-          <div className="sgc-comparison-col-label">Sebelum</div>
+          <div className="sgc-comparison-col-label">{copy("Sebelum", "Before")}</div>
           <pre className="sgc-comparison-pre">{JSON.stringify(card.before, null, 1)}</pre>
         </div>
         <div className="sgc-comparison-col">
-          <div className="sgc-comparison-col-label">Sesudah</div>
+          <div className="sgc-comparison-col-label">{copy("Sesudah", "After")}</div>
           <pre className="sgc-comparison-pre">{JSON.stringify(card.after, null, 1)}</pre>
         </div>
       </div>
@@ -355,10 +364,11 @@ export function ComparisonResultCard({
 }
 
 export function WarningResultCard({ card }: { card: Extract<ResultCard, { type: "warning" }> }) {
+  const copy = useBilingualCopy();
   return (
     <div className="sgc-warnings">
       <div className="sgc-warning-title">
-        <i className="bi bi-exclamation-triangle" /> Catatan
+        <i className="bi bi-exclamation-triangle" /> {copy("Catatan", "Note")}
       </div>
       <p className="sgc-warning-item">{card.message}</p>
     </div>

@@ -11,6 +11,7 @@ import { KarhutlaOverviewCard, adaptLegacyEvent } from "@/features/karhutla/comp
 import { FALLBACK_WILDFIRE_EVENTS } from "@/features/karhutla/data";
 import { isKarhutlaDisasterType } from "./types";
 import { safeHttpUrl } from "@/utils/safeHttpUrl";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import {
   EVENT_DISASTER_TYPE_LABELS,
   EVENT_DISASTER_TYPE_OPTIONS,
@@ -78,6 +79,7 @@ function resolveThumbnailUrl(thumbnail: string | null | undefined): string | nul
  */
 export default function DisasterListPage() {
   const { t } = useI18nStore();
+  const c = useBilingualCopy();
   const { getInt } = useConfigStore();
   const yearMin = getInt("year.min", 2015);
   const yearMax = getInt("year.max", new Date().getFullYear());
@@ -321,7 +323,7 @@ export default function DisasterListPage() {
           </div>
           <div className="disaster-pagination-info">
             <span>
-              {pageStart}-{pageEnd} dari {events.length} event
+              {pageStart}-{pageEnd} {c("dari", "of")} {events.length} {c("kejadian", "events")}
             </span>
             <button
               type="button"
@@ -389,11 +391,10 @@ export default function DisasterListPage() {
                 )}
                 <div className="disaster-card-footer">
                   <span>
-                    <i className="bi bi-bar-chart" /> {event.available_analysis_count} analisis
-                    tersedia
+                    <i className="bi bi-bar-chart" /> {event.available_analysis_count} {c("analisis tersedia", "analyses available")}
                   </span>
                   <Link to={`/pemetaan-bencana/${event.id}`} className="btn btn-sm btn-primary">
-                    Detail <i className="bi bi-arrow-right" />
+                    {c("Detail", "Details")} <i className="bi bi-arrow-right" />
                   </Link>
                 </div>
               </div>

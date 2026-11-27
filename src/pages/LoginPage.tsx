@@ -1,3 +1,4 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -7,6 +8,7 @@ import { ApiError } from "@/services/apiClient";
 import { authService } from "@/services/authService";
 
 export default function LoginPage() {
+  const c = useBilingualCopy();
   const { login, isLoading, error, mfaChallenge, recoveryCodes } = useAuthStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +30,7 @@ export default function LoginPage() {
     setResetMessage(null);
     setResetError(null);
     if (!resetIdentifier.trim()) {
-      setResetError("Masukkan email atau username admin.");
+      setResetError(c("Masukkan email atau nama pengguna admin.", "Enter the admin email or username."));
       return;
     }
     setResetLoading(true);
@@ -36,7 +38,7 @@ export default function LoginPage() {
       const res = await authService.forgotPassword(resetIdentifier.trim());
       setResetMessage(res.message);
     } catch (err) {
-      setResetError(err instanceof ApiError ? err.message : "Gagal mengirim email reset password.");
+      setResetError(err instanceof ApiError ? err.message : c("Gagal mengirim email untuk mengatur ulang kata sandi.", "Could not send the password reset email."));
     } finally {
       setResetLoading(false);
     }
@@ -47,15 +49,15 @@ export default function LoginPage() {
       <div className="login-illust-side">
         <div className="login-illust-content">
           <LoginIllustration
-            ariaLabel="Visual bumi realistis untuk pemantauan karbon satelit"
+            ariaLabel={c("Ilustrasi bumi untuk pemantauan karbon berbasis satelit", "Earth illustration for satellite-based carbon monitoring")}
             cards={[
               { kicker: "NDVI", note: "vegetasi stabil" },
-              { kicker: "Carbon", note: "tren naik" },
-              { kicker: "AOI", note: "area aktif" },
+              { kicker: c("Karbon", "Carbon"), note: c("tren meningkat", "rising trend") },
+              { kicker: "AOI", note: c("area aktif", "active area") },
             ]}
           />
           <h2>SAVEGEO</h2>
-          <p>Pemantauan stok karbon berbasis citra satelit &amp; machine learning.</p>
+          <p>{c("Pemantauan stok karbon berbasis citra satelit dan pembelajaran mesin.", "Satellite imagery and machine learning for carbon stock monitoring.")}</p>
         </div>
       </div>
 
@@ -65,20 +67,20 @@ export default function LoginPage() {
             <Link to="/">
               <img src="/logo.jpg" alt="SAVEGEO" height={56} className="mb-2 rounded" />
             </Link>
-            <h5 className="mb-0">SAVEGEO Admin</h5>
-            <small className="text-muted">Masuk untuk mengelola sistem</small>
+            <h5 className="mb-0">{c("Admin SAVEGEO", "SAVEGEO Admin")}</h5>
+            <small className="text-muted">{c("Masuk untuk mengelola sistem", "Sign in to manage the system")}</small>
           </div>
           {mfaChallenge || recoveryCodes.length > 0 ? <MfaLoginPanel /> : forgotMode ? (
             <form onSubmit={handleForgotSubmit}>
               <div className="reset-password-callout mb-3">
                 <i className="bi bi-shield-lock" />
                 <div>
-                  <strong>Reset akses admin</strong>
-                  <span>Link reset akan dikirim ke email admin yang terdaftar.</span>
+                  <strong>{c("Atur ulang akses admin", "Reset admin access")}</strong>
+                  <span>{c("Tautan pengaturan ulang akan dikirim ke email admin yang terdaftar.", "A reset link will be sent to the registered admin email.")}</span>
                 </div>
               </div>
               <div className="mb-3">
-                <label className="form-label small">Email atau username</label>
+                <label className="form-label small">{c("Email atau nama pengguna", "Email or username")}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -91,18 +93,18 @@ export default function LoginPage() {
               {resetError && <div className="alert alert-danger py-2 px-2 small">{resetError}</div>}
               {resetMessage && <div className="alert alert-success py-2 px-2 small">{resetMessage}</div>}
               <button type="submit" className="btn btn-primary w-100" disabled={resetLoading}>
-                {resetLoading ? "Mengirim..." : "Kirim Link Reset"}
+                {resetLoading ? c("Mengirim...", "Sending...") : c("Kirim Tautan Pengaturan Ulang", "Send Reset Link")}
               </button>
               <div className="text-center mt-3 small">
                 <button type="button" className="btn btn-link p-0 align-baseline" onClick={() => setForgotMode(false)}>
-                  Kembali ke login
+                  {c("Kembali ke halaman masuk", "Back to sign in")}
                 </button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label small">Username</label>
+                <label className="form-label small">{c("Nama pengguna", "Username")}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -113,7 +115,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label small">Password</label>
+                <label className="form-label small">{c("Kata sandi", "Password")}</label>
                 <div className="position-relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -128,7 +130,7 @@ export default function LoginPage() {
                     className="btn bg-white border-0 p-0 position-absolute top-50 end-0 translate-middle-y me-3 text-secondary"
                     onClick={() => setShowPassword((v) => !v)}
                     tabIndex={-1}
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-label={showPassword ? c("Sembunyikan kata sandi", "Hide password") : c("Tampilkan kata sandi", "Show password")}
                   >
                     <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} />
                   </button>
@@ -136,11 +138,11 @@ export default function LoginPage() {
               </div>
               {error && <div className="alert alert-danger py-2 px-2 small">{error}</div>}
               <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
-                {isLoading ? "Memproses..." : "Login"}
+                {isLoading ? c("Memproses...", "Signing in...") : c("Masuk", "Sign in")}
               </button>
               <div className="text-center mt-3 small">
                 <button type="button" className="btn btn-link p-0 align-baseline" onClick={() => setForgotMode(true)}>
-                  Lupa password?
+                  {c("Lupa kata sandi?", "Forgot password?")}
                 </button>
               </div>
             </form>

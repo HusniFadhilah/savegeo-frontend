@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { bilingualCopy, useBilingualCopy } from "@/hooks/useBilingualCopy";
+import { useI18nStore } from "@/hooks/useI18nStore";
 import type { ChatSession } from "@/types/api";
 
 interface Props {
@@ -18,11 +20,21 @@ interface Props {
 function relativeTime(iso: string): string {
   const d = new Date(iso);
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "Baru saja";
-  if (diff < 3600) return `${Math.floor(diff / 60)} menit lalu`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} hari lalu`;
-  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  if (diff < 60) return bilingualCopy("Baru saja", "Just now");
+  if (diff < 3600) {
+    const n = Math.floor(diff / 60);
+    return bilingualCopy(`${n} menit lalu`, `${n} minute${n === 1 ? "" : "s"} ago`);
+  }
+  if (diff < 86400) {
+    const n = Math.floor(diff / 3600);
+    return bilingualCopy(`${n} jam lalu`, `${n} hour${n === 1 ? "" : "s"} ago`);
+  }
+  if (diff < 604800) {
+    const n = Math.floor(diff / 86400);
+    return bilingualCopy(`${n} hari lalu`, `${n} day${n === 1 ? "" : "s"} ago`);
+  }
+  const language = useI18nStore.getState().language;
+  return d.toLocaleDateString(language === "id" ? "id-ID" : "en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function SessionItem({
@@ -38,6 +50,7 @@ function SessionItem({
   onRename: (title: string) => void;
   onDelete: () => void;
 }) {
+  const c = useBilingualCopy();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(session.title);
 
@@ -76,7 +89,7 @@ function SessionItem({
           <>
             <div className="sgc-session-title">{session.title}</div>
             <div className="sgc-session-meta">
-              {relativeTime(session.updated_at)} &bull; {session.message_count} pesan
+              {relativeTime(session.updated_at)} &bull; {session.message_count} {c("pesan", "messages")}
             </div>
           </>
         )}
@@ -84,7 +97,7 @@ function SessionItem({
       <button
         type="button"
         className="sgc-session-rename"
-        title="Ganti nama"
+        title={c("Ganti nama", "Rename")}
         onClick={(e) => {
           e.stopPropagation();
           setEditing(true);
@@ -95,7 +108,7 @@ function SessionItem({
       <button
         type="button"
         className="sgc-session-del"
-        title="Hapus"
+        title={c("Hapus", "Delete")}
         onClick={(e) => {
           e.stopPropagation();
           onDelete();
@@ -120,6 +133,8 @@ export default function SessionSidebar({
   onRename,
   onDelete,
 }: Props) {
+  const c = useBilingualCopy();
+  const localizedRetryLabel = retryLabel === "Retry" ? c("Coba lagi", "Retry") : retryLabel;
   const filtered = search
     ? sessions.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
     : sessions;
@@ -131,17 +146,17 @@ export default function SessionSidebar({
         <input
           id="sgc-session-search"
           type="text"
-          placeholder="Cari percakapan..."
+          placeholder={c("Cari percakapan...", "Search conversations...")}
           autoComplete="off"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <div id="sgc-session-list">
-        {error && <div className="sgc-session-empty" role="alert">{error}{onRetry && <button type="button" onClick={onRetry}>{retryLabel}</button>}</div>}
-        {!error && sessions.length === 0 && <div className="sgc-session-empty">Belum ada percakapan tersimpan.</div>}
+        {error && <div className="sgc-session-empty" role="alert">{error}{onRetry && <button type="button" onClick={onRetry}>{localizedRetryLabel}</button>}</div>}
+        {!error && sessions.length === 0 && <div className="sgc-session-empty">{c("Belum ada percakapan tersimpan.", "No saved conversations yet.")}</div>}
         {sessions.length > 0 && filtered.length === 0 && (
-          <div className="sgc-session-empty">Tidak ada percakapan yang cocok.</div>
+          <div className="sgc-session-empty">{c("Tidak ada percakapan yang cocok.", "No matching conversations.")}</div>
         )}
         {filtered.map((s) => (
           <SessionItem

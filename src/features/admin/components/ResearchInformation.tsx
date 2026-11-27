@@ -1,4 +1,5 @@
 import { AdminTableNumberCell, AdminTableNumberHeader } from "@/features/admin/components/AdminTableNumber";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 const RESEARCHERS = [
   { name: "Dr. Eng. Adi Wibowo, S.Si., M.Kom.", role: "Ketua Peneliti", affiliation: "Universitas Diponegoro" },
   { name: "Satriawan Rasyid Purnama, S.Kom., M.Cs.", role: "Anggota Peneliti", affiliation: "Universitas Diponegoro" },
@@ -58,39 +59,60 @@ const METHOD_STEPS = [
 ];
 
 export default function ResearchInformation() {
+  const c = useBilingualCopy();
+  const english: Record<string, string> = {
+    "Informasi pada halaman ini bersifat internal dan hanya tersedia untuk administrator.": "This information is internal and available to administrators only.",
+    "Identitas riset": "Research overview", Keterangan: "Description", Nilai: "Value", "Nomor paten": "Patent number",
+    Jenis: "Type", "Paten Sederhana": "Simple patent", Inovasi: "Innovation", "Sistem Estimasi Stok Karbon Berbasis AI": "AI-Based Carbon Stock Estimation System",
+    Platform: "Platform", "Teknologi yang digunakan": "Technology stack", "Backend dan Processing": "Backend and processing",
+    "Frontend dan Visualisasi": "Frontend and visualization", "Tim peneliti": "Research team", Nama: "Name", Peran: "Role", Afiliasi: "Affiliation",
+    "Mitra industri": "Industry partners", "Metodologi penelitian": "Research methodology", "Ketua Peneliti": "Principal investigator",
+    "Anggota Peneliti": "Research team member", "Direktur Utama": "President director", "Akuisisi Data": "Data acquisition",
+    "Segmentasi dan Preprocessing": "Segmentation and preprocessing", "Estimasi Biomassa": "Biomass estimation", "Konversi dan Output": "Conversion and outputs",
+    "Citra Sentinel-2 (12 band spektral)": "Sentinel-2 imagery (12 spectral bands)", "Dataset Dynamic World (Google)": "Dynamic World dataset (Google)",
+    "ESA WorldCover dan ESRI Land Cover": "ESA WorldCover and Esri Land Cover", "API Wilayah Indonesia untuk AOI (Area of Interest)": "Indonesia administrative-boundary API for AOI (area of interest)",
+    "Semi-Supervised UNet dengan GPU Server H100": "Semi-supervised U-Net on an H100 GPU server", "Cloud masking dan filtering": "Cloud masking and filtering",
+    "Composite median untuk time series": "Median composites for time series", "Robust Linear Regression dari Google Earth Engine": "Robust linear regression in Google Earth Engine",
+    "Kalibrasi menggunakan referensi karbon global (WCMC, ESA CCI)": "Calibration against global carbon references (WCMC, ESA CCI)",
+    "Cross-validation untuk validasi model": "Cross-validation for model assessment", "Konversi AGB (Above Ground Biomass) ke stok karbon": "Conversion of AGB (aboveground biomass) to carbon stock",
+    "CO2 ekuivalen = karbon x 3.67 (IPCC conversion factor)": "CO₂ equivalent = carbon × 3.67 (IPCC conversion factor)",
+    "Visualisasi peta densitas karbon (Mg C/ha)": "Carbon-density map (Mg C/ha)", "Statistik regional dan insight stok karbon": "Regional statistics and carbon-stock insights",
+    "Len Innovation Technology (LenIoT)": "Len Innovation Technology (LenIoT)", "Senior General Manager Information System": "Senior General Manager, Information Systems",
+  };
+  const text = (id: string) => c(id, english[id] ?? id);
   return (
     <div>
       <div className="alert alert-warning py-2 px-3 small">
-        <i className="bi bi-lock-fill me-2" /> Informasi pada halaman ini bersifat internal dan hanya tersedia untuk administrator.
+        <i className="bi bi-lock-fill me-2" /> {text("Informasi pada halaman ini bersifat internal dan hanya tersedia untuk administrator.")}
       </div>
 
       <div className="two-col">
         <div className="card">
           <div className="card-header-custom">
-            <span>Identitas riset</span>
+            <span>{text("Identitas riset")}</span>
           </div>
           <div className="card-body-custom">
             <table className="tbl">
-              <thead><tr><AdminTableNumberHeader /><th>Keterangan</th><th>Nilai</th></tr></thead>
+              <thead><tr><AdminTableNumberHeader /><th>{text("Keterangan")}</th><th>{text("Nilai")}</th></tr></thead>
               <tbody>
                 <tr>
                   <AdminTableNumberCell index={0} />
-                  <td>Nomor paten</td>
+                  <td>{text("Nomor paten")}</td>
                   <td className="tbl-mono">S00202515583</td>
                 </tr>
                 <tr>
                   <AdminTableNumberCell index={1} />
-                  <td>Jenis</td>
-                  <td>Paten Sederhana</td>
+                  <td>{text("Jenis")}</td>
+                  <td>{text("Paten Sederhana")}</td>
                 </tr>
                 <tr>
                   <AdminTableNumberCell index={2} />
-                  <td>Inovasi</td>
-                  <td>Sistem Estimasi Stok Karbon Berbasis AI</td>
+                  <td>{text("Inovasi")}</td>
+                  <td>{text("Sistem Estimasi Stok Karbon Berbasis AI")}</td>
                 </tr>
                 <tr>
                   <AdminTableNumberCell index={3} />
-                  <td>Platform</td>
+                  <td>{text("Platform")}</td>
                   <td>savegeo.len.co.id</td>
                 </tr>
               </tbody>
@@ -100,14 +122,14 @@ export default function ResearchInformation() {
 
         <div className="card">
           <div className="card-header-custom">
-            <span>Teknologi yang digunakan</span>
+            <span>{text("Teknologi yang digunakan")}</span>
           </div>
           <div className="card-body-custom">
             {TECHNOLOGY_GROUPS.map((group) => (
               <div key={group.title} style={{ marginBottom: 14 }}>
-                <strong>{group.title}</strong>
+                <strong>{text(group.title)}</strong>
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                  {group.items.map((item) => <li key={item}>{item}</li>)}
+                  {group.items.map((item) => <li key={item}>{text(item)}</li>)}
                 </ul>
               </div>
             ))}
@@ -117,16 +139,16 @@ export default function ResearchInformation() {
 
       <div className="card">
         <div className="card-header-custom">
-          <span>Tim peneliti</span>
+          <span>{text("Tim peneliti")}</span>
         </div>
         <div className="card-body-custom">
           <table className="tbl tbl-wide">
             <thead>
-              <tr><AdminTableNumberHeader /><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
+              <tr><AdminTableNumberHeader /><th>{text("Nama")}</th><th>{text("Peran")}</th><th>{text("Afiliasi")}</th></tr>
             </thead>
             <tbody>
               {RESEARCHERS.map((person, index) => (
-                <tr key={person.name}><AdminTableNumberCell index={index} /><td>{person.name}</td><td>{person.role}</td><td>{person.affiliation}</td></tr>
+                <tr key={person.name}><AdminTableNumberCell index={index} /><td>{person.name}</td><td>{text(person.role)}</td><td>{person.affiliation}</td></tr>
               ))}
             </tbody>
           </table>
@@ -135,16 +157,16 @@ export default function ResearchInformation() {
 
       <div className="card">
         <div className="card-header-custom">
-          <span>Mitra industri</span>
+          <span>{text("Mitra industri")}</span>
         </div>
         <div className="card-body-custom">
           <table className="tbl tbl-wide">
             <thead>
-              <tr><AdminTableNumberHeader /><th>Nama</th><th>Peran</th><th>Afiliasi</th></tr>
+              <tr><AdminTableNumberHeader /><th>{text("Nama")}</th><th>{text("Peran")}</th><th>{text("Afiliasi")}</th></tr>
             </thead>
             <tbody>
               {PARTNERS.map((partner, index) => (
-                <tr key={partner.name}><AdminTableNumberCell index={index} /><td>{partner.name}</td><td>{partner.role}</td><td>PT LEN Industri (Persero)</td></tr>
+                <tr key={partner.name}><AdminTableNumberCell index={index} /><td>{partner.name}</td><td>{text(partner.role)}</td><td>PT LEN Industri (Persero)</td></tr>
               ))}
             </tbody>
           </table>
@@ -153,15 +175,15 @@ export default function ResearchInformation() {
 
       <div className="card">
         <div className="card-header-custom">
-          <span>Metodologi penelitian</span>
+          <span>{text("Metodologi penelitian")}</span>
         </div>
         <div className="card-body-custom">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             {METHOD_STEPS.map((step, index) => (
               <div key={step.title}>
-                <strong>{index + 1}. {step.title}</strong>
+                <strong>{index + 1}. {text(step.title)}</strong>
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                  {step.items.map((item) => <li key={item}>{item}</li>)}
+                  {step.items.map((item) => <li key={item}>{text(item)}</li>)}
                 </ul>
               </div>
             ))}

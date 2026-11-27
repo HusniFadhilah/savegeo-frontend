@@ -1,3 +1,4 @@
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
@@ -21,6 +22,7 @@ interface Props {
  * fully decoupled per the redesign contract doc.
  */
 export default function LoginUserPage({ onSwitchToRegister }: Props) {
+  const c = useBilingualCopy();
   const { login, isLoading, error } = useUserAuthStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -41,7 +43,7 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
     setResetMessage(null);
     setResetError(null);
     if (!resetIdentifier.trim()) {
-      setResetError("Masukkan email atau username akun.");
+      setResetError(c("Masukkan email atau nama pengguna akun.", "Enter the account email or username."));
       return;
     }
     setResetLoading(true);
@@ -49,7 +51,7 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
       const res = await userAuthService.forgotPassword(resetIdentifier.trim());
       setResetMessage(res.message);
     } catch (err) {
-      setResetError(err instanceof ApiError ? err.message : "Gagal mengirim email reset password.");
+      setResetError(err instanceof ApiError ? err.message : c("Gagal mengirim email untuk mengatur ulang kata sandi.", "Could not send the password reset email."));
     } finally {
       setResetLoading(false);
     }
@@ -60,15 +62,15 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
       <div className="login-illust-side">
         <div className="login-illust-content">
           <LoginIllustration
-            ariaLabel="Visual bumi realistis untuk pemantauan dampak bencana satelit"
+            ariaLabel={c("Ilustrasi bumi untuk pemantauan dampak bencana berbasis satelit", "Earth illustration for satellite-based disaster impact monitoring")}
             cards={[
-              { kicker: "Banjir", note: "area terdampak" },
-              { kicker: "Longsor", note: "titik rawan" },
-              { kicker: "Dampak", note: "wilayah terpantau" },
+              { kicker: c("Banjir", "Flood"), note: c("area terdampak", "affected area") },
+              { kicker: c("Longsor", "Landslide"), note: c("titik rawan", "risk locations") },
+              { kicker: c("Dampak", "Impact"), note: c("wilayah terpantau", "monitored areas") },
             ]}
           />
           <h2>SAVEGEO</h2>
-          <p>Dashboard Intelijen Bencana &mdash; pemantauan dampak bencana berbasis citra satelit.</p>
+          <p>{c("Dasbor intelijen bencana untuk memantau dampak menggunakan citra satelit.", "Disaster intelligence dashboard for monitoring impacts with satellite imagery.")}</p>
         </div>
       </div>
 
@@ -78,20 +80,20 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
             <Link to="/">
               <img src="/logo.jpg" alt="SAVEGEO" height={56} className="mb-2 rounded" />
             </Link>
-            <h5 className="mb-0">Pemetaan Bencana</h5>
-            <small className="text-muted">Masuk untuk melihat dashboard intelijen bencana</small>
+            <h5 className="mb-0">{c("Pemetaan Bencana", "Disaster Mapping")}</h5>
+            <small className="text-muted">{c("Masuk untuk melihat dasbor intelijen bencana", "Sign in to view the disaster intelligence dashboard")}</small>
           </div>
           {forgotMode ? (
             <form onSubmit={handleForgotSubmit}>
               <div className="reset-password-callout mb-3">
                 <i className="bi bi-envelope-check" />
                 <div>
-                  <strong>Kirim link reset</strong>
-                  <span>Link aman akan dikirim ke email yang terdaftar pada akun Anda.</span>
+                  <strong>{c("Kirim tautan pengaturan ulang", "Send a reset link")}</strong>
+                  <span>{c("Tautan aman akan dikirim ke email yang terdaftar pada akun Anda.", "A secure link will be sent to the email address registered to your account.")}</span>
                 </div>
               </div>
               <div className="mb-3">
-                <label className="form-label small">Email atau username</label>
+                <label className="form-label small">{c("Email atau nama pengguna", "Email or username")}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -104,18 +106,18 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
               {resetError && <div className="alert alert-danger py-2 px-2 small">{resetError}</div>}
               {resetMessage && <div className="alert alert-success py-2 px-2 small">{resetMessage}</div>}
               <button type="submit" className="btn btn-primary w-100" disabled={resetLoading}>
-                {resetLoading ? "Mengirim..." : "Kirim Link Reset"}
+                {resetLoading ? c("Mengirim...", "Sending...") : c("Kirim Tautan Pengaturan Ulang", "Send Reset Link")}
               </button>
               <div className="text-center mt-3 small">
                 <button type="button" className="btn btn-link p-0 align-baseline" onClick={() => setForgotMode(false)}>
-                  Kembali ke login
+                  {c("Kembali ke halaman masuk", "Back to sign in")}
                 </button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label small">Username</label>
+                <label className="form-label small">{c("Nama pengguna", "Username")}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -126,7 +128,7 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label small">Password</label>
+                <label className="form-label small">{c("Kata sandi", "Password")}</label>
                 <div className="position-relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -141,7 +143,7 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
                     className="btn bg-white border-0 p-0 position-absolute top-50 end-0 translate-middle-y me-3 text-secondary"
                     onClick={() => setShowPassword((v) => !v)}
                     tabIndex={-1}
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-label={showPassword ? c("Sembunyikan kata sandi", "Hide password") : c("Tampilkan kata sandi", "Show password")}
                   >
                     <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} />
                   </button>
@@ -149,11 +151,11 @@ export default function LoginUserPage({ onSwitchToRegister }: Props) {
               </div>
               {error && <div className="alert alert-danger py-2 px-2 small">{error}</div>}
               <button type="submit" className="btn btn-primary w-100 mt-2" disabled={isLoading}>
-                {isLoading ? "Memproses..." : "Login"}
+                {isLoading ? c("Memproses...", "Signing in...") : c("Masuk", "Sign in")}
               </button>
               <div className="d-flex justify-content-center gap-2 mt-3 small">
                 <button type="button" className="btn btn-link p-0 align-baseline" onClick={() => setForgotMode(true)}>
-                  Lupa password?
+                  {c("Lupa kata sandi?", "Forgot password?")}
                 </button>
                 {onSwitchToRegister && (
                   <>

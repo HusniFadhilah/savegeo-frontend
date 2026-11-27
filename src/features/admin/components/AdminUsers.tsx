@@ -10,6 +10,7 @@ import { useI18nStore } from "@/hooks/useI18nStore";
 import { hasAdminPermission } from "@/auth/access";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import BulkTableToolbar from "./BulkTableToolbar";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface FormState {
   fullName: string;
@@ -66,6 +67,7 @@ function formatAdminDate(value: string | null | undefined, language: "id" | "en"
 export default function AdminUsers() {
   const { notify } = useAdmin();
   const { language, t } = useI18nStore();
+  const c = useBilingualCopy();
   const [me, setMe] = useState<AdminUserRow | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const { rows, loading, error, page, pageCount, pageSize, recordsTotal, recordsFiltered, search, setSearch, nextPage, prevPage } =
@@ -232,13 +234,13 @@ export default function AdminUsers() {
             <div className="two-col" style={{ marginBottom: "0.75rem" }}>
               <div className="form-field">
                 <label className="form-label" htmlFor="admin-user-full-name">{t("admin.users.fullNameLabel")} *</label>
-                <input id="admin-user-full-name" className="form-input" autoComplete="name" maxLength={160} placeholder="Contoh: Ilham Nugraha, S.T., M.M., IPM." required value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+                <input id="admin-user-full-name" className="form-input" autoComplete="name" maxLength={160} placeholder={c("Contoh: Ilham Nugraha, S.T., M.M., IPM.", "Example: Ilham Nugraha, S.T., M.M., IPM.")} required value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
               </div>
               <div className="form-field">
                 <label className="form-label">{t("admin.users.username")} {form.id === null && "*"}</label>
                 <input
                   className="form-input"
-                  placeholder="Contoh: budi_admin"
+                  placeholder={c("Contoh: budi_admin", "Example: budi_admin")}
                   value={form.username}
                   disabled={form.id !== null}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
@@ -248,7 +250,7 @@ export default function AdminUsers() {
                 <label className="form-label">{t("admin.users.email")}</label>
                 <input
                   className="form-input"
-                  placeholder="budi@savegeo.id"
+                  placeholder={c("Contoh: budi@savegeo.id", "Example: budi@savegeo.id")}
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
@@ -331,7 +333,7 @@ export default function AdminUsers() {
             </colgroup>
             <thead>
               <tr>
-                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label="Pilih semua pengguna di halaman" checked={allPageSelected} onChange={toggleAllPage} /></th>
+                <th className="admin-table-selection"><input className="admin-table-check" type="checkbox" aria-label={c("Pilih semua pengguna di halaman", "Select all users on this page")} checked={allPageSelected} onChange={toggleAllPage} /></th>
                 <AdminTableNumberHeader />
                 <th>{t("admin.users.user")}</th>
                 <th>{t("admin.users.role")}</th>

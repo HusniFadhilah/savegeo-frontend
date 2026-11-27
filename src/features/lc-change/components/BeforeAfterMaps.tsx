@@ -14,6 +14,7 @@ import type { ChangeMapMode, LcChangeMapResponse, LcDataset, LcIdentifyResponse,
 import { translateLulcClass } from "../utils";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 type ViewMode = "split" | "swipe";
 
@@ -113,6 +114,7 @@ export default function BeforeAfterMaps({
   dwProbabilityThreshold,
 }: Props) {
   const { t, language } = useI18nStore();
+  const c = useBilingualCopy();
   const beforeTile = (yearA != null ? yearData[yearA]?.tile_url : null) ?? changeMapData?.from_tile_url ?? null;
   const afterRawTile = (yearB != null ? yearData[yearB]?.tile_url : null) ?? changeMapData?.to_tile_url ?? null;
   const afterTile = mode === "destination" ? changeMapData?.destination_tile_url ?? afterRawTile : afterRawTile;
@@ -224,7 +226,7 @@ export default function BeforeAfterMaps({
 
       {changeMapLoading && (
         <div className="alert alert-info py-2 mb-2" style={{ fontSize: ".82rem" }}>
-          <i className="fas fa-spinner fa-spin" /> Memuat peta perubahan {yearA} - {yearB}...
+          <i className="fas fa-spinner fa-spin" /> {c(`Memuat peta perubahan ${yearA}–${yearB}…`, `Loading the ${yearA}–${yearB} change map…`)}
         </div>
       )}
       {changeMapError && (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AoiFeature } from "@/types/map";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useUiStore } from "@/hooks/useUiStore";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { ApiError } from "@/services/apiClient";
@@ -108,6 +109,7 @@ function dateRangeForYear(
 export default function LcChangeModule() {
   const t = useI18nStore((state) => state.t);
   const language = useI18nStore((state) => state.language);
+  const copy = useBilingualCopy();
   const query = useMemo(
     () => parseQuery(typeof window !== "undefined" ? window.location.search : ""),
     [],
@@ -1180,7 +1182,7 @@ export default function LcChangeModule() {
                         <i className="fas fa-circle-info mt-1 flex-shrink-0" />
                         <div style={{ fontSize: ".8rem" }}>
                           <strong>
-                            Tahun {label} ({r.year}):
+                            {copy(`Tahun ${label} (${r.year})`, `Year ${label} (${r.year})`)}:
                           </strong>{" "}
                           {r.coverage_note}
                         </div>
@@ -1196,10 +1198,10 @@ export default function LcChangeModule() {
                         <i className="fas fa-triangle-exclamation mt-1 flex-shrink-0" />
                         <div style={{ fontSize: ".8rem" }}>
                           <strong>
-                            Tahun {label} ({r.requested_year}):
+                            {copy(`Tahun ${label} (${r.requested_year})`, `Year ${label} (${r.requested_year})`)}:
                           </strong>{" "}
-                          data tidak tersedia untuk tahun yang diminta - menampilkan{" "}
-                          <strong>{r.year}</strong> sebagai gantinya
+                          {copy("data tidak tersedia untuk tahun yang diminta — menampilkan", "data is unavailable for the requested year; showing")} {" "}
+                          <strong>{r.year}</strong> {copy("sebagai gantinya", "instead")}
                           {r.fallback_reason ? ` (${r.fallback_reason})` : ""}.
                         </div>
                       </div>,
@@ -1219,9 +1221,9 @@ export default function LcChangeModule() {
                         />
                         <div style={{ fontSize: ".8rem" }}>
                           <strong>
-                            Keyakinan Dynamic World, tahun {label} ({r.year}):
+                            {copy(`Keyakinan Dynamic World, tahun ${label} (${r.year})`, `Dynamic World confidence, year ${label} (${r.year})`)}:
                           </strong>{" "}
-                          rata-rata{" "}
+                          {copy("rata-rata", "mean")}{" "}
                           {c.mean_confidence != null
                             ? `${Math.round(c.mean_confidence * 100)}%`
                             : "-"}
@@ -1233,9 +1235,9 @@ export default function LcChangeModule() {
                           {c.low_confidence_pixel_pct != null
                             ? `${c.low_confidence_pixel_pct}%`
                             : "-"}{" "}
-                          piksel di bawah ambang {Math.round(c.low_confidence_threshold * 100)}%
+                          {copy("piksel di bawah ambang", "pixels below threshold")} {Math.round(c.low_confidence_threshold * 100)}%
                           {r.dw_probability_threshold
-                            ? " (piksel ini sudah disamarkan dari hasil)"
+                            ? copy(" (piksel ini sudah disamarkan dari hasil)", " (these pixels are masked from the result)")
                             : ""}
                           .
                         </div>

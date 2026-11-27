@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { interpolate } from "@/i18n/translations";
 import {
   CategoryScale,
@@ -97,6 +98,7 @@ function buildCarbonLegend(visMin: number, visMax: number, visPalette: string[],
  */
 export default function CarbonTimeSeriesPanel({ result, zoom, center, visMin, visMax, visPalette, legendBins }: Props) {
   const t = useI18nStore((s) => s.t);
+  const c = useBilingualCopy();
   const language = useI18nStore((s) => s.language);
   const locale = language === "id" ? "id-ID" : "en-US";
   const { series, deltas, summary } = result;
@@ -330,7 +332,7 @@ export default function CarbonTimeSeriesPanel({ result, zoom, center, visMin, vi
               </MapView>
               {activeTile && (
                 <div className="carbon-timelapse-legend">
-                  <MapLegend title="Densitas Karbon (Mg/ha)" entries={legendEntries} />
+                  <MapLegend title={c("Densitas karbon (Mg/ha)", "Carbon density (Mg/ha)")} entries={legendEntries} />
                 </div>
               )}
             </div>

@@ -407,9 +407,9 @@ export function RegistryPanel({ check, ...props }: SectionProps & { check: Regis
                 value={form.unit_status}
                 onChange={(e) => change("unit_status", e.target.value)}
               >
-                <option value="reported_issued">Issued</option>
-                <option value="reported_retired">Retired</option>
-                <option value="reported_cancelled">Cancelled</option>
+                <option value="reported_issued">{c("Diterbitkan", "Issued")}</option>
+                <option value="reported_retired">{c("Dipensiunkan", "Retired")}</option>
+                <option value="reported_cancelled">{c("Dibatalkan", "Cancelled")}</option>
               </select>
             </Field>
           </div>

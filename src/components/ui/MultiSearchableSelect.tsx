@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { SearchableSelectOption } from "@/components/ui/SearchableSelect";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   value: string[];
@@ -20,15 +21,18 @@ export default function MultiSearchableSelect({
   value,
   onChange,
   options,
-  placeholder = "Pilih satu atau beberapa...",
+  placeholder,
   loading = false,
   disabled = false,
-  emptyHint = "Tidak ditemukan",
+  emptyHint,
   clearable = false,
   selectedSummary,
   id,
   className,
 }: Props) {
+  const c = useBilingualCopy();
+  const displayPlaceholder = placeholder ?? c("Pilih satu atau beberapa…", "Select one or more…");
+  const displayEmptyHint = emptyHint ?? c("Tidak ditemukan", "No results found");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -88,7 +92,7 @@ export default function MultiSearchableSelect({
 
   const summary = selectedLabels.length
     ? (selectedSummary ?? `${selectedLabels.length} wilayah dipilih`)
-    : placeholder;
+    : displayPlaceholder;
 
   return (
     <div className={`sg-ssel sg-mssel ${className ?? ""}`} ref={rootRef}>
@@ -98,7 +102,7 @@ export default function MultiSearchableSelect({
           className="sg-ssel-input"
           type="text"
           disabled={disabled || loading}
-          placeholder={loading ? "Memuat..." : summary}
+          placeholder={loading ? c("Memuat…", "Loading…") : summary}
           value={open ? query : ""}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
@@ -112,7 +116,7 @@ export default function MultiSearchableSelect({
           <button
             type="button"
             className="sg-ssel-clear"
-            title="Kosongkan semua pilihan"
+            title={c("Kosongkan semua pilihan", "Clear all selections")}
             onClick={(event) => {
               event.stopPropagation();
               onChange([]);
@@ -124,7 +128,7 @@ export default function MultiSearchableSelect({
       </div>
       {open && !disabled && (
         <div className="sg-ssel-dropdown">
-          {filtered.length === 0 && <div className="sg-ssel-empty">{emptyHint}</div>}
+          {filtered.length === 0 && <div className="sg-ssel-empty">{displayEmptyHint}</div>}
           {filtered.map((option, index) => {
             const selected = selectedSet.has(option.value);
             return (

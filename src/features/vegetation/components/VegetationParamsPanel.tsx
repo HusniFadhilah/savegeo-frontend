@@ -4,6 +4,7 @@ import { VEGETATION_INDICES } from "@/features/vegetation/indices";
 import { getCloudMaskTechniques, getVegetationCatalog, getVegetationSatellites } from "@/features/vegetation/api";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import InfoTip from "@/components/ui/InfoTip";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   params: VegetationParams;
@@ -57,6 +58,7 @@ function indexIcon(code: string) {
  */
 export default function VegetationParamsPanel({ params, onParamsChange }: Props) {
   const { t } = useI18nStore();
+  const c = useBilingualCopy();
   const [badges, setBadges] = useState<BadgeIndex[]>(FALLBACK_BADGES);
   const [satellites, setSatellites] = useState<Record<string, SatelliteProvider>>({});
   const [techniques, setTechniques] = useState<Record<string, CloudMaskTechniqueInfo>>({});
@@ -177,7 +179,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
               </option>
             ))}
           </select>
-          <span className="align-self-center">s/d</span>
+          <span className="align-self-center">{c("s/d", "to")}</span>
           <select
             className="form-select"
             id="endMonth"
@@ -210,7 +212,7 @@ export default function VegetationParamsPanel({ params, onParamsChange }: Props)
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Indeks Vegetasi</label>
+        <label className="form-label">{c("Indeks Vegetasi", "Vegetation Indices")}</label>
         <div id="indicesContainer">
           {badges.map((idx) => (
             <button

@@ -882,7 +882,7 @@ export default function SatelliteViewer({
   if (!preSavedImagery.length && !postSavedImagery.length && !aoiFeature && !comparison) {
     return (
       <div className="alert alert-secondary py-2 mb-3">
-        Belum ada citra satelit pre/post untuk event ini.
+        {language === "id" ? "Belum ada citra satelit sebelum/sesudah untuk kejadian ini." : "No pre/post satellite imagery is available for this event."}
       </div>
     );
   }
@@ -904,7 +904,7 @@ export default function SatelliteViewer({
             aria-pressed={activeOutput !== "change" && displayView === "pre"}
             onClick={() => chooseView("pre")}
           >
-            Pre
+            {language === "id" ? "Sebelum" : "Before"}
           </button>
           <button
             type="button"
@@ -912,7 +912,7 @@ export default function SatelliteViewer({
             aria-pressed={activeOutput !== "change" && displayView === "post"}
             onClick={() => chooseView("post")}
           >
-            Post
+            {language === "id" ? "Sesudah" : "After"}
           </button>
           <button
             type="button"
@@ -957,7 +957,7 @@ export default function SatelliteViewer({
                 ? language === "id" ? "Pilih sumber citra" : "Choose an imagery source"
                 : language === "id" ? "Tidak ada citra pra-bencana" : "No pre-event imagery"}</option>}
               {preSavedImagery.length > 0 && (
-                <optgroup label="Citra tersimpan">
+                <optgroup label={language === "id" ? "Citra tersimpan" : "Saved imagery"}>
                   {preSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
                       {preImageryOptionLabels.get(img.id) ?? imageryLabel(img)}
@@ -967,9 +967,9 @@ export default function SatelliteViewer({
                 </optgroup>
               )}
               {aoiFeature && (
-                <optgroup label="Sumber tambahan · dipotong sesuai AOI">
-                  <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
-                  <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+              <optgroup label={language === "id" ? "Sumber tambahan · dipotong sesuai AOI" : "Additional sources · clipped to AOI"}>
+                  <option value="source:sentinel2">Sentinel-2 · {language === "id" ? "mosaik AOI" : "AOI mosaic"}</option>
+                  <option value="source:esri_wayback">Esri Wayback · {language === "id" ? "snapshot historis" : "historical snapshot"}</option>
                   {mapboxSatelliteAvailable && <option value="source:mapbox-satellite">Mapbox Satellite · {language === "id" ? "referensi terkini" : "current reference"}</option>}
                 </optgroup>
               )}
@@ -998,7 +998,7 @@ export default function SatelliteViewer({
                 disabled={preRange.endDate < ESRI_WAYBACK_START_DATE}
                 onChange={event => setPreWaybackTarget(event.target.value)} />
             </div>}
-            {dynamicPreLoading && <div className="small text-muted mt-1" role="status">Memuat citra pra-bencana dan memotong sesuai AOI...</div>}
+            {dynamicPreLoading && <div className="small text-muted mt-1" role="status">{language === "id" ? "Memuat citra sebelum kejadian dan memotong sesuai AOI..." : "Loading pre-event imagery and clipping it to the AOI..."}</div>}
             {dynamicPreError && <div className="small text-danger mt-1" role="alert">{dynamicPreError}</div>}
           </div>
           <div className="col-sm-6">
@@ -1024,7 +1024,7 @@ export default function SatelliteViewer({
                 ? language === "id" ? "Pilih sumber citra" : "Choose an imagery source"
                 : language === "id" ? "Tidak ada citra pasca-bencana" : "No post-event imagery"}</option>}
               {postSavedImagery.length > 0 && (
-                <optgroup label="Citra tersimpan">
+                <optgroup label={language === "id" ? "Citra tersimpan" : "Saved imagery"}>
                   {postSavedImagery.map((img) => (
                     <option key={img.id} value={img.id}>
                       {postImageryOptionLabels.get(img.id) ?? imageryLabel(img)}
@@ -1034,9 +1034,9 @@ export default function SatelliteViewer({
                 </optgroup>
               )}
               {aoiFeature && (
-                <optgroup label="Sumber tambahan · dipotong sesuai AOI">
-                  <option value="source:sentinel2">Sentinel-2 · mosaic AOI</option>
-                  <option value="source:esri_wayback">Esri Wayback · snapshot historis</option>
+              <optgroup label={language === "id" ? "Sumber tambahan · dipotong sesuai AOI" : "Additional sources · clipped to AOI"}>
+                  <option value="source:sentinel2">Sentinel-2 · {language === "id" ? "mosaik AOI" : "AOI mosaic"}</option>
+                  <option value="source:esri_wayback">Esri Wayback · {language === "id" ? "snapshot historis" : "historical snapshot"}</option>
                   {mapboxSatelliteAvailable && <option value="source:mapbox-satellite">Mapbox Satellite · {language === "id" ? "referensi terkini" : "current reference"}</option>}
                 </optgroup>
               )}
@@ -1052,7 +1052,7 @@ export default function SatelliteViewer({
                 onChange={event => setPostWaybackTarget(event.target.value)} />
               <div className="form-text">{language === "id" ? "Memakai rilis Wayback terdekat pada periode pasca-bencana." : "Uses the closest Wayback release in the post-event period."}</div>
             </div>}
-            {dynamicPostLoading && <div className="small text-muted mt-1" role="status">Memuat citra pasca-bencana dan memotong sesuai AOI…</div>}
+            {dynamicPostLoading && <div className="small text-muted mt-1" role="status">{language === "id" ? "Memuat citra sesudah kejadian dan memotong sesuai AOI…" : "Loading post-event imagery and clipping it to the AOI…"}</div>}
             {dynamicPostError && <div className="small text-danger mt-1" role="alert">{dynamicPostError}</div>}
           </div>
         </div>}

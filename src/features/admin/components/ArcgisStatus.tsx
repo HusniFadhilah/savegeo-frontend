@@ -5,12 +5,14 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
 import { useAdmin } from "../AdminContext";
 import { getArcgisStatus, saveArcgisConfig } from "../api";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { ArcgisStatusInfo } from "../types";
 
 type AuthMode = "none" | "api_key";
 
 export default function ArcgisStatus() {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const language = useI18nStore((state) => state.language);
   const { user } = useAuthStore();
   const { notify } = useAdmin();
@@ -117,7 +119,7 @@ export default function ArcgisStatus() {
                 <label className="form-label" htmlFor="arcgis-auth-mode">{t("admin.arcgis.authModeField")}</label>
                 <select id="arcgis-auth-mode" className="form-select form-select-sm" value={authMode} onChange={(event) => setAuthMode(event.target.value as AuthMode)}>
                   <option value="none">{t("admin.arcgis.publicMode")}</option>
-                  <option value="api_key">API key</option>
+                  <option value="api_key">{c("Kunci API", "API key")}</option>
                 </select>
               </div>
               {authMode === "api_key" && (

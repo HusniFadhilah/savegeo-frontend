@@ -6,8 +6,10 @@ import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/features/admin/AdminDashboard";
 import { DEFAULT_ADMIN_SECTION, getAdminSectionPath } from "@/routes/adminSectionRoutes";
 import type { AdminSection } from "@/features/admin/types";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 export default function AdminPage({ section = DEFAULT_ADMIN_SECTION }: { section?: AdminSection }) {
+  const c = useBilingualCopy();
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const navigate = useNavigate();
   const previousAuth = useRef<boolean | null>(null);
@@ -21,7 +23,7 @@ export default function AdminPage({ section = DEFAULT_ADMIN_SECTION }: { section
   }, [isAuthenticated, isLoading, navigate]);
 
   if (isLoading) {
-    return <div className="d-flex min-vh-100 align-items-center justify-content-center">Memverifikasi sesi...</div>;
+    return <div className="d-flex min-vh-100 align-items-center justify-content-center">{c("Memverifikasi sesi…", "Verifying session…")}</div>;
   }
 
   if (!isAuthenticated) {

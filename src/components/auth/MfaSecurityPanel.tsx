@@ -200,7 +200,7 @@ export default function MfaSecurityPanel() {
             {mode !== "step-up" && (
               <div className="mb-3">
                 <label htmlFor="mfa-security-password" className="form-label">
-                  Password
+                  {tr("Kata sandi", "Password")}
                 </label>
                 <input
                   id="mfa-security-password"

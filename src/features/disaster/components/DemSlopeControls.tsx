@@ -1,4 +1,5 @@
 import type { DemSlopeResult } from "../types";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   loading: boolean;
@@ -12,11 +13,12 @@ interface Props {
  * this panel just shows the stats + configured/fallback banner.
  */
 export default function DemSlopeControls({ loading, error, result }: Props) {
+  const c = useBilingualCopy();
   if (loading) {
     return (
       <div className="alert alert-info py-2 mb-3">
         <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-        Menghitung kemiringan lereng dari DEM...
+        {c("Menghitung kemiringan lereng dari DEM...", "Calculating slope from the DEM...")}
       </div>
     );
   }
@@ -29,11 +31,11 @@ export default function DemSlopeControls({ loading, error, result }: Props) {
 
   return (
     <div className={`alert ${result.is_official_demnas ? "alert-success" : "alert-warning"} py-2 mb-3`}>
-      <strong>Layer kemiringan lereng aktif.</strong> Sumber: {result.source}. Rata-rata:{" "}
-      {Number(result.stats?.mean_slope_deg || 0).toFixed(1)}°, Maksimum:{" "}
+      <strong>{c("Layer kemiringan lereng aktif.", "Slope layer is active.")}</strong> {c("Sumber:", "Source:")} {result.source}. {c("Rata-rata:", "Mean:")}{" "}
+      {Number(result.stats?.mean_slope_deg || 0).toFixed(1)}°, {c("Maksimum:", "Maximum:")}{" "}
       {Number(result.stats?.max_slope_deg || 0).toFixed(1)}°.
       {!result.is_official_demnas && (
-        <div className="small mt-1">DEMNAS belum dikonfigurasi; layer ini memakai fallback DEM global.</div>
+        <div className="small mt-1">{c("DEMNAS belum dikonfigurasi; layer ini memakai DEM global sebagai pengganti.", "DEMNAS is not configured; this layer uses the global DEM fallback.")}</div>
       )}
     </div>
   );

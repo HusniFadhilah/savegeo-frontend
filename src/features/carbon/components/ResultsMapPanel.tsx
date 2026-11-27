@@ -19,6 +19,7 @@ import type { DirectReferenceLayer } from "@/features/carbon/api";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 import type { MapLegendEntry } from "@/types/map";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface ResultTab {
   key: string;
@@ -330,6 +331,7 @@ export default function ResultsMapPanel({
   onCarbonVisualizationChange,
 }: Props) {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const [refreshToken, setRefreshToken] = useState(0);
   const tabs = useMemo(() => buildTabs(results, showReference), [results, showReference]);
   const [activeKey, setActiveKey] = useState<string | null>(tabs[0]?.key ?? null);
@@ -420,7 +422,7 @@ export default function ResultsMapPanel({
       setStretchMode(next);
       setStretchMenuOpen(false);
     } catch (error) {
-      setStretchError(error instanceof Error ? error.message : "Rentang warna gagal diperbarui.");
+      setStretchError(error instanceof Error ? error.message : c("Rentang warna gagal diperbarui.", "Could not update the color range."));
     } finally {
       setStretchBusy(false);
     }
@@ -429,7 +431,7 @@ export default function ResultsMapPanel({
   return (
     <div className="card">
       <div className="card-header">
-        <i className="bi bi-globe-americas me-1" /> Peta Hasil
+        <i className="bi bi-globe-americas me-1" /> {c("Peta hasil", "Results map")}
       </div>
       <div className="card-body">
         {tabs.length > 0 && (
@@ -469,21 +471,20 @@ export default function ResultsMapPanel({
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-secondary flex-shrink-0"
-                  title="Atur kontras warna berdasarkan distribusi raster"
-                  aria-label="Atur rentang warna peta karbon"
+                  title={c("Atur kontras warna berdasarkan distribusi raster", "Adjust color contrast to the raster distribution")}
+                  aria-label={c("Atur rentang warna peta karbon", "Adjust the carbon map color range")}
                   aria-expanded={stretchMenuOpen}
                   disabled={stretchBusy}
                   onClick={() => setStretchMenuOpen((open) => !open)}
                 >
-                  <i className={`bi ${stretchBusy ? "bi-arrow-repeat" : "bi-sliders"} me-1`} />
-                  Skala warna
+                  <i className={`bi ${stretchBusy ? "bi-arrow-repeat" : "bi-sliders"}`} aria-hidden="true" />
                 </button>
                 <div
                   className={`dropdown-menu dropdown-menu-end p-3 ${stretchMenuOpen ? "show" : ""}`}
                   style={{ minWidth: 270 }}
                 >
                   <label className="form-label small fw-semibold mb-1" htmlFor="carbon-map-stretch">
-                    Rentang nilai raster
+                    {c("Rentang nilai raster", "Raster value range")}
                   </label>
                   <select
                     id="carbon-map-stretch"
@@ -492,13 +493,13 @@ export default function ResultsMapPanel({
                     disabled={stretchBusy}
                     onChange={(event) => void applyStretch(event.target.value as CarbonVisualizationStretch)}
                   >
-                    <option value="p2_98">Persentil 2-98 - seimbang</option>
-                    <option value="p5_95">Persentil 5-95 - kontras kuat</option>
-                    <option value="min_max">Rentang penuh - min-maks</option>
-                    <option value="admin">Rentang yang diatur admin</option>
+                    <option value="p2_98">{c("Persentil 2–98 · seimbang", "2nd–98th percentile · balanced")}</option>
+                    <option value="p5_95">{c("Persentil 5–95 · kontras kuat", "5th–95th percentile · high contrast")}</option>
+                    <option value="min_max">{c("Rentang penuh · minimum–maksimum", "Full range · minimum–maximum")}</option>
+                    <option value="admin">{c("Rentang yang diatur admin", "Administrator-defined range")}</option>
                   </select>
                   <p className="small text-body-secondary mt-2 mb-0">
-                    Nilai di luar persentil tetap terlihat, dengan warna pada ujung skala.
+                    {c("Nilai di luar persentil tetap terlihat, dengan warna pada ujung skala.", "Values outside the percentile range remain visible and use the scale's end colors.")}
                   </p>
                   {stretchError && <div className="small text-danger mt-2" role="alert">{stretchError}</div>}
                 </div>
@@ -520,7 +521,7 @@ export default function ResultsMapPanel({
 
         {compareOn && tabs.length > 1 && (
           <div className="d-flex align-items-center gap-2 flex-wrap mb-2" style={{ fontSize: ".85rem" }}>
-            <span className="text-muted">Bandingkan <strong>{activeTab?.label}</strong> dengan:</span>
+            <span className="text-muted">{c("Bandingkan", "Compare")} <strong>{activeTab?.label}</strong> {c("dengan:", "with:")}</span>
             <select
               className="form-select form-select-sm"
               style={{ maxWidth: 220 }}
@@ -558,7 +559,7 @@ export default function ResultsMapPanel({
               clipGeometry={aoi?.feature}
             >
               <BasemapSwitcher />
-              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+              <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={c("Opasitas", "Opacity")} />
               {aoi?.feature && <GeoJSON key={JSON.stringify(aoi.feature.geometry)} data={aoi.feature} style={{ color: "red", weight: 2, fillOpacity: 0.1 }} />}
               {aoi && <FitResultAoi aoi={aoi} zoom={zoom} />}
               {(legend.entries.length > 0 || legend.scale || compareLegend.entries.length > 0 || compareLegend.scale) && (
@@ -597,7 +598,7 @@ export default function ResultsMapPanel({
                     refreshToken={refreshToken}
                     clipGeometry={aoi?.feature}
                   />
-                  <LayerOpacityControl opacity={opacity} onChange={setOpacity} label="Opacity" />
+                  <LayerOpacityControl opacity={opacity} onChange={setOpacity} label={c("Opasitas", "Opacity")} />
                 </>
               )}
               {(legend.entries.length > 0 || legend.scale) && (
@@ -612,8 +613,7 @@ export default function ResultsMapPanel({
         {activeTab && !activeTab.tileUrl && (
           <div className="alert alert-info mt-2 mb-0 py-2 small">
             <i className="bi bi-info-circle me-1" />
-            Statistik tersedia, namun peta tile tidak tersedia untuk layer ini (mis. model
-            inferensi server-side / non-GEE).
+            {c("Statistik tersedia, tetapi tile peta tidak tersedia untuk layer ini (misalnya hasil inferensi di server atau sumber non-GEE).", "Statistics are available, but map tiles are unavailable for this layer (for example, server-side model inference or a non-GEE source).")}
           </div>
         )}
       </div>

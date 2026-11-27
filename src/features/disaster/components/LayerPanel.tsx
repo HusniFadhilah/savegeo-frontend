@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DisasterAnalysisEntry, DisasterSatelliteLayers } from "../types";
 import InfoTip from "@/components/ui/InfoTip";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   satellite: DisasterSatelliteLayers | null;
@@ -18,18 +19,18 @@ interface Props {
   onToggleHotspots: () => void;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  change_detection: "Change Detection",
-  segmentation: "Satellite imagery / Segmentation",
-  water_inundation: "Water / Inundation",
-  land_cover: "Land Cover",
-  building_exposure: "Building Exposure",
-  road_exposure: "Road Exposure",
-  landcover_impact: "Landcover Impact",
-  building_change: "Building Change",
-  damage_candidate: "Damage Candidate",
-  official_observation: "Official Intensity",
-  damage_assessment: "Damage Candidate",
+const CATEGORY_LABELS: Record<string, [string, string]> = {
+  change_detection: ["Deteksi perubahan", "Change detection"],
+  segmentation: ["Citra satelit / segmentasi", "Satellite imagery / segmentation"],
+  water_inundation: ["Air / genangan", "Water / inundation"],
+  land_cover: ["Tutupan lahan", "Land cover"],
+  building_exposure: ["Paparan bangunan", "Building exposure"],
+  road_exposure: ["Paparan jalan", "Road exposure"],
+  landcover_impact: ["Dampak pada tutupan lahan", "Land cover impact"],
+  building_change: ["Perubahan bangunan", "Building change"],
+  damage_candidate: ["Indikasi kerusakan", "Damage candidates"],
+  official_observation: ["Intensitas resmi", "Official intensity"],
+  damage_assessment: ["Indikasi kerusakan", "Damage candidates"],
 };
 
 const LAYER_LABELS: Record<string, string> = {
@@ -38,20 +39,21 @@ const LAYER_LABELS: Record<string, string> = {
   earthquake_road_impact_v1: "Road impact",
 };
 
-function categoryLabel(category: string): string {
+function categoryLabel(category: string, c: (id: string, en: string) => string): string {
   const normalized = category.toLowerCase();
-  return CATEGORY_LABELS[normalized] || normalized.replace(/[_-]+/g, " ");
+  const label = CATEGORY_LABELS[normalized];
+  return label ? c(...label) : normalized.replace(/[_-]+/g, " ");
 }
 
-function layerInfo(entry: DisasterAnalysisEntry): string {
+function layerInfo(entry: DisasterAnalysisEntry, c: (id: string, en: string) => string): string {
   return [
     !entry.available && entry.availability_reason?.length
-      ? `Belum tersedia: ${entry.availability_reason.join("; ")}`
+      ? `${c("Belum tersedia", "Unavailable")}: ${entry.availability_reason.join("; ")}`
       : !entry.available
-        ? "Layer ini belum tersedia."
+        ? c("Layer ini belum tersedia.", "This layer is unavailable.")
         : null,
-    entry.damage_model === false ? "Indikator/paparan; bukan kerusakan terkonfirmasi." : null,
-    entry.validation_status === "review_required" ? "Perlu ditinjau sebelum publikasi." : null,
+    entry.damage_model === false ? c("Indikator paparan; kerusakan belum dikonfirmasi.", "Exposure indicator; damage is not confirmed.") : null,
+    entry.validation_status === "review_required" ? c("Perlu ditinjau sebelum publikasi.", "Review is required before publication.") : null,
     ...(entry.limitations ?? []).slice(0, 2),
   ]
     .filter(Boolean)
@@ -82,6 +84,7 @@ export default function LayerPanel({
   onToggleHotspots,
 }: Props) {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const [satelliteOptionsOpen, setSatelliteOptionsOpen] = useState(false);
   const groups = new Map<string, DisasterAnalysisEntry[]>();
   for (const entry of analyses) {
@@ -119,11 +122,11 @@ export default function LayerPanel({
       </svg>
       <div className="card mb-3 disaster-modern-card disaster-layer-panel">
         <div className="card-header py-2 disaster-soft-header">
-          <i className="bi bi-layers-fill" /> Layer
+          <i className="bi bi-layers-fill" /> {c("Layer", "Layers")}
         </div>
         <div className="card-body py-2">
           <div className="mb-2">
-            <div className="fw-semibold small text-muted text-uppercase mb-1">Satellite</div>
+            <div className="fw-semibold small text-muted text-uppercase mb-1">{c("Satelit", "Satellite")}</div>
             <div className="disaster-layer-satellite-row">
               <div className="form-check form-switch flex-grow-1">
                 <input
@@ -188,7 +191,7 @@ export default function LayerPanel({
           {[...groups.entries()].map(([category, entries]) => (
             <div className="mb-2" key={category}>
               <div className="fw-semibold small text-muted text-uppercase mb-1">
-                {categoryLabel(category)}
+                {categoryLabel(category, c)}
               </div>
               {entries.map((entry) => (
                 <div className="form-check form-switch" key={entry.model_id}>
@@ -209,7 +212,7 @@ export default function LayerPanel({
                   {layerInfo(entry) && (
                     <InfoTip
                       label={`Info ${LAYER_LABELS[entry.model_id] ?? entry.user_label}`}
-                      content={layerInfo(entry)}
+                      content={layerInfo(entry, c)}
                     />
                   )}
                 </div>
@@ -218,7 +221,7 @@ export default function LayerPanel({
           ))}
 
           <div>
-            <div className="fw-semibold small text-muted text-uppercase mb-1">Reference</div>
+            <div className="fw-semibold small text-muted text-uppercase mb-1">{c("Referensi", "Reference")}</div>
             <div className="form-check form-switch">
               <input
                 className="form-check-input"
@@ -228,7 +231,7 @@ export default function LayerPanel({
                 onChange={onToggleAoi}
               />
               <label className="form-check-label small" htmlFor="layerAoi">
-                Batas AOI
+                {c("Batas AOI", "AOI boundary")}
               </label>
             </div>
             <div className="form-check form-switch">
@@ -240,7 +243,7 @@ export default function LayerPanel({
                 onChange={onToggleHotspots}
               />
               <label className="form-check-label small" htmlFor="layerHotspots">
-                Hotspot
+                {c("Titik panas", "Hotspot")}
               </label>
             </div>
           </div>

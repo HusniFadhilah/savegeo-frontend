@@ -6,6 +6,7 @@ import { hasAdminPermission } from "@/auth/access";
 import InfoTip from "@/components/ui/InfoTip";
 import { safeHttpUrl } from "@/utils/safeHttpUrl";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 const CONFIG_KEY = "carbon.bluecarbon_profiles";
 const POOLS = [
@@ -62,6 +63,7 @@ function parseRecords(raw?: string | null): BlueCarbonRecord[] {
 
 export default function BlueCarbonCatalogAdmin() {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const poolLabel = (key: string, fallback: string) => key === "soc" ? t("admin.calibration.pool.soc") : key === "litter" ? t("admin.calibration.pool.litter") : key === "deadwood" ? t("admin.calibration.pool.deadwood") : fallback;
   const { notify } = useAdmin();
   const user = useAuthStore((state) => state.user);
@@ -178,7 +180,7 @@ export default function BlueCarbonCatalogAdmin() {
               <form className="bluecarbon-admin__form" onSubmit={(event) => void submit(event)}>
                 <div className="bluecarbon-admin__fields">
                   <label>{t("admin.blueCarbon.name")}<input required className="form-control" value={draft.name} onChange={(event) => patch({ name: event.target.value })} /></label>
-                  <label>{t("admin.blueCarbon.habitat")}<select className="form-select" value={draft.habitat} onChange={(event) => patch({ habitat: event.target.value })}><option value="Mangrove">Mangrove</option><option value="Lamun">{t("admin.blueCarbon.seagrass")}</option><option value="Rawa asin">{t("admin.blueCarbon.saltmarsh")}</option><option value="Ekosistem pesisir lainnya">{t("admin.blueCarbon.otherCoastal")}</option></select></label>
+                  <label>{t("admin.blueCarbon.habitat")}<select className="form-select" value={draft.habitat} onChange={(event) => patch({ habitat: event.target.value })}><option value="Mangrove">{c("Mangrove (bakau)", "Mangrove")}</option><option value="Lamun">{t("admin.blueCarbon.seagrass")}</option><option value="Rawa asin">{t("admin.blueCarbon.saltmarsh")}</option><option value="Ekosistem pesisir lainnya">{t("admin.blueCarbon.otherCoastal")}</option></select></label>
                   <label>{t("admin.blueCarbon.sourceKind")}<select className="form-select" value={draft.data_kind} onChange={(event) => patch({ data_kind: event.target.value })}><option value="dataset">{t("admin.blueCarbon.geospatialDataset")}</option><option value="field_observation">{t("admin.blueCarbon.fieldMeasurement")}</option><option value="literature">{t("admin.blueCarbon.literature")}</option></select></label>
                   <label>{t("admin.blueCarbon.region")}<input className="form-control" value={draft.region} onChange={(event) => patch({ region: event.target.value })} placeholder={t("admin.blueCarbon.regionPlaceholder")} /></label>
                   <label>{t("admin.blueCarbon.period")}<input className="form-control" value={draft.period} onChange={(event) => patch({ period: event.target.value })} placeholder={t("admin.blueCarbon.periodPlaceholder")} /></label>

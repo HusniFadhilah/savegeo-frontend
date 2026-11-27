@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { useUserAuthStore } from "@/hooks/useUserAuthStore";
 import { workflowApi, type WorkflowRecord } from "@/services/workflowApi";
 import { executeWorkflow } from "@/workflow/engine";
@@ -69,6 +70,7 @@ export default function WorkflowBuilderPage() {
   const workflowId = id || queryWorkflowId;
   const navigate = useNavigate();
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const isAuthenticated = useUserAuthStore((state) => state.isAuthenticated);
   const [workflow, setWorkflow] = useState<WorkflowDefinition>(() => {
     const query = parseWorkflowQuery(window.location.search);
@@ -124,7 +126,7 @@ export default function WorkflowBuilderPage() {
       .get(workflowId)
       .then((record) => setWorkflow(normalizeRecord(record)))
       .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : "WORKFLOW_NOT_FOUND"),
+        setError(reason instanceof Error ? reason.message : c("Workflow tidak ditemukan", "Workflow was not found")),
       );
   }, [workflowId]);
 
@@ -187,7 +189,7 @@ export default function WorkflowBuilderPage() {
 
   const loadTemplate = (template: WorkflowDefinition) => {
     setWorkflow(structuredClone(template));
-    setNotice("Template loaded");
+    setNotice(c("Template berhasil dimuat", "Template loaded"));
     setError(null);
   };
   const save = async () => {
@@ -196,7 +198,7 @@ export default function WorkflowBuilderPage() {
       return;
     }
     if (!isAuthenticated) {
-      setNotice("Draft tersimpan di browser. Login untuk menyimpan ke server.");
+      setNotice(c("Draft tersimpan di browser. Login untuk menyimpan ke server.", "Draft saved in this browser. Sign in to save it to the server."));
       return;
     }
     try {
@@ -205,15 +207,15 @@ export default function WorkflowBuilderPage() {
         : await workflowApi.create(workflow);
       const next = normalizeRecord(record);
       setWorkflow(next);
-      setNotice("Workflow saved");
+      setNotice(c("Workflow tersimpan", "Workflow saved"));
       if (!workflow.id) navigate(`/workflow/${record.id}/edit`, { replace: true });
     } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : "Failed to save workflow");
+      setError(reason instanceof Error ? reason.message : c("Workflow gagal disimpan", "Failed to save workflow"));
     }
   };
   const share = async () => {
     if (!workflow.id) {
-      setError("Save workflow before sharing");
+      setError(c("Simpan workflow sebelum membagikannya", "Save the workflow before sharing it"));
       return;
     }
     try {
@@ -221,9 +223,9 @@ export default function WorkflowBuilderPage() {
       const url = `${window.location.origin}${canonicalWorkflowUrl("/workflow", { workflowId: workflow.id })}`;
       await navigator.clipboard?.writeText(url);
       setWorkflow((current) => ({ ...current, visibility: "unlisted" }));
-      setNotice("Share link copied");
+      setNotice(c("Tautan berbagi disalin", "Share link copied"));
     } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : "Share failed");
+      setError(reason instanceof Error ? reason.message : c("Workflow gagal dibagikan", "Sharing failed"));
     }
   };
   const runWorkflow = async () => {
@@ -262,9 +264,9 @@ export default function WorkflowBuilderPage() {
               className="workflow-title-input"
               value={workflow.name}
               onChange={(event) => setWorkflow({ ...workflow, name: event.target.value })}
-              aria-label="Workflow name"
+              aria-label={c("Nama workflow", "Workflow name")}
             />
-            <p>Bangun analisis geospasial yang dapat diulang, dibagikan, dan ditelusuri.</p>
+            <p>{c("Bangun analisis geospasial yang dapat diulang, dibagikan, dan ditelusuri.", "Build geospatial analyses that can be repeated, shared, and traced.")}</p>
           </div>
           <div className="workflow-actions">
             <Link className="btn btn-light btn-sm" to="/workflow">
@@ -282,9 +284,9 @@ export default function WorkflowBuilderPage() {
                   void file.text().then((text) => {
                     try {
                       setWorkflow(JSON.parse(text) as WorkflowDefinition);
-                      setNotice("Workflow imported");
+                      setNotice(c("Workflow berhasil diimpor", "Workflow imported"));
                     } catch {
-                      setError("WORKFLOW_INVALID");
+                      setError(c("File workflow tidak valid", "Invalid workflow file"));
                     }
                   });
                 }}
@@ -297,7 +299,7 @@ export default function WorkflowBuilderPage() {
                 setWorkflow(emptyWorkflow());
               }}
             >
-              <i className="bi bi-trash3 me-1" /> Hapus draft
+              <i className="bi bi-trash3 me-1" /> {c("Hapus draft", "Clear draft")}
             </button>
             <button
               className="btn btn-outline-primary btn-sm"
@@ -338,7 +340,7 @@ export default function WorkflowBuilderPage() {
                 setError(null);
                 setNotice(null);
               }}
-              aria-label="Dismiss"
+              aria-label={c("Tutup pemberitahuan", "Dismiss notification")}
             >
               ×
             </button>
@@ -352,10 +354,10 @@ export default function WorkflowBuilderPage() {
             </div>
             <input
               className="form-control form-control-sm mb-3"
-              placeholder="Search nodes…"
+              placeholder={c("Cari node…", "Search nodes…")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search nodes"
+              aria-label={c("Cari node", "Search nodes")}
             />
             {filteredCatalog.map(([category, nodes]) => (
               <div key={category} className="node-group">
@@ -389,22 +391,22 @@ export default function WorkflowBuilderPage() {
                   onClick={() => loadTemplate(template)}
                 >
                   <span>{template.name}</span>
-                  <small>{template.nodes.length} nodes</small>
+                  <small>{template.nodes.length} {c("node", "nodes")}</small>
                 </button>
               ))}
             </div>
             <Link to="/settings/plugins" className="plugin-link">
-              <i className="bi bi-puzzle me-2" /> {t("workflow.plugin")} manager
+              <i className="bi bi-puzzle me-2" /> {t("workflow.plugin")} {c("pengelola", "manager")}
             </Link>
           </aside>
           <div className="workflow-canvas-wrap">
             <div className="canvas-toolbar">
               <span>
-                <i className="bi bi-arrows-move me-1" /> Canvas
+                <i className="bi bi-arrows-move me-1" /> {c("Kanvas", "Canvas")}
               </span>
               <span className={validation.valid ? "text-success" : "text-danger"}>
                 <i className={`bi ${validation.valid ? "bi-check-circle" : "bi-x-circle"}`} />{" "}
-                {validation.valid ? "Valid" : `${validation.errors.length} errors`}
+                {validation.valid ? c("Valid", "Valid") : c(`${validation.errors.length} kesalahan`, `${validation.errors.length} errors`)}
               </span>
               <button
                 className="btn btn-sm btn-outline-secondary"
@@ -420,7 +422,7 @@ export default function WorkflowBuilderPage() {
                   URL.revokeObjectURL(url);
                 }}
               >
-                Export JSON
+                {c("Ekspor JSON", "Export JSON")}
               </button>
             </div>
             <div
@@ -457,8 +459,8 @@ export default function WorkflowBuilderPage() {
               {workflow.nodes.length === 0 && (
                 <div className="canvas-empty">
                   <i className="bi bi-boxes" />
-                  <strong>Drop a node here</strong>
-                  <span>Pilih node di kiri atau gunakan template untuk memulai.</span>
+                  <strong>{c("Letakkan node di sini", "Drop a node here")}</strong>
+                  <span>{c("Pilih node di sebelah kiri atau gunakan template untuk memulai.", "Choose a node on the left or use a template to get started.")}</span>
                 </div>
               )}
               {workflow.nodes.map((node) => (
@@ -467,7 +469,7 @@ export default function WorkflowBuilderPage() {
                   className={`workflow-node ${selectedNode === node.id ? "selected" : ""} ${run?.nodeStatuses[node.id] || ""}`}
                   style={{ left: node.position.x, top: node.position.y }}
                   onClick={() => setSelectedNode(node.id)}
-                  aria-label={`Select ${node.label}`}
+                  aria-label={`${c("Pilih", "Select")} ${node.label}`}
                 >
                   <span className="workflow-node-port left" />
                   <span className="workflow-node-icon">
@@ -485,9 +487,9 @@ export default function WorkflowBuilderPage() {
             </div>
           </div>
           <aside className="workflow-panel workflow-inspector">
-            <div className="panel-heading">Inspector</div>
+            <div className="panel-heading">{c("Inspektur", "Inspector")}</div>
             <label className="form-label small">
-              Visibility
+              {c("Visibilitas", "Visibility")}
               <select
                 className="form-select form-select-sm"
                 value={workflow.visibility}
@@ -498,15 +500,15 @@ export default function WorkflowBuilderPage() {
                   })
                 }
               >
-                <option value="private">Private</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="public">Public</option>
+                <option value="private">{c("Privat", "Private")}</option>
+                <option value="unlisted">{c("Tidak tercantum", "Unlisted")}</option>
+                <option value="public">{c("Publik", "Public")}</option>
               </select>
             </label>
             {selected ? (
               <>
                 <label className="form-label small">
-                  Node label
+                  {c("Label node", "Node label")}
                   <input
                     className="form-control form-control-sm"
                     value={selected.label}
@@ -514,11 +516,11 @@ export default function WorkflowBuilderPage() {
                   />
                 </label>
                 <label className="form-label small">
-                  Node type
+                  {c("Jenis node", "Node type")}
                   <input className="form-control form-control-sm" value={selected.type} readOnly />
                 </label>
                 <label className="form-label small">
-                  Parameters (JSON)
+                  {c("Parameter (JSON)", "Parameters (JSON)")}
                   <textarea
                     className="form-control form-control-sm"
                     rows={6}
@@ -545,13 +547,13 @@ export default function WorkflowBuilderPage() {
                     setSelectedNode(null);
                   }}
                 >
-                  <i className="bi bi-x-circle me-1" /> Delete node
+                  <i className="bi bi-x-circle me-1" /> {c("Hapus node", "Delete node")}
                 </button>
               </>
             ) : (
               <div className="inspector-empty">
                 <i className="bi bi-cursor" />
-                <p>Select a node to edit parameters.</p>
+                <p>{c("Pilih node untuk mengubah parameternya.", "Select a node to edit its parameters.")}</p>
               </div>
             )}
             <hr />
@@ -587,7 +589,7 @@ export default function WorkflowBuilderPage() {
                       ),
                     )
                   }
-                  aria-label={`${layer.name} opacity`}
+                  aria-label={`${layer.name} ${c("opasitas", "opacity")}`}
                 />
               </div>
             ))}
@@ -608,7 +610,7 @@ export default function WorkflowBuilderPage() {
                 ])
               }
             >
-              <i className="bi bi-plus-circle me-1" /> Add 3D extrusion
+              <i className="bi bi-plus-circle me-1" /> {c("Tambahkan ekstrusi 3D", "Add 3D extrusion")}
             </button>
             <label className="form-label small mt-3">
               {t("workflow.timeSlider")} <output>{activeTime}</output>
@@ -639,7 +641,7 @@ export default function WorkflowBuilderPage() {
                   />
                 </div>
                 <Link to={`/workflow/${workflow.id || "local"}/run`} className="small d-block mt-2">
-                  View provenance
+                  {c("Lihat provenance", "View provenance")}
                 </Link>
               </div>
             )}
@@ -647,8 +649,8 @@ export default function WorkflowBuilderPage() {
         </section>
         {action === "run" && (
           <div className="workflow-run-banner">
-            Run details are shown in the inspector.{" "}
-            <button onClick={() => navigate(`/workflow/${workflowId}/edit`)}>Back to editor</button>
+          {c("Rincian run ditampilkan di panel inspektur.", "Run details are shown in the inspector.")}{" "}
+          <button onClick={() => navigate(`/workflow/${workflowId}/edit`)}>{c("Kembali ke editor", "Back to editor")}</button>
           </div>
         )}
       </main>

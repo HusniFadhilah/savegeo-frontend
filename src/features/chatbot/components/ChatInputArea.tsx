@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { PendingFileAttachment } from "../types";
 
 interface Props {
@@ -24,15 +25,16 @@ export default function ChatInputArea({
   fileAccept,
   onSend,
 }: Props) {
+  const c = useBilingualCopy();
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const placeholder = pendingImage
-    ? "Tambahkan pertanyaan tentang gambar ini..."
+    ? c("Tambahkan pertanyaan tentang gambar ini...", "Ask a question about this image...")
     : pendingFile
-      ? "Tambahkan pertanyaan tentang file ini..."
-      : "Tanyakan sesuatu atau minta analisis...";
+      ? c("Tambahkan pertanyaan tentang file ini...", "Ask a question about this file...")
+      : c("Tanyakan sesuatu atau minta analisis...", "Ask a question or request an analysis...");
 
   function autoResize() {
     const el = textareaRef.current;
@@ -67,12 +69,12 @@ export default function ChatInputArea({
       {pendingImage && (
         <div id="sgc-img-preview-bar">
           <div className="sgc-img-preview-inner">
-            <img src={`data:image/png;base64,${pendingImage}`} className="sgc-img-thumb" alt="pratinjau" />
+            <img src={`data:image/png;base64,${pendingImage}`} className="sgc-img-thumb" alt={c("Pratinjau gambar", "Image preview")} />
             <div className="sgc-img-preview-label">
               <i className="bi bi-map me-1" />
-              Gambar siap dikirim
+              {c("Gambar siap dikirim", "Image ready to send")}
             </div>
-            <button type="button" className="sgc-img-clear" title="Hapus gambar" onClick={onClearImage}>
+            <button type="button" className="sgc-img-clear" title={c("Hapus gambar", "Remove image")} onClick={onClearImage}>
               <i className="bi bi-x-lg" />
             </button>
           </div>
@@ -86,20 +88,20 @@ export default function ChatInputArea({
               <span className="sgc-file-name">{pendingFile.name}</span>
               <span className="sgc-file-size">{pendingFile.size_label}</span>
             </div>
-            <button type="button" className="sgc-img-clear" title="Hapus lampiran" onClick={onClearFile}>
+            <button type="button" className="sgc-img-clear" title={c("Hapus lampiran", "Remove attachment")} onClick={onClearFile}>
               <i className="bi bi-x-lg" />
             </button>
           </div>
         </div>
       )}
       <div id="sgc-input-area">
-        <button type="button" id="sgc-camera" title="Screenshot peta" disabled={cameraBusy} onClick={onCameraClick}>
+        <button type="button" id="sgc-camera" title={c("Ambil tangkapan layar peta", "Take a map screenshot")} disabled={cameraBusy} onClick={onCameraClick}>
           <i className={`bi ${cameraBusy ? "bi-arrow-repeat sgc-spin" : "bi-camera"}`} />
         </button>
         <button
           type="button"
           id="sgc-attach"
-          title="Lampirkan file (gambar, PDF, CSV, TXT)"
+          title={c("Lampirkan file (gambar, PDF, CSV, TXT)", "Attach a file (image, PDF, CSV, TXT)")}
           onClick={() => fileInputRef.current?.click()}
         >
           <i className="bi bi-paperclip" />
@@ -124,7 +126,7 @@ export default function ChatInputArea({
           }}
           onKeyDown={handleKeyDown}
         />
-        <button type="button" id="sgc-send" title="Kirim" onClick={handleSendClick}>
+        <button type="button" id="sgc-send" title={c("Kirim", "Send")} onClick={handleSendClick}>
           <i className="bi bi-send" />
         </button>
       </div>

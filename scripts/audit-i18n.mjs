@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -135,29 +136,63 @@ function collectCatalogKeys(files) {
   return keys;
 }
 
+function isUserFacingText(value) {
+  const normalized = value.trim().replace(/\s+/gu, " ");
+  if (normalized.length < 3 || !/[A-Za-zÀ-ÿ]/u.test(normalized)) return false;
+  if (/^&(?:[A-Za-z]+|#\d+);$/u.test(normalized)) return false;
+  if (allowlist.hardcodedValues.includes(normalized) || allowlist.technicalTerms.includes(normalized)) return false;
+  if (/^[A-Z0-9_.:/-]+$/u.test(normalized)) return false;
+  if (/^(?:\d+|(?:km²|km|ha|m|cm|mm|Mg C\/ha|Mg\/ha|tCO₂e|tCO2e|UTC|%)\s*)$/iu.test(normalized)) return false;
+  if (/^https?:\/\//iu.test(normalized)) return false;
+  return true;
+}
+
+function isInsideCode(node, sourceFile) {
+  for (let current = node.parent; current; current = current.parent) {
+    if (ts.isJsxElement(current) || ts.isJsxSelfClosingElement(current)) {
+      const tagName = ts.isJsxElement(current) ? current.openingElement.tagName : current.tagName;
+      const tag = tagName.getText(sourceFile).toLowerCase();
+      if (tag === "code" || tag === "pre") return true;
+    }
+  }
+  return false;
+}
+
 function auditRenderedKeys(files, catalogKeys) {
   for (const file of files) {
     const text = fs.readFileSync(file, "utf8");
-    for (const match of text.matchAll(RAW_KEY_RE)) {
-      if (!catalogKeys.has(match[1])) {
-        const before = text.slice(0, match.index);
-        const line = before.split(/\r?\n/u).length;
-        report(errors, file, line, match.index - before.lastIndexOf("\n"), `missing translation key ${match[1]}`, match[0]);
+    const isTest = /\.(?:test|spec)\.[cm]?[jt]sx?$/u.test(file);
+    if (!isTest) {
+      for (const match of text.matchAll(RAW_KEY_RE)) {
+        if (!catalogKeys.has(match[1])) {
+          const before = text.slice(0, match.index);
+          const line = before.split(/\r?\n/u).length;
+          report(errors, file, line, match.index - before.lastIndexOf("\n"), `missing translation key ${match[1]}`, match[0]);
+        }
       }
     }
-    if (file.endsWith(".tsx")) {
-      const hardcoded = />\s*([A-Za-zÀ-ÿ][^<{>\r\n]*?)\s*</gu;
-      const attributes = /(?:placeholder|aria-label|title|alt)\s*=\s*(["'])(.*?)\1/gu;
-      for (const match of [...text.matchAll(hardcoded), ...text.matchAll(attributes)]) {
-        const value = (match[2] ?? match[1]).trim();
-        if (!value || allowlist.hardcodedValues.includes(value) || allowlist.technicalTerms.includes(value) || /^[A-Z0-9_.:/-]+$/u.test(value)) continue;
-        const line = text.slice(0, match.index).split(/\r?\n/u).length;
-        warnings.push(`${rel(file)}:${line} candidate hardcoded UI text: ${value.slice(0, 100)}`);
+    if (!file.endsWith(".tsx") || isTest) continue;
+    const sourceFile = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    function visit(node) {
+      if (ts.isJsxText(node) && !isInsideCode(node, sourceFile)) {
+        const value = node.text.trim().replace(/\s+/gu, " ");
+        if (isUserFacingText(value)) {
+          const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          report(warnings, file, pos.line + 1, pos.character + 1, "candidate hardcoded UI text", value);
+        }
       }
+      if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
+        const attribute = node.name.getText(sourceFile);
+        if (["placeholder", "aria-label", "title", "alt"].includes(attribute) && isUserFacingText(node.initializer.text)) {
+          const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          report(warnings, file, pos.line + 1, pos.character + 1, `candidate hardcoded ${attribute}`, node.initializer.text);
+        }
+      }
+      ts.forEachChild(node, visit);
     }
+    visit(sourceFile);
   }
 }
-
 function routeRegistry() {
   const file = path.join(ROOT, "src/routes/AppRoutes.tsx");
   if (!fs.existsSync(file)) return [];
@@ -181,6 +216,6 @@ console.log(`route registry: ${routes.length} routes indexed`);
 console.log(`fatal issues: ${errors.length}`);
 for (const issue of errors) console.log(`ERROR ${issue}`);
 console.log(`warnings: ${warnings.length}`);
-for (const warning of warnings.slice(0, 80)) console.log(`WARN ${warning}`);
-if (warnings.length > 80) console.log(`WARN ... ${warnings.length - 80} additional hardcoded candidates`);
-process.exitCode = errors.length ? 1 : 0;
+const warningLimit = process.env.SAVEGEO_I18N_AUDIT_ALL === "1" ? warnings.length : 80;
+for (const warning of warnings.slice(0, warningLimit)) console.log(`WARN ${warning}`);
+if (warnings.length > warningLimit) console.log(`WARN ... ${warnings.length - warningLimit} additional hardcoded candidates`);process.exitCode = errors.length ? 1 : 0;

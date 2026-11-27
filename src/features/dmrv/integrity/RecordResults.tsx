@@ -88,7 +88,7 @@ export default function RecordResults({ result }: { result: IntegrityResult }) {
             <table className="table integrity-results-table">
               <thead>
                 <tr>
-                  <th>Pool</th>
+                  <th>{c("Pool karbon", "Carbon pool")}</th>
                   <th>{c("ΔC proyek (Mg C)", "Project ΔC (Mg C)")}</th>
                   <th>{c("ΔC baseline (Mg C)", "Baseline ΔC (Mg C)")}</th>
                   <th>{c("Tambahan (tCO₂)", "Additional (tCO₂)")}</th>

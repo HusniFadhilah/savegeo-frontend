@@ -63,8 +63,11 @@
 .green-rankings__actions .btn { border-radius: 9px; }
 .green-rankings__status { display: flex; align-items: flex-start; gap: .6rem; padding: .75rem .9rem; margin: 0 0 .9rem; border: 1px solid; border-radius: 10px; font-size: .9rem; }
 .green-rankings__status > .bi { margin-top: .1rem; }
+.green-rankings__status > span { flex: 1; min-width: 0; }
+.green-rankings__status > .inline-info-tip { align-self: center; }
 .green-rankings__status.is-complete { color: #17613d; background: #eef9f1; border-color: #ccebd4; }
 .green-rankings__status.is-partial { color: #165f73; background: #eef9fc; border-color: #c7eaf0; }
+.inline-info-tip__popover.green-rankings__method-popover { max-width: min(420px, calc(100vw - 2rem)); }
 .green-rankings__snapshot-note { display: flex; align-items: center; gap: .45rem; margin: -.35rem 0 .8rem; color: var(--green-rank-muted); font-size: .72rem; }
 .green-rankings__snapshot-note > .bi { color: #218348; }
 .green-rankings__snapshot-note strong { color: #9a6411; font-weight: 700; }

@@ -9,6 +9,7 @@ import {
   Title,
 } from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { LandCoverDatasetResult, LandCoverResult } from "@/features/landcover/types";
 import { isLandCoverDatasetEntry } from "@/features/landcover/types";
 
@@ -73,6 +74,7 @@ interface Props {
  * WorldCover, ESRI Land Cover, or any other dataset key present).
  */
 export default function LandCoverResultTables({ result }: Props) {
+  const c = useBilingualCopy();
   const entries = Object.entries(result).filter(([key, value]) =>
     isLandCoverDatasetEntry(key, value),
   );
@@ -85,7 +87,7 @@ export default function LandCoverResultTables({ result }: Props) {
   return (
     <div className="mt-4">
       <h5 className="mb-3">
-        <i className="bi bi-map me-1" /> Analisis Tutupan Lahan
+        <i className="bi bi-map me-1" /> {c("Analisis tutupan lahan", "Land-cover analysis")}
       </h5>
       {errors.map(({ key, message }) => <div className="alert alert-warning py-2 small" role="alert" key={key}><strong>{key.replace(/_/g, " ")}</strong>: {message}</div>)}
       {entries.map(([key, value]) => {
@@ -105,14 +107,14 @@ export default function LandCoverResultTables({ result }: Props) {
               <p className="small text-muted mb-2">{value.year} · {value.resolution} · {value.model_version ?? value.collection_version} · {value.class_schema}</p>
               {value.fallback_reason && <div className="alert alert-warning py-2 small">{value.fallback_reason}</div>}
               {value.quality_note && <div className="alert alert-info py-2 small">{value.quality_note}</div>}
-              {Boolean(value.missing_training_classes?.length) && <p className="small text-warning">Kelas tanpa sampel training: {value.missing_training_classes?.join(", ")}</p>}
+              {Boolean(value.missing_training_classes?.length) && <p className="small text-warning">{c("Kelas tanpa sampel pelatihan:", "Classes without training samples:")} {value.missing_training_classes?.join(", ")}</p>}
               <div className="table-responsive">
                 <table className="table table-striped table-hover table-sm">
                   <thead className="table-secondary">
                     <tr>
-                      <th>Kelas</th>
-                      <th>Luas (ha)</th>
-                      <th>Persentase</th>
+                      <th>{c("Kelas", "Class")}</th>
+                      <th>{c("Luas (ha)", "Area (ha)")}</th>
+                      <th>{c("Persentase", "Percentage")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -146,7 +148,7 @@ export default function LandCoverResultTables({ result }: Props) {
                     ))}
                     <tr className="table-light">
                       <td>
-                        <strong>Total</strong>
+                        <strong>{c("Total", "Total")}</strong>
                       </td>
                       <td>
                         <strong>
@@ -165,7 +167,7 @@ export default function LandCoverResultTables({ result }: Props) {
               </div>
             </div>
             <div className="col-md-6">
-              <h6 className="mb-2">Diagram Distribusi</h6>
+              <h6 className="mb-2">{c("Diagram distribusi", "Distribution chart")}</h6>
               <div className="card">
                 <div className="card-body">
                   <Pie
@@ -252,8 +254,7 @@ export default function LandCoverResultTables({ result }: Props) {
             <div className="card mb-4">
               <div className="card-body">
                 <h6 className="mb-3">
-                  <i className="bi bi-bar-chart-fill me-1" /> Perbandingan Antar Dataset (Top{" "}
-                  {topClasses.length} Kelas)
+                  <i className="bi bi-bar-chart-fill me-1" /> {c("Perbandingan antardataset (", "Dataset comparison (")}{c("teratas", "top")} {topClasses.length} {c("kelas)", "classes)")}
                 </h6>
                 <div style={{ height: Math.max(260, topClasses.length * 34) }}>
                   <Bar
@@ -270,7 +271,7 @@ export default function LandCoverResultTables({ result }: Props) {
                       responsive: true,
                       maintainAspectRatio: false,
                       plugins: { legend: { position: "top" } },
-                      scales: { x: { title: { display: true, text: "% Luas AOI" } } },
+                      scales: { x: { title: { display: true, text: c("% luas AOI", "% AOI area") } } },
                     }}
                   />
                 </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 /**
  * Small dependency-free searchable/creatable combobox, built to replace the
@@ -45,15 +46,18 @@ export default function SearchableSelect({
   onChange,
   options,
   groupOrder,
-  placeholder = "Cari...",
+  placeholder,
   loading = false,
   disabled = false,
   allowCustomValue = true,
-  emptyHint = "Tidak ditemukan",
+  emptyHint,
   id,
   variant = "model",
   className = "",
 }: SearchableSelectProps) {
+  const c = useBilingualCopy();
+  const displayPlaceholder = placeholder ?? c("Cari…", "Search…");
+  const displayEmptyHint = emptyHint ?? c("Tidak ditemukan", "No results found");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -128,7 +132,7 @@ export default function SearchableSelect({
 
   let lastGroup: string | undefined;
   const inputValue = variant === "plain" && !open && selected ? selected.label : open ? query : "";
-  const inputPlaceholder = loading ? "Memuat..." : selected ? selected.label : placeholder;
+  const inputPlaceholder = loading ? c("Memuat…", "Loading…") : selected ? selected.label : displayPlaceholder;
 
   return (
     <div className={`adm-ssel adm-ssel-${variant} ${className}`.trim()} ref={rootRef}>
@@ -152,7 +156,7 @@ export default function SearchableSelect({
           <button
             type="button"
             className="adm-ssel-clear"
-            title="Kosongkan"
+            title={c("Kosongkan", "Clear")}
             onClick={(e) => {
               e.stopPropagation();
               commit("");
@@ -164,7 +168,7 @@ export default function SearchableSelect({
       </div>
       {open && !disabled && (
         <div className="adm-ssel-dropdown">
-          {flatList.length === 0 && <div className="adm-ssel-empty">{emptyHint}</div>}
+          {flatList.length === 0 && <div className="adm-ssel-empty">{displayEmptyHint}</div>}
           {flatList.map((item, idx) => {
             if ("create" in item) {
               return (
@@ -176,7 +180,7 @@ export default function SearchableSelect({
                     commit(item.value);
                   }}
                 >
-                  Gunakan model: <strong>{item.value}</strong>
+                  {c("Gunakan model:", "Use model:")} <strong>{item.value}</strong>
                 </div>
               );
             }

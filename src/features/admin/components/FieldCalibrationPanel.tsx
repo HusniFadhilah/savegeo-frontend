@@ -3,6 +3,7 @@ import TablePagination from "@/components/ui/TablePagination";
 import InfoTip from "@/components/ui/InfoTip";
 import { AdminTableNumberCell, AdminTableNumberHeader } from "./AdminTableNumber";
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import {
   downloadJson,
   FIELD_CSV_HEADER,
@@ -35,6 +36,7 @@ function MetricRow({ label, metric, index, language }: { label: string; metric?:
 }
 
 export default function FieldCalibrationPanel({ datasetId }: { datasetId: string }) {
+  const c = useBilingualCopy();
   const { t, language } = useI18nStore();
   const poolLabel = (value: string) => {
     const pool = value.includes("aboveground") || value === "agb" ? "agb"
@@ -810,7 +812,7 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
               {assessment.metrics.artifact.clip_min === 0 ? "maks(0, " : ""}
               {fmt(assessment.metrics.artifact.intercept, language)} +{" "}
               {fmt(assessment.metrics.artifact.slope, language)} × {t("admin.fieldCalibration.sourcePrediction")}
-              {assessment.metrics.artifact.clip_min === 0 ? ")" : ""}. Disimpan sebagai model
+              {assessment.metrics.artifact.clip_min === 0 ? ")" : ""}{c(". Disimpan sebagai model", ". Saved as a model")}
               {t("admin.fieldCalibration.experimentalNotActive")}
             </p>
           )}

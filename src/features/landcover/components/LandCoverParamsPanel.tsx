@@ -5,6 +5,7 @@ import { canonicalLandCoverKeys, isPrimaryLandCover, landCoverChoices, PRIMARY_L
 import SearchableMultiSelect from "@/components/ui/SearchableMultiSelect";
 import InfoTip from "@/components/ui/InfoTip";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 interface Props {
   params: LandCoverParams;
@@ -22,6 +23,7 @@ function dateForYear(year: number, month: number, day: number) {
 /** Ported from module-carbon.html's #landcoverParams block. */
 export default function LandCoverParamsPanel({ params, year, showAdvancedOptions = true, onParamsChange }: Props) {
   const { t, language } = useI18nStore();
+  const c = useBilingualCopy();
   const text = (id: string, en: string) => language === "id" ? id : en;
   const [catalog, setCatalog] = useState<LandCoverDatasetCatalog>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -177,7 +179,7 @@ export default function LandCoverParamsPanel({ params, year, showAdvancedOptions
           <label className="form-label">{t("landcover.dateMode")}</label>
           {dateMode === "date" && <InfoTip label={t("carbon.params.moreInfo")} content={t("landcover.dateSpecificHint")} />}
         </div>
-        <div className="btn-group w-100" role="group" aria-label="Mode tanggal analisis LULC">
+        <div className="btn-group w-100" role="group" aria-label={c("Mode tanggal analisis tutupan lahan", "Land cover analysis date mode")}>
           {(["year", "month", "date"] as const).map((mode) => (
             <button
               key={mode}
@@ -213,7 +215,7 @@ export default function LandCoverParamsPanel({ params, year, showAdvancedOptions
                 </option>
               ))}
             </select>
-            <span className="align-self-center">s/d</span>
+            <span className="align-self-center">{c("s/d", "to")}</span>
             <select
               className="form-select"
               id="lcEndMonth"

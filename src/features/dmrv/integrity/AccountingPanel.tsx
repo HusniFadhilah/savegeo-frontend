@@ -219,7 +219,7 @@ export default function AccountingPanel({
               </caption>
               <thead>
                 <tr>
-                  <th>Pool</th>
+                  <th>{c("Pool karbon", "Carbon pool")}</th>
                   {labels.map((s) => (
                     <th key={s}>{s}</th>
                   ))}

@@ -5,9 +5,10 @@ interface InfoTipProps {
   content: ReactNode;
   label: string;
   align?: "start" | "end";
+  popoverClassName?: string;
 }
 
-export default function InfoTip({ content, label, align = "start" }: InfoTipProps) {
+export default function InfoTip({ content, label, align = "start", popoverClassName }: InfoTipProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const id = useId();
@@ -76,7 +77,7 @@ export default function InfoTip({ content, label, align = "start" }: InfoTipProp
         <span
           ref={popoverRef}
           id={id}
-          className="inline-info-tip__popover"
+          className={`inline-info-tip__popover${popoverClassName ? ` ${popoverClassName}` : ""}`}
           style={{ top: position.top, left: position.left }}
           role="tooltip"
         >

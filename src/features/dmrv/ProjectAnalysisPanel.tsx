@@ -245,7 +245,7 @@ export default function ProjectAnalysisPanel({
           {kind === "landcover_transition" && (
             <div className="col-md-4">
               <label className="form-label" htmlFor="analysis-baseline">
-                Baseline
+                {tr("Tahun dasar", "Baseline")}
               </label>
               <select
                 id="analysis-baseline"

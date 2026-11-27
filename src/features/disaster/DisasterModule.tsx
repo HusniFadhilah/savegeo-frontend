@@ -5,6 +5,7 @@ import MapView from "@/components/map/MapView";
 import BasemapSwitcher from "@/components/map/BasemapSwitcher";
 import AoiDrawingTools from "@/components/map/AoiDrawingTools";
 import { useAoiStore } from "@/hooks/useAoiStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { areaKm2, boundsFromGeoJSON } from "@/features/carbon/lib/geo";
 import MapLegend from "@/components/map/MapLegend";
 import { ApiError } from "@/services/apiClient";
@@ -63,6 +64,7 @@ function FitToAoi({ aoi }: { aoi: AoiFeature | null }) {
  * (see `api.ts` - the backend now gates them behind `get_current_user`).
  */
 export default function DisasterModule() {
+  const c = useBilingualCopy();
   const aoi = useAoiStore((s) => s.aoi?.feature ?? null);
   const aoiName = useAoiStore((s) => s.aoi?.name);
   const setAoi = useCallback((feature: AoiFeature | null) => {
@@ -250,11 +252,10 @@ export default function DisasterModule() {
     <div className="analysis-page analysis-page-disaster">
       <section className="analysis-hero analysis-hero-disaster" aria-labelledby="disasterHeroTitle">
         <div className="analysis-hero-main">
-          <span className="analysis-eyebrow">Pemetaan Bencana</span>
-          <h1 id="disasterHeroTitle">Pemetaan Risiko Bencana & Sumber Resmi</h1>
+          <span className="analysis-eyebrow">{c("Pemetaan bencana", "Disaster mapping")}</span>
+          <h1 id="disasterHeroTitle">{c("Pemetaan risiko bencana dan sumber resmi", "Disaster risk mapping and official sources")}</h1>
           <p>
-            Gabungkan AOI, peringatan BMKG, sumber resmi, dan layer kemiringan DEM untuk membaca
-            konteks risiko wilayah secara cepat.
+            {c("Gabungkan AOI, peringatan BMKG, sumber resmi, dan layer kemiringan DEM untuk memahami konteks risiko wilayah dengan cepat.", "Combine an AOI, BMKG alerts, official sources, and a DEM slope layer to quickly understand local risk context.")}
           </p>
         </div>
         <div className="analysis-hero-status">
@@ -262,21 +263,21 @@ export default function DisasterModule() {
             <i className="bi bi-bounding-box" />
             <div>
               <span>AOI</span>
-              <strong>{aoiName || (aoi ? aoi.geometry.type : "Belum digambar")}</strong>
+              <strong>{aoiName || (aoi ? aoi.geometry.type : c("Belum digambar", "Not drawn yet"))}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-database-check" />
             <div>
-              <span>Sumber</span>
-              <strong>{sources ? `${configuredSources} aktif` : "Belum dimuat"}</strong>
+              <span>{c("Sumber", "Sources")}</span>
+              <strong>{sources ? c(`${configuredSources} aktif`, `${configuredSources} active`) : c("Belum dimuat", "Not loaded")}</strong>
             </div>
           </div>
           <div className="analysis-status-card">
             <i className="bi bi-cloud-lightning-rain" />
             <div>
               <span>BMKG</span>
-              <strong>{alerts ? `${alerts.length} alert` : "Belum dimuat"}</strong>
+              <strong>{alerts ? c(`${alerts.length} peringatan`, `${alerts.length} alerts`) : c("Belum dimuat", "Not loaded")}</strong>
             </div>
           </div>
         </div>
@@ -286,7 +287,7 @@ export default function DisasterModule() {
         <div className="col-lg-3">
           <div className="sidebar h-100">
             <h5 className="mb-3">
-              <i className="bi bi-sliders" /> Sumber Tambahan
+              <i className="bi bi-sliders" /> {c("Sumber tambahan", "Additional sources")}
             </h5>
             <AoiStatusCard aoi={aoi} />
             <button
@@ -294,25 +295,24 @@ export default function DisasterModule() {
               onClick={handleLoadSources}
               disabled={anyLoading}
             >
-              <i className="bi bi-database-fill" /> Muat Sumber Resmi
+              <i className="bi bi-database-fill" /> {c("Muat sumber resmi", "Load official sources")}
             </button>
             <button
               className="btn btn-outline-info w-100 mt-2"
               onClick={handleLoadBmkg}
               disabled={anyLoading}
             >
-              <i className="bi bi-cloud-rain-heavy-fill" /> Peringatan BMKG
+              <i className="bi bi-cloud-rain-heavy-fill" /> {c("Peringatan BMKG", "BMKG alerts")}
             </button>
             <button
               className="btn btn-outline-secondary w-100 mt-2"
               onClick={handleLoadDem}
               disabled={anyLoading}
             >
-              <i className="bi bi-triangle-fill" /> Layer Kemiringan DEM
+              <i className="bi bi-triangle-fill" /> {c("Layer kemiringan DEM", "DEM slope layer")}
             </button>
             <div className="alert alert-secondary py-2 mt-3 mb-0" style={{ fontSize: ".78rem" }}>
-              Untuk dashboard intelijen bencana lengkap (analisis per-kejadian, statistik, hotspot),
-              buka <strong>Pemetaan Bencana</strong> di <code>/pemetaan-bencana</code>.
+              {c("Untuk dashboard intelijen bencana lengkap (analisis per kejadian, statistik, dan hotspot), buka", "For the full disaster intelligence dashboard (event analysis, statistics, and hotspots), open")} <strong>{c("Pemetaan Bencana", "Disaster Mapping")}</strong> <code>/pemetaan-bencana</code>.
             </div>
           </div>
         </div>
@@ -322,17 +322,17 @@ export default function DisasterModule() {
           <BmkgAlerts loading={alertsLoading} error={alertsError} alerts={alerts} />
           <DemSlopeControls loading={demLoading} error={demError} result={demResult} />
 
-          {eventLoading && <p role="status">Analisis bencana sedang diproses oleh backend.</p>}
+          {eventLoading && <p role="status">{c("Analisis bencana sedang diproses oleh backend.", "The backend is processing the disaster analysis.")}</p>}
           {eventError && (
             <p role="alert" className="text-danger">
               {eventError}
             </p>
           )}
           {eventResult && (
-            <section className="card card-body mb-3" aria-label="Hasil analisis bencana">
+            <section className="card card-body mb-3" aria-label={c("Hasil analisis bencana", "Disaster analysis results")}>
               <h5>{eventResult.title}</h5>
               <p>
-                {eventResult.area_ha.toLocaleString("id-ID")} ha ? {eventResult.source}
+                {eventResult.area_ha.toLocaleString("id-ID")} ha · {eventResult.source}
               </p>
               <p>
                 {eventResult.before_period.start}?{eventResult.before_period.end} /{" "}

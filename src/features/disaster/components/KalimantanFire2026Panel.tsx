@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import { GeoJSON, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import MapView from "@/components/map/MapView";
@@ -117,6 +118,7 @@ function selectedBoundaryStyle() {
 }
 
 export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
+  const c = useBilingualCopy();
   const [fireLayers, setFireLayers] = useState<FireMultiSourceLayerState>(EMPTY_FIRE_LAYERS);
   const analysisRequestRef = useRef(0);
   const multiPoints = useMemo(() => visibleHotspots(fireLayers), [fireLayers]);
@@ -378,11 +380,10 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
           onClick={() => setIsExpanded((expanded) => !expanded)}
         >
           <div>
-            <span className="disaster-eyebrow">Analisis cepat · 2026</span>
-            <h2 id="kalimantanFireBriefTitle">Karhutla Kalimantan 2026</h2>
+            <span className="disaster-eyebrow">{c("Analisis cepat · 2026", "Rapid assessment · 2026")}</span>
+            <h2 id="kalimantanFireBriefTitle">{c("Karhutla Kalimantan 2026", "Kalimantan wildfire 2026")}</h2>
             <p>
-              Ringkasan situasi berbasis rilis resmi dan batas administrasi BIG untuk membantu
-              memilih event kebakaran hutan/lahan yang relevan.
+              {c("Ringkasan situasi berbasis rilis resmi dan batas administrasi BIG untuk membantu memilih kejadian kebakaran hutan/lahan yang relevan.", "Situation summary based on official releases and BIG administrative boundaries to help select a relevant forest or land fire event.")}
             </p>
           </div>
           <i
@@ -391,7 +392,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
           />
         </button>
         <button type="button" className="btn btn-sm btn-primary" onClick={onApplyFilter}>
-          <i className="bi bi-funnel-fill" /> Tampilkan event 2026
+          <i className="bi bi-funnel-fill" /> {c("Tampilkan kejadian 2026", "Show 2026 events")}
         </button>
       </div>
 
@@ -562,32 +563,31 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             {boundaryError && <div className="small text-warning mt-2">{boundaryError}</div>}
             {!boundary && !boundaryError && (
               <div className="small text-muted mt-2">
-                <span className="spinner-border spinner-border-sm me-1" /> Memuat batas provinsi
-                dari BIG…
+                <span className="spinner-border spinner-border-sm me-1" /> {c("Memuat batas provinsi dari BIG…", "Loading provincial boundaries from BIG…")}
               </div>
             )}
             <div className="small text-muted mt-2">
-              Layer:{" "}
+              {c("Layer:", "Layer:")}{" "}
               <a href={safeHttpUrl(KALIMANTAN_FIRE_2026.boundarySource)} target="_blank" rel="noopener noreferrer">
-                BIG · 34 Provinsi
+                {c("BIG · 34 Provinsi", "BIG · 34 provinces")}
               </a>
             </div>
             <div className="disaster-kalimantan-region-controls">
               <div className="disaster-kalimantan-controls-title">
                 <span>
-                  <i className="bi bi-diagram-3" /> Muat layer wilayah
+                  <i className="bi bi-diagram-3" /> {c("Muat layer wilayah", "Load administrative boundaries")}
                 </span>
                 <small>{regionLoading ? "Memuat geometri…" : `AOI: ${selectedRegionName}`}</small>
               </div>
               <div className="disaster-kalimantan-region-grid">
                 <label>
-                  Provinsi
+                  {c("Provinsi", "Province")}
                   <select
                     value={provinceCode}
                     onChange={(event) => void handleProvinceChange(event.target.value)}
                     disabled={regionLoading}
                   >
-                    <option value="">Seluruh Kalimantan</option>
+                    <option value="">{c("Seluruh Kalimantan", "All of Kalimantan")}</option>
                     {provinces.map((province) => (
                       <option key={province.code} value={province.code}>
                         {province.name}
@@ -596,13 +596,13 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   </select>
                 </label>
                 <label>
-                  Kabupaten/kota
+                  {c("Kabupaten/kota", "Regency/city")}
                   <select
                     value={cityCode}
                     onChange={(event) => void handleCityChange(event.target.value)}
                     disabled={!provinceCode || regionLoading}
                   >
-                    <option value="">Semua kabupaten/kota di provinsi</option>
+                    <option value="">{c("Semua kabupaten/kota di provinsi", "All regencies/cities in the province")}</option>
                     {cities.map((city) => (
                       <option key={city.code} value={city.code}>
                         {city.name}
@@ -613,20 +613,19 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
               </div>
               {regionError && <div className="small text-warning mt-2">{regionError}</div>}
               <div className="small text-muted mt-2">
-                Pilih provinsi untuk memuat batas kabupaten/kota. Analisis citra memakai wilayah
-                yang dipilih.
+                {c("Pilih provinsi untuk memuat batas kabupaten/kota. Analisis citra memakai wilayah yang dipilih.", "Select a province to load regency/city boundaries. Image analysis will use the selected area.")}
               </div>
             </div>
             <div className="disaster-kalimantan-controls">
               <div className="disaster-kalimantan-controls-title">
                 <span>
-                  <i className="bi bi-camera-reels" /> Jalankan analisis citra
+                  <i className="bi bi-camera-reels" /> {c("Jalankan analisis citra", "Run image analysis")}
                 </span>
                 {analysis && <small>{analysis.source}</small>}
               </div>
               <div className="disaster-kalimantan-date-grid">
                 <label>
-                  Pre mulai
+                  {c("Sebelum · mulai", "Before · start")}
                   <input
                     type="date"
                     value={beforeStart}
@@ -634,7 +633,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   />
                 </label>
                 <label>
-                  Pre akhir
+                  {c("Sebelum · akhir", "Before · end")}
                   <input
                     type="date"
                     value={beforeEnd}
@@ -642,7 +641,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   />
                 </label>
                 <label>
-                  Post mulai
+                  {c("Sesudah · mulai", "After · start")}
                   <input
                     type="date"
                     value={afterStart}
@@ -650,7 +649,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                   />
                 </label>
                 <label>
-                  Post akhir
+                  {c("Sesudah · akhir", "After · end")}
                   <input
                     type="date"
                     value={afterEnd}
@@ -666,12 +665,11 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
               >
                 {analysisLoading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-1" /> Memproses
-                    Sentinel-2/MODIS…
+                    <span className="spinner-border spinner-border-sm me-1" /> {c("Memproses Sentinel-2/MODIS…", "Processing Sentinel-2/MODIS…")}
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-play-fill" /> Hitung area terdampak
+                    <i className="bi bi-play-fill" /> {c("Hitung area terdampak", "Calculate affected area")}
                   </>
                 )}
               </button>
@@ -683,11 +681,11 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
               >
                 {samLoading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-1" /> Segmentasi SAM…
+                    <span className="spinner-border spinner-border-sm me-1" /> {c("Segmentasi SAM…", "SAM segmentation…")}
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-bounding-box" /> Alternatif SAM
+                    <i className="bi bi-bounding-box" /> {c("Gunakan SAM", "Run SAM alternative")}
                   </>
                 )}
               </button>
@@ -697,8 +695,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
               {samError && <div className="alert alert-warning py-2 mt-2 mb-0">{samError}</div>}
               {samResult && (
                 <div className="small text-muted mt-2">
-                  SAM mempertahankan {samResult.features.length.toLocaleString("id-ID")} poligon
-                  yang berdekatan dengan seed hotspot MODIS.
+                  {c(`SAM mempertahankan ${samResult.features.length.toLocaleString("id-ID")} poligon yang berdekatan dengan seed hotspot MODIS.`, `SAM retained ${samResult.features.length.toLocaleString("en-US")} polygons near MODIS hotspot seeds.`)}
                 </div>
               )}
               {(analysis || samResult) && (
@@ -710,7 +707,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                         checked={showBefore}
                         onChange={(event) => setShowBefore(event.target.checked)}
                       />{" "}
-                      Citra pre
+                      {c("Citra sebelum", "Before imagery")}
                     </label>
                   )}
                   {analysis && (
@@ -720,7 +717,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                         checked={showAfter}
                         onChange={(event) => setShowAfter(event.target.checked)}
                       />{" "}
-                      Citra post
+                      {c("Citra sesudah", "After imagery")}
                     </label>
                   )}
                   {analysis && (
@@ -730,7 +727,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                         checked={showBurned}
                         onChange={(event) => setShowBurned(event.target.checked)}
                       />{" "}
-                      Area terbakar
+                      {c("Area terbakar", "Burned area")}
                     </label>
                   )}
                   {analysis && (
@@ -740,7 +737,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                         checked={showHotspots}
                         onChange={(event) => setShowHotspots(event.target.checked)}
                       />{" "}
-                      Titik hotspot
+                      {c("Titik hotspot", "Hotspot points")}
                     </label>
                   )}
                   {samResult && (
@@ -750,7 +747,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                         checked={showSam}
                         onChange={(event) => setShowSam(event.target.checked)}
                       />{" "}
-                      Poligon SAM
+                      {c("Poligon SAM", "SAM polygons")}
                     </label>
                   )}
                 </div>
@@ -768,26 +765,25 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
           </div>
 
           <div className="disaster-kalimantan-facts">
-            <p className="small text-muted mb-2">Periode pemantauan: {KALIMANTAN_FIRE_2026.observationWindow}</p>
+            <p className="small text-muted mb-2">{c("Periode pemantauan:", "Monitoring period:")} {KALIMANTAN_FIRE_2026.observationWindow}</p>
             <div className="disaster-kalimantan-stat-grid">
               <div>
-                <span>Snapshot rilis · hotspot high confidence</span>
+                <span>{c("Snapshot rilis · hotspot berkeyakinan tinggi", "Release snapshot · high-confidence hotspots")}</span>
                 <strong>{metricTotalLabel}</strong>
                 <small>
-                  high confidence ·{" "}
-                  {KALIMANTAN_FIRE_TOTAL_MEDIUM_CONFIDENCE.toLocaleString("id-ID")} medium
-                  confidence
+                  {c("keyakinan tinggi", "high confidence")} ·{" "}
+                  {KALIMANTAN_FIRE_TOTAL_MEDIUM_CONFIDENCE.toLocaleString("id-ID")} {c("keyakinan sedang", "medium confidence")}
                 </small>
               </div>
               <div>
-                <span>Luas terbakar tercatat</span>
+                <span>{c("Luas terbakar tercatat", "Recorded burned area")}</span>
                 <strong>
                   {KALIMANTAN_FIRE_KNOWN_BURNED_AREA_HA.toLocaleString("id-ID", {
                     maximumFractionDigits: 2,
                   })}{" "}
                   ha
                 </strong>
-                <small>angka provinsi Jan–Jun yang tersedia pada rilis</small>
+                <small>{c("angka provinsi Januari–Juni yang tersedia pada rilis", "provincial figures available in the January–June release")}</small>
               </div>
             </div>
 
@@ -810,24 +806,24 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
             {analysis && (
               <div className="disaster-kalimantan-live-result">
                 <div className="disaster-kalimantan-live-result-heading">
-                  <strong>Hasil analisis spasial</strong>
+                <strong>{c("Hasil analisis spasial", "Spatial analysis results")}</strong>
                   <span>
                     {analysis.before_period.start} → {analysis.after_period.end}
                   </span>
                 </div>
                 <div className="disaster-kalimantan-live-kpis">
                   <div>
-                    <span>Area terdampak</span>
+                    <span>{c("Area terdampak", "Affected area")}</span>
                     <strong>
                       {analysis.area_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
                     </strong>
                   </div>
                   <div>
-                    <span>Titik MODIS</span>
+                    <span>{c("Titik MODIS", "MODIS hotspots")}</span>
                     <strong>{analysis.hotspots?.count.toLocaleString("id-ID") ?? "0"}</strong>
                   </div>
                   <div>
-                    <span>Scene pre/post</span>
+                    <span>{c("Citra sebelum/sesudah", "Before/after scenes")}</span>
                     <strong>
                       {analysis.before_scene_count ?? 0}/{analysis.after_scene_count ?? 0}
                     </strong>
@@ -835,28 +831,28 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
                 </div>
                 {severity && (
                   <div className="disaster-kalimantan-severity-list">
-                    <span>Rincian kelas dNBR</span>
+                    <span>{c("Rincian kelas dNBR", "dNBR class breakdown")}</span>
                     <div>
-                      <em className="severity-low" /> Rendah{" "}
+                      <em className="severity-low" /> {c("Rendah", "Low")}{" "}
                       <strong>
                         {severity.low_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
                       </strong>
                     </div>
                     <div>
-                      <em className="severity-moderate" /> Sedang{" "}
+                      <em className="severity-moderate" /> {c("Sedang", "Moderate")}{" "}
                       <strong>
                         {severity.moderate_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })}{" "}
                         ha
                       </strong>
                     </div>
                     <div>
-                      <em className="severity-high" /> Tinggi{" "}
+                      <em className="severity-high" /> {c("Tinggi", "High")}{" "}
                       <strong>
                         {severity.high_ha.toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha
                       </strong>
                     </div>
                     <div>
-                      <em className="severity-very-high" /> Sangat tinggi{" "}
+                      <em className="severity-very-high" /> {c("Sangat tinggi", "Very high")}{" "}
                       <strong>
                         {severity.very_high_ha.toLocaleString("id-ID", {
                           maximumFractionDigits: 2,
@@ -878,8 +874,7 @@ export default function KalimantanFire2026Panel({ onApplyFilter }: Props) {
       {isExpanded && (
         <div className="disaster-kalimantan-brief-footer">
           <div>
-            <i className="bi bi-info-circle" /> Hotspot adalah indikasi anomali suhu permukaan,
-            bukan otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.
+            <i className="bi bi-info-circle" /> {c("Hotspot adalah indikasi anomali suhu permukaan, bukan otomatis satu kejadian kebakaran. Verifikasi lapangan tetap diperlukan.", "A hotspot indicates a surface-temperature anomaly and does not automatically represent a fire event. Field verification is still required.")}
           </div>
           <div className="disaster-kalimantan-sources">
             {KALIMANTAN_FIRE_2026.sources.map((source) => {

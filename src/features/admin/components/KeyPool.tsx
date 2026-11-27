@@ -3,8 +3,10 @@ import { getKeyPoolStatus, saveConfigKey } from "../api";
 import { KEY_POOL_PROVIDERS } from "../types";
 import type { KeyPoolStatus } from "../types";
 import { useAdmin } from "../AdminContext";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 
 export default function KeyPool() {
+  const c = useBilingualCopy();
   const { notify } = useAdmin();
   const [status, setStatus] = useState<KeyPoolStatus>({});
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function KeyPool() {
       const r = await getKeyPoolStatus();
       setStatus(r || {});
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat key pool");
+      setError(err instanceof Error ? err.message : c("Gagal memuat kumpulan kunci", "Failed to load key pool"));
     } finally {
       setLoading(false);
     }
@@ -35,11 +37,11 @@ export default function KeyPool() {
     try {
       const val = (drafts[pid] ?? "").trim();
       await saveConfigKey(`ai.backup_keys.${pid}`, val);
-      notify(`Kunci cadangan ${pid} disimpan`, "s");
+      notify(c(`Kunci cadangan ${pid} disimpan`, `Backup key for ${pid} saved`), "s");
       setOpenId(null);
       await load();
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Gagal simpan", "e");
+      notify(err instanceof Error ? err.message : c("Gagal menyimpan", "Save failed"), "e");
     } finally {
       setSavingId(null);
     }
@@ -50,14 +52,14 @@ export default function KeyPool() {
       <div className="card-header-custom">
         <span>
           <span className="stat-badge badge-blue" style={{ marginRight: 6 }}>
-            pool
+            {c("kumpulan", "pool")}
           </span>
-          Kunci Cadangan (Key Pool)
+          {c("Kunci cadangan", "Backup key pool")}
         </span>
-        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Otomatis ganti kunci saat rate-limit habis</span>
+        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{c("Kunci diganti otomatis saat batas laju tercapai", "Keys rotate automatically when rate limits are reached")}</span>
       </div>
       <div className="card-body-custom" style={{ padding: "0.5rem 1rem 1rem" }}>
-        {loading && <div style={{ color: "var(--text-muted)", padding: "8px 0", fontSize: 12 }}>Memuat...</div>}
+        {loading && <div style={{ color: "var(--text-muted)", padding: "8px 0", fontSize: 12 }}>{c("Memuat…", "Loading…")}</div>}
         {!loading && error && (
           <div className="alert alert-danger py-1 px-2 small mb-0">{error}</div>
         )}
@@ -75,11 +77,11 @@ export default function KeyPool() {
                 </div>
                 <div className="kp-status">
                   {total === 0 ? (
-                    <span className="kp-badge kp-none">Tidak ada kunci cadangan</span>
+                    <span className="kp-badge kp-none">{c("Belum ada kunci cadangan", "No backup keys")}</span>
                   ) : (
                     <>
                       <span className={`kp-badge ${cls}`}>
-                        {avail}/{total} tersedia
+                        {avail}/{total} {c("tersedia", "available")}
                       </span>
                       {keys.map((k, idx) => (
                         <span className="kp-key-chip" key={`${p.id}-${idx}`}>
@@ -90,22 +92,22 @@ export default function KeyPool() {
                   )}
                 </div>
                 <button type="button" className="btn-sm" onClick={() => setOpenId(openId === p.id ? null : p.id)}>
-                  Edit
+                  {c("Edit", "Edit")}
                 </button>
                 {openId === p.id && (
                   <div className="kp-edit">
                     <textarea
                       rows={4}
-                      placeholder={"Tempel kunci API cadangan, satu per baris\nKunci utama sudah otomatis terdaftar"}
+                      placeholder={c("Tempel kunci API cadangan, satu per baris\nKunci utama sudah otomatis terdaftar", "Paste backup API keys, one per line\nThe primary key is already registered automatically")}
                       value={drafts[p.id] ?? ""}
                       onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
                     />
                     <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                       <button type="button" className="btn-sm primary" disabled={savingId === p.id} onClick={() => save(p.id)}>
-                        {savingId === p.id ? "Menyimpan..." : "Simpan"}
+                        {savingId === p.id ? c("Menyimpan…", "Saving…") : c("Simpan", "Save")}
                       </button>
                       <button type="button" className="btn-sm" onClick={() => setOpenId(null)}>
-                        Batal
+                        {c("Batal", "Cancel")}
                       </button>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import { Line } from "react-chartjs-2";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -22,18 +23,19 @@ interface Props {
  * called by any frontend caller until now).
  */
 function LegacyVegetationTimeSeriesPanel({ result }: Props) {
+  const c = useBilingualCopy();
   const points = result.data.filter((p) => p.value != null);
   const hasData = points.length > 0;
 
   return (
     <div className="card mt-3">
       <div className="card-header">
-        <i className="bi bi-graph-up me-1" /> Time-Series Bulanan {result.index} ({result.year})
+        <i className="bi bi-graph-up me-1" /> {c("Deret waktu bulanan", "Monthly time series")} {result.index} ({result.year})
       </div>
       <div className="card-body">
         {!hasData && (
           <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".85rem" }}>
-            Tidak ada citra bebas awan yang cukup di bulan manapun tahun ini untuk AOI/threshold ini.
+            {c("Tidak ada cukup citra bebas awan pada bulan mana pun tahun ini untuk AOI dan ambang awan ini.", "There are not enough cloud-free images in any month this year for this AOI and cloud threshold.")}
           </div>
         )}
         {hasData && (
@@ -59,15 +61,15 @@ function LegacyVegetationTimeSeriesPanel({ result }: Props) {
                   maintainAspectRatio: false,
                   plugins: { legend: { display: false } },
                   scales: {
-                    x: { title: { display: true, text: "Bulan" } },
-                    y: { title: { display: true, text: result.index ?? "Nilai indeks" } },
+                    x: { title: { display: true, text: c("Bulan", "Month") } },
+                    y: { title: { display: true, text: result.index ?? c("Nilai indeks", "Index value") } },
                   },
                 }}
               />
             </div>
             {result.satellite && (
               <small className="text-muted d-block mt-2">
-                Citra dari <strong>{result.satellite.name}</strong> ({result.satellite.provider}) · skala {result.scale}m
+                {c("Citra dari", "Imagery from")} <strong>{result.satellite.name}</strong> ({result.satellite.provider}) · {c("skala", "scale")} {result.scale} m
               </small>
             )}
           </>
@@ -81,14 +83,15 @@ const COLORS = ["#2e7d32", "#1565c0", "#ef6c00", "#8e24aa", "#00838f", "#c62828"
 
 /** Monthly chart for multiple vegetation indices and sensor reflectance bands. */
 export default function VegetationTimeSeriesPanel({ result }: Props) {
+  const c = useBilingualCopy();
   if (!result.series) return <LegacyVegetationTimeSeriesPanel result={result} />;
   const series = result.series ?? (result.index ? {
     [result.index]: { kind: "index" as const, unit: "index" as const, data: result.data },
   } : {});
   const periods = result.periods?.length ? result.periods : result.data.map((point) => point.period);
   const groups = [
-    { kind: "index" as const, title: "Indeks vegetasi", unit: "Nilai indeks", entries: Object.entries(series).filter(([, metric]) => metric.kind === "index") },
-    { kind: "band" as const, title: "Band spektral", unit: "Reflektansi permukaan", entries: Object.entries(series).filter(([, metric]) => metric.kind === "band") },
+    { kind: "index" as const, title: c("Indeks vegetasi", "Vegetation indices"), unit: c("Nilai indeks", "Index value"), entries: Object.entries(series).filter(([, metric]) => metric.kind === "index") },
+    { kind: "band" as const, title: c("Band spektral", "Spectral bands"), unit: c("Reflektansi permukaan", "Surface reflectance"), entries: Object.entries(series).filter(([, metric]) => metric.kind === "band") },
   ].filter((group) => group.entries.length > 0);
   const hasData = Object.values(series).some((metric) => metric.data.some((point) => point.value != null));
   const unavailable = Object.entries(series).filter(([, metric]) => metric.availability);
@@ -96,18 +99,18 @@ export default function VegetationTimeSeriesPanel({ result }: Props) {
   return (
     <div className="card mt-3">
       <div className="card-header">
-        <i className="bi bi-graph-up me-1" /> Time-Series Bulanan ({result.year})
+        <i className="bi bi-graph-up me-1" /> {c("Deret waktu bulanan", "Monthly time series")} ({result.year})
         <span className="text-muted ms-2 small">{periods[0]?.slice(5)}–{periods.at(-1)?.slice(5)}</span>
       </div>
       <div className="card-body">
         {!hasData && (
           <div className="alert alert-warning py-2 mb-0" style={{ fontSize: ".85rem" }}>
-            Tidak ada data bebas awan pada rentang bulan terpilih. Bulan tanpa citra tetap ditampilkan sebagai nilai kosong.
+            {c("Tidak ada data bebas awan pada rentang bulan terpilih. Bulan tanpa citra tetap ditampilkan sebagai nilai kosong.", "No cloud-free data is available in the selected month range. Months without imagery remain visible as empty values.")}
           </div>
         )}
         {unavailable.length > 0 && (
           <div className="alert alert-warning py-2 small">
-            Tidak tersedia untuk sensor ini: {unavailable.map(([name]) => name).join(", ")}.
+            {c("Tidak tersedia untuk sensor ini:", "Unavailable for this sensor:")} {unavailable.map(([name]) => name).join(", ")}.
           </div>
         )}
         {hasData && groups.map((group) => (
@@ -135,7 +138,7 @@ export default function VegetationTimeSeriesPanel({ result }: Props) {
                   maintainAspectRatio: false,
                   plugins: { legend: { display: group.entries.length > 1, position: "bottom" } },
                   scales: {
-                    x: { title: { display: true, text: "Bulan" } },
+                    x: { title: { display: true, text: c("Bulan", "Month") } },
                     y: { title: { display: true, text: group.unit } },
                   },
                 }}
@@ -145,13 +148,13 @@ export default function VegetationTimeSeriesPanel({ result }: Props) {
         ))}
         {(result.period_errors?.length ?? 0) > 0 && (
           <div className="alert alert-warning py-2 small mb-2">
-            Beberapa bulan gagal diproses ({result.period_errors?.join(", ")}); bulan lain tetap ditampilkan.
+            {c(`Beberapa bulan gagal diproses (${result.period_errors?.join(", ")}); bulan lain tetap ditampilkan.`, `Some months failed to process (${result.period_errors?.join(", ")}); the other months are still shown.`)}
           </div>
         )}
         {result.satellite && (
           <small className="text-muted d-block mt-2">
-            Citra dari <strong>{result.satellite.name}</strong> ({result.satellite.provider}) · skala {result.scale} m.
-            Band spektral menunjukkan reflektansi permukaan; grafik band dan indeks dipisah karena satuannya berbeda.
+            {c("Citra dari", "Imagery from")} <strong>{result.satellite.name}</strong> ({result.satellite.provider}) · {c("skala", "scale")} {result.scale} m.
+            {c("Band spektral menunjukkan reflektansi permukaan. Grafik band dan indeks dipisah karena satuannya berbeda.", "Spectral bands show surface reflectance. Band and index charts are separated because their units differ.")}
           </small>
         )}
       </div>

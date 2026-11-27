@@ -16,6 +16,7 @@ import AoiPickerModal from "@/components/map/AoiPickerModal";
 import { RESULT_PANE } from "@/config/mapPanes";
 import { useAoiStore } from "@/hooks/useAoiStore";
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { AoiFeature } from "@/types/map";
 import { getCloudMaskTechniques } from "@/features/vegetation/api";
 import type { CloudMaskTechniqueInfo } from "@/features/vegetation/types";
@@ -639,6 +640,7 @@ function TerrainPreview3D({ tileUrl, source }: { tileUrl?: string | null; source
  */
 export default function ImageryModule() {
   const t = useI18nStore((state) => state.t);
+  const c = useBilingualCopy();
   const query = parseQuery(typeof window !== "undefined" ? window.location.search : "");
   const aoiState = useAoiStore((s) => s.aoi);
   const setAoiState = useAoiStore((s) => s.setAoi);
@@ -1743,8 +1745,7 @@ export default function ImageryModule() {
                 </small>
                 {isEsriWayback && (
                   <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
-                    <i className="fas fa-circle-info" /> Tanggal Wayback adalah tanggal rilis/publikasi basemap, bukan
-                    tanggal akuisisi scene sensor tunggal. Cocok untuk inspeksi visual historis resolusi tinggi.
+                    <i className="fas fa-circle-info" /> {c("Tanggal Wayback adalah tanggal rilis/publikasi basemap, bukan tanggal akuisisi satu scene sensor. Cocok untuk inspeksi visual historis beresolusi tinggi.", "Wayback dates mark basemap releases, not acquisition dates for individual sensor scenes. They are useful for high-resolution historical visual inspection.")}
                   </div>
                 )}
                 {(satelliteMeta.visualization !== "rgb" || satelliteMeta.color_mode === "false_color") && (
@@ -1762,8 +1763,7 @@ export default function ImageryModule() {
                 )}
                 {satelliteMeta.source_kind === "big_ctsrt" && (
                   <div className="alert alert-info py-1 px-2 mt-2 mb-0" style={{ fontSize: ".75rem" }}>
-                    <i className="fas fa-circle-info" /> Mosaic CTSRT resmi BIG tersedia per wilayah/tahun. Hasil
-                    pencarian akan memilih mosaic yang mencakup AOI, lalu merender citra dari ImageServer BIG.
+                    <i className="fas fa-circle-info" /> {c("Mosaik CTSRT resmi BIG tersedia berdasarkan wilayah dan tahun. Pencarian memilih mosaik yang mencakup AOI, lalu menampilkan citra dari ImageServer BIG.", "Official BIG CTSRT mosaics are available by region and year. Search selects the mosaic covering the AOI, then renders imagery from the BIG ImageServer.")}
                   </div>
                 )}
               </>
@@ -2467,7 +2467,7 @@ export default function ImageryModule() {
                         )}
                         <RasterResolutionNotice layers={[{label: tileRenderMode === "mosaic" ? `${satelliteMeta?.name ?? "Sentinel-2"} · ${t("imagery.results.mosaic")}` : satelliteMeta?.name ?? "Scene", resolutionM: sceneResolution(selectedScene ?? undefined, cogAssetKey, satelliteMeta?.resolution_m), nativeZoom: sceneTileMaxNativeZoom, tileUrl}]} />
                         <LayerOpacityControl opacity={tileOpacity} onChange={setTileOpacity} label={t("imagery.sceneOpacity")} />
-                        {effectiveVisualEnhancement && <div className="small text-muted mt-1">GPU tile status: {gpuTileStatus}. Data analitik tetap memakai citra native.</div>}
+                        {effectiveVisualEnhancement && <div className="small text-muted mt-1">{c("Status tile GPU", "GPU tile status")}: {gpuTileStatus}. {c("Data analitik tetap memakai citra asli.", "Analytics continue to use native imagery.")}</div>}
                       </>
                     )}
                     {demLayerMode !== "none" && demResult?.tile_url && (
