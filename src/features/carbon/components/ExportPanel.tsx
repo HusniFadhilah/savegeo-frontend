@@ -201,7 +201,7 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
                   }
                 }}
               >
-                {storedReportBusy ? c("Menyiapkan DOCX…", "Preparing DOCX…") : c("Unduh DOCX dengan provenance", "Download DOCX with provenance")}
+                {storedReportBusy ? c("Menyiapkan DOCX…", "Preparing DOCX…") : c("Unduh DOCX dengan keterangan sumber data", "Download DOCX with source details")}
               </button>
             </div>
           </div>

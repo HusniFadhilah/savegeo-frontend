@@ -93,6 +93,40 @@ export function boundsFromGeoJSON(geojson: unknown): L.LatLngBounds | null {
   }
 }
 
+/**
+ * Recommend a maximum map zoom that fits an AOI with a little breathing room.
+ * The viewport defaults match the carbon results map and can be overridden by
+ * callers that know the rendered map dimensions.
+ */
+export function recommendedAoiZoom(
+  bounds: L.LatLngBounds,
+  viewportWidth = 1100,
+  viewportHeight = 600,
+  minZoom = 5,
+  maxZoom = 18,
+): number {
+  if (!isFiniteMapBounds(bounds)) return minZoom;
+
+  const clampLatitude = (latitude: number) => Math.max(-85.05112878, Math.min(85.05112878, latitude));
+  const mercatorY = (latitude: number) => {
+    const radians = (clampLatitude(latitude) * Math.PI) / 180;
+    return (1 - Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) / 2;
+  };
+  const longitudeFraction = Math.min(1, Math.abs(bounds.getEast() - bounds.getWest()) / 360);
+  const latitudeFraction = Math.abs(mercatorY(bounds.getNorth()) - mercatorY(bounds.getSouth()));
+  const worldWidthAtZoomZero = longitudeFraction * 256;
+  const worldHeightAtZoomZero = latitudeFraction * 256;
+  const availableWidth = Math.max(1, viewportWidth * 0.9);
+  const availableHeight = Math.max(1, viewportHeight * 0.9);
+  const widthScale = worldWidthAtZoomZero > 0 ? availableWidth / worldWidthAtZoomZero : Infinity;
+  const heightScale = worldHeightAtZoomZero > 0 ? availableHeight / worldHeightAtZoomZero : Infinity;
+  const scale = Math.min(widthScale, heightScale);
+
+  if (!Number.isFinite(scale)) return maxZoom;
+  const zoom = Math.floor(Math.log2(scale));
+  return Math.max(minZoom, Math.min(maxZoom, zoom));
+}
+
 /** Bounding-box AOI payload shape expected by /analyze/* endpoints. */
 export interface AoiBoundsPayload {
   west: number;

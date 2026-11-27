@@ -37,7 +37,7 @@ import {
   CARBON_DATASET_YEARS,
   carbonDatasetYearOptions,
 } from "@/features/carbon/referenceDatasets";
-import { areaKm2, boundsFromGeoJSON, boundsToPayload } from "@/features/carbon/lib/geo";
+import { areaKm2, boundsFromGeoJSON, boundsToPayload, recommendedAoiZoom } from "@/features/carbon/lib/geo";
 import { getAoiRegionSelection, loadAoiRegionSelection, normalizeAoiRegionGeoJson, parseAoiRegionSelection, withAoiRegionSelection } from "@/features/carbon/lib/aoiRegionState";
 import { buildBasicCarbonPlan, simpleCarbonSummaryScale } from "@/features/carbon/lib/basicCarbonPlan";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
@@ -129,6 +129,17 @@ export default function CarbonModule() {
   const aoiUrlRestoreFailed = useRef(false);
   const [analysisType, setAnalysisType] = useState<AnalysisType>(initialType);
   const [carbonUiMode, setCarbonUiMode] = useState<"basic" | "advanced">("basic");
+
+  useEffect(() => {
+    if (!aoi?.bounds) {
+      setZoom(10);
+      return;
+    }
+
+    const viewportWidth = typeof window === "undefined" ? 1100 : Math.min(1600, Math.max(320, window.innerWidth * 0.72));
+    setZoom(recommendedAoiZoom(aoi.bounds, viewportWidth, 600, 5, HIGH_DETAIL_MAX_ZOOM));
+  }, [aoi]);
+
   useEffect(() => {
     if (availableAnalysisTypes.length && !availableAnalysisTypes.includes(analysisType)) {
       setAnalysisType(availableAnalysisTypes[0]);
@@ -304,12 +315,14 @@ export default function CarbonModule() {
   const [directLoadEnabled, setDirectLoadEnabled] = useState(false);
 
   const carbonParams: CarbonParams = useMemo(() => ({ ...carbonPartial, year }), [carbonPartial, year]);
-  const staticPoolModel = selectedModel?.metadata_json?.time_series_supported === false
-    && selectedModel?.metadata_json?.method !== "saved_reference_ensemble";
+  const staticPoolModel = ["soil_stock_integration", "ipcc_root_to_shoot"].includes(
+    String(selectedModel?.metadata_json?.method ?? ""),
+  );
+  const carbonDeltaUnsupported = selectedModel?.metadata_json?.time_series_supported === false || staticPoolModel;
 
   useEffect(() => {
-    if (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel) setDeltaEnabled(false);
-  }, [carbonParams.referenceOnly, directLoadEnabled, staticPoolModel]);
+    if (carbonParams.referenceOnly || directLoadEnabled || carbonDeltaUnsupported) setDeltaEnabled(false);
+  }, [carbonParams.referenceOnly, directLoadEnabled, carbonDeltaUnsupported]);
 
   useEffect(() => {
     setResults({});
@@ -510,7 +523,7 @@ export default function CarbonModule() {
     try {
       const plan = await buildBasicCarbonPlan(carbonParams.year, aoiPayload);
       let completedPools = 0;
-      const outcomes = await Promise.all(plan.map(async (target, index) => {
+      for (const [index, target] of plan.entries()) {
         const poolLabel = t(`carbon.basic.${target.key}`);
         setLoadingProgress(15 + Math.round((index / plan.length) * 25), `${poolLabel} (${index + 1}/${plan.length})`);
         const params: CarbonParams = {
@@ -536,17 +549,13 @@ export default function CarbonModule() {
           };
           carbonPoolRequestArgs.current[target.key] = request;
           const result = await analyzeCarbon(request);
-          return { key: target.key, result };
+          poolResults[target.key] = result;
         } catch (err) {
           errors.push(`${poolLabel}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
-          return null;
         } finally {
           completedPools += 1;
           setLoadingProgress(40 + Math.round((completedPools / plan.length) * 50), `${poolLabel} (${completedPools}/${plan.length})`);
         }
-      }));
-      for (const outcome of outcomes) {
-        if (outcome) poolResults[outcome.key] = outcome.result;
       }
 
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(2);
@@ -1067,7 +1076,7 @@ export default function CarbonModule() {
                 className="form-check-input"
                 type="checkbox"
                 checked={deltaEnabled}
-                disabled={carbonParams.referenceOnly || directLoadEnabled || staticPoolModel}
+                disabled={carbonParams.referenceOnly || directLoadEnabled || carbonDeltaUnsupported}
                 onChange={(e) => setDeltaEnabled(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="enableCarbonDelta">
@@ -1131,7 +1140,11 @@ export default function CarbonModule() {
             </div>
           ) : !(analysisType === "carbon" && carbonUiMode === "advanced" && (carbonParams.referenceOnly || directLoadEnabled || staticPoolModel)) ? (
             <div className="mb-3">
-              <label className="form-label">{t(analysisType === "carbon" && carbonUiMode === "basic" ? "carbon.basic.agbYear" : "carbon.sidebar.year")}</label>
+              <label className="form-label">{t(
+                analysisType === "carbon" && (carbonUiMode === "basic" || (carbonUiMode === "advanced" && selectedModel && !staticPoolModel))
+                  ? "carbon.basic.agbYear"
+                  : "carbon.sidebar.year",
+              )}</label>
               <input
                 id="yearSlider"
                 type="range"
