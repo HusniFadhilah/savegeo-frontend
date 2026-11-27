@@ -937,27 +937,64 @@ export default function GreenRankingsPanel({
                               {formatRankingValue(value.value, compactNumbers, value.unit)}
                             </td>
                           ))}
-                          {carbonPools.map((pool) => (
-                            <td key={`carbon-${pool.key}`} title={row.carbon_pool_sources?.[pool.key]?.method || pool.source}>
-                              {row.carbon_pool_sources?.[pool.key] && (
-                                <small className="d-block text-muted">
-                                  {row.carbon_pool_sources[pool.key].name || row.carbon_pool_sources[pool.key].dataset}
-                                  {" · "}{row.carbon_pool_sources[pool.key].source_period || row.carbon_pool_sources[pool.key].source_year || "tahun sumber tidak tercatat"}
-                                  {" · "}{row.carbon_pool_sources[pool.key].resolution_m ? `${row.carbon_pool_sources[pool.key].resolution_m} m` : "resolusi tidak tercatat"}
-                                  {" · "}{carbonStatusLabel[row.carbon_pool_sources[pool.key].status] || row.carbon_pool_sources[pool.key].status}
-                                  {row.carbon_pool_sources[pool.key].estimate_year != null && ` · estimasi ${row.carbon_pool_sources[pool.key].estimate_year}`}
-                                  {row.carbon_pool_sources[pool.key].reference_year != null && ` · acuan ${row.carbon_pool_sources[pool.key].reference_year}`}
-                                  {row.carbon_pool_sources[pool.key].valid_coverage_percent != null && ` · cakupan valid ${fmt(row.carbon_pool_sources[pool.key].valid_coverage_percent)}%`}
+                          {carbonPools.map((pool) => {
+                            const source = row.carbon_pool_sources?.[pool.key];
+                            const sourceStatus = source
+                              ? carbonStatusLabel[source.status] || source.status
+                              : "";
+                            return (
+                              <td key={`carbon-${pool.key}`}>
+                                <div className="green-rankings__pool-value">
+                                  <span>{formatRankingValue(pool.value(row), compactNumbers, "Mg C/ha")}</span>
+                                  {source && (
+                                    <InfoTip
+                                      label={c(`Info sumber ${pool.label}`, `${pool.label} source details`)}
+                                      align="end"
+                                      popoverClassName="green-rankings__pool-info-popover"
+                                      content={
+                                        <div className="green-rankings__pool-info">
+                                          <strong>{source.name || source.dataset}</strong>
+                                          <dl>
+                                            <dt>{c("Periode sumber", "Source period")}</dt>
+                                            <dd>{source.source_period || source.source_year || c("Tidak tercatat", "Not recorded")}</dd>
+                                            <dt>{c("Resolusi", "Resolution")}</dt>
+                                            <dd>{source.resolution_m ? `${fmt(source.resolution_m)} m` : c("Tidak tercatat", "Not recorded")}</dd>
+                                            <dt>{c("Status", "Status")}</dt>
+                                            <dd>{sourceStatus}</dd>
+                                            {source.estimate_year != null && (
+                                              <>
+                                                <dt>{c("Tahun estimasi", "Estimate year")}</dt>
+                                                <dd>{source.estimate_year}</dd>
+                                              </>
+                                            )}
+                                            {source.reference_year != null && (
+                                              <>
+                                                <dt>{c("Tahun acuan", "Reference year")}</dt>
+                                                <dd>{source.reference_year}</dd>
+                                              </>
+                                            )}
+                                            {source.valid_coverage_percent != null && (
+                                              <>
+                                                <dt>{c("Cakupan valid", "Valid coverage")}</dt>
+                                                <dd>{fmt(source.valid_coverage_percent)}%</dd>
+                                              </>
+                                            )}
+                                          </dl>
+                                          {source.method && <p>{source.method}</p>}
+                                          {source.formula && (
+                                            <p><b>{c("Rumus", "Formula")}:</b> {source.formula}</p>
+                                          )}
+                                        </div>
+                                      }
+                                    />
+                                  )}
+                                </div>
+                                <small className="text-muted">
+                                  {c("Total", "Total")} {pool.total(row) == null ? c("Tidak tersedia", "Not available") : `${fmt(pool.total(row))} Mg C`}
                                 </small>
-                              )}
-                              <span className="d-block">
-                                {formatRankingValue(pool.value(row), compactNumbers, "Mg C/ha")}
-                              </span>
-                              <small className="text-muted">
-                                {c("Total", "Total")} {pool.total(row) == null ? "—" : `${fmt(pool.total(row))} Mg C`}
-                              </small>
-                            </td>
-                          ))}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))
                     ) : (

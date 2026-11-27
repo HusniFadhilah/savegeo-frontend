@@ -168,6 +168,15 @@
 .green-rankings__table tbody tr:nth-child(even) { background: rgba(36, 123, 77, .035); }
 .green-rankings__table tbody tr:hover { background: rgba(36, 123, 77, .09); }
 .green-rankings__table td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.green-rankings__pool-value { display: flex; align-items: center; justify-content: flex-end; gap: .12rem; }
+.green-rankings__pool-value .inline-info-tip__trigger { width: 1.1rem; height: 1.1rem; font-size: .74rem; }
+.inline-info-tip__popover.green-rankings__pool-info-popover { width: min(360px, calc(100vw - 2rem)); max-width: min(360px, calc(100vw - 2rem)); }
+.green-rankings__pool-info { overflow-wrap: anywhere; white-space: normal; }
+.green-rankings__pool-info > strong { display: block; margin-bottom: .45rem; color: #263d2e; font-size: .8rem; }
+.green-rankings__pool-info dl { display: grid; grid-template-columns: minmax(90px, .8fr) minmax(0, 1.2fr); gap: .22rem .6rem; margin: 0; }
+.green-rankings__pool-info dt { color: #697a70; font-size: .7rem; font-weight: 600; }
+.green-rankings__pool-info dd { min-width: 0; margin: 0; font-size: .72rem; }
+.green-rankings__pool-info p { margin: .45rem 0 0; padding-top: .4rem; border-top: 1px solid #e3ebe5; font-size: .72rem; line-height: 1.45; }
 .green-rankings__sort { display: inline-flex; align-items: center; gap: .35rem; padding: 0; border: 0; color: inherit; background: transparent; font: inherit; font-weight: 700; white-space: nowrap; }
 .green-rankings__table thead th:nth-child(-n+3) .green-rankings__sort,
 .green-rankings__table thead th:nth-child(n+5) .green-rankings__sort { justify-content: flex-end; width: 100%; }
@@ -256,6 +265,9 @@ html[data-theme="dark"] .green-rankings__snapshot-note > .bi { color: #9be2b0; }
 html[data-theme="dark"] .green-rankings__snapshot-note strong { color: #f3c96b; }
 html[data-theme="dark"] .green-rankings__table thead th { color: #c9dfd0; background: #172a25; }
 html[data-theme="dark"] .green-rankings__table { --bs-table-color: #e2e8f0; --bs-table-border-color: #334155; }
+html[data-theme="dark"] .green-rankings__pool-info > strong { color: #e2ece5; }
+html[data-theme="dark"] .green-rankings__pool-info dt { color: #a7b8ac; }
+html[data-theme="dark"] .green-rankings__pool-info p { border-color: #33483b; }
 html[data-theme="dark"] .green-rankings__stat strong { color: #f1f5f9; }
 html[data-theme="dark"] .green-rankings__chart-card { border-color: var(--green-rank-border); background: #101b29; }
 html[data-theme="dark"] .green-rankings__chart-heading h3,
