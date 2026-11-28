@@ -1012,7 +1012,7 @@ export default function GreenRankingsPanel({
               </div>
               <div className="green-rankings__datatable-footer">
                 <span>
-                  {c("Menampilkan", "Showing")} {firstRow}?{lastRow} {c("dari", "of")} {recordsFiltered} {c("wilayah", "regions")}
+                  {c("Menampilkan", "Showing")} {firstRow}–{lastRow} {c("dari", "of")} {recordsFiltered} {c("wilayah", "regions")}
                   {recordsFiltered !== recordsTotal ? ` (disaring dari ${recordsTotal})` : ""}
                 </span>
                 <div>
