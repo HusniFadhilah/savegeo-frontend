@@ -115,13 +115,13 @@ export default function AppRoutes() {
       {adminRoutes.map((route) => (
         <Route key={route.path} path={route.path} element={<AdminPage section={route.section} />} />
       ))}
-      {/* dMRV: login required; project membership and roles are enforced by the backend. */}
-        <Route path="/dmrv/examples/arr-accounting" element={<ProtectedAppRoute checkFeatureAccess={false}><ArrIllustrativeAccountingPage /></ProtectedAppRoute>} />
-      <Route path="/dmrv/projects" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectsPage /></ProtectedAppRoute>} />
-      <Route path="/dmrv/portfolio" element={<ProtectedAppRoute checkFeatureAccess={false}><PortfolioPage /></ProtectedAppRoute>} />
-      <Route path="/dmrv/projects/:projectId/integrity" element={<ProtectedAppRoute checkFeatureAccess={false}><IntegrityPage /></ProtectedAppRoute>} />
-      <Route path="/organizations" element={<ProtectedAppRoute checkFeatureAccess={false}><OrganizationsPage /></ProtectedAppRoute>} />
-      <Route path="/dmrv/projects/:projectId" element={<ProtectedAppRoute checkFeatureAccess={false}><DmrvProjectPage /></ProtectedAppRoute>} />
+      {/* dMRV: global Viewer feature access is combined with project membership and project-role checks. */}
+      <Route path="/dmrv/examples/arr-accounting" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><ArrIllustrativeAccountingPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><DmrvProjectsPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/portfolio" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><PortfolioPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects/:projectId/integrity" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><IntegrityPage /></ProtectedAppRoute>} />
+      <Route path="/organizations" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><OrganizationsPage /></ProtectedAppRoute>} />
+      <Route path="/dmrv/projects/:projectId" element={<ProtectedAppRoute feature="app.feature.dmrv_projects"><DmrvProjectPage /></ProtectedAppRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/no-features" element={<ProtectedAppRoute><NoFeatureAccessPage /></ProtectedAppRoute>} />
       <Route path="/workflow" element={<ProtectedAppRoute anyFeature={[...VIEWER_FEATURE_CODES]}><WorkflowBuilderPage /></ProtectedAppRoute>} />

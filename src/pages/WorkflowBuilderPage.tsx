@@ -128,7 +128,7 @@ export default function WorkflowBuilderPage() {
       .catch((reason: unknown) =>
         setError(reason instanceof Error ? reason.message : c("Workflow tidak ditemukan", "Workflow was not found")),
       );
-  }, [workflowId]);
+  }, [workflowId, c]);
 
   useEffect(() => {
     saveWorkflowDraft(workflow);

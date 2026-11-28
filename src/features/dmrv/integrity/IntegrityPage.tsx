@@ -9,6 +9,7 @@ import { CreditLedgerPanel, MethodologyPanel, SatelliteProvenancePanel } from ".
 import ChecklistPanel from "./ChecklistPanel";
 import { RegistryPanel, ValidationPanel } from "./DataPanels";
 import DocumentsPanel from "./DocumentsPanel";
+import OperationsPanel from "./OperationsPanel";
 import CarbonOperationsPanel, { AutomaticImageProvenance } from "./CarbonOperationsPanel";
 import RisksPanel, { IssueForm } from "./RisksPanel";
 import SettingsPanel from "./SettingsPanel";
@@ -28,6 +29,7 @@ const SECTIONS = [
   ["validation", "bi-graph-up", "Validasi", "Validation"],
   ["safeguards", "bi-people", "Safeguards", "Safeguards"],
   ["documents", "bi-folder2-open", "Dokumen", "Documents"],
+  ["operations", "bi-kanban", "Operasional", "Operations"],
   ["settings", "bi-gear", "Pengaturan", "Settings"],
 ] as const;
 type Section = (typeof SECTIONS)[number][0];
@@ -310,6 +312,16 @@ export default function IntegrityPage() {
                   projectId={projectId}
                   documents={workspace.documents}
                   canWrite={canWrite}
+                  onChanged={refresh}
+                />
+              ) : null}
+              {section === "operations" ? (
+                <OperationsPanel
+                  projectId={projectId}
+                  records={workspace.records.filter((record) => record.category === "operations")}
+                  documents={workspace.documents}
+                  canWrite={canWrite}
+                  canReview={canReview}
                   onChanged={refresh}
                 />
               ) : null}

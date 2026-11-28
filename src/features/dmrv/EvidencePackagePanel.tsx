@@ -147,6 +147,17 @@ export default function EvidencePackagePanel({
               <p className="small mb-1">{t("dmrv.evidence.status")}: {t(`dmrv.evidence.readiness.${item.readiness}`)}</p>
               <p className="small mb-1">{t("dmrv.evidence.snapshotHash")}: <code>{item.manifest.snapshot.sha256}</code></p>
               <p className="small mb-1">{t("dmrv.evidence.packageHash")}: <code>{item.package_sha256}</code></p>
+              {item.manifest.carbon_mrv_status ? (
+                <p className="small mb-1">
+                  Carbon dMRV: estimate {item.manifest.carbon_mrv_status.estimate || "-"} ·
+                  calibration {item.manifest.carbon_mrv_status.calibration || "-"} ·
+                  validation {item.manifest.carbon_mrv_status.validation || "not_validated"} ({item.manifest.carbon_mrv_status.validation_type || "none"}) ·
+                  segmentation {item.manifest.carbon_mrv_status.segmentation || "not_linked"} ·
+                  review {item.manifest.carbon_mrv_status.review || "not_reviewed"} ·
+                  accounting {item.manifest.carbon_mrv_status.accounting || "not_calculated"} ·
+                  registry {item.manifest.carbon_mrv_status.registry || "not_connected"}
+                </p>
+              ) : null}
               {verified[item.id] === true ? <p className="small text-success mb-0">{t("dmrv.evidence.integrityPassed")}</p> : null}
             </div>
             <div className="d-flex align-items-start gap-2">

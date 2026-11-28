@@ -97,6 +97,17 @@ export interface Metric {
 export interface Assessment {
   id: string;
   target_pool?: string;
+  model?: {
+    id: number;
+    model_id: string;
+    model_name: string;
+    version: string;
+    status: string;
+    is_active: boolean;
+    metadata?: {
+      review?: { decision?: string; reviewed_at?: string; reviewer?: { username?: string | null; role?: string | null }; reason?: string };
+    };
+  } | null;
   metrics: {
     configuration?: { pool: Pool; prediction_source: string };
     status: string;
@@ -133,7 +144,7 @@ export const fieldApi = {
     }),
   history: (dataset: string) =>
     apiClient.get<{
-      runs: { id: string; target_pool: string; status: string; created_at: string }[];
+      runs: { id: string; target_pool: string; status: string; created_at: string; model?: Assessment["model"] }[];
     }>(`${base}/datasets/${encodeURIComponent(dataset)}/field-assessments`, { auth: true }),
   assessment: (id: string) =>
     apiClient.get<Assessment>(`${base}/runs/${encodeURIComponent(id)}`, { auth: true }),
@@ -176,6 +187,14 @@ export const fieldApi = {
       payload,
       { auth: true },
     ),
+  approve: (runId: string, reason: string) =>
+    apiClient.post<{ model: Assessment["model"] }>(`${base}/runs/${encodeURIComponent(runId)}/approve`, { reason }, { auth: true }),
+  reject: (modelId: number, reason: string) =>
+    apiClient.post(`${base}/models/${modelId}/reject`, { reason }, { auth: true }),
+  activate: (modelId: number) =>
+    apiClient.post(`${base}/models/${modelId}/activate`, {}, { auth: true }),
+  rollback: (modelId: number, reason: string) =>
+    apiClient.post(`${base}/models/${modelId}/rollback`, { reason }, { auth: true }),
   prediction: (dataset: string, id: string, payload: Record<string, unknown>) =>
     apiClient.post(
       `${base}/datasets/${encodeURIComponent(dataset)}/observations/${encodeURIComponent(id)}/predictions`,

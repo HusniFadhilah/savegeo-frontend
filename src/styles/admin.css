@@ -2658,6 +2658,8 @@ html[data-theme="dark"] .admin-lc-advanced__actions pre { border-color: #334155;
 .bluecarbon-admin__fields .form-control, .bluecarbon-admin__fields .form-select, .bluecarbon-admin__pool-fields .form-control { min-width: 0; min-height: 39px; border-color: #dce6df; border-radius: 9px; color: #26362c; background-color: #fff; font-size: .78rem; box-shadow: none; }
 .bluecarbon-admin__fields .form-control:focus, .bluecarbon-admin__fields .form-select:focus, .bluecarbon-admin__pool-fields .form-control:focus { border-color: #64ad73; box-shadow: 0 0 0 3px rgba(53, 143, 75, .12); }
 .bluecarbon-admin__fields textarea.form-control { min-height: auto; resize: vertical; }
+.bluecarbon-admin__fields .bluecarbon-admin__curated-toggle { display: flex; align-items: center; align-self: end; gap: .55rem; min-height: 39px; padding: .5rem .65rem; border: 1px solid #dce6df; border-radius: 9px; background: #f7faf8; }
+.bluecarbon-admin__curated-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: #278243; }
 .bluecarbon-admin__pool-section { display: grid; gap: .55rem; padding: .78rem; border: 1px solid #e4ece5; border-radius: 12px; background: #f8fbf8; }
 .bluecarbon-admin__subheading { display: flex; align-items: center; gap: .45rem; }
 .bluecarbon-admin__subheading h4 { margin: 0; color: #33483a; font-size: .78rem; font-weight: 750; }

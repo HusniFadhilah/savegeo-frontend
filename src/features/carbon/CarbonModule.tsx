@@ -61,6 +61,12 @@ import { useAnalysisJobStore } from "@/services/analysisJobStore";
 
 type CarbonPartial = Omit<CarbonParams, "year">;
 
+function analysisJobIdFromError(error: unknown): string | undefined {
+  if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== "object") return undefined;
+  const jobId = (error.payload as { job_id?: unknown }).job_id;
+  return typeof jobId === "string" ? jobId : undefined;
+}
+
 const VEGETATION_SERIES_BANDS = [
   { code: "B2", label: "Blue" },
   { code: "B3", label: "Green" },
@@ -306,6 +312,12 @@ export default function CarbonModule() {
   const extraAnalysisRun = useRef<(() => Promise<boolean>) | null>(null);
   const registerExtraRun = useCallback((run: (() => Promise<boolean>) | null) => { extraAnalysisRun.current = run; }, []);
   const [runError, setRunError] = useState<string | null>(null);
+  const [poolFailures, setPoolFailures] = useState<Array<{
+    key: CarbonPoolKey;
+    label: string;
+    message: string;
+    jobId?: string;
+  }>>([]);
   const [results, setResults] = useState<AnalysisResultsBundle>({});
   const carbonPoolRequestArgs = useRef<Partial<Record<CarbonPoolKey, AnalyzeCarbonArgs>>>({});
   const primaryCarbonRequestArgs = useRef<AnalyzeCarbonArgs | null>(null);
@@ -518,7 +530,7 @@ export default function CarbonModule() {
     primaryCarbonRequestArgs.current = null;
     showLoading(t("carbon.loading.runningTitle"), t("carbon.basic.preparing"));
     const poolResults: CarbonPoolResults = {};
-    const errors: string[] = [];
+    const errors: Array<{ key: CarbonPoolKey; label: string; message: string; jobId?: string }> = [];
     const startedAt = Date.now();
     try {
       const plan = await buildBasicCarbonPlan(carbonParams.year, aoiPayload);
@@ -551,7 +563,12 @@ export default function CarbonModule() {
           const result = await analyzeCarbon(request);
           poolResults[target.key] = result;
         } catch (err) {
-          errors.push(`${poolLabel}: ${err instanceof ApiError ? err.message : t("carbon.err.networkError")}`);
+          errors.push({
+            key: target.key,
+            label: poolLabel,
+            message: err instanceof ApiError ? err.message : t("carbon.err.networkError"),
+            jobId: analysisJobIdFromError(err),
+          });
         } finally {
           completedPools += 1;
           setLoadingProgress(40 + Math.round((completedPools / plan.length) * 50), `${poolLabel} (${completedPools}/${plan.length})`);
@@ -562,13 +579,17 @@ export default function CarbonModule() {
       setResults({ carbonPools: poolResults });
       setProcessingTimes({ carbon: elapsed, total: elapsed });
       setMapKey((key) => key + 1);
+      setPoolFailures(errors);
+      const errorDetails = errors
+        .map(({ label, message, jobId }) => `${label}: ${message}${jobId ? ` (ID: ${jobId})` : ""}`)
+        .join(" ");
       if (!Object.keys(poolResults).length) {
-        const error = errors.join(" ") || t("carbon.basic.noResults");
+        const error = errors.length ? c("Semua pool karbon gagal dihitung.", "All carbon pools failed to calculate.") : t("carbon.basic.noResults");
         setRunError(error);
-        return { hasResult: false, error };
+        return { hasResult: false, error: errorDetails || error };
       }
-      if (errors.length) setRunError(errors.join(" "));
-      return { hasResult: true, error: errors.join(" ") || null };
+      if (errors.length) setRunError(c("Sebagian pool karbon belum berhasil dihitung.", "Some carbon pools could not be calculated."));
+      return { hasResult: true, error: errorDetails || null };
     } catch (err) {
       const error = err instanceof ApiError ? err.message : err instanceof Error ? err.message : t("carbon.basic.noResults");
       setRunError(error);
@@ -582,6 +603,7 @@ export default function CarbonModule() {
 
   async function handleRunAnalysis(): Promise<UiCommandOutcome> {
     const previousJobIds = new Set(useAnalysisJobStore.getState().jobs.map((job) => job.job_id));
+    setPoolFailures([]);
     setReportJobs([]);
     const captureReportJobs = () => {
       const expectedTypes = new Set(
@@ -1317,9 +1339,37 @@ export default function CarbonModule() {
       <div className={settingsCollapsed ? "col" : "col-lg-9"}>
         {analysisType !== "green_rankings" && analysisType !== "bluecarbon" && analysisType !== "productivity" && <AoiPanel aoi={aoi} onAoiChange={setAoi} />}
 
-        {runError && (
-          <div className="alert alert-warning py-2">
-            <i className="bi bi-exclamation-triangle me-1" /> {runError}
+        {(runError || poolFailures.length > 0) && (
+          <div className="alert alert-danger shadow-sm border-start border-4 border-danger mt-3" role="alert" aria-live="assertive">
+            <div className="d-flex align-items-start gap-2">
+              <i className="bi bi-exclamation-octagon-fill mt-1" aria-hidden="true" />
+              <div className="flex-grow-1 min-w-0">
+                <div className="fw-semibold">
+                  {poolFailures.length
+                    ? Object.keys(results.carbonPools ?? {}).length
+                      ? c("Sebagian pool karbon belum berhasil dihitung.", "Some carbon pools could not be calculated.")
+                      : c("Estimasi semua pool karbon gagal diproses.", "Carbon pool estimation failed.")
+                    : c("Analisis belum berhasil.", "The analysis did not complete.")}
+                </div>
+                {!poolFailures.length && <div className="mt-1">{runError}</div>}
+                {poolFailures.length > 0 && (
+                  <>
+                    <div className="small mt-1">{c("Rincian kegagalan per pool:", "Failures by pool:")}</div>
+                    <ul className="list-unstyled d-grid gap-2 mt-2 mb-0">
+                      {poolFailures.map((failure) => (
+                        <li key={`${failure.key}-${failure.jobId ?? failure.message}`} className="rounded border border-danger-subtle bg-white px-3 py-2">
+                          <div className="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
+                            <strong>{failure.label}</strong>
+                            <span className="text-break">{failure.message}</span>
+                          </div>
+                          {failure.jobId && <small className="d-block text-muted mt-1">{c("ID pekerjaan:", "Job ID:")} {failure.jobId}</small>}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1341,7 +1391,7 @@ export default function CarbonModule() {
         {analysisType === "productivity" && <div className="alert alert-info"><i className="bi bi-arrow-right-circle me-2" />{c("Produktivitas NPP/GPP sekarang tersedia sebagai sumber analisis di", "NPP/GPP productivity is now available as an analysis source in")} <a href="/crop-monitoring">{c("Pemantauan Tanaman", "Crop Monitoring")}</a>.</div>}
         {analysisType === "green_rankings" && <GreenRankingsPanel year={year} startMonth={carbonParams.startMonth} endMonth={carbonParams.endMonth} onRunReady={registerExtraRun} onResult={(greenRanking) => setResults({ greenRanking })} />}
 
-        {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && (
+        {hasResults && (aoi || results.direct?.length) && !deltaResult && !vegTsResult && analysisType !== "green_rankings" && (
           <>
             {hasDirectResults && <div className="alert alert-info small" role="status">
               {(results.direct ?? []).map((layer) => <div key={layer.dataset}>

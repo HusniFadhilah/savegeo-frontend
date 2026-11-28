@@ -17,9 +17,10 @@ export default function FieldValidationPlot({
     { label: t("admin.fieldCalibration.beforeCalibration"), color: "#2482c5", rows: baseline.rows ?? [] },
     { label: t("admin.fieldCalibration.afterCalibration"), color: "#26924c", rows: corrected?.rows ?? [] },
   ];
-  const values = series
-    .flatMap((group) => group.rows)
-    .filter((row) => Number.isFinite(row.observed) && Number.isFinite(row.predicted));
+  const validRows = series.map((group) =>
+    group.rows.filter((row) => Number.isFinite(row.observed) && Number.isFinite(row.predicted)),
+  );
+  const values = validRows.flat();
   if (!values.length) return null;
   const bound =
     values.reduce((maximum, row) => Math.max(maximum, row.observed, row.predicted), 1) * 1.08;
@@ -68,12 +69,13 @@ export default function FieldValidationPlot({
             </g>
           );
         })}
-        {series.map((group) => (
+        {series.map((group, groupIndex) => {
+          const rows = validRows[groupIndex];
+          const stride = Math.max(1, Math.ceil(rows.length / 500));
+          const renderedRows = rows.filter((_, index) => index % stride === 0);
+          return (
           <g key={group.label}>
-            {group.rows
-              .filter((row) => Number.isFinite(row.observed) && Number.isFinite(row.predicted))
-              .filter((_, index) => index % Math.max(1, Math.ceil(group.rows.length / 1000)) === 0)
-              .map((row) => (
+            {renderedRows.map((row) => (
                 <circle
                   key={row.plot_id}
                   cx={x(row.observed)}
@@ -89,7 +91,8 @@ export default function FieldValidationPlot({
                 </circle>
               ))}
           </g>
-        ))}
+          );
+        })}
         <text x={244} y={274} textAnchor="middle" fill="currentColor" fontSize={12}>
           {t("admin.fieldCalibration.fieldObserved")} (Mg C/ha)
         </text>

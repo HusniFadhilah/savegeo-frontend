@@ -124,6 +124,49 @@ export interface AnalyzeCarbonArgs {
   visualizationStretch?: CarbonVisualizationStretch;
 }
 
+export interface CarbonSegmentationModelStatus {
+  id: string;
+  name: string;
+  architecture: string;
+  release_status: string;
+  inference_available: boolean;
+  weights_available: boolean;
+  class_schema: string;
+  class_schema_version: string;
+  class_order: string[];
+  class_map: Record<string, { label: string; color: string }>;
+  label_source: string | null;
+  label_license: string | null;
+  sensor_mode: string;
+  channel_order: string[];
+  sensor_modes_evaluated: string[];
+  validation: { type: string; metrics: Record<string, unknown> | null; holdout: unknown };
+  availability_reason: string;
+}
+
+export async function listCarbonSegmentationModels(): Promise<CarbonSegmentationModelStatus[]> {
+  const response = await apiClient.get<{ models: CarbonSegmentationModelStatus[] }>("/carbon/segmentation/models", { auth: "app" });
+  return response.models ?? [];
+}
+
+export interface CarbonCalibrationOption {
+  id: number;
+  model_id: string;
+  model_name: string;
+  version: string;
+  target_pool: string;
+  target_unit: string;
+  dataset_id: string | null;
+  application_scope: { site?: string | null; ecosystem?: string | null; survey_year?: number | null; compatible_sensors?: string[]; compatible_analysis_years?: number[] };
+  baseline_model: { id?: string | null; version?: string | null; preprocessing_version?: string | null };
+  validation: { type?: string | null; independent_metrics?: Record<string, unknown> | null; validation_plot_count: number };
+}
+
+export async function listCarbonCalibrationModels(): Promise<CarbonCalibrationOption[]> {
+  const response = await apiClient.get<{ models: CarbonCalibrationOption[] }>("/carbon/calibration-models", { auth: "app" });
+  return response.models ?? [];
+}
+
 /**
  * Ported from `runCarbonAnalysis()` in main.js: routes non-GEE models
  * (trained on Planetary Computer STAC features, not ee.Image) to
@@ -189,6 +232,7 @@ export async function analyzeCarbon({
       {
         aoi,
         model_name: selectedModel.name,
+        calibration_model_id: params.calibrationModelId || undefined,
         start_date: `${params.year}-${pad(params.startMonth)}-01`,
         end_date: `${params.year}-${pad(params.endMonth)}-${pad(lastDayOfEndMonth)}`,
         scale: 10,
@@ -216,6 +260,7 @@ export async function analyzeCarbon({
       reference_dataset: params.referenceDataset,
       dataset_year: params.datasetYear,
       model_name: params.modelName || null,
+      calibration_model_id: params.calibrationModelId || undefined,
       reference_only: params.referenceOnly || (!params.modelName && params.referenceDataset === "CHLORIS_AGB_STOCK"),
       load_only: params.loadOnly,
       cloud_mask_technique: params.cloudMaskTechnique,
@@ -230,6 +275,24 @@ export async function analyzeCarbon({
     },
     { timeoutMs: CARBON_TIMEOUT_MS },
   );
+}
+
+/** Download a saved carbon run's immutable statistics snapshot as CSV. */
+export async function downloadCarbonStatisticsCsv(analysisId: string, aoiName?: string): Promise<void> {
+  const blob = await apiClient.getBlob(
+    `/carbon/analysis-snapshots/${encodeURIComponent(analysisId)}/statistics.csv`,
+    { auth: "app", timeoutMs: 30_000 },
+  );
+  const slug = (aoiName || "").replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 48);
+  const filename = `savegeo_carbon_${slug || analysisId.slice(0, 12)}.csv`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 export interface AnalyzeCarbonDeltaArgs {

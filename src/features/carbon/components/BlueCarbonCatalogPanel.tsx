@@ -48,7 +48,7 @@ export default function BlueCarbonCatalogPanel() {
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : c("Katalog blue carbon belum dapat dimuat.", "The blue carbon catalogue could not be loaded.")); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [c]);
 
   return (
     <section className="blue-carbon-catalog" aria-label={c("Katalog data blue carbon", "Blue carbon data catalogue")}>

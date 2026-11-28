@@ -103,6 +103,12 @@ export default function SettingsPanel({
     <>
       <form className="integrity-editor" onSubmit={(e) => void save(e)}>
         <h3>{c("Identitas dan metodologi proyek", "Project identity and methodology")}</h3>
+        <p className="integrity-note">
+          {c(
+            "Pilih metode dan versinya sebelum periode monitoring dimulai. Setelah periode berjalan atau snapshot karbon dibuat, metode proyek dikunci.",
+            "Choose the method and version before monitoring starts. The project method is locked once a period is active or a carbon snapshot exists.",
+          )}
+        </p>
         <div className="integrity-form-grid">
           {(
             [

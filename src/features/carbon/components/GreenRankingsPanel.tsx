@@ -10,6 +10,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import type { RegionOption } from "@/types/api";
 import type { GreenRankingHistory, GreenRankingResult } from "../extendedTypes";
 import CropPanelAccordion from "@/features/crop-monitoring/components/CropPanelAccordion";
+import GreenRankingsResultPanels from "./GreenRankingsResultPanels";
 import "./green-rankings-panel.css";
 
 const LEVELS = [
@@ -595,7 +596,7 @@ export default function GreenRankingsPanel({
       </div>
       {snapshotUnavailable && !result && (
         <div className="alert alert-warning mt-3" role="alert">
-          Snapshot dengan nilai pool karbon belum tersedia untuk cakupan ini. Klik ‘Hitung peringkat’ sekali untuk membuat dan menyimpannya; pemuatan berikutnya memakai snapshot database.
+          {c("Snapshot dengan nilai pool karbon belum tersedia untuk cakupan ini. Klik ‘Hitung peringkat’ sekali untuk membuat dan menyimpannya; pemuatan berikutnya memakai snapshot database.", "A snapshot with carbon pool values is not available for this extent. Click ‘Calculate ranking’ once to create and save it; later loads will use the database snapshot.")}
         </div>
       )}
       {error && (
@@ -1039,6 +1040,18 @@ export default function GreenRankingsPanel({
             </div>
           </CropPanelAccordion>
         </div>
+      )}
+      {result && (
+        <GreenRankingsResultPanels
+          result={result}
+          year={year}
+          startMonth={rankingStartMonth}
+          endMonth={rankingEndMonth}
+          level={level}
+          province={province}
+          city={city}
+          district={district}
+        />
       )}
       <section className="green-rankings__history" aria-labelledby="green-ranking-history-title">
         <div className="green-rankings__history-heading">

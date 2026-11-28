@@ -11,6 +11,7 @@ import ImageryAttribution from "@/components/map/ImageryAttribution";
 import HistoricalImageryControl, { HistoricalAoiClipController } from "./HistoricalImageryControl";
 import ZoomScaleControl from "@/components/map/ZoomScaleControl";
 import MapExportControl from "@/components/map/MapExportControl";
+import type { MapExportAction } from "@/components/map/MapExportControl";
 import { BasemapContext } from "@/components/map/BasemapContext";
 import {
   BASEMAP_REFERENCE_PANE,
@@ -52,6 +53,8 @@ interface Props {
   historicalAoi?: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null;
   /** Use Leaflet's canvas renderer for dense point layers such as hotspots. */
   preferCanvas?: boolean;
+  /** Restrict map export actions when only selected formats apply to this layer. */
+  exportActions?: MapExportAction[];
 }
 
 /** Default basemap drawn by Apple MapKit JS (no tile URL). */
@@ -121,7 +124,7 @@ function ResultPaneSetup() {
  * disaster map, LC-change before/after maps). Satellite is always the
  * default base layer - see BasemapSwitcher / config/basemaps.ts.
  */
-export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, fullscreenTarget, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false }: Props) {
+export default function MapView({ id, children, onMapReady, center, zoom, maxZoom, className, fullscreenTarget, showGlobeControl = true, historicalDate, historicalAoi, preferCanvas = false, exportActions }: Props) {
   const mapShellRef = useRef<HTMLDivElement>(null);
   const t = useI18nStore((state) => state.t);
   const { basemaps } = useBasemaps();
@@ -195,7 +198,7 @@ export default function MapView({ id, children, onMapReady, center, zoom, maxZoo
         <Pane name="historical-imagery" style={{ zIndex: 250, pointerEvents: "none" }} />
         <FullscreenControl fullscreenTarget={fullscreenTarget} />
         <ZoomScaleControl />
-        <MapExportControl mapTitle={id} enabled={active && !globe} />
+        <MapExportControl mapTitle={id} enabled={active && !globe} actions={exportActions} />
         <ImageryAttribution />
         <HistoricalImageryControl enabled={active && !globe} targetDate={historicalDate} />
         {historicalAoi && <HistoricalAoiClipController aoi={historicalAoi} />}

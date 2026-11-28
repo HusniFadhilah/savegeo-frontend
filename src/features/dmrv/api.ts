@@ -97,6 +97,12 @@ export const cancelDmrvJob = (id: string, jobId: string) =>
 export const getDmrvSnapshot = (id: string, snapshotId: string) =>
   apiClient.get<DmrvSnapshot>(`${base(id)}/snapshots/${encodeURIComponent(snapshotId)}`, AUTH);
 
+export const carbonStatisticsCsvPath = (id: string, snapshotId: string) =>
+  `${base(id)}/snapshots/${encodeURIComponent(snapshotId)}/carbon-statistics.csv`;
+
+export const downloadCarbonStatisticsCsv = (id: string, snapshotId: string) =>
+  apiClient.getBlob(carbonStatisticsCsvPath(id, snapshotId), AUTH);
+
 export const createEvidencePackage = (id: string, snapshotId: string, idempotencyKey: string) =>
   apiClient.post<EvidencePackage>(`${base(id)}/evidence-packages`, { snapshot_id: snapshotId }, withKey(idempotencyKey));
 

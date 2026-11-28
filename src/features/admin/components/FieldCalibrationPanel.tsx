@@ -58,8 +58,9 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
   const [notice, setNotice] = useState("");
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [history, setHistory] = useState<
-    { id: string; target_pool: string; status: string; created_at: string }[]
+    { id: string; target_pool: string; status: string; created_at: string; model?: Assessment["model"] }[]
   >([]);
+  const [reviewReason, setReviewReason] = useState("");
   const [pool, setPool] = useState<Pool>("agb");
   const [autoPool, setAutoPool] = useState<Pool>("agb");
   const [autoYear, setAutoYear] = useState(new Date().getFullYear());
@@ -122,6 +123,31 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
     setRefresh((n) => n + 1);
     setAssessment(null);
     setNotice("Data lapangan tersimpan.");
+  }
+  async function calibrationAction(action: "approve" | "reject" | "activate" | "rollback") {
+    const candidate = assessment?.model;
+    if (!assessment || !candidate) return;
+    if (action !== "activate" && reviewReason.trim().length < 3) {
+      setError(language === "id" ? "Tulis alasan minimal 3 karakter." : "Enter a reason of at least 3 characters.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      if (action === "approve") await fieldApi.approve(assessment.id, reviewReason.trim());
+      if (action === "reject") await fieldApi.reject(candidate.id, reviewReason.trim());
+      if (action === "activate") await fieldApi.activate(candidate.id);
+      if (action === "rollback") await fieldApi.rollback(candidate.id, reviewReason.trim());
+      setAssessment(await fieldApi.assessment(assessment.id));
+      setReviewReason("");
+      setRefresh((n) => n + 1);
+      setNotice(language === "id" ? "Status kalibrasi diperbarui dan dicatat di audit log." : "Calibration state updated and recorded in the audit log.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : (language === "id" ? "Perubahan status gagal." : "Could not update calibration state."));
+    } finally {
+      setBusy(false);
+    }
   }
   async function csv(previewOnly: boolean) {
     if (!file) return;
@@ -761,6 +787,66 @@ export default function FieldCalibrationPanel({ datasetId }: { datasetId: string
             <p className="small text-muted">
               {t("admin.fieldCalibration.predictionSource")}: {assessment.metrics.configuration.prediction_source}
             </p>
+          )}
+          {assessment.model && (
+            <section className="border rounded p-3 my-3" aria-label={language === "id" ? "Siklus review kalibrasi" : "Calibration review lifecycle"}>
+              <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <strong>{assessment.model.model_name} · v{assessment.model.version}</strong>
+                <span className={`badge ${assessment.model.status === "active_local" ? "text-bg-success" : assessment.model.status === "approved_local" ? "text-bg-primary" : "text-bg-secondary"}`}>
+                  {assessment.model.status}{assessment.model.is_active ? " · active" : ""}
+                </span>
+              </div>
+              {assessment.model.metadata?.review && (
+                <div className="small mt-2" aria-label={language === "id" ? "Catatan review terakhir" : "Latest review record"}>
+                  <strong>{assessment.model.metadata.review.decision}</strong>
+                  {assessment.model.metadata.review.reviewer?.username && ` · ${assessment.model.metadata.review.reviewer.username}`}
+                  {assessment.model.metadata.review.reviewer?.role && ` (${assessment.model.metadata.review.reviewer.role})`}
+                  {assessment.model.metadata.review.reviewed_at && ` · ${new Date(assessment.model.metadata.review.reviewed_at).toLocaleString(language === "en" ? "en-US" : "id-ID")}`}
+                  {assessment.model.metadata.review.reason && <div>{assessment.model.metadata.review.reason}</div>}
+                </div>
+              )}
+              <p className="small text-muted mt-2 mb-2">
+                {language === "id"
+                  ? "Persetujuan mensyaratkan baseline model, hash, snapshot prediksi, domain aplikasi, serta sedikitnya tiga plot kalibrasi dan tiga plot validasi terpisah. Penyetuju harus berbeda dari pembuat run."
+                  : "Approval requires the base model, artifact hash, prediction snapshot, application domain, and at least three separate calibration and validation plots. The reviewer must differ from the run creator."}
+              </p>
+              {assessment.model.status !== "active_local" && assessment.model.status !== "rejected" && (
+                <label className="form-label small d-block">
+                  {language === "id" ? "Alasan review / rollback" : "Review / rollback reason"}
+                  <input className="form-control form-control-sm mt-1" value={reviewReason} maxLength={1000}
+                    onChange={(event) => setReviewReason(event.target.value)} />
+                </label>
+              )}
+              <div className="d-flex flex-wrap gap-2">
+                {["experimental", "pending_approval", "approved_local", "rolled_back"].includes(assessment.model.status) && (
+                  <>
+                    <button className="btn btn-outline-primary btn-sm" type="button" disabled={busy || reviewReason.trim().length < 3} onClick={() => void calibrationAction("approve")}>
+                      {language === "id" ? "Setujui sebagai lokal" : "Approve locally"}
+                    </button>
+                    <button className="btn btn-outline-danger btn-sm" type="button" disabled={busy || reviewReason.trim().length < 3} onClick={() => void calibrationAction("reject")}>
+                      {language === "id" ? "Tolak kandidat" : "Reject candidate"}
+                    </button>
+                  </>
+                )}
+                {["approved_local", "rolled_back"].includes(assessment.model.status) && (
+                  <button className="btn btn-primary btn-sm" type="button" disabled={busy} onClick={() => void calibrationAction("activate")}>
+                    {language === "id" ? "Aktifkan versi lokal" : "Activate local version"}
+                  </button>
+                )}
+                {assessment.model.status === "active_local" && (
+                  <>
+                    <label className="form-label small mb-0">
+                      {language === "id" ? "Alasan rollback" : "Rollback reason"}
+                      <input className="form-control form-control-sm mt-1" value={reviewReason} maxLength={1000}
+                        onChange={(event) => setReviewReason(event.target.value)} />
+                    </label>
+                    <button className="btn btn-outline-danger btn-sm align-self-end" type="button" disabled={busy || reviewReason.trim().length < 3} onClick={() => void calibrationAction("rollback")}>
+                      {language === "id" ? "Rollback ke versi sebelumnya" : "Rollback to previous version"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
           )}
           <div className="field-calibration-table-wrap">
             <table className="tbl tbl-wide field-calibration-table field-calibration-table--metrics">

@@ -1,0 +1,44 @@
+.green-rankings__result-panels { display: grid; gap: .8rem; margin: 1rem 0; }
+.green-rankings__map-toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: .7rem; margin: 0 0 .75rem; }
+.green-rankings__metric-select { display: grid; width: min(100%, 390px); gap: .35rem; color: #526357; font-size: .76rem; font-weight: 650; }
+.green-rankings__metric-select .form-select { min-height: 40px; border-color: #dbe5e1; border-radius: 9px; font-size: .83rem; }
+.green-rankings__map-count { color: #617267; font-size: .77rem; }
+.green-rankings__map-frame { position: relative; min-height: 0; overflow: hidden; border: 1px solid #dbe5e1; border-radius: 12px; background: #eaf0ed; }
+.green-rankings__map-frame .map-view-shell { height: clamp(340px, 55vh, 620px); }
+.green-rankings__map-frame .map-view-shell > div:first-child,
+.green-rankings__map-frame .savegeo-map { height: 100%; min-height: 0; }
+.green-rankings__map-loading, .green-rankings__map-error { position: absolute; z-index: 1000; top: .75rem; left: .75rem; display: flex; align-items: center; gap: .55rem; max-width: min(520px, calc(100% - 1.5rem)); padding: .6rem .75rem; border: 1px solid #dbe5e1; border-radius: 9px; color: #42564a; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(25,53,39,.12); font-size: .78rem; }
+.green-rankings__map-error { color: #8b3f30; border-color: #f0d2ca; background: rgba(255,249,247,.97); }
+.green-rankings__map-placeholder { display: flex; align-items: center; gap: .7rem; min-height: 150px; padding: 1.1rem; border: 1px dashed #cbd9d0; border-radius: 11px; color: #526357; background: #f8fbf9; font-size: .86rem; }
+.green-rankings__map-placeholder > .bi { color: #247842; font-size: 1.2rem; }
+.green-rankings__map-legend { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .8rem; margin-top: .65rem; padding: .65rem .75rem; border: 1px solid #e2eae5; border-radius: 9px; color: #526357; background: #fbfdfb; font-size: .72rem; }
+.green-rankings__map-legend > strong { margin-right: .3rem; color: #294b37; }
+.green-rankings__map-legend > span { display: inline-flex; align-items: center; gap: .35rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.green-rankings__map-legend > span i { width: 13px; height: 13px; border: 1px solid rgba(25,45,35,.18); border-radius: 3px; }
+.green-rankings__map-legend > small { flex-basis: 100%; color: #718078; font-size: .67rem; }
+.green-rankings__result-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .6rem; }
+.green-rankings__result-stats article { display: grid; align-content: center; gap: .3rem; min-height: 78px; padding: .7rem .8rem; border: 1px solid #dbe5e1; border-radius: 10px; background: #fbfdfb; }
+.green-rankings__result-stats article span { color: #65776b; font-size: .72rem; }
+.green-rankings__result-stats article strong { color: #244d35; font-size: .98rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.green-rankings__result-note { margin: .65rem 0 0; color: #68796f; font-size: .71rem; line-height: 1.5; }
+.green-rankings__export-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.green-rankings__export-actions .btn { min-height: 38px; border-radius: 9px; font-size: .78rem; }
+.green-rankings__export-actions > span { flex-basis: 100%; color: #68796f; font-size: .7rem; line-height: 1.45; }
+html[data-theme="dark"] .green-rankings__metric-select,
+html[data-theme="dark"] .green-rankings__map-count,
+html[data-theme="dark"] .green-rankings__result-note { color: #a7b4c5; }
+html[data-theme="dark"] .green-rankings__metric-select .form-select,
+html[data-theme="dark"] .green-rankings__map-frame,
+html[data-theme="dark"] .green-rankings__map-placeholder,
+html[data-theme="dark"] .green-rankings__map-legend,
+html[data-theme="dark"] .green-rankings__result-stats article { border-color: #334155; color: #dce8df; background: #101b29; }
+html[data-theme="dark"] .green-rankings__map-legend > strong,
+html[data-theme="dark"] .green-rankings__result-stats article strong { color: #bce8c8; }
+html[data-theme="dark"] .green-rankings__map-legend > small,
+html[data-theme="dark"] .green-rankings__result-stats article span,
+html[data-theme="dark"] .green-rankings__export-actions > span { color: #a7b4c5; }
+@media (max-width: 600px) {
+  .green-rankings__map-frame .map-view-shell { height: 390px; }
+  .green-rankings__map-legend { align-items: flex-start; }
+  .green-rankings__map-legend > strong { flex-basis: 100%; }
+}

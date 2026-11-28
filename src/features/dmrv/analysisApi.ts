@@ -7,6 +7,8 @@ export interface AnalysisRequest {
   monitoring_period_id: string;
   baseline_period_id?: string;
   parameters: {
+    model_name?: string;
+    calibration_model_id?: number;
     reference_dataset?: string;
     datasets?: string[];
     dataset?: string;

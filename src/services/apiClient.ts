@@ -24,6 +24,7 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   auth?: boolean | "app" | "admin" | "user";
   timeoutMs?: number;
   isFormData?: boolean;
+  responseType?: "json" | "blob";
 }
 
 // GEE-backed analysis endpoints (carbon/vegetation/landcover/disaster/timeseries)
@@ -142,6 +143,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     auth = false,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     isFormData,
+    responseType = "json",
     headers,
     signal: callerSignal,
     ...rest
@@ -191,7 +193,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const contentType = res.headers.get("content-type") || "";
-  const parsed = (contentType.includes("application/json") || contentType.includes("+json"))
+  const parsed = res.ok && responseType === "blob"
+    ? await res.blob()
+    : (contentType.includes("application/json") || contentType.includes("+json"))
     ? await res.json().catch(() => null)
     : await res.text().catch(() => null);
 
@@ -211,6 +215,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const apiClient = {
   get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "GET" }),
+  getBlob: (path: string, options?: RequestOptions) => request<Blob>(path, { ...options, responseType: "blob", method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options?: RequestOptions) =>

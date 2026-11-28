@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
+import { listCarbonCalibrationModels, listCarbonModels, type CarbonCalibrationOption } from "@/features/carbon/api";
+import type { CarbonModelListItem } from "@/features/carbon/types";
 import { listMonitoringPeriods, newIdempotencyKey } from "./api";
 import * as api from "./analysisApi";
 import type { MonitoringPeriod } from "./types";
@@ -38,6 +40,10 @@ export default function ProjectAnalysisPanel({
   const periodId = query.get("period") || "";
   const snapshotId = query.get("snapshot") || "";
   const [periods, setPeriods] = useState<MonitoringPeriod[]>([]);
+  const [carbonModels, setCarbonModels] = useState<CarbonModelListItem[]>([]);
+  const [calibrationModels, setCalibrationModels] = useState<CarbonCalibrationOption[]>([]);
+  const [modelCatalogError, setModelCatalogError] = useState("");
+  const [modelCatalogLoading, setModelCatalogLoading] = useState(true);
   const requestedKind = query.get("analysis_kind") || "carbon";
   const kind: api.AnalysisKind = Object.prototype.hasOwnProperty.call(KIND_LABELS, requestedKind)
     ? (requestedKind as api.AnalysisKind)
@@ -48,6 +54,23 @@ export default function ProjectAnalysisPanel({
     Number.isSafeInteger(pageValue) && pageValue > 0 && pageValue <= 100000 ? pageValue : 1;
   const availablePeriods = periods.filter((p) => p.status !== "planned");
   const selectedPeriod = availablePeriods.find((p) => p.id === periodId);
+  const selectedModelName = query.get("carbon_model") || "";
+  const selectedModel = carbonModels.find((item) => item.name === selectedModelName) || null;
+  const numericYear = selectedPeriod ? Number(selectedPeriod.start_date.slice(0, 4)) : null;
+  const eligibleCalibrations = selectedModel && numericYear !== null
+    ? calibrationModels.filter((item) => {
+        const metadata = selectedModel.metadata_json || {};
+        return item.baseline_model.id === selectedModel.name
+          && (!selectedModel.version || item.baseline_model.version === selectedModel.version)
+          && Boolean(metadata.preprocessing_version)
+          && item.baseline_model.preprocessing_version === metadata.preprocessing_version
+          && Boolean(metadata.target_pool)
+          && item.target_pool === metadata.target_pool
+          && item.application_scope.compatible_analysis_years?.includes(numericYear) === true;
+      })
+    : [];
+  const selectedCalibrationId = Number(query.get("carbon_calibration") || "");
+  const selectedCalibration = eligibleCalibrations.find((item) => item.id === selectedCalibrationId);
   const baselinePeriods = availablePeriods.filter((p) => p.id !== periodId);
   const validBaseline = baselinePeriods.some((p) => p.id === baseline);
   function updateQuery(values: Record<string, string | null>, resetPage = true) {
@@ -81,6 +104,27 @@ export default function ProjectAnalysisPanel({
       })
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : "Unable to load periods");
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    let active = true;
+    setModelCatalogLoading(true);
+    Promise.all([listCarbonModels("WCMC"), listCarbonCalibrationModels()])
+      .then(([models, calibrations]) => {
+        if (!active) return;
+        setCarbonModels(models);
+        setCalibrationModels(calibrations);
+        setModelCatalogError("");
+      })
+      .catch((cause: unknown) => {
+        if (active) setModelCatalogError(cause instanceof Error ? cause.message : "Unable to load model versions");
+      })
+      .finally(() => {
+        if (active) setModelCatalogLoading(false);
       });
     return () => {
       active = false;
@@ -136,7 +180,10 @@ export default function ProjectAnalysisPanel({
       kind,
       monitoring_period_id: periodId,
       ...(kind === "landcover_transition" ? { baseline_period_id: baseline } : {}),
-      parameters: {},
+      parameters: kind === "carbon" ? {
+        ...(selectedModel ? { model_name: selectedModel.name } : {}),
+        ...(selectedCalibration ? { calibration_model_id: selectedCalibration.id } : {}),
+      } : {},
     };
     const body = JSON.stringify({ projectId, request });
     if (attempt.current?.body !== body) attempt.current = { body, key: newIdempotencyKey() };
@@ -210,7 +257,7 @@ export default function ProjectAnalysisPanel({
               id="analysis-period"
               value={periodId}
               disabled={busy}
-              onChange={(e) => updateQuery({ period: e.target.value, baseline_period: null })}
+              onChange={(e) => updateQuery({ period: e.target.value, baseline_period: null, carbon_calibration: null })}
             >
               <option value="">{tr("Pilih periode", "Choose period")}</option>
               {periods
@@ -265,6 +312,54 @@ export default function ProjectAnalysisPanel({
               </select>
             </div>
           )}
+          {kind === "carbon" && (
+            <>
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="project-carbon-model">
+                  {tr("Versi model karbon", "Carbon model version")}
+                </label>
+                <select
+                  id="project-carbon-model"
+                  className="form-select"
+                  value={selectedModelName}
+                  disabled={busy || modelCatalogLoading}
+                  onChange={(e) => updateQuery({ carbon_model: e.target.value, carbon_calibration: null })}
+                >
+                  <option value="">{tr("Gunakan model default", "Use default model")}</option>
+                  {carbonModels.map((model) => (
+                    <option key={`${model.name}:${model.version || ""}`} value={model.name}>
+                      {model.display_name || model.name} · {model.version || tr("versi tidak dicatat", "version not recorded")}
+                    </option>
+                  ))}
+                </select>
+                {modelCatalogError && <div className="form-text text-warning">{tr("Katalog model/kalibrasi tidak dapat dimuat.", "Model/calibration catalog is unavailable.")}</div>}
+              </div>
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="project-carbon-calibration">
+                  {tr("Versi kalibrasi yang disetujui", "Approved calibration version")}
+                </label>
+                <select
+                  id="project-carbon-calibration"
+                  className="form-select"
+                  value={selectedCalibration ? String(selectedCalibration.id) : ""}
+                  disabled={busy || !selectedModel || !selectedPeriod || eligibleCalibrations.length === 0}
+                  onChange={(e) => updateQuery({ carbon_calibration: e.target.value || null })}
+                >
+                  <option value="">{tr("Tanpa kalibrasi tambahan", "No additional calibration")}</option>
+                  {eligibleCalibrations.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.model_name} · {model.version} · {model.target_pool}
+                    </option>
+                  ))}
+                </select>
+                <div className="form-text">
+                  {selectedModel
+                    ? tr("Pilihan dicocokkan dengan model dasar, pool, dan tahun; server tetap memeriksa approval, sensor, unit, serta domain AOI.", "Options match the base model, pool, and year; the server still checks approval, sensor, unit, and AOI domain.")
+                    : tr("Pilih versi model aktif terlebih dahulu untuk melihat kalibrasi yang cocok.", "Select an active model version to see matching calibrations.")}
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <p className="small text-body-secondary">
           {tr(
@@ -279,6 +374,7 @@ export default function ProjectAnalysisPanel({
             disabled={
               busy ||
               !selectedPeriod ||
+              (kind === "carbon" && Boolean(selectedModelName) && (!selectedModel || modelCatalogLoading)) ||
               (kind === "landcover_transition" && !validBaseline) ||
               usage?.remaining === 0
             }

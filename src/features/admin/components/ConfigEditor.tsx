@@ -231,6 +231,35 @@ function ConfigValueControl({
   const numeric = getNumericControl(item, t);
   const title = description;
   const paletteColors = parsePalette(value);
+  const poolMapResolution = /^carbon\.pool\.(agb|bgb|soc|litter|deadwood)\.map_resolution_m$/.test(item.key);
+
+  if (poolMapResolution) {
+    const resolutions = [30, 60, 100, 250, 300, 500, 1000];
+    const resolutionSelection = value === "reference" || resolutions.includes(Number(value)) ? value : "30";
+    return (
+      <div>
+        <select
+          className="form-select"
+          aria-label={`${title || item.key} ${c("resolusi peta", "map resolution")}`}
+          title={title}
+          value={resolutionSelection}
+          onChange={(event) => onChange(item.key, event.target.value)}
+        >
+          <option value="30">30 m · {c("default grid model", "default model grid")}</option>
+          <option value="reference">{c("Ikuti resolusi dataset referensi", "Follow reference dataset resolution")}</option>
+          {resolutions.filter((resolution) => resolution !== 30).map((resolution) => (
+            <option key={resolution} value={resolution}>{resolution >= 1000 ? `${resolution / 1000} km` : `${resolution} m`}</option>
+          ))}
+        </select>
+        <small className="d-block text-muted mt-1">
+          {c(
+            "Pilihan ini mengatur grid tampilan layer model. Dukungan data sumber tetap dicatat terpisah; grid lebih halus tidak menambah detail pengukuran.",
+            "This sets the display grid for model layers. Source support is reported separately; a finer grid does not add measurement detail.",
+          )}
+        </small>
+      </div>
+    );
+  }
 
   if (isBooleanConfig(item, value)) {
     const checked = ["true", "1", "yes", "on"].includes(value.toLowerCase());

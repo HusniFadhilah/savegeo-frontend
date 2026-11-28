@@ -65,6 +65,27 @@ export interface CarbonDataQuality {
   model_r2: number | null;
   model_rmse: number | null;
   analysis_year_partial?: boolean;
+  source_provenance?: CarbonSourceProvenance[];
+  cloud_mask_technique?: string | null;
+}
+
+export interface CarbonSourceProvenance {
+  provider?: string;
+  collection_id?: string;
+  start_date_inclusive?: string;
+  end_date_exclusive?: string;
+  cloud_threshold_pct_used?: number;
+  scene_count?: number;
+  scene_manifest_truncated?: boolean;
+  aerosol_handling?: string;
+  scenes?: {
+    scene_id?: string;
+    acquired_at_utc?: string | null;
+    cloudy_pixel_percentage?: number | null;
+    mgrs_tile?: string;
+    processing_baseline?: string;
+    aot_retrieval_accuracy?: number | string;
+  }[];
 }
 
 export interface CarbonModelMeta {
@@ -88,6 +109,7 @@ export interface CarbonModelMeta {
 
 export interface CarbonModelListItem {
   name: string;
+  version?: string;
   display_name?: string;
   description?: string;
   algorithm?: string;
@@ -132,6 +154,8 @@ export interface CarbonParams {
   referenceDataset: string;
   datasetYear: number;
   modelName: string | null;
+  /** Explicit local calibration version. Null keeps the base model output. */
+  calibrationModelId?: number | null;
   showReference: boolean;
   /** "scl" | "qa60" | "s2cloudless" - see GET /vegetation/cloud-mask-techniques (shared catalog). */
   cloudMaskTechnique: string;
@@ -203,7 +227,20 @@ export interface CarbonAreaInfo {
 }
 
 export interface CarbonModelRunInfo {
+  calibration?: {
+    status?: "applied" | "not_applied" | string;
+    model_id?: number;
+    model_version?: string;
+    artifact_sha256?: string;
+    reason?: string;
+    application_mode?: string;
+    warning?: string;
+    note?: string;
+    [key: string]: unknown;
+  };
   source_data_kind?: string;
+  /** How values should be interpreted: field observation, imputed, modelled or derived. */
+  data_value_kind?: "measured" | "imputed" | "modeled" | "derived" | string;
   source_url?: string;
   extension_payload?: { extension: string; extension_settings: Record<string, unknown> };
   large_aoi_baseline?: boolean;
@@ -212,8 +249,14 @@ export interface CarbonModelRunInfo {
   display_mode?: string;
   visualization_mode?: CarbonVisualizationStretch;
   scale?: number;
+  /** Pixel scale used to calculate summary statistics; does not describe the map grid. */
+  summary_scale_m?: number;
   /** Pixel spacing of the rendered model layer; may differ from summary scale. */
   map_resolution_m?: number;
+  /** Whether the displayed layer follows an administrator-selected grid or the source grid. */
+  map_resolution_mode?: "configured" | "reference" | string;
+  /** CRS used for the displayed map grid, when known. */
+  map_resolution_crs?: string | null;
   /** Spatial support of the reference labels used to train this map. */
   reference_support_m?: number | null;
   predictor_gap_fill?: string | null;
@@ -263,6 +306,7 @@ export interface CarbonResult {
   model_performance?: { rmse?: number; r2_score?: number; cv_folds?: number; rmse_std?: number };
   data_quality?: CarbonDataQuality;
   processing_time?: string;
+  analysis_snapshot_id?: string;
 }
 
 export type CarbonPoolKey = "agb" | "bgb" | "soc" | "litter" | "deadwood";

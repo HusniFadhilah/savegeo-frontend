@@ -490,7 +490,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.detail.yearMismatchWarning":
       "Ini adalah **prediksi model** untuk citra satelit tahun **{analysisYear}**, bukan pengukuran biomassa langsung tahun itu. Model dilatih menggunakan data referensi biomassa **{refName}** tahun **{refYear}** - akurasinya bergantung pada seberapa valid hubungan citra-ke-biomassa itu tetap berlaku di tahun {analysisYear}.",
     "carbon.detail.resolutionMismatchWarning":
-      "**Perbedaan resolusi:** model divalidasi (R²/RMSE di atas) terhadap referensi **{refName}** pada resolusi native **{refRes}m**, tapi prediksi di sini ditampilkan pada grid **{scale}m**. Piksel individu pada resolusi {scale}m *tidak* divalidasi satu-per-satu terhadap ground truth - akurasi yang terukur berlaku pada agregat skala {refRes}m, bukan per-piksel {scale}m.",
+      "**Perbedaan resolusi:** layer ditampilkan pada grid **{scale}m**, sementara dukungan spasial sumber **{refName}** adalah **{refRes}m**. Grid yang lebih halus tidak menambah detail sumber atau menjadi pengukuran lapangan per piksel. Jika metrik validasi tersedia, cakupannya mengikuti skala dan sampel yang tercatat.",
     "carbon.detail.modeClipped": "Mode Clipped",
     "carbon.detail.modeBoundingBox": "Mode Bounding Box",
     "carbon.detail.area": "Luas",
@@ -1269,7 +1269,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "carbon.detail.yearMismatchWarning":
       "This is a **model prediction** for {analysisYear} satellite imagery, not a direct biomass measurement for that year. The model was trained on **{refName}** biomass reference data from {refYear} - its accuracy depends on how well that imagery-to-biomass relationship still holds in {analysisYear}.",
     "carbon.detail.resolutionMismatchWarning":
-      "**Resolution mismatch:** the model was validated (R²/RMSE above) against the **{refName}** reference at its native **{refRes}m** resolution, but the prediction shown here is on a **{scale}m** grid. Individual pixels at {scale}m resolution are *not* validated one-by-one against ground truth - the measured accuracy applies at the {refRes}m aggregate scale, not per-pixel at {scale}m.",
+      "**Resolution mismatch:** the layer is displayed on a **{scale}m** grid while the **{refName}** source has **{refRes}m** spatial support. A finer grid does not add source detail or make each pixel a field measurement. If validation metrics are available, their scope follows the recorded scale and samples.",
     "carbon.detail.modeClipped": "Clipped Mode",
     "carbon.detail.modeBoundingBox": "Bounding Box Mode",
     "carbon.detail.area": "Area",

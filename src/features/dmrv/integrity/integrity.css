@@ -188,6 +188,15 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 20px;
 }
+.integrity-form-wide {
+  grid-column: 1 / -1;
+}
+.integrity-operations-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
 .integrity-field {
   display: flex;
   flex-direction: column;

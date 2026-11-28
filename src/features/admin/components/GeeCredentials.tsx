@@ -190,6 +190,9 @@ export default function GeeCredentials() {
         </button>
       </div>
       <div className="card-body-custom">
+        <p className="small text-body-secondary" role="note">
+          {t("admin.gee.poolNote")}
+        </p>
         <div className={`collapse-form ${formOpen ? "open" : ""}`}>
           <div className="two-col" style={{ marginBottom: "0.75rem" }}>
             <div className="form-field">

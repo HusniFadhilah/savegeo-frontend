@@ -9,11 +9,13 @@ import { escapeHtmlText } from "@/utils/safeHttpUrl";
 import { RESULT_PANE } from "@/config/mapPanes";
 import "./MapExportControl.css";
 
-type ExportAction = "png" | "geotiff" | "geojson" | "csv" | "json" | "print";
+export type MapExportAction = "png" | "geotiff" | "geojson" | "csv" | "json" | "print";
+type ExportAction = MapExportAction;
 
 interface Props {
   mapTitle: string;
   enabled?: boolean;
+  actions?: MapExportAction[];
 }
 
 type ExportableLayer = L.Layer & {
@@ -270,7 +272,7 @@ function openPrintLayout(
   printWindow.document.getElementById("savegeo-close-action")?.addEventListener("click", () => printWindow.close());
   printWindow.focus();
 }
-export default function MapExportControl({ mapTitle, enabled = true }: Props) {
+export default function MapExportControl({ mapTitle, enabled = true, actions }: Props) {
   const map = useMap();
   const t = useI18nStore((state) => state.t);
   const language = useI18nStore((state) => state.language);
@@ -281,6 +283,7 @@ export default function MapExportControl({ mapTitle, enabled = true }: Props) {
   const [busy, setBusy] = useState<ExportAction | null>(null);
   const [message, setMessage] = useState("");
   const filename = safeFilename(title);
+  const actionVisible = (action: MapExportAction) => !actions || actions.includes(action);
 
   useEffect(() => {
     if (!titleEditedRef.current) setTitle(defaultMapTitle(mapTitle, t));
@@ -416,56 +419,68 @@ export default function MapExportControl({ mapTitle, enabled = true }: Props) {
             }}
             maxLength={100}
           />
-          <div className="savegeo-map-export__section-title">{t("map.export.sectionMap")}</div>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("png")}
-          >
-            <i className="bi bi-filetype-png" aria-hidden="true" /> {t("map.export.downloadPng")}
-          </button>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("geotiff")}
-          >
-            <i className="bi bi-globe2" aria-hidden="true" /> {t("map.export.downloadGeoTiff")}
-          </button>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("print")}
-          >
-            <i className="bi bi-printer" aria-hidden="true" /> {t("map.export.printPdf")}
-          </button>
-          <div className="savegeo-map-export__section-title">{t("map.export.sectionVector")}</div>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("geojson")}
-          >
-            <i className="bi bi-braces" aria-hidden="true" /> {t("map.export.downloadGeoJson")}
-          </button>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("csv")}
-          >
-            <i className="bi bi-filetype-csv" aria-hidden="true" /> {t("map.export.downloadCsv")}
-          </button>
-          <button
-            type="button"
-            className="savegeo-map-export__item"
-            disabled={!!busy}
-            onClick={() => void run("json")}
-          >
-            <i className="bi bi-filetype-json" aria-hidden="true" /> {t("map.export.downloadJson")}
-          </button>
+          {(actionVisible("png") || actionVisible("geotiff") || actionVisible("print")) && <div className="savegeo-map-export__section-title">{t("map.export.sectionMap")}</div>}
+          {actionVisible("png") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("png")}
+            >
+              <i className="bi bi-filetype-png" aria-hidden="true" /> {t("map.export.downloadPng")}
+            </button>
+          )}
+          {actionVisible("geotiff") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("geotiff")}
+            >
+              <i className="bi bi-globe2" aria-hidden="true" /> {t("map.export.downloadGeoTiff")}
+            </button>
+          )}
+          {actionVisible("print") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("print")}
+            >
+              <i className="bi bi-printer" aria-hidden="true" /> {t("map.export.printPdf")}
+            </button>
+          )}
+          {(actionVisible("geojson") || actionVisible("csv") || actionVisible("json")) && <div className="savegeo-map-export__section-title">{t("map.export.sectionVector")}</div>}
+          {actionVisible("geojson") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("geojson")}
+            >
+              <i className="bi bi-braces" aria-hidden="true" /> {t("map.export.downloadGeoJson")}
+            </button>
+          )}
+          {actionVisible("csv") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("csv")}
+            >
+              <i className="bi bi-filetype-csv" aria-hidden="true" /> {t("map.export.downloadCsv")}
+            </button>
+          )}
+          {actionVisible("json") && (
+            <button
+              type="button"
+              className="savegeo-map-export__item"
+              disabled={!!busy}
+              onClick={() => void run("json")}
+            >
+              <i className="bi bi-filetype-json" aria-hidden="true" /> {t("map.export.downloadJson")}
+            </button>
+          )}
           <p className="savegeo-map-export__hint">{t("map.export.hint")}</p>
           {busy && (
             <div className="savegeo-map-export__status" role="status">

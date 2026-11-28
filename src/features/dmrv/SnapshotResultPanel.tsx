@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { formatNumber, useI18nStore } from "@/hooks/useI18nStore";
-import { getDmrvSnapshot } from "./api";
+import { downloadCarbonStatisticsCsv, getDmrvSnapshot } from "./api";
 import { asRecord, snapshotAoi, snapshotLayers, snapshotMetrics } from "./snapshotPresentation";
 import SnapshotValues from "./SnapshotValues";
 import type { DmrvSnapshot } from "./types";
@@ -44,6 +44,7 @@ export default function SnapshotResultPanel({
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [layerKey, setLayerKey] = useState("");
+  const [csvBusy, setCsvBusy] = useState(false);
   useEffect(() => {
     let active = true;
     setSnapshot(null);
@@ -72,16 +73,45 @@ export default function SnapshotResultPanel({
   const context = asRecord(snapshot?.inputs.context);
   const period = asRecord(context.period);
   const boundary = asRecord(context.boundary);
+  const carbonMrv = asRecord(snapshot?.outputs.carbon_mrv);
+  const estimateStatus = asRecord(carbonMrv.estimate).status;
+  const calibrationStatus = asRecord(carbonMrv.calibration).status;
+  const validationStatus = asRecord(carbonMrv.validation).status;
+  const validationType = asRecord(carbonMrv.validation).validation_type;
+  const segmentationStatus = asRecord(carbonMrv.segmentation).status;
+  const currentReview = asRecord(snapshot?.mrv_review_status);
+  const reviewStatus = currentReview.status || asRecord(carbonMrv.review).status;
+  const reviewerKey = typeof currentReview.reviewer_key === "string" ? currentReview.reviewer_key : "";
+  const accountingStatus = asRecord(carbonMrv.accounting).status;
+  const registryStatus = asRecord(carbonMrv.registry).status;
   function download() {
     if (!snapshot) return;
     const url = URL.createObjectURL(
-      new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" }),
+      new Blob([JSON.stringify({ ...snapshot, mrv_review_status: undefined }, null, 2)], { type: "application/json" }),
     );
     const link = document.createElement("a");
     link.href = url;
     link.download = `savegeo-snapshot-${snapshot.id}.json`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function downloadCsv() {
+    if (!snapshot || snapshot.kind !== "carbon" || csvBusy) return;
+    setCsvBusy(true);
+    setError("");
+    try {
+      const blob = await downloadCarbonStatisticsCsv(projectId, snapshot.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `savegeo-carbon-${snapshot.id}.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setError(en ? "CSV export failed or access is no longer permitted." : "Ekspor CSV gagal atau akses sudah tidak diizinkan.");
+    } finally {
+      setCsvBusy(false);
+    }
   }
   return (
     <section
@@ -118,6 +148,7 @@ export default function SnapshotResultPanel({
                 <i className="bi bi-calendar3 me-1" aria-hidden="true" />
                 {String(period.start || "")} - {String(period.end || "")}
               </span>
+              <span>{tr("Proyek", "Project")}: {projectId}</span>
               <span>
                 {tr("Versi batas", "Boundary version")}: {String(boundary.version || "-")}
               </span>
@@ -128,6 +159,32 @@ export default function SnapshotResultPanel({
                   : "-"}
               </span>
             </div>
+            {snapshot.kind === "carbon" && (
+              <div className="alert alert-light border small" aria-label={tr("Status karbon dMRV", "Carbon dMRV status")}>
+                <strong>{tr("Jejak karbon dMRV", "Carbon dMRV trace")}</strong>
+                <div className="d-flex flex-wrap gap-3 mt-2">
+                  <span>{tr("Estimasi", "Estimate")}: <strong>{String(estimateStatus || "model_estimate")}</strong></span>
+                  <span>{tr("Kalibrasi", "Calibration")}: <strong>{String(calibrationStatus || "not_requested")}</strong></span>
+                  <span>{tr("Validasi", "Validation")}: <strong>{String(validationStatus || "not_validated")}</strong> ({String(validationType || "none")})</span>
+                  <span>{tr("Segmentasi", "Segmentation")}: <strong>{String(segmentationStatus || "not_linked")}</strong></span>
+                  <span>{tr("Review MRV", "MRV review")}: <strong>{String(reviewStatus || "not_reviewed")}</strong></span>
+                  <span>{tr("Akuntansi bersih", "Net accounting")}: <strong>{String(accountingStatus || "not_calculated")}</strong></span>
+                  <span>{tr("Registry", "Registry")}: <strong>{String(registryStatus || "not_connected")}</strong></span>
+                </div>
+                {reviewerKey && (
+                  <div className="mt-2">
+                    {tr("Reviewer", "Reviewer")}: {reviewerKey} · {String(currentReview.decided_at || "")}
+                    {currentReview.decision_reason ? ` · ${String(currentReview.decision_reason)}` : ""}
+                  </div>
+                )}
+                <p className="mb-0 mt-2 text-body-secondary">
+                  {tr(
+                    "Perbandingan raster dan plot yang ditautkan tidak otomatis menjadi validasi independen. Nilai raster ini adalah stok model, bukan kredit proyek.",
+                    "Raster comparisons and linked plots do not automatically become independent validation. This raster value is modeled stock, not project credits.",
+                  )}
+                </p>
+              </div>
+            )}
             {metrics.length > 0 && (
               <div className="row g-2 mb-3">
                 {metrics.map((metric) => (
@@ -205,10 +262,18 @@ export default function SnapshotResultPanel({
                 {JSON.stringify(snapshot.inputs, null, 2)}
               </pre>
             </details>
-            <button type="button" className="btn btn-outline-success mt-3" onClick={download}>
-              <i className="bi bi-download me-2" aria-hidden="true" />
-              {tr("Unduh snapshot JSON", "Download snapshot JSON")}
-            </button>
+            <div className="d-flex flex-wrap gap-2 mt-3">
+              <button type="button" className="btn btn-outline-success" onClick={download}>
+                <i className="bi bi-download me-2" aria-hidden="true" />
+                {tr("Unduh snapshot JSON", "Download snapshot JSON")}
+              </button>
+              {snapshot.kind === "carbon" && (
+                <button type="button" className="btn btn-outline-primary" onClick={() => void downloadCsv()} disabled={csvBusy}>
+                  <i className="bi bi-filetype-csv me-2" aria-hidden="true" />
+                  {csvBusy ? tr("Menyiapkan CSV...", "Preparing CSV...") : tr("Ekspor statistik CSV", "Export statistics CSV")}
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>

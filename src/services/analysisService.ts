@@ -131,6 +131,11 @@ export function fetchRegionChildrenGeometries(
   return apiClient.get<GeoJSON.FeatureCollection>(`/regions/children-geometries?${params.toString()}`);
 }
 
+/** Checked-in province polygons used for national regional-result maps. */
+export function fetchProvinceGeometries(signal?: AbortSignal): Promise<GeoJSON.FeatureCollection> {
+  return apiClient.get<GeoJSON.FeatureCollection>("/regions/provinces/geometries", { signal });
+}
+
 /** One Nominatim search result from GET /utils/geocode/search - a free-text
  * place lookup (city/province/district/village/street/address, like Google
  * Maps' search box), restricted to Indonesia. `geojson` is the real

@@ -36,6 +36,7 @@ export interface GreenRankingRow {
     status: string;
     coverage_type?: string;
     valid_coverage_percent?: number | null;
+    valid_area_ha?: number | null;
     total_scope?: string;
     source_url?: string;
     method?: string;

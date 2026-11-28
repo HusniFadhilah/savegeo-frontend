@@ -103,7 +103,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
         label: carbonQuantityLabel(results.carbon.carbon_estimated),
         icon: "bi-tree",
         tileUrl: results.carbon.carbon_estimated.tile_url,
-        resolutionM: results.carbon.model_info?.map_resolution_m ?? results.carbon.model_info?.scale,
+        resolutionM: results.carbon.model_info?.map_resolution_m ?? results.carbon.carbon_reference?.resolution,
       });
     }
     if ((referenceOnly || showReference) && results.carbon.carbon_reference?.tile_url) {
@@ -131,7 +131,7 @@ function buildTabs(results: AnalysisResultsBundle, showReference: boolean): Resu
       label: poolLabels[pool],
       icon: pool === "soc" ? "bi-layers" : "bi-tree",
       tileUrl,
-      resolutionM: result.model_info?.map_resolution_m ?? result.model_info?.scale,
+      resolutionM: result.model_info?.map_resolution_m ?? result.carbon_reference?.resolution,
     });
   }
 

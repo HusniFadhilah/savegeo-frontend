@@ -17,6 +17,22 @@ function statusText(c: (id: string, en: string) => string, value: string) {
   return c(label[0], label[1]);
 }
 
+function methodologyQualification(c: (id: string, en: string) => string, check: MethodologyChecklist) {
+  if (check.qualification_id === "internal_review_aid") {
+    return c(
+      "Daftar periksa internal yang disusun dari sumber Verra yang ditautkan. Isinya tidak lengkap, tidak menggantikan teks metodologi terkendali atau review VVB untuk proyek ini, dan tidak menetapkan kelayakan maupun sertifikasi.",
+      "Internal checklist based on the linked Verra sources. It is not exhaustive, does not replace the controlled methodology text or project-specific VVB review, and does not determine eligibility or certification.",
+    );
+  }
+  if (check.qualification_id === "unsupported_version") {
+    return c(
+      "Belum ada daftar periksa untuk versi metodologi ini. Gunakan metodologi resmi proyek dan panduan reviewer; kriteria versi lain tidak diterapkan.",
+      "No checklist is available for this methodology version. Use the project's official methodology and reviewer guidance; criteria from another version are not applied.",
+    );
+  }
+  return check.qualification;
+}
+
 export function MethodologyPanel(props: SectionProps) {
   const c = useCopy();
   const [check, setCheck] = useState<MethodologyChecklist | null>(null);
@@ -77,7 +93,17 @@ export function MethodologyPanel(props: SectionProps) {
 
   return (
     <div>
-      <p className="integrity-note">{check.qualification}</p>
+      <p className="integrity-note">{methodologyQualification(c, check)}</p>
+      {check.supported && <aside className="alert alert-info" aria-label={c("Metadata sumber metodologi", "Methodology source metadata")}>
+        <strong>{c("Sumber resmi diperiksa", "Official sources checked")}: {check.source_checked_on || "—"}</strong>
+        <ul className="mb-2 mt-2">
+          {check.official_sources.map((source) => <li key={source.id}>
+            <a href={source.url} target="_blank" rel="noreferrer">{c(source.title_id, source.title)} v{source.version}</a>
+            <span> — {c("tanggal dokumen", "document date")}: {source.document_date}; {c("berlaku sejak", "effective since")}: {source.effective_date}</span>
+          </li>)}
+        </ul>
+        <span>{c("Review ahli/VVB untuk paket daftar ini belum tercatat. Pemeriksaan sumber bukan persetujuan metodologi.", "No expert/VVB review of this checklist pack is recorded. This source check is not methodology approval.")}</span>
+      </aside>}
       {!check.supported ? (
         <div className="alert alert-info">
           <strong>{c("Belum ada paket untuk versi ini", "No curated pack for this version")}</strong>
@@ -87,7 +113,6 @@ export function MethodologyPanel(props: SectionProps) {
         props.canWrite ? <form className="integrity-editor" onSubmit={(event) => { event.preventDefault(); if (props.canWrite) void save("draft"); }}>
           <div className="d-flex flex-wrap justify-content-between gap-2 align-items-center">
             <h3 className="h6 mb-0">{check.methodology_id} v{check.methodology_version} · {c("paket ringkas untuk review", "review aid")}</h3>
-            <span className="small text-muted">{c("Diperiksa", "Reviewed")}: {check.reviewed_on}</span>
           </div>
           <Field label={c("Pendekatan metodologi", "Methodology approach")}>
             <select className="form-select" value={check.approach || "area_based"} onChange={(event) => changeApproach(event.target.value as "area_based" | "census_based")}>
@@ -100,8 +125,8 @@ export function MethodologyPanel(props: SectionProps) {
               <article className="integrity-methodology-item" key={item.key}>
                 <div className="d-flex flex-wrap align-items-start justify-content-between gap-2">
                   <div>
-                    <h4>{item.title}</h4>
-                    <p>{item.description}</p>
+                    <h4>{c(item.title_id || item.title, item.title)}</h4>
+                    <p>{c(item.description_id || item.description, item.description)}</p>
                   </div>
                   <select aria-label={`${item.title} status`} className="form-select integrity-methodology-status" value={item.status} onChange={(event) => updateItem(item.key, { status: event.target.value as MethodologyRuleItem["status"] })}>
                     {(["not_assessed", "complete", "partial", ...(item.approach && item.approach !== check.approach ? ["not_applicable"] : [])] as const).map((status) => <option key={status} value={status}>{statusText(c, status)}</option>)}
@@ -122,8 +147,8 @@ export function MethodologyPanel(props: SectionProps) {
         </form> : (
           <div className="integrity-methodology-list">
             {check.items.map((item) => <article className="integrity-methodology-item" key={item.key}>
-              <div className="d-flex justify-content-between gap-2"><h4>{item.title}</h4><span className="small">{statusText(c, item.status)}</span></div>
-              <p>{item.description}</p>
+              <div className="d-flex justify-content-between gap-2"><h4>{c(item.title_id || item.title, item.title)}</h4><span className="small">{statusText(c, item.status)}</span></div>
+              <p>{c(item.description_id || item.description, item.description)}</p>
               {item.notes && <p>{item.notes}</p>}
               {item.evidence.length > 0 && <p>{c("Bukti", "Evidence")}: {item.evidence.join(", ")}</p>}
               <a className="small" href={item.source} target="_blank" rel="noreferrer">{c("Buka sumber resmi", "Open official source")} ↗</a>

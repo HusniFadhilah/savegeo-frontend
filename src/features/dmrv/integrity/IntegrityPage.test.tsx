@@ -33,6 +33,8 @@ it("connects the project page to every integrity workflow without a sidebar entr
   expect(screen.getByRole("heading", { name: "Register pengaduan" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Dokumen" }));
   expect(screen.getByLabelText("Unggah dokumen bukti")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Operasional" }));
+  expect(screen.getByText(/Status selesai, hubungan mitra/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Risiko" }));
   expect(screen.getByRole("heading", { name: "Jadwal dan ambang monitoring" })).toBeInTheDocument();
 });

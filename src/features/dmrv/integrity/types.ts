@@ -1,6 +1,7 @@
 import type { ProjectRole } from "../types";
 
 export type Category =
+  | "operations"
   | "readiness"
   | "safeguard"
   | "risk"
@@ -147,7 +148,9 @@ export interface RecordSave {
 export interface MethodologyRuleItem {
   key: string;
   title: string;
+  title_id?: string;
   description: string;
+  description_id?: string;
   source: string;
   required: boolean;
   approach?: "area_based" | "census_based";
@@ -161,6 +164,18 @@ export interface MethodologyChecklist {
   supported: boolean;
   pack_id: string | null;
   reviewed_on: string | null;
+  source_checked_on: string | null;
+  official_sources: {
+    id: string;
+    title: string;
+    title_id: string;
+    version: string;
+    document_date: string;
+    effective_date: string;
+    url: string;
+    landing_page: string;
+  }[];
+  expert_review_status: "not_recorded_for_pack" | null;
   approach: "area_based" | "census_based" | null;
   approach_options: ("area_based" | "census_based")[];
   items: MethodologyRuleItem[];
@@ -168,6 +183,7 @@ export interface MethodologyChecklist {
   revision: number;
   record_status: string | null;
   qualification: string;
+  qualification_id: "internal_review_aid" | "unsupported_version";
 }
 export interface ReviewerPriority {
   priority: "urgent" | "elevated" | "routine";

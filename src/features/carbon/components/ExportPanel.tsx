@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useBilingualCopy } from "@/hooks/useBilingualCopy";
-import { exportGeoTiff } from "@/features/carbon/api";
+import { downloadCarbonStatisticsCsv, exportGeoTiff } from "@/features/carbon/api";
 import type { AoiPayload } from "@/features/carbon/lib/geo";
 import type { AnalysisResultsBundle, ReportContext } from "@/features/reports/export";
 import { downloadStatisticsJson, downloadStoredAnalysisReport, generatePdfReport } from "@/features/reports/export";
@@ -62,6 +62,8 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
   const [reportBusy, setReportBusy] = useState(false);
   const [storedReportBusy, setStoredReportBusy] = useState(false);
   const [storedReportJob, setStoredReportJob] = useState("");
+  const [carbonStatsJob, setCarbonStatsJob] = useState("");
+  const [carbonStatsBusy, setCarbonStatsBusy] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [exportMode, setExportMode] = useState<"direct" | "batch_gcs">("direct");
   const [batchTask, setBatchTask] = useState<{ token: string; destination: string; state: string; error?: string } | null>(null);
@@ -70,23 +72,43 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
 
   const { results, year, startMonth, endMonth, cloudThreshold } = reportContext;
   const layerOptions = buildLayerOptions(results, c);
+  const carbonReportJobs = reportJobs.filter((job) => job.type === "carbon" || job.type === "carbon_local");
   const selectedPool = choice?.pool?.startsWith("extension:") ? results.carbonExtensions?.[choice.pool.slice(10)] : choice?.pool ? results.carbonPools?.[choice.pool as keyof NonNullable<typeof results.carbonPools>] : results.carbon;
-  const sourceResolution = choice?.layerType === "carbon" ? selectedPool?.carbon_reference?.resolution : undefined;
+  const sourceResolution = choice?.layerType === "carbon"
+    ? selectedPool?.model_info?.reference_support_m ?? selectedPool?.carbon_reference?.resolution
+    : undefined;
+  const mapResolution = choice?.layerType === "carbon"
+    ? selectedPool?.model_info?.map_resolution_m ?? selectedPool?.carbon_reference?.resolution
+    : undefined;
 
   useEffect(() => {
     setStoredReportJob(reportJobs[0]?.job_id ?? "");
+  }, [reportJobs]);
+
+  useEffect(() => {
+    setCarbonStatsJob(carbonReportJobs[0]?.job_id ?? "");
   }, [reportJobs]);
 
   function openModal() {
     const first = layerOptions[0];
     if (!first) return;
     const [layerType, extra] = first.value.split("|");
+    const initialResult = layerType === "carbon"
+      ? extra?.startsWith("extension:")
+        ? results.carbonExtensions?.[extra.slice(10)]
+        : extra
+          ? results.carbonPools?.[extra as keyof NonNullable<typeof results.carbonPools>]
+          : results.carbon
+      : undefined;
+    const initialScale = initialResult?.model_info?.map_resolution_m
+      ?? initialResult?.carbon_reference?.resolution
+      ?? 30;
     setChoice({
       pool: layerType === "carbon" ? extra : undefined,
       layerType: layerType as ExportChoice["layerType"],
       indexName: layerType === "vegetation" ? extra : null,
       dataset: layerType === "landcover" ? extra : null,
-      scale: layerType === "carbon" ? 10 : layerType === "landcover" ? 10 : 20,
+      scale: layerType === "carbon" ? initialScale : layerType === "landcover" ? 10 : 20,
     });
     setExportError(null);
     setModalOpen(true);
@@ -206,6 +228,51 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
             </div>
           </div>
         )}
+        {carbonReportJobs.length > 0 && (
+          <div className="row align-items-end g-2 mt-2 border-top pt-3">
+            <div className="col-md-8">
+              <label className="form-label mb-1" htmlFor="savedCarbonStatsJob">
+                {c("CSV statistik karbon dari snapshot tersimpan", "Carbon statistics CSV from saved snapshot")}
+              </label>
+              <select
+                id="savedCarbonStatsJob"
+                className="form-select"
+                value={carbonStatsJob}
+                onChange={(event) => setCarbonStatsJob(event.target.value)}
+              >
+                {carbonReportJobs.map((job) => (
+                  <option key={job.job_id} value={job.job_id}>
+                    {job.type} · {job.job_id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+              <small className="text-muted">
+                {c("CSV memakai statistik dan provenance yang disimpan saat analisis selesai.", "The CSV uses statistics and provenance saved when the analysis completed.")}
+              </small>
+            </div>
+            <div className="col-md-4">
+              <button
+                type="button"
+                className="btn btn-outline-primary w-100"
+                disabled={carbonStatsBusy || !carbonStatsJob}
+                onClick={async () => {
+                  setCarbonStatsBusy(true);
+                  setExportError(null);
+                  try {
+                    await downloadCarbonStatisticsCsv(carbonStatsJob, reportContext.aoi.name);
+                  } catch (error) {
+                    setExportError(error instanceof Error ? error.message : c("CSV statistik gagal diunduh.", "Could not download statistics CSV."));
+                  } finally {
+                    setCarbonStatsBusy(false);
+                  }
+                }}
+              >
+                <i className="bi bi-filetype-csv me-1" />
+                {carbonStatsBusy ? c("Menyiapkan CSV…", "Preparing CSV…") : c("Unduh CSV statistik", "Download statistics CSV")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {exportNotice && <div className="alert alert-success mx-3" role="status">{exportNotice}</div>}
@@ -224,7 +291,7 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
                   <button type="button" className="btn-close" onClick={() => setModalOpen(false)} />
                 </div>
                 <div className="modal-body">
-                  <label className="form-label d-block">{c("Metode ekspor", "Export method")}<select className="form-select" value={exportMode} onChange={(event) => { const value = event.target.value as "direct" | "batch_gcs"; setExportMode(value); if (value === "batch_gcs" && sourceResolution) setChoice({ ...choice, scale: sourceResolution }); }}><option value="direct">{c("Unduhan langsung (ukuran terbatas)", "Direct download (size limited)")}</option><option value="batch_gcs">{c("Resolusi penuh / AOI sangat besar (batch Cloud Storage)", "Full resolution / very large AOI (Cloud Storage batch)")}</option></select></label>
+                  <label className="form-label d-block">{c("Metode ekspor", "Export method")}<select className="form-select" value={exportMode} onChange={(event) => { const value = event.target.value as "direct" | "batch_gcs"; setExportMode(value); if (value === "batch_gcs" && mapResolution) setChoice({ ...choice, scale: mapResolution }); }}><option value="direct">{c("Unduhan langsung (ukuran terbatas)", "Direct download (size limited)")}</option><option value="batch_gcs">{c("Resolusi penuh / AOI sangat besar (batch Cloud Storage)", "Full resolution / very large AOI (Cloud Storage batch)")}</option></select></label>
                   <div className="alert alert-info py-2 small">
                     {exportMode === "direct" ? c("Unduhan langsung dapat menyesuaikan resolusi untuk memenuhi batas ukuran Earth Engine.", "Direct downloads may adjust resolution to meet Earth Engine size limits.") : c("Ekspor dijalankan di Earth Engine dan dibagi menjadi COG pada resolusi pilihan. Server memerlukan GEE_EXPORT_BUCKET beserta izin tulis. Waktu dan kapasitas penyimpanan mengikuti ukuran AOI.", "Earth Engine creates COG files at the selected resolution. The server needs GEE_EXPORT_BUCKET and write access. Processing time and storage requirements depend on AOI size.")}
                   </div>
@@ -236,12 +303,22 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
                       value={`${choice.layerType}|${choice.pool ?? choice.indexName ?? choice.dataset ?? ""}`}
                       onChange={(v) => {
                         const [layerType, extra] = v.split("|");
+                        const nextCarbonResult = layerType === "carbon"
+                          ? extra?.startsWith("extension:")
+                            ? results.carbonExtensions?.[extra.slice(10)]
+                            : extra
+                              ? results.carbonPools?.[extra as keyof NonNullable<typeof results.carbonPools>]
+                              : results.carbon
+                          : undefined;
+                        const nextScale = nextCarbonResult?.model_info?.map_resolution_m
+                          ?? nextCarbonResult?.carbon_reference?.resolution
+                          ?? choice.scale;
                         setChoice({
                           pool: layerType === "carbon" ? extra : undefined,
       layerType: layerType as ExportChoice["layerType"],
                           indexName: layerType === "vegetation" ? extra : null,
                           dataset: layerType === "landcover" ? extra : null,
-                          scale: choice.scale,
+                          scale: layerType === "carbon" ? nextScale : choice.scale,
                         });
                       }}
                       options={layerOptions}
@@ -256,13 +333,17 @@ export default function ExportPanel({ reportContext, aoiPayload, modelName, repo
                       value={choice.scale}
                       onChange={(e) => setChoice({ ...choice, scale: Number(e.target.value) })}
                     >
-                      {[...new Set([...SCALE_OPTIONS, choice.scale, ...(sourceResolution ? [sourceResolution] : [])])].sort((a, b) => a - b).map((s) => (
+                      {[...new Set([...SCALE_OPTIONS, choice.scale, ...(sourceResolution ? [sourceResolution] : []), ...(mapResolution ? [mapResolution] : [])])].sort((a, b) => a - b).map((s) => (
                         <option key={s} value={s}>
                           {s}m
                         </option>
                       ))}
                     </select>
-                    {sourceResolution && <small className="text-muted d-block mt-1">{c("Resolusi sumber/referensi yang dilaporkan:", "Reported source/reference resolution:")} {sourceResolution} m. {c("Ekspor batch mempertahankan resolusi pilihan. Resolusi lebih halus tidak menambah detail sumber.", "Batch export retains the selected resolution. A finer output does not add source detail.")}</small>}
+                    {sourceResolution && <small className="text-muted d-block mt-1">
+                      {c("Grid peta:", "Map grid:")} {mapResolution ?? "—"} m · {c("Dukungan sumber:", "Source support:")} {sourceResolution} m
+                      {selectedPool?.model_info?.map_resolution_crs ? ` · ${selectedPool.model_info.map_resolution_crs}` : ""}
+                      {selectedPool?.model_info?.summary_scale_m != null && ` · ${c("Skala ringkasan:", "Summary scale:")} ${selectedPool.model_info.summary_scale_m} m`}. {c("Ekspor mempertahankan resolusi pilihan; grid lebih halus tidak menambah detail sumber.", "Export retains the selected resolution; a finer grid does not add source detail.")}
+                    </small>}
                   </div>
                   {exportMode === "direct" && <label className="form-check mb-3"><input type="checkbox" className="form-check-input" checked={autoScale} onChange={(event) => setAutoScale(event.target.checked)} /><span className="form-check-label">{c("Sesuaikan resolusi otomatis untuk AOI besar. Resolusi akhir ditampilkan setelah ekspor.", "Automatically adjust resolution for large AOIs. The final resolution is shown after export.")}</span></label>}
                   {exportError && <div className="alert alert-danger py-2 small">{exportError}</div>}

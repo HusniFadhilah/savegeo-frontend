@@ -1,4 +1,5 @@
 import { useI18nStore } from "@/hooks/useI18nStore";
+import { useBilingualCopy } from "@/hooks/useBilingualCopy";
 import type { CarbonPoolKey, CarbonPoolResults } from "@/features/carbon/types";
 import CarbonStatsPanel from "./CarbonStatsPanel";
 
@@ -17,6 +18,7 @@ const POOLS: { key: CarbonPoolKey; icon: string; labelKey: string }[] = [
 export default function CarbonPoolsSummary({ results }: Props) {
   const t = useI18nStore((state) => state.t);
   const language = useI18nStore((state) => state.language);
+  const c = useBilingualCopy();
   const locale = language === "id" ? "id-ID" : "en-US";
   const available = POOLS.filter(({ key }) => results[key]);
 
@@ -42,6 +44,21 @@ export default function CarbonPoolsSummary({ results }: Props) {
           const referenceYear = result.model_info?.reference_dataset_year
             || result.model_info?.reference_year || result.carbon_reference?.year;
           const currentYearPartial = Boolean(result.model_info?.analysis_year_partial);
+          const valueKind = result.model_info?.data_value_kind
+            || (result.model_info?.source_data_kind === "proxy_not_field_measurement" ? "derived" : "modeled");
+          const valueKindLabel = valueKind === "measured"
+            ? c("Diukur di lapangan", "Field measured")
+            : valueKind === "imputed"
+              ? c("Imputasi", "Imputed")
+              : valueKind === "derived"
+                ? c("Turunan / proksi", "Derived / proxy")
+                : c("Estimasi model", "Model estimate");
+          const mapResolution = result.model_info?.map_resolution_m ?? result.carbon_reference?.resolution;
+          const mapResolutionCrs = result.model_info?.map_resolution_crs;
+          const referenceSupport = result.model_info?.reference_support_m ?? result.carbon_reference?.resolution;
+          const summaryScale = result.model_info?.load_only || result.model_info?.statistics_available === false
+            ? undefined
+            : result.model_info?.summary_scale_m ?? result.model_info?.scale;
           const staticReferenceOnly = result.model_info?.analysis_year_mode === "static_reference"
             && result.model_info?.requested_analysis_year != null
             && String(result.model_info.requested_analysis_year) !== String(result.model_info.analysis_year);
@@ -54,6 +71,17 @@ export default function CarbonPoolsSummary({ results }: Props) {
                   <div>
                     <h6 className="mb-0">{t(labelKey)}</h6>
                     <small className="carbon-basic-pool-card__source">{reference}</small>
+                    <div className="carbon-basic-pool-card__meta">
+                      <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">
+                        {valueKindLabel}
+                      </span>
+                      <span>
+                        {c("Grid peta", "Map grid")} {mapResolution != null ? `${mapResolution} m` : "—"}
+                        {mapResolutionCrs ? ` (${mapResolutionCrs})` : ""}
+                        {referenceSupport != null ? ` · ${c("dukungan sumber", "source support")} ${referenceSupport} m` : ""}
+                        {summaryScale != null ? ` · ${c("ringkasan", "summary")} ${summaryScale} m` : ""}
+                      </span>
+                    </div>
                     <div className="carbon-basic-pool-card__meta">
                       {period && (
                         <span>
@@ -87,13 +115,13 @@ export default function CarbonPoolsSummary({ results }: Props) {
                           {language === "id" ? `Referensi statis ${result.model_info?.analysis_year}` : `Static reference ${result.model_info?.analysis_year}`}
                         </span>
                       )}
-                      {result.model_info?.source_data_kind === "proxy_not_field_measurement" && <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">{language === "id" ? "Referensi turunan · validasi lapangan diperlukan" : "Derived reference · field validation needed"}</span>}
+                      {valueKind === "derived" && <span className="carbon-basic-pool-card__badge carbon-basic-pool-card__badge--reference">{language === "id" ? "Validasi lapangan diperlukan" : "Field validation needed"}</span>}
                     </div>
                     {result.model_info?.large_aoi_baseline && (
                       <small className="d-block text-muted mt-2">
                         {language === "id"
-                          ? `AOI besar: stok dihitung dari raster referensi ${period}, bukan prediksi tahunan ${result.model_info.requested_analysis_year}. Resolusi ringkasan ${result.model_info.scale} m.`
-                          : `Large AOI: stock calculated from the ${period} reference raster, rather than an annual ${result.model_info.requested_analysis_year} prediction. Summary resolution ${result.model_info.scale} m.`}
+                          ? `AOI besar: stok dihitung dari raster referensi ${period}, bukan prediksi tahunan ${result.model_info.requested_analysis_year}. Skala ringkasan ${summaryScale ?? "—"} m.`
+                          : `Large AOI: stock calculated from the ${period} reference raster, rather than an annual ${result.model_info.requested_analysis_year} prediction. Summary scale ${summaryScale ?? "—"} m.`}
                       </small>
                     )}
                     {result.model_info?.analysis_year_mode === "annual_covariate_inference" && (

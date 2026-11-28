@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getKeyPoolStatus, saveConfigKey } from "../api";
 import { KEY_POOL_PROVIDERS } from "../types";
 import type { KeyPoolStatus } from "../types";
@@ -15,7 +15,7 @@ export default function KeyPool() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -26,11 +26,11 @@ export default function KeyPool() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [c]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const save = async (pid: string) => {
     setSavingId(pid);

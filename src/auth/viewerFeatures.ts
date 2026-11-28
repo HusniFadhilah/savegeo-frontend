@@ -6,6 +6,7 @@ export const VIEWER_FEATURE_CODES = [
   "app.feature.satellite_exploration",
   "app.feature.disaster_mapping",
   "app.feature.crop_monitoring",
+  "app.feature.dmrv_projects",
 ] as const;
 
 export type ViewerFeatureCode = (typeof VIEWER_FEATURE_CODES)[number];
@@ -31,5 +32,6 @@ export function getViewerLandingPath(features: readonly ViewerFeatureCode[] | nu
   if (enabled.has("app.feature.satellite_exploration")) return "/satellite-imagery";
   if (enabled.has("app.feature.disaster_mapping")) return "/pemetaan-bencana";
   if (enabled.has("app.feature.crop_monitoring")) return "/crop-monitoring";
+  if (enabled.has("app.feature.dmrv_projects")) return "/dmrv/projects";
   return "/no-features";
 }

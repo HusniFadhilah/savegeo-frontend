@@ -27,8 +27,12 @@ type BlueCarbonRecord = {
   resolution_m: number | null;
   source_name: string;
   source_url: string;
+  viewer_url: string;
   citation: string;
+  license: string;
+  coverage_note: string;
   notes: string;
+  is_curated: boolean;
   status: "draft" | "published";
   values: Partial<Record<(typeof POOLS)[number][0], number | null>>;
   updated_at: string;
@@ -44,8 +48,12 @@ const emptyRecord = (): BlueCarbonRecord => ({
   resolution_m: null,
   source_name: "",
   source_url: "",
+  viewer_url: "",
   citation: "",
+  license: "",
+  coverage_note: "",
   notes: "",
+  is_curated: false,
   status: "draft",
   values: {},
   updated_at: "",
@@ -55,7 +63,19 @@ function parseRecords(raw?: string | null): BlueCarbonRecord[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((item): item is BlueCarbonRecord => Boolean(item && typeof item === "object" && "id" in item)) : [];
+    return Array.isArray(parsed)
+      ? parsed
+        .filter((item): item is BlueCarbonRecord => Boolean(item && typeof item === "object" && "id" in item))
+        .map((item) => ({
+          ...emptyRecord(),
+          ...item,
+          viewer_url: item.viewer_url ?? "",
+          license: item.license ?? "",
+          coverage_note: item.coverage_note ?? "",
+          is_curated: item.is_curated === true,
+          values: item.values ?? {},
+        }))
+      : [];
   } catch {
     return [];
   }
@@ -103,7 +123,7 @@ export default function BlueCarbonCatalogAdmin() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canWrite) return;
-    if (draft.source_url && !/^https:\/\//i.test(draft.source_url)) {
+    if ([draft.source_url, draft.viewer_url].some((url) => url && !/^https:\/\//i.test(url))) {
       setError(t("admin.blueCarbon.httpsRequired"));
       return;
     }
@@ -180,14 +200,16 @@ export default function BlueCarbonCatalogAdmin() {
               <form className="bluecarbon-admin__form" onSubmit={(event) => void submit(event)}>
                 <div className="bluecarbon-admin__fields">
                   <label>{t("admin.blueCarbon.name")}<input required className="form-control" value={draft.name} onChange={(event) => patch({ name: event.target.value })} /></label>
-                  <label>{t("admin.blueCarbon.habitat")}<select className="form-select" value={draft.habitat} onChange={(event) => patch({ habitat: event.target.value })}><option value="Mangrove">{c("Mangrove (bakau)", "Mangrove")}</option><option value="Lamun">{t("admin.blueCarbon.seagrass")}</option><option value="Rawa asin">{t("admin.blueCarbon.saltmarsh")}</option><option value="Ekosistem pesisir lainnya">{t("admin.blueCarbon.otherCoastal")}</option></select></label>
-                  <label>{t("admin.blueCarbon.sourceKind")}<select className="form-select" value={draft.data_kind} onChange={(event) => patch({ data_kind: event.target.value })}><option value="dataset">{t("admin.blueCarbon.geospatialDataset")}</option><option value="field_observation">{t("admin.blueCarbon.fieldMeasurement")}</option><option value="literature">{t("admin.blueCarbon.literature")}</option></select></label>
+                  <label>{t("admin.blueCarbon.habitat")}<select className="form-select" value={draft.habitat} onChange={(event) => patch({ habitat: event.target.value })}><option value="Mangrove">{c("Mangrove (bakau)", "Mangrove")}</option><option value="Lamun">{t("admin.blueCarbon.seagrass")}</option><option value="Rawa asin">{t("admin.blueCarbon.saltmarsh")}</option><option value="Rawa asin / tidal marsh">{c("Rawa pasang surut", "Tidal marsh")}</option><option value="Ekosistem pesisir lainnya">{t("admin.blueCarbon.otherCoastal")}</option></select></label>
+                  <label>{t("admin.blueCarbon.sourceKind")}<select className="form-select" value={draft.data_kind} onChange={(event) => patch({ data_kind: event.target.value })}><option value="dataset">{t("admin.blueCarbon.geospatialDataset")}</option><option value="open_dataset">{c("Dataset terbuka", "Open dataset")}</option><option value="open_raster">{c("Raster terbuka", "Open raster")}</option><option value="modelled_raster">{c("Raster hasil pemodelan", "Modelled raster")}</option><option value="field_observation">{t("admin.blueCarbon.fieldMeasurement")}</option><option value="literature">{t("admin.blueCarbon.literature")}</option></select></label>
                   <label>{t("admin.blueCarbon.region")}<input className="form-control" value={draft.region} onChange={(event) => patch({ region: event.target.value })} placeholder={t("admin.blueCarbon.regionPlaceholder")} /></label>
                   <label>{t("admin.blueCarbon.period")}<input className="form-control" value={draft.period} onChange={(event) => patch({ period: event.target.value })} placeholder={t("admin.blueCarbon.periodPlaceholder")} /></label>
                   <label>{t("admin.blueCarbon.resolution")}<input type="number" min="0" step="any" className="form-control" value={draft.resolution_m ?? ""} onChange={(event) => patch({ resolution_m: event.target.value === "" ? null : Number(event.target.value) })} /></label>
                   <label>{t("admin.blueCarbon.provider")}<input required className="form-control" value={draft.source_name} onChange={(event) => patch({ source_name: event.target.value })} /></label>
                   <label>{t("admin.blueCarbon.sourceUrl")}<input type="url" className="form-control" value={draft.source_url} onChange={(event) => patch({ source_url: event.target.value })} placeholder="https://…" /></label>
+                  <label>{c("Peta interaktif", "Interactive map")}<input type="url" className="form-control" value={draft.viewer_url} onChange={(event) => patch({ viewer_url: event.target.value })} placeholder="https://…" /></label>
                   <label>{t("admin.blueCarbon.publicStatus")}<select className="form-select" value={draft.status} onChange={(event) => patch({ status: event.target.value as BlueCarbonRecord["status"] })}><option value="draft">{t("admin.blueCarbon.draftAdmin")}</option><option value="published">{t("admin.blueCarbon.publishUsers")}</option></select></label>
+                  <label className="bluecarbon-admin__curated-toggle"><input type="checkbox" checked={draft.is_curated} onChange={(event) => patch({ is_curated: event.target.checked })} /> {c("Sumber terbuka pilihan", "Curated open source")}</label>
                 </div>
                 <div className="bluecarbon-admin__pool-section">
                   <div className="bluecarbon-admin__subheading"><h4>{t("admin.blueCarbon.poolValues")}</h4><span>Mg C/ha</span><InfoTip label={t("admin.blueCarbon.poolTip")} content={t("admin.blueCarbon.poolHelp")} /></div>
@@ -197,6 +219,8 @@ export default function BlueCarbonCatalogAdmin() {
                 </div>
                 <div className="bluecarbon-admin__fields bluecarbon-admin__fields--references">
                   <label className="bluecarbon-admin__wide">{t("admin.blueCarbon.citation")}<input className="form-control" value={draft.citation} onChange={(event) => patch({ citation: event.target.value })} placeholder={t("admin.blueCarbon.citationPlaceholder")} /></label>
+                  <label>{c("Lisensi dan atribusi", "License and attribution")}<input className="form-control" value={draft.license} onChange={(event) => patch({ license: event.target.value })} /></label>
+                  <label className="bluecarbon-admin__wide">{c("Cakupan data", "Data coverage")}<textarea rows={2} className="form-control" value={draft.coverage_note} onChange={(event) => patch({ coverage_note: event.target.value })} /></label>
                   <label className="bluecarbon-admin__wide">{t("admin.blueCarbon.methodNotes")}<textarea rows={2} className="form-control" value={draft.notes} onChange={(event) => patch({ notes: event.target.value })} /></label>
                 </div>
                 <div className="bluecarbon-admin__form-actions">

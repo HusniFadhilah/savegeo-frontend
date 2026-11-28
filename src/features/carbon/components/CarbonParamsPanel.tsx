@@ -19,6 +19,8 @@ import type {
 } from "@/features/carbon/types";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import InfoTip from "@/components/ui/InfoTip";
+import CarbonSegmentationStatusPanel from "./CarbonSegmentationStatusPanel";
+import CarbonCalibrationPanel from "./CarbonCalibrationPanel";
 
 interface Props {
   params: CarbonParams;
@@ -707,6 +709,9 @@ export default function CarbonParamsPanel({
           </div>
         )}
       </div>
+
+      {analysisMode !== "global" && <CarbonSegmentationStatusPanel />}
+      {analysisMode !== "global" && <CarbonCalibrationPanel params={params} selectedModel={selectedModel} onParamsChange={onParamsChange} />}
 
       {(analysisMode !== "model" || !isGraniteHlsModel) && <div className="mb-3">
         <div className="carbon-info-label">

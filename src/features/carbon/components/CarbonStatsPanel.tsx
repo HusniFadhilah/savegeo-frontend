@@ -5,6 +5,7 @@ import { interpolate } from "@/i18n/translations";
 import RichText from "@/components/ui/RichText";
 import InfoTip from "@/components/ui/InfoTip";
 import type { CarbonResult } from "@/features/carbon/types";
+import CarbonProvenancePanel from "./CarbonProvenancePanel";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend);
 
@@ -34,20 +35,23 @@ export default function CarbonStatsPanel({ result }: Props) {
 
   if (modelInfo.load_only || modelInfo.statistics_available === false) {
     return (
-      <div className="cs-status-summary mt-3" role="status">
-        <i className="bi bi-layers" />
-        <strong>{modelInfo.load_only
-          ? (language === "id" ? "Layer referensi dimuat" : "Reference layer loaded")
-          : (language === "id" ? "Statistik AOI tidak tersedia" : "AOI statistics unavailable")}</strong>
-        <InfoTip label={t("lc.moreInfo")} content={modelInfo.load_only
-          ? (language === "id"
-            ? "Mode muat peta melewati perhitungan statistik, luas AOI, dan total stok."
-            : "Map-only mode skips statistics, AOI area, and total stock calculations.")
-          : (language === "id"
-            ? "Layer estimasi berhasil dimuat, tetapi Earth Engine membatasi agregasi statistik untuk AOI ini. Peta tetap dapat dilihat."
-            : "The estimate layer loaded, but Earth Engine limited statistics aggregation for this AOI. The map remains available.")}
-        />
-      </div>
+      <>
+        <div className="cs-status-summary mt-3" role="status">
+          <i className="bi bi-layers" />
+          <strong>{modelInfo.load_only
+            ? (language === "id" ? "Layer referensi dimuat" : "Reference layer loaded")
+            : (language === "id" ? "Statistik AOI tidak tersedia" : "AOI statistics unavailable")}</strong>
+          <InfoTip label={t("lc.moreInfo")} content={modelInfo.load_only
+            ? (language === "id"
+              ? "Mode muat peta melewati perhitungan statistik, luas AOI, dan total stok."
+              : "Map-only mode skips statistics, AOI area, and total stock calculations.")
+            : (language === "id"
+              ? "Layer estimasi berhasil dimuat, tetapi Earth Engine membatasi agregasi statistik untuk AOI ini. Peta tetap dapat dilihat."
+              : "The estimate layer loaded, but Earth Engine limited statistics aggregation for this AOI. The map remains available.")}
+          />
+        </div>
+        <CarbonProvenancePanel result={result} />
+      </>
     );
   }
 
@@ -69,7 +73,17 @@ export default function CarbonStatsPanel({ result }: Props) {
   });
   const hasHistogram = histogramBins.length > 0 && histogramTotal > 0;
   const yearMismatch = reference?.year != null && modelInfo.analysis_year != null && reference.year !== modelInfo.analysis_year;
-  const resolutionMismatch = reference?.resolution != null && modelInfo.scale != null && reference.resolution >= modelInfo.scale * 3;
+  const mapResolution = modelInfo.map_resolution_m ?? reference?.resolution;
+  const referenceSupport = modelInfo.reference_support_m ?? reference?.resolution;
+  const summaryScale = modelInfo.summary_scale_m ?? modelInfo.scale;
+  const resolutionMismatch = referenceSupport != null && mapResolution != null && referenceSupport >= mapResolution * 3;
+  const valueKindLabel = modelInfo.data_value_kind === "measured"
+    ? (language === "id" ? "Diukur di lapangan" : "Field measured")
+    : modelInfo.data_value_kind === "imputed"
+      ? (language === "id" ? "Imputasi" : "Imputed")
+      : modelInfo.data_value_kind === "derived"
+        ? (language === "id" ? "Turunan / proksi" : "Derived / proxy")
+        : (language === "id" ? "Estimasi model" : "Model estimate");
   const distributionMarkers: Plugin<"bar"> = {
     id: "carbon-distribution-markers",
     beforeDatasetsDraw(chart) {
@@ -137,8 +151,8 @@ export default function CarbonStatsPanel({ result }: Props) {
               <InfoTip label={t("lc.moreInfo")} content={(
                 <RichText text={interpolate(t("carbon.detail.resolutionMismatchWarning"), {
                   refName: reference?.name || reference?.full_name || "",
-                  refRes: reference?.resolution ?? "-",
-                  scale: modelInfo.scale ?? "-",
+                  refRes: referenceSupport ?? "-",
+                  scale: mapResolution ?? "-",
                 })} />
               )} />
             </span>
@@ -302,8 +316,20 @@ export default function CarbonStatsPanel({ result }: Props) {
               </span>
             </div>
             <div className="cs-config-item">
-              <span className="cs-config-label">{t("carbon.detail.processScale")}</span>
-              <span className="cs-config-value">{modelInfo.scale ? `${modelInfo.scale}m` : "-"}</span>
+              <span className="cs-config-label">{language === "id" ? "Grid peta" : "Map grid"}</span>
+              <span className="cs-config-value">{mapResolution ? `${mapResolution}m` : "-"}{modelInfo.map_resolution_crs ? ` (${modelInfo.map_resolution_crs})` : ""}</span>
+            </div>
+            <div className="cs-config-item">
+              <span className="cs-config-label">{language === "id" ? "Dukungan sumber" : "Source support"}</span>
+              <span className="cs-config-value">{referenceSupport ? `${referenceSupport}m` : "-"}</span>
+            </div>
+            <div className="cs-config-item">
+              <span className="cs-config-label">{language === "id" ? "Skala ringkasan" : "Summary scale"}</span>
+              <span className="cs-config-value">{summaryScale ? `${summaryScale}m` : "-"}</span>
+            </div>
+            <div className="cs-config-item">
+              <span className="cs-config-label">{language === "id" ? "Jenis nilai" : "Value type"}</span>
+              <span className="cs-config-value">{valueKindLabel}</span>
             </div>
             <div className="cs-config-item">
               <span className="cs-config-label">{t("carbon.detail.displayMode")}</span>
@@ -386,6 +412,7 @@ export default function CarbonStatsPanel({ result }: Props) {
           </div>
         </div>
       )}
+      <CarbonProvenancePanel result={result} />
     </div>
   );
 }

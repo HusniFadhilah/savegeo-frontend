@@ -160,6 +160,14 @@ export interface DmrvSnapshot {
   snapshot_hash: string;
   created_by: string;
   created_at: string | null;
+  mrv_review_status?: {
+    status: string;
+    submission_id: string | null;
+    reviewer_key: string | null;
+    decided_at: string | null;
+    decision_reason: string | null;
+    qualification: string;
+  };
 }
 
 export interface EvidencePackage {
@@ -172,6 +180,16 @@ export interface EvidencePackage {
     entries: { path: string; size_bytes: number; sha256: string }[];
     verification_status: "not_verified";
     issuance_status: "not_issued";
+    carbon_mrv_status?: {
+      estimate: string | null;
+      calibration: string | null;
+      validation: string | null;
+      validation_type: string | null;
+      segmentation: string | null;
+      review: string | null;
+      accounting: string | null;
+      registry: string | null;
+    } | null;
   };
   manifest_hash: string;
   package_sha256: string;
